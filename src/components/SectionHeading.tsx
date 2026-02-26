@@ -7,11 +7,11 @@ interface SectionHeadingProps {
 export default function SectionHeading({ title, subtitle, centered = false }: SectionHeadingProps) {
   return (
     <div className={`mb-8 ${centered ? "text-center" : ""}`}>
-      <h2 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900">
+      <h2 className="font-heading text-3xl sm:text-4xl font-bold text-ngpa-white">
         {title}
       </h2>
       {subtitle && (
-        <p className="mt-3 text-lg text-gray-600 max-w-2xl leading-relaxed">
+        <p className="mt-3 text-lg text-ngpa-muted max-w-2xl leading-relaxed">
           {subtitle}
         </p>
       )}

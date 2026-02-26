@@ -7,8 +7,7 @@ interface RegButtonProps {
 
 export default function RegButton({ ballColor, url }: RegButtonProps) {
   const level = levels.find((l) => l.key === ballColor);
-  const color = level?.color ?? "#DC2626";
-  const bgLight = level?.bgLight ?? "#FEF2F2";
+  const color = level?.color ?? "#FF4040";
 
   return (
     <a
@@ -17,8 +16,8 @@ export default function RegButton({ ballColor, url }: RegButtonProps) {
       rel="noopener noreferrer"
       className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all hover:scale-105"
       style={{
-        backgroundColor: bgLight,
-        color: color,
+        backgroundColor: color,
+        color: '#000000',
         border: `1px solid ${color}30`,
       }}
     >

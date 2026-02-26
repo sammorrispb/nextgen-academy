@@ -6,7 +6,7 @@ interface LocationMapProps {
 
 export default function LocationMap({ location }: LocationMapProps) {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+    <div className="bg-ngpa-panel rounded-2xl overflow-hidden border border-ngpa-slate shadow-sm">
       <iframe
         title={`${location.venue} ${location.name} map`}
         src={`https://www.google.com/maps?q=${location.mapQuery}&output=embed`}
@@ -16,11 +16,11 @@ export default function LocationMap({ location }: LocationMapProps) {
         style={{ border: 0 }}
       />
       <div className="p-4">
-        <h4 className="font-heading font-bold text-gray-900">{location.name}</h4>
-        <p className="text-sm text-gray-500">
+        <h4 className="font-heading font-bold text-ngpa-white">{location.name}</h4>
+        <p className="text-sm text-ngpa-muted">
           {location.venue}, {location.address}
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-ngpa-muted">
           {location.city}, {location.state} {location.zip}
         </p>
       </div>

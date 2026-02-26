@@ -17,12 +17,12 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
+    <nav className="sticky top-0 z-50 bg-ngpa-black/95 backdrop-blur border-b border-ngpa-slate">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="font-heading text-xl font-900 text-gray-900 tracking-tight">
-            Next Gen<span className="text-ball-red">.</span>
+          <Link href="/" className="font-heading text-xl font-900 text-ngpa-white tracking-tight">
+            Next Gen<span className="text-ngpa-lime">.</span>
           </Link>
 
           {/* Desktop links */}
@@ -33,8 +33,8 @@ export default function Navbar() {
                 href={link.href}
                 className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                   pathname === link.href
-                    ? "text-ball-red bg-red-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "text-ngpa-lime bg-ngpa-slate"
+                    : "text-ngpa-white hover:text-ngpa-lime hover:bg-ngpa-slate"
                 }`}
               >
                 {link.label}
@@ -42,7 +42,7 @@ export default function Navbar() {
             ))}
             <Link
               href="/schedule"
-              className="ml-3 px-5 py-2 bg-ball-red text-white text-sm font-bold rounded-full hover:bg-red-700 transition-colors"
+              className="ml-3 px-5 py-2 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
             >
               Register
             </Link>
@@ -51,7 +51,7 @@ export default function Navbar() {
           {/* Mobile hamburger */}
           <button
             onClick={() => setOpen(!open)}
-            className="md:hidden p-2 text-gray-600 hover:text-gray-900"
+            className="md:hidden p-2 text-ngpa-white hover:text-ngpa-lime"
             aria-label="Toggle menu"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -66,7 +66,7 @@ export default function Navbar() {
 
         {/* Mobile menu */}
         {open && (
-          <div className="md:hidden pb-4 border-t border-gray-100">
+          <div className="md:hidden pb-4 border-t border-ngpa-slate">
             <div className="flex flex-col gap-1 pt-3">
               {links.map((link) => (
                 <Link
@@ -75,8 +75,8 @@ export default function Navbar() {
                   onClick={() => setOpen(false)}
                   className={`px-3 py-2 text-sm font-medium rounded-lg ${
                     pathname === link.href
-                      ? "text-ball-red bg-red-50"
-                      : "text-gray-600 hover:bg-gray-50"
+                      ? "text-ngpa-lime bg-ngpa-slate"
+                      : "text-ngpa-white hover:bg-ngpa-slate"
                   }`}
                 >
                   {link.label}
@@ -85,7 +85,7 @@ export default function Navbar() {
               <Link
                 href="/schedule"
                 onClick={() => setOpen(false)}
-                className="mt-2 mx-3 px-5 py-2.5 bg-ball-red text-white text-sm font-bold rounded-full text-center hover:bg-red-700 transition-colors"
+                className="mt-2 mx-3 px-5 py-2.5 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full text-center hover:bg-ngpa-cyan transition-colors"
               >
                 Register
               </Link>

@@ -3,11 +3,11 @@ import { site } from "@/data/site";
 
 export default function YellowBallCTA() {
   return (
-    <div className="bg-yellow-50 border border-yellow-200/60 rounded-2xl p-8">
-      <h3 className="font-heading text-2xl font-bold text-yellow-700 mb-3">
+    <div className="bg-ngpa-panel border border-ngpa-slate rounded-2xl p-8">
+      <h3 className="font-heading text-2xl font-bold text-ngpa-white mb-3">
         Ready for Tournament Play?
       </h3>
-      <p className="text-gray-600 leading-relaxed mb-4">
+      <p className="text-ngpa-muted leading-relaxed mb-4">
         Yellow Ball is our coach-curated competitive track for players 12+ rated
         3.0 or above. Small groups of 3&ndash;5 athletes, custom scheduling,
         and focused preparation for tournament play.
@@ -18,12 +18,12 @@ export default function YellowBallCTA() {
         {yellowBallPricing.map((tier) => (
           <div
             key={tier.players}
-            className="bg-white rounded-lg p-3 text-center border border-yellow-100"
+            className="bg-ngpa-slate rounded-lg p-3 text-center border border-ngpa-slate"
           >
-            <div className="text-xs text-gray-500 mb-1">
+            <div className="text-xs text-ngpa-muted mb-1">
               {tier.players} players
             </div>
-            <div className="font-heading font-bold text-yellow-700">
+            <div className="font-mono font-bold text-ngpa-skill-yellow">
               {tier.price}
             </div>
           </div>
@@ -32,7 +32,7 @@ export default function YellowBallCTA() {
 
       <a
         href={`mailto:${site.email}?subject=Yellow%20Ball%20Inquiry`}
-        className="inline-block px-6 py-3 bg-yellow-600 text-white font-bold rounded-full hover:bg-yellow-700 transition-colors"
+        className="inline-block px-6 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
       >
         Email Us About Yellow Ball
       </a>

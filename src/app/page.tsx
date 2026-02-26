@@ -10,7 +10,7 @@ export default function Home() {
       <Hero />
 
       {/* EASE Values */}
-      <section className="bg-white py-16 px-4 sm:px-6 lg:px-8">
+      <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <SectionHeading
             title="Our Coaching Philosophy"
@@ -19,11 +19,11 @@ export default function Home() {
           <EaseValues />
 
           {/* Teaching method callout */}
-          <div className="mt-8 border-l-4 border-ball-red bg-red-50/50 rounded-r-xl p-5">
-            <div className="font-heading text-base font-bold text-gray-900 mb-1">
+          <div className="mt-8 border-l-4 border-ngpa-lime bg-ngpa-slate/50 rounded-r-xl p-5">
+            <div className="font-heading text-base font-bold text-ngpa-white mb-1">
               Define &rarr; Demonstrate &rarr; Drill
             </div>
-            <p className="text-sm text-gray-600 leading-relaxed">
+            <p className="text-sm text-ngpa-muted leading-relaxed">
               We explain the why, show the how, then practice until it&rsquo;s second nature.
             </p>
           </div>
@@ -31,7 +31,7 @@ export default function Home() {
       </section>
 
       {/* Program Levels */}
-      <section className="bg-gray-50 py-16 px-4 sm:px-6 lg:px-8">
+      <section className="bg-ngpa-black py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <SectionHeading
             title="Find Your Level"

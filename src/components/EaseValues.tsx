@@ -6,15 +6,15 @@ export default function EaseValues() {
       {ease.map((item, i) => (
         <div
           key={i}
-          className="bg-gray-50 rounded-xl p-6 border border-gray-100"
+          className="bg-ngpa-panel rounded-xl p-6 border border-ngpa-slate"
         >
-          <div className="font-heading text-3xl font-900 text-ball-red mb-1">
+          <div className="font-heading text-3xl font-900 text-ngpa-lime mb-1">
             {item.letter}
           </div>
-          <div className="font-heading text-base font-bold text-gray-900 mb-2">
+          <div className="font-heading text-base font-bold text-ngpa-white mb-2">
             {item.title}
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">
+          <p className="text-sm text-ngpa-muted leading-relaxed">
             {item.description}
           </p>
         </div>

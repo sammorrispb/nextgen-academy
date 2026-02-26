@@ -14,7 +14,7 @@ export default function ProgramsPage() {
   return (
     <>
       {/* Header */}
-      <section className="bg-white py-16 px-4 sm:px-6 lg:px-8">
+      <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <SectionHeading
             title="Our Programs"
@@ -24,18 +24,18 @@ export default function ProgramsPage() {
           {/* Color legend */}
           <div className="flex flex-wrap gap-6 mb-10 text-sm">
             {[
-              { label: "Red Ball", color: "#DC2626", ages: "Ages 5+" },
-              { label: "Orange Ball", color: "#EA580C", ages: "Ages 7+" },
-              { label: "Green Ball", color: "#16A34A", ages: "Ages 9+" },
-              { label: "Yellow Ball", color: "#CA8A04", ages: "Ages 12+" },
+              { label: "Red Ball", color: "#FF4040", ages: "Ages 5+" },
+              { label: "Orange Ball", color: "#FF8C00", ages: "Ages 7+" },
+              { label: "Green Ball", color: "#00C853", ages: "Ages 9+" },
+              { label: "Yellow Ball", color: "#FFD600", ages: "Ages 12+" },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2">
                 <span
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: item.color }}
                 />
-                <span className="font-medium text-gray-700">{item.label}</span>
-                <span className="text-gray-400">{item.ages}</span>
+                <span className="font-medium text-ngpa-white">{item.label}</span>
+                <span className="text-ngpa-muted">{item.ages}</span>
               </div>
             ))}
           </div>
@@ -45,7 +45,7 @@ export default function ProgramsPage() {
       </section>
 
       {/* Yellow Ball CTA */}
-      <section className="bg-gray-50 py-16 px-4 sm:px-6 lg:px-8">
+      <section className="bg-ngpa-black py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <YellowBallCTA />
         </div>

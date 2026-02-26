@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default function SchedulePage() {
   return (
     <>
-      <section className="bg-white py-16 px-4 sm:px-6 lg:px-8">
+      <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <SectionHeading
             title={`${seasonLabel} Schedule`}
@@ -31,7 +31,7 @@ export default function SchedulePage() {
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: l.color }}
                   />
-                  <span className="font-medium text-gray-700">{l.label}</span>
+                  <span className="font-medium text-ngpa-white">{l.label}</span>
                 </div>
               ))}
           </div>
@@ -43,10 +43,9 @@ export default function SchedulePage() {
               .map((l) => (
                 <div
                   key={l.key}
-                  className="rounded-xl p-4 border"
+                  className="bg-ngpa-panel rounded-xl p-4 border"
                   style={{
                     borderColor: `${l.color}30`,
-                    backgroundColor: l.bgLight,
                   }}
                 >
                   <div className="flex items-center gap-2 mb-2">
@@ -54,13 +53,13 @@ export default function SchedulePage() {
                       className="w-2.5 h-2.5 rounded-full"
                       style={{ backgroundColor: l.color }}
                     />
-                    <span className="font-heading font-bold text-sm text-gray-900">
+                    <span className="font-heading font-bold text-sm text-ngpa-white">
                       {l.label}
                     </span>
                   </div>
-                  <div className="text-sm" style={{ color: l.color }}>
+                  <div className="text-sm font-mono" style={{ color: l.color }}>
                     <span className="font-bold">{l.dropIn}</span>
-                    <span className="mx-2 text-gray-300">|</span>
+                    <span className="mx-2 text-ngpa-muted">|</span>
                     <span className="font-bold">{l.season}</span>
                   </div>
                 </div>

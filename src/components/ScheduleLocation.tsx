@@ -7,18 +7,18 @@ interface ScheduleLocationProps {
 
 export default function ScheduleLocationCard({ location }: ScheduleLocationProps) {
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-      <h3 className="font-heading text-xl font-bold text-gray-900 mb-1">
+    <div className="bg-ngpa-panel rounded-2xl p-6 border border-ngpa-slate shadow-sm">
+      <h3 className="font-heading text-xl font-bold text-ngpa-white mb-1">
         {location.location}
       </h3>
-      <p className="text-sm text-gray-500 mb-6">
+      <p className="text-sm text-ngpa-muted mb-6">
         {location.venue}, {location.address}
       </p>
 
       <div className="space-y-6">
         {location.slots.map((slot, si) => (
           <div key={si}>
-            <div className="font-heading text-sm font-bold text-gray-900 mb-3">
+            <div className="font-mono text-sm font-bold text-ngpa-white mb-3">
               {slot.day} &middot; {slot.time}
             </div>
             <div className="flex flex-wrap gap-2">

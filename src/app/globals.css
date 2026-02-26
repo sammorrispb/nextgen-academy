@@ -1,8 +1,52 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #05132B;
+  --foreground: #EEF2FF;
+
+  /* BRAND_GUIDELINES.md v1.1 — Design Tokens */
+  /* Backgrounds */
+  --color-bg-logo: #000000;
+  --color-bg-primary: #05132B;
+  --color-bg-surface: #0C1F47;
+  --color-bg-elevated: #1A3060;
+
+  /* Brand */
+  --color-brand-primary: #AADC00;
+  --color-brand-second: #00D4FF;
+  --color-accent: #FF6B2B;
+
+  /* Text */
+  --color-text-logo: #FFFFFF;
+  --color-text-primary: #EEF2FF;
+  --color-text-muted: #7A88B8;
+
+  /* Semantic */
+  --color-success: #00E676;
+  --color-error: #FF3B5C;
+
+  /* Skill pathway */
+  --color-skill-red: #FF4040;
+  --color-skill-orange: #FF8C00;
+  --color-skill-green: #00C853;
+  --color-skill-yellow: #FFD600;
+
+  /* Typography */
+  --font-heading: 'Montserrat', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'Roboto Mono', monospace;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-glow-lime: 0 0 20px rgba(170, 220, 0, 0.15);
+  --shadow-glow-cyan: 0 0 20px rgba(0, 212, 255, 0.12);
 }
 
 @theme inline {
@@ -10,18 +54,24 @@
   --color-foreground: var(--foreground);
   --font-heading: var(--font-montserrat);
   --font-body: var(--font-inter);
+  --font-mono: var(--font-roboto-mono);
 
-  /* Ball-system brand colors */
-  --color-ball-red: #DC2626;
-  --color-ball-orange: #EA580C;
-  --color-ball-green: #16A34A;
-  --color-ball-yellow: #CA8A04;
-
-  /* Brand accents */
-  --color-brand-red-light: #FEF2F2;
-  --color-brand-orange-light: #FFF7ED;
-  --color-brand-green-light: #F0FDF4;
-  --color-brand-yellow-light: #FEFCE8;
+  /* NGPA Design System — BRAND_GUIDELINES.md v1.1 */
+  --color-ngpa-black: #000000;
+  --color-ngpa-navy: #05132B;
+  --color-ngpa-panel: #0C1F47;
+  --color-ngpa-slate: #1A3060;
+  --color-ngpa-lime: #AADC00;
+  --color-ngpa-cyan: #00D4FF;
+  --color-ngpa-orange: #FF6B2B;
+  --color-ngpa-white: #EEF2FF;
+  --color-ngpa-muted: #7A88B8;
+  --color-ngpa-green: #00E676;
+  --color-ngpa-red: #FF3B5C;
+  --color-ngpa-skill-red: #FF4040;
+  --color-ngpa-skill-orange: #FF8C00;
+  --color-ngpa-skill-green: #00C853;
+  --color-ngpa-skill-yellow: #FFD600;
 }
 
 body {
