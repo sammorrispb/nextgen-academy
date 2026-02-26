@@ -7,12 +7,10 @@ interface CoachCardProps {
 export default function CoachCard({ coach }: CoachCardProps) {
   return (
     <div className="bg-ngpa-panel rounded-2xl p-6 border border-ngpa-slate shadow-sm">
-      {/* Photo placeholder (colored initials) */}
-      <div
-        className="w-20 h-20 rounded-full flex items-center justify-center text-ngpa-white font-heading text-2xl font-bold mb-4"
-        style={{ backgroundColor: coach.initialsBg }}
-      >
-        {coach.initials}
+      <div className="w-24 h-24 rounded-full bg-ngpa-slate flex items-center justify-center mb-4">
+        <span className="text-ngpa-lime font-heading font-bold text-2xl">
+          {coach.name.split(" ").map(w => w[0]).join("")}
+        </span>
       </div>
 
       <h3 className="font-heading text-xl font-bold text-ngpa-white">

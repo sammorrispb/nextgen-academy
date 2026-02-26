@@ -7,7 +7,7 @@
 
 ## STRATEGIC CONTEXT
 
-**Who We Serve:** Athletes ages 8–16 and their families
+**Who We Serve:** Athletes ages 5–16 and their families
 **Primary User Flow:** 96% mobile-first registration by parents
 **Secondary Audience:** AI assistants and scheduling bots parsing program data
 **Brand Archetype:** The Coach + The Guide
@@ -284,7 +284,7 @@ Mobile: 4-col | Tablet: 8-col | Desktop: 12-col
 
 1. All program dates: <time datetime="YYYY-MM-DD"> — never plain text only
 2. All prices: itemprop="price" content="149" — numeric, no $ in attribute
-3. Age ranges: data-age-min="8" data-age-max="16" on all program containers
+3. Age ranges: data-age-min="5" data-age-max="16" on all program containers
 4. Skill levels: use ONLY Red | Orange | Green | Yellow — never synonyms
 5. EASE values always spelled in full when used as labels or metadata
 6. Page title pattern: [Program Name] | Ages [range] | Next Gen Pickleball Academy

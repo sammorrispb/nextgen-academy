@@ -8,9 +8,13 @@ interface LevelCardProps {
 
 export default function LevelCard({ level, variant = "compact" }: LevelCardProps) {
   return (
-    <div
+    <article
       className="bg-ngpa-panel rounded-xl p-6 border border-ngpa-slate shadow-sm"
       style={{ borderLeftWidth: 4, borderLeftColor: level.color }}
+      itemScope
+      itemType="https://schema.org/SportsEvent"
+      data-age-min={level.ages.replace("+", "")}
+      data-age-max="16"
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
@@ -18,7 +22,7 @@ export default function LevelCard({ level, variant = "compact" }: LevelCardProps
           className="w-3.5 h-3.5 rounded-full shrink-0"
           style={{ backgroundColor: level.color }}
         />
-        <span className="font-heading text-lg font-bold text-ngpa-white">
+        <span className="font-heading text-lg font-bold text-ngpa-white" itemProp="name">
           {level.label}
         </span>
         <span
@@ -41,7 +45,7 @@ export default function LevelCard({ level, variant = "compact" }: LevelCardProps
         <div className="flex items-center justify-between pt-3 border-t border-ngpa-slate">
           {level.dropIn ? (
             <div className="text-sm font-bold text-ngpa-lime font-mono">
-              {level.dropIn} &middot; {level.season}
+              <span itemProp="price" content={level.dropIn?.replace(/[^0-9]/g, "") ?? ""}>{level.dropIn}</span> &middot; {level.season}
             </div>
           ) : (
             <div className="text-sm font-bold italic text-ngpa-lime font-mono">
@@ -65,6 +69,6 @@ export default function LevelCard({ level, variant = "compact" }: LevelCardProps
           )}
         </div>
       )}
-    </div>
+    </article>
   );
 }

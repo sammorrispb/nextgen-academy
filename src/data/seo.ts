@@ -7,7 +7,7 @@ export const seo = {
   programs: {
     title: "Programs",
     description:
-      "Four color-coded levels from beginner to tournament play. Red Ball (5+), Orange Ball (7+), Green Ball (9+), and Yellow Ball (12+ tournament track).",
+      "Four color-coded levels from Red Ball level to tournament play. Red Ball (5+), Orange Ball (7+), Green Ball (9+), and Yellow Ball (12+ tournament track).",
   },
   schedule: {
     title: "Schedule",

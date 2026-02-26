@@ -10,7 +10,6 @@ export interface Level {
   dropIn: string | null;
   season: string | null;
   color: string;
-  bgLight: string;
 }
 
 export const levels: Level[] = [
@@ -24,7 +23,6 @@ export const levels: Level[] = [
     dropIn: "$35/drop-in",
     season: "$300/season",
     color: "#FF4040",
-    bgLight: "#FF4040",
   },
   {
     key: "orange",
@@ -36,7 +34,6 @@ export const levels: Level[] = [
     dropIn: "$40/drop-in",
     season: "$350/season",
     color: "#FF8C00",
-    bgLight: "#FF8C00",
   },
   {
     key: "green",
@@ -48,7 +45,6 @@ export const levels: Level[] = [
     dropIn: "$50/drop-in",
     season: "$450/season",
     color: "#00C853",
-    bgLight: "#00C853",
   },
   {
     key: "yellow",
@@ -60,6 +56,5 @@ export const levels: Level[] = [
     dropIn: null,
     season: null,
     color: "#FFD600",
-    bgLight: "#FFD600",
   },
 ];
