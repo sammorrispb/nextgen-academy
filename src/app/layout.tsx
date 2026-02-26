@@ -32,7 +32,8 @@ export const metadata: Metadata = {
   description:
     "Structured pickleball coaching for ages 5\u201316. We build confident players through competitive play, real strategy, and a growth mindset.",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/images/og-image.png",
+    apple: "/images/og-image.png",
   },
   openGraph: {
     type: "website",
@@ -41,6 +42,18 @@ export const metadata: Metadata = {
     title: "Next Gen Pickleball Academy",
     description:
       "Structured pickleball coaching for ages 5\u201316 in Montgomery County, MD. Better than yesterday\u2014together.",
+    images: [{
+      url: "/images/og-image.png",
+      width: 512,
+      height: 512,
+      alt: "Next Gen Pickleball Academy",
+    }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Next Gen Pickleball Academy",
+    description: "Structured pickleball coaching for ages 5\u201316 in Montgomery County, MD.",
+    images: ["/images/og-image.png"],
   },
 };
 

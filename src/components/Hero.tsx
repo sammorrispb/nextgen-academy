@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { seasonLabel, seasonDates } from "@/data/schedule";
 
 export default function Hero() {
@@ -12,6 +13,8 @@ export default function Hero() {
         <div className="inline-block px-4 py-1.5 rounded-full bg-ngpa-slate text-ngpa-lime text-xs font-bold tracking-wider uppercase mb-6">
           {seasonLabel} &middot; {seasonDates}
         </div>
+
+        <Image src="/images/logo.png" alt="Next Gen Pickleball Academy" width={400} height={115} className="w-64 sm:w-80 lg:w-96 h-auto mb-6" priority />
 
         <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-900 text-ngpa-white leading-tight max-w-3xl">
           Better than yesterday
