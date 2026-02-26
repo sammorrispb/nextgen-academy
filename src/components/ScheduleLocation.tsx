@@ -27,6 +27,7 @@ export default function ScheduleLocationCard({ location }: ScheduleLocationProps
                   key={link.level}
                   ballColor={link.level}
                   url={link.url}
+                  embedCode={link.embedCode}
                 />
               ))}
             </div>

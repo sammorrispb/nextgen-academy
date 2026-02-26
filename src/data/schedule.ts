@@ -3,6 +3,7 @@ import type { BallColor } from "./levels";
 export interface ScheduleLink {
   level: BallColor;
   url: string;
+  embedCode?: string;  // CourtReserve embed iframe src
 }
 
 export interface ScheduleSlot {
@@ -35,14 +36,17 @@ export const schedule: ScheduleLocation[] = [
           {
             level: "red",
             url: "https://app.courtreserve.com/Online/Events/Public/10869/1912084",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10869/27052/1912084",
           },
           {
             level: "orange",
             url: "https://app.courtreserve.com/Online/Events/Public/10869/1912076",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10869/27052/1912076",
           },
           {
             level: "green",
             url: "https://app.courtreserve.com/Online/Events/Public/10869/1912060",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10869/27052/1912060",
           },
         ],
       },
@@ -53,14 +57,17 @@ export const schedule: ScheduleLocation[] = [
           {
             level: "red",
             url: "https://app.courtreserve.com/Online/Events/Public/10869/1912042",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10869/27052/1912042",
           },
           {
             level: "orange",
             url: "https://app.courtreserve.com/Online/Events/Public/10869/1912047",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10869/27052/1912047",
           },
           {
             level: "green",
             url: "https://app.courtreserve.com/Online/Events/Public/10869/1912052",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10869/27052/1912052",
           },
         ],
       },
@@ -78,14 +85,17 @@ export const schedule: ScheduleLocation[] = [
           {
             level: "red",
             url: "https://app.courtreserve.com/Online/Events/Public/10483/1912330",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10483/26428/1912330",
           },
           {
             level: "orange",
             url: "https://app.courtreserve.com/Online/Events/Public/10483/1912338",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10483/26428/1912338",
           },
           {
             level: "green",
             url: "https://app.courtreserve.com/Online/Events/Public/10483/1912347",
+            embedCode: "https://app.courtreserve.com/Online/Public/EmbedCode/10483/26428/1912347",
           },
         ],
       },
