@@ -12,7 +12,7 @@ export const seo = {
   schedule: {
     title: "Schedule",
     description:
-      "Spring 2026 session schedule at Dill Dinkers Rockville and North Bethesda. Drop in or register for the full 10-week season.",
+      "Winter and Spring 2026 session schedules at Dill Dinkers Rockville and North Bethesda. Drop in or register for the full season.",
   },
   about: {
     title: "About",

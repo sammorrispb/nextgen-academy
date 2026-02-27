@@ -17,10 +17,29 @@ export default function SchedulePage() {
       {seasons.map((season) => (
         <section key={season.label} className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
-            <SectionHeading
-              title={`${season.label} Schedule`}
-              subtitle={`${season.dates}${season.weeks ? ` \u00b7 ${season.weeks} weeks` : ""} \u00b7 Drop in anytime or commit to the full season.`}
-            />
+            <div className="flex flex-col items-center gap-3 mb-2">
+              <SectionHeading
+                title={`${season.label} Schedule`}
+                subtitle={`${season.dates}${season.weeks ? ` \u00b7 ${season.weeks} weeks` : ""} \u00b7 Drop in anytime or commit to the full season.`}
+              />
+              {season.status && (
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${
+                    season.status === "active"
+                      ? "bg-ngpa-green/15 text-ngpa-green"
+                      : "bg-ngpa-lime/15 text-ngpa-lime"
+                  }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full"
+                    style={{
+                      backgroundColor: season.status === "active" ? "var(--color-ngpa-green)" : "var(--color-ngpa-lime)",
+                    }}
+                  />
+                  {season.status === "active" ? "In Progress" : "Registration Open"}
+                </span>
+              )}
+            </div>
 
             {/* Color legend */}
             <div className="flex flex-wrap gap-4 mb-8">

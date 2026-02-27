@@ -21,7 +21,10 @@ export default function FAQSection() {
             return (
               <div key={i}>
                 <button
+                  id={`faq-question-${i}`}
                   onClick={() => setOpenIndex(isOpen ? null : i)}
+                  aria-expanded={isOpen}
+                  aria-controls={`faq-answer-${i}`}
                   className={`w-full flex items-center justify-between gap-4 bg-ngpa-panel rounded-lg p-4 border transition-colors text-left ${
                     isOpen ? "border-ngpa-lime" : "border-ngpa-slate"
                   }`}
@@ -29,11 +32,14 @@ export default function FAQSection() {
                   <span className="text-ngpa-white font-heading font-semibold">
                     {item.question}
                   </span>
-                  <span className="text-ngpa-lime text-xl shrink-0">
+                  <span className="text-ngpa-lime text-xl shrink-0" aria-hidden="true">
                     {isOpen ? "\u2212" : "+"}
                   </span>
                 </button>
                 <div
+                  id={`faq-answer-${i}`}
+                  role="region"
+                  aria-labelledby={`faq-question-${i}`}
                   className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
                     isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
                   }`}

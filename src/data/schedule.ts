@@ -22,6 +22,7 @@ export interface Season {
   label: string;
   dates: string;
   weeks: number;
+  status?: "active" | "upcoming";
   locations: ScheduleLocation[];
 }
 
@@ -29,6 +30,7 @@ const winterSeason: Season = {
   label: "Winter 2026",
   dates: "Ends March 22",
   weeks: 0,
+  status: "active",
   locations: [
     {
       location: "Rockville",
@@ -108,6 +110,7 @@ const springSeason: Season = {
   label: "Spring 2026",
   dates: "April 11 – June 15",
   weeks: 10,
+  status: "upcoming",
   locations: [
     {
       location: "Rockville",

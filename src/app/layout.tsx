@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Next Gen Pickleball Academy",
     description: "Structured pickleball coaching for ages 5\u201316 in Montgomery County, MD.",
     images: ["/images/og-image.png"],
@@ -67,8 +67,14 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${inter.variable} ${robotoMono.variable} antialiased bg-ngpa-navy text-ngpa-white`}
       >
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-ngpa-lime focus:text-ngpa-black focus:font-bold focus:rounded-lg"
+        >
+          Skip to content
+        </a>
         <Navbar />
-        <main>{children}</main>
+        <main id="main">{children}</main>
         <Footer />
       </body>
     </html>
