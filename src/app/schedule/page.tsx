@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
-import { schedule, seasonLabel, seasonDates, seasonWeeks } from "@/data/schedule";
+import { seasons } from "@/data/schedule";
 import { levels } from "@/data/levels";
 import SectionHeading from "@/components/SectionHeading";
 import ScheduleLocationCard from "@/components/ScheduleLocation";
@@ -14,66 +14,68 @@ export const metadata: Metadata = {
 export default function SchedulePage() {
   return (
     <>
-      <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <SectionHeading
-            title={`${seasonLabel} Schedule`}
-            subtitle={`${seasonDates} \u00b7 ${seasonWeeks} weeks \u00b7 Drop in anytime or commit to the full season.`}
-          />
+      {seasons.map((season) => (
+        <section key={season.label} className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
+            <SectionHeading
+              title={`${season.label} Schedule`}
+              subtitle={`${season.dates}${season.weeks ? ` \u00b7 ${season.weeks} weeks` : ""} \u00b7 Drop in anytime or commit to the full season.`}
+            />
 
-          {/* Color legend */}
-          <div className="flex flex-wrap gap-4 mb-8">
-            {levels
-              .filter((l) => l.dropIn)
-              .map((l) => (
-                <div key={l.key} className="flex items-center gap-2 text-sm">
-                  <span
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: l.color }}
-                  />
-                  <span className="font-medium text-ngpa-white">{l.label}</span>
-                </div>
-              ))}
-          </div>
-
-          {/* Pricing summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
-            {levels
-              .filter((l) => l.dropIn)
-              .map((l) => (
-                <div
-                  key={l.key}
-                  className="bg-ngpa-panel rounded-xl p-4 border"
-                  style={{
-                    borderColor: `${l.color}30`,
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
+            {/* Color legend */}
+            <div className="flex flex-wrap gap-4 mb-8">
+              {levels
+                .filter((l) => l.dropIn)
+                .map((l) => (
+                  <div key={l.key} className="flex items-center gap-2 text-sm">
                     <span
-                      className="w-2.5 h-2.5 rounded-full"
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: l.color }}
                     />
-                    <span className="font-heading font-bold text-sm text-ngpa-white">
-                      {l.label}
-                    </span>
+                    <span className="font-medium text-ngpa-white">{l.label}</span>
                   </div>
-                  <div className="text-sm font-mono" style={{ color: l.color }}>
-                    <span className="font-bold">{l.dropIn}</span>
-                    <span className="mx-2 text-ngpa-muted">|</span>
-                    <span className="font-bold">{l.season}</span>
-                  </div>
-                </div>
-              ))}
-          </div>
+                ))}
+            </div>
 
-          {/* Locations */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {schedule.map((loc) => (
-              <ScheduleLocationCard key={loc.location} location={loc} />
-            ))}
+            {/* Pricing summary */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+              {levels
+                .filter((l) => l.dropIn)
+                .map((l) => (
+                  <div
+                    key={l.key}
+                    className="bg-ngpa-panel rounded-xl p-4 border"
+                    style={{
+                      borderColor: `${l.color}30`,
+                    }}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full"
+                        style={{ backgroundColor: l.color }}
+                      />
+                      <span className="font-heading font-bold text-sm text-ngpa-white">
+                        {l.label}
+                      </span>
+                    </div>
+                    <div className="text-sm font-mono" style={{ color: l.color }}>
+                      <span className="font-bold">{l.dropIn}</span>
+                      <span className="mx-2 text-ngpa-muted">|</span>
+                      <span className="font-bold">{l.season}</span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Locations */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {season.locations.map((loc) => (
+                <ScheduleLocationCard key={loc.location} location={loc} />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ))}
 
       <CTABanner
         heading="Questions About Registration?"

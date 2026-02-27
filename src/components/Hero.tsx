@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { seasonLabel, seasonDates } from "@/data/schedule";
+import { seasons } from "@/data/schedule";
+
+const heroSeason = seasons[seasons.length - 1];
 
 export default function Hero() {
   return (
@@ -11,7 +13,7 @@ export default function Hero() {
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
         {/* Season badge */}
         <div className="inline-block px-4 py-1.5 rounded-full bg-ngpa-slate text-ngpa-lime text-xs font-bold tracking-wider uppercase mb-6">
-          {seasonLabel} &middot; {seasonDates}
+          {heroSeason.label} &middot; {heroSeason.dates}
         </div>
 
         <Image src="/images/logo.png" alt="Next Gen Pickleball Academy" width={400} height={115} className="w-64 sm:w-80 lg:w-96 h-auto mb-6" priority />
