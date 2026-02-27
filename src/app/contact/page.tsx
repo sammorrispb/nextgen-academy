@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { seo } from "@/data/seo";
 import { site } from "@/data/site";
 import { locations } from "@/data/locations";
 import SectionHeading from "@/components/SectionHeading";
 import LocationMap from "@/components/LocationMap";
-import FAQSection from "@/components/FAQSection";
 
 export const metadata: Metadata = {
   title: seo.contact.title,
@@ -69,7 +69,7 @@ export default function ContactPage() {
               </div>
               <div className="font-heading font-bold text-ngpa-white mb-1">Instagram</div>
               <div className="text-sm text-ngpa-muted group-hover:text-ngpa-lime transition-colors">
-                @nextgenpbacademy
+                @nextgenpickleballacademy
               </div>
             </a>
 
@@ -92,7 +92,41 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <FAQSection />
+      {/* Feedback + FAQ links */}
+      <section className="bg-ngpa-navy py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Share Feedback */}
+          <div className="bg-ngpa-panel rounded-xl p-6 border border-ngpa-slate text-center">
+            <h3 className="font-heading text-lg font-bold text-ngpa-white mb-2">
+              Share Feedback
+            </h3>
+            <p className="text-sm text-ngpa-muted mb-4">
+              Help us improve — your feedback is completely anonymous.
+            </p>
+            <a
+              href="https://REPLACE_WITH_NOTION_FORM_URL"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block px-6 py-2.5 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
+            >
+              Give Feedback
+            </a>
+          </div>
+
+          {/* FAQ link */}
+          <Link
+            href="/faq"
+            className="bg-ngpa-panel rounded-xl p-6 border border-ngpa-slate hover:border-ngpa-lime transition-colors flex flex-col items-center justify-center text-center"
+          >
+            <h3 className="font-heading text-lg font-bold text-ngpa-white mb-2">
+              Have Questions?
+            </h3>
+            <p className="text-sm text-ngpa-muted">
+              Check our FAQ for registration steps, cancellation policies, and more.
+            </p>
+          </Link>
+        </div>
+      </section>
 
       <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">

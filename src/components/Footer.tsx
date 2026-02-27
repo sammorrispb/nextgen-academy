@@ -26,6 +26,7 @@ export default function Footer() {
               <li><Link href="/schedule" className="hover:text-ngpa-lime transition-colors">Schedule & Register</Link></li>
               <li><Link href="/about" className="hover:text-ngpa-lime transition-colors">About Us</Link></li>
               <li><Link href="/contact" className="hover:text-ngpa-lime transition-colors">Contact</Link></li>
+              <li><Link href="/faq" className="hover:text-ngpa-lime transition-colors">FAQ</Link></li>
             </ul>
           </div>
 
@@ -47,7 +48,7 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="hover:text-ngpa-lime transition-colors"
                 >
-                  @nextgenpbacademy
+                  @nextgenpickleballacademy
                 </a>
               </li>
             </ul>

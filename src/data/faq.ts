@@ -17,12 +17,22 @@ export const faq: FaqItem[] = [
   {
     question: "How do I sign up?",
     answer:
-      "Check our Schedule page for available sessions and click the registration button for your child's level. Sessions are booked through CourtReserve. You can drop in or commit to the full season.",
+      "Step 1: Visit the session link on our Schedule page. Step 2: Create a free CourtReserve visitor account (just your name and email). Step 3: Select drop-in or the full season option and complete payment. Step 4: You\u2019ll receive a reservation reminder email the day before each session.",
   },
   {
-    question: "What's the difference between drop-in and season pricing?",
+    question: "What\u2019s the difference between drop-in and season pricing?",
     answer:
       "Drop-in lets you pay per session with no commitment. Season pricing covers all 10 weeks at a discounted rate. Both options are available for Red, Orange, and Green Ball levels.",
+  },
+  {
+    question: "What is the cancellation policy?",
+    answer:
+      "Cancellations must be made via email to nextgenacademypb@gmail.com at least 24 hours in advance in order to receive a make-up session.",
+  },
+  {
+    question: "How do make-up sessions work?",
+    answer:
+      "Parents must email us the desired make-up date at least 24 hours in advance. This allows us to accurately account for how many courts we need to reserve.",
   },
   {
     question: "What should my child bring?",
@@ -37,11 +47,11 @@ export const faq: FaqItem[] = [
   {
     question: "What is the EASE framework?",
     answer:
-      "EASE stands for Ethics, Attitude, Skills, and Excellence — our four core values that guide everything we do, from how we coach to how athletes compete.",
+      "EASE stands for Ethics, Attitude, Skills, and Excellence \u2014 our four core values that guide everything we do, from how we coach to how athletes compete.",
   },
   {
     question: "How do free evaluations work?",
     answer:
-      "Email us at nextgenacademypb@gmail.com to schedule a 30-minute evaluation. Our coaches will assess your child's current level and recommend the right program.",
+      "Email us at nextgenacademypb@gmail.com to schedule a 30-minute evaluation. Our coaches will assess your child\u2019s current level and recommend the right program.",
   },
 ];

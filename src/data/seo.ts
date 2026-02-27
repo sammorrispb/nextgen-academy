@@ -24,4 +24,9 @@ export const seo = {
     description:
       "Get in touch with Next Gen Pickleball Academy. Schedule a free evaluation, find our locations, or ask questions about our programs.",
   },
+  faq: {
+    title: "FAQ",
+    description:
+      "Frequently asked questions about Next Gen Pickleball Academy — registration, cancellation policy, make-up sessions, levels, and more.",
+  },
 } as const;

@@ -5,7 +5,7 @@ export const site = {
     "Structured pickleball coaching for ages 5–16. We build confident players through competitive play, real strategy, and a growth mindset that lasts beyond the court.",
   email: "nextgenacademypb@gmail.com",
   phone: "301-325-4731",
-  instagram: "https://www.instagram.com/nextgenpbacademy",
+  instagram: "https://www.instagram.com/nextgenpickleballacademy",
   website: "https://nextgenpbacademy.com",
   boilerplate25:
     "Family-first junior pickleball academy with a clear pathway, quality coaching, and EASE values—guiding players 5–16 from first rally to tournament-ready in a safe, inclusive community.",
