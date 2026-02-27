@@ -104,7 +104,7 @@ export default function ContactPage() {
               Help us improve — your feedback is completely anonymous.
             </p>
             <a
-              href="https://REPLACE_WITH_NOTION_FORM_URL"
+              href="https://forms.gle/8FNWs5y4Yjh6T9A47"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-6 py-2.5 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
