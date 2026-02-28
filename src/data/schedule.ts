@@ -164,3 +164,8 @@ export const yellowBallPricing = [
   { players: 4, price: "$45/player" },
   { players: 5, price: "$36/player" },
 ];
+
+export const privateLessonPricing = {
+  single: { label: "1 Hour", price: "$130" },
+  pack: { label: "4 Hours", price: "$400" },
+};

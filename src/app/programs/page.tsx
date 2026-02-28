@@ -3,6 +3,7 @@ import { seo } from "@/data/seo";
 import SectionHeading from "@/components/SectionHeading";
 import LevelGrid from "@/components/LevelGrid";
 import YellowBallCTA from "@/components/YellowBallCTA";
+import PrivateLessonCTA from "@/components/PrivateLessonCTA";
 import CTABanner from "@/components/CTABanner";
 
 export const metadata: Metadata = {
@@ -48,6 +49,13 @@ export default function ProgramsPage() {
       <section className="bg-ngpa-black py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           <YellowBallCTA />
+        </div>
+      </section>
+
+      {/* Private Lessons */}
+      <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <PrivateLessonCTA />
         </div>
       </section>
 
