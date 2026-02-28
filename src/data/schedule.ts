@@ -23,6 +23,10 @@ export interface Season {
   dates: string;
   weeks: number;
   status?: "active" | "upcoming";
+  /** When set, all levels use this uniform drop-in price for the season */
+  dropInPrice?: string;
+  /** When false, season/commitment pricing is hidden for this season (defaults true) */
+  showSeasonRate?: boolean;
   locations: ScheduleLocation[];
 }
 
@@ -31,6 +35,8 @@ const winterSeason: Season = {
   dates: "Ends March 22",
   weeks: 0,
   status: "active",
+  dropInPrice: "$50",
+  showSeasonRate: false,
   locations: [
     {
       location: "Rockville",

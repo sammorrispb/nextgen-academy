@@ -7,9 +7,17 @@ export default function PrivateLessonCTA() {
       <h3 className="font-heading text-2xl font-bold text-ngpa-white mb-3">
         Private Lessons
       </h3>
-      <p className="text-ngpa-muted leading-relaxed mb-6">
+      <p className="text-ngpa-muted leading-relaxed mb-4">
         Accelerate your child&rsquo;s development with focused, one-on-one or
-        small-group coaching. Minimum 4-week commitment required.
+        small-group coaching. No minimum commitment&nbsp;&mdash; book as many
+        sessions as you&rsquo;d like.
+      </p>
+      <p className="text-sm text-ngpa-lime font-medium mb-4">
+        Commit to 4 weeks and save $20/player on the total.
+      </p>
+      <p className="text-sm text-ngpa-muted leading-relaxed mb-6">
+        Optional DUPR rating available for private lesson students at no extra
+        cost&nbsp;&mdash; just a few free setup steps required.
       </p>
 
       {/* 1-on-1 pricing */}

@@ -20,7 +20,7 @@ export default function SchedulePage() {
             <div className="flex flex-col items-center gap-3 mb-2">
               <SectionHeading
                 title={`${season.label} Schedule`}
-                subtitle={`${season.dates}${season.weeks ? ` \u00b7 ${season.weeks} weeks` : ""} \u00b7 Drop in anytime or commit to the full season.`}
+                subtitle={`${season.dates}${season.weeks ? ` \u00b7 ${season.weeks} weeks` : ""}${season.showSeasonRate !== false ? " \u00b7 Drop in anytime or commit to the full season." : " \u00b7 Drop-in sessions only."}`}
               />
               {season.status && (
                 <span
@@ -57,34 +57,50 @@ export default function SchedulePage() {
             </div>
 
             {/* Pricing summary */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
-              {levels
-                .filter((l) => l.dropIn)
-                .map((l) => (
-                  <div
-                    key={l.key}
-                    className="bg-ngpa-panel rounded-xl p-4 border"
-                    style={{
-                      borderColor: `${l.color}30`,
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full"
-                        style={{ backgroundColor: l.color }}
-                      />
-                      <span className="font-heading font-bold text-sm text-ngpa-white">
-                        {l.label}
-                      </span>
+            {season.dropInPrice && season.showSeasonRate === false ? (
+              <div className="bg-ngpa-panel rounded-xl p-4 border border-ngpa-slate mb-10 text-center">
+                <span className="font-heading font-bold text-sm text-ngpa-white">
+                  All Levels
+                </span>
+                <span className="mx-3 text-ngpa-muted">&mdash;</span>
+                <span className="text-sm font-mono font-bold text-ngpa-lime">
+                  {season.dropInPrice}/drop-in
+                </span>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+                {levels
+                  .filter((l) => l.dropIn)
+                  .map((l) => (
+                    <div
+                      key={l.key}
+                      className="bg-ngpa-panel rounded-xl p-4 border"
+                      style={{
+                        borderColor: `${l.color}30`,
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full"
+                          style={{ backgroundColor: l.color }}
+                        />
+                        <span className="font-heading font-bold text-sm text-ngpa-white">
+                          {l.label}
+                        </span>
+                      </div>
+                      <div className="text-sm font-mono" style={{ color: l.color }}>
+                        <span className="font-bold">{season.dropInPrice ? `${season.dropInPrice}/drop-in` : l.dropIn}</span>
+                        {season.showSeasonRate !== false && (
+                          <>
+                            <span className="mx-2 text-ngpa-muted">|</span>
+                            <span className="font-bold">{l.season}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-sm font-mono" style={{ color: l.color }}>
-                      <span className="font-bold">{l.dropIn}</span>
-                      <span className="mx-2 text-ngpa-muted">|</span>
-                      <span className="font-bold">{l.season}</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )}
 
             {/* Locations */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
