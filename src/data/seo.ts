@@ -29,4 +29,9 @@ export const seo = {
     description:
       "Frequently asked questions about Next Gen Pickleball Academy — registration, cancellation policy, make-up sessions, levels, and more.",
   },
+  privateLessons: {
+    title: "Private Lessons",
+    description:
+      "1-on-1 private pickleball coaching for juniors ages 5–16. Personalized training for beginners, developing players, and tournament-bound competitors.",
+  },
 } as const;

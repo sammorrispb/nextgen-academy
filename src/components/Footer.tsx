@@ -23,6 +23,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/programs" className="hover:text-ngpa-lime transition-colors">Programs</Link></li>
+              <li><Link href="/private-lessons" className="hover:text-ngpa-lime transition-colors">Private Lessons</Link></li>
               <li><Link href="/schedule" className="hover:text-ngpa-lime transition-colors">Schedule & Register</Link></li>
               <li><Link href="/about" className="hover:text-ngpa-lime transition-colors">About Us</Link></li>
               <li><Link href="/contact" className="hover:text-ngpa-lime transition-colors">Contact</Link></li>
