@@ -14,7 +14,7 @@ export default function YellowBallCTA() {
       </p>
 
       {/* Pricing table */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
         {yellowBallPricing.map((tier) => (
           <div
             key={tier.players}
@@ -29,6 +29,9 @@ export default function YellowBallCTA() {
           </div>
         ))}
       </div>
+      <p className="text-xs text-ngpa-muted mb-6">
+        Minimum 4-week commitment required.
+      </p>
 
       <a
         href={`mailto:${site.email}?subject=Yellow%20Ball%20Inquiry`}
