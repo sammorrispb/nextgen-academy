@@ -22,7 +22,7 @@ export const faq: FaqItem[] = [
   {
     question: "What\u2019s the difference between drop-in and season pricing?",
     answer:
-      "Drop-in lets you pay per session with no commitment. Season pricing covers all 10 weeks at a discounted rate. Both options are available for Red, Orange, and Green Ball levels.",
+      "Drop-in lets you pay per session with no commitment. When available, season pricing covers the full session block at a discounted rate. Pricing varies by season\u2014check the Schedule page for current rates.",
   },
   {
     question: "What is the cancellation policy?",
