@@ -9,6 +9,7 @@ export interface ScheduleSlot {
   day: string;
   time: string;
   links: ScheduleLink[];
+  note?: string;
 }
 
 export interface ScheduleLocation {
@@ -156,6 +157,7 @@ const springSeason: Season = {
             { level: "orange", url: "https://app.courtreserve.com/Online/Events/Public/10483/1912338" },
             { level: "green", url: "https://app.courtreserve.com/Online/Events/Public/10483/1912347" },
           ],
+          note: "May 14 only: Class moves to 4:00–5:00 PM due to the Maryland Senior Olympics pre-tournament (9 AM–4 PM).",
         },
       ],
     },

@@ -30,6 +30,11 @@ export default function ScheduleLocationCard({ location }: ScheduleLocationProps
                 />
               ))}
             </div>
+            {slot.note && (
+              <p className="mt-2 text-xs text-ngpa-yellow italic">
+                {slot.note}
+              </p>
+            )}
           </div>
         ))}
       </div>
