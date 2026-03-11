@@ -57,6 +57,15 @@ export default function Footer() {
 
         <div className="mt-10 pt-6 border-t border-ngpa-slate text-center text-xs text-ngpa-muted">
           &copy; {new Date().getFullYear()} Next Gen Pickleball Academy. All rights reserved.
+          <span className="mx-1.5">&middot;</span>
+          <a
+            href="https://sammorrispb.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-ngpa-lime transition-colors"
+          >
+            Built by Sam Morris
+          </a>
         </div>
       </div>
     </footer>

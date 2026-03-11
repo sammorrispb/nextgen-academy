@@ -17,7 +17,7 @@ export const faq: FaqItem[] = [
   {
     question: "How do I sign up?",
     answer:
-      "Step 1: Visit the session link on our Schedule page. Step 2: Create a free CourtReserve visitor account (just your name and email). Step 3: Select drop-in or the full season option and complete payment. Step 4: You\u2019ll receive a reservation reminder email the day before each session.",
+      "Step 1: Visit the session link on our Schedule page. Step 2: Download the CourtReserve app or go to their website, search for Dill Dinkers, and create your family profile. Step 3: Select drop-in or the full season option and complete payment. Step 4: You\u2019ll receive a reservation reminder the day before. Tip: Click on any class date in CourtReserve to see who\u2019s registered \u2014 coordinate with other families so the kids can play together!",
   },
   {
     question: "What\u2019s the difference between drop-in and season pricing?",
@@ -27,7 +27,7 @@ export const faq: FaqItem[] = [
   {
     question: "What is the cancellation policy?",
     answer:
-      "Cancellations must be made via email to nextgenacademypb@gmail.com at least 24 hours in advance in order to receive a make-up session.",
+      "Cancellations must be made via email to nextgenacademypb@gmail.com at least 24 hours in advance in order to receive a make-up session. If you do not sign up or email us in advance, you will not receive credit for a missed class.",
   },
   {
     question: "How do make-up sessions work?",

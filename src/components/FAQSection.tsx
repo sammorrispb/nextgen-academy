@@ -4,13 +4,14 @@ import { useState } from "react";
 import { faq } from "@/data/faq";
 import SectionHeading from "@/components/SectionHeading";
 
-export default function FAQSection() {
+export default function FAQSection({ headingAs }: { headingAs?: "h1" | "h2" | "h3" }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
     <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         <SectionHeading
+          as={headingAs}
           title="Frequently Asked Questions"
           subtitle="Everything families need to know"
         />

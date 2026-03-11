@@ -40,6 +40,19 @@ export default function LevelCard({ level, variant = "compact" }: LevelCardProps
       <p className="font-medium text-ngpa-white mb-1">{level.focus}</p>
       <p className="text-sm text-ngpa-muted leading-relaxed mb-4">{level.detail}</p>
 
+      {/* Action link (compact only) */}
+      {variant === "compact" && (
+        <div className="pt-3 border-t border-ngpa-slate">
+          <Link
+            href={level.dropIn ? "/schedule" : "/contact"}
+            className="text-sm font-bold transition-colors"
+            style={{ color: level.color }}
+          >
+            {level.dropIn ? "View Schedule →" : "Contact Us →"}
+          </Link>
+        </div>
+      )}
+
       {/* Pricing + CTA (expanded only) */}
       {variant === "expanded" && (
         <div className="flex items-center justify-between pt-3 border-t border-ngpa-slate">

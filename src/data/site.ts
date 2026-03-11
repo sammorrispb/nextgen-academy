@@ -7,6 +7,7 @@ export const site = {
   phone: "301-325-4731",
   instagram: "https://www.instagram.com/nextgenpickleballacademy",
   website: "https://nextgenpbacademy.com",
+  whatsapp: "https://chat.whatsapp.com/D298cbHYUZo53zdBkbafq8?mode=gi_t",
   boilerplate25:
     "Family-first junior pickleball academy with a clear pathway, quality coaching, and EASE values—guiding players 5–16 from first rally to tournament-ready in a safe, inclusive community.",
   boilerplate50:
