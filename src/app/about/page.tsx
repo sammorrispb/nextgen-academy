@@ -9,6 +9,7 @@ import CTABanner from "@/components/CTABanner";
 export const metadata: Metadata = {
   title: seo.about.title,
   description: seo.about.description,
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {
@@ -18,6 +19,7 @@ export default function AboutPage() {
       <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <SectionHeading
+            as="h1"
             title="Our Story"
             subtitle="Two dads building the program they wished existed for their own kids."
           />
@@ -113,9 +115,9 @@ export default function AboutPage() {
 
       <CTABanner
         heading="Join the Next Gen Family"
-        description="Schedule a free evaluation and see what makes our program different."
-        buttonText="Contact Us"
-        buttonHref="/contact"
+        description="Find a session that fits your family and register today."
+        buttonText="View Schedule & Register"
+        buttonHref="/schedule"
       />
     </>
   );

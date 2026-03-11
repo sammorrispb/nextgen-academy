@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
+import JsonLd from "@/components/JsonLd";
 import SectionHeading from "@/components/SectionHeading";
 import LevelGrid from "@/components/LevelGrid";
 import YellowBallCTA from "@/components/YellowBallCTA";
@@ -9,15 +10,67 @@ import CTABanner from "@/components/CTABanner";
 export const metadata: Metadata = {
   title: seo.programs.title,
   description: seo.programs.description,
+  alternates: { canonical: "/programs" },
+};
+
+const provider = {
+  "@type": "SportsActivityLocation",
+  name: "Next Gen Pickleball Academy",
+  url: "https://nextgenpbacademy.com",
+};
+
+const courseListJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  itemListElement: [
+    {
+      "@type": "Course",
+      name: "Red Ball — Youth Pickleball (Ages 5+)",
+      description: "First paddle, first rally, first love of the game. Movement, hand-eye coordination, and basic rules of play.",
+      provider,
+      offers: [
+        { "@type": "Offer", name: "Drop-in", price: "35", priceCurrency: "USD" },
+        { "@type": "Offer", name: "Season", price: "300", priceCurrency: "USD" },
+      ],
+    },
+    {
+      "@type": "Course",
+      name: "Orange Ball — Youth Pickleball (Ages 7+)",
+      description: "From rallying to competing — rules mastery, sustained rallying, and full-court movement.",
+      provider,
+      offers: [
+        { "@type": "Offer", name: "Drop-in", price: "40", priceCurrency: "USD" },
+        { "@type": "Offer", name: "Season", price: "350", priceCurrency: "USD" },
+      ],
+    },
+    {
+      "@type": "Course",
+      name: "Green Ball — Youth Pickleball (Ages 9+)",
+      description: "Strategy meets competition. Shot selection, court positioning, and doubles teamwork.",
+      provider,
+      offers: [
+        { "@type": "Offer", name: "Drop-in", price: "50", priceCurrency: "USD" },
+        { "@type": "Offer", name: "Season", price: "450", priceCurrency: "USD" },
+      ],
+    },
+    {
+      "@type": "Course",
+      name: "Yellow Ball — Tournament Track (Ages 12+)",
+      description: "Coach-curated competitive groups of 3–5 athletes with custom scheduling and focused tournament prep.",
+      provider,
+    },
+  ],
 };
 
 export default function ProgramsPage() {
   return (
     <>
+      <JsonLd data={courseListJsonLd} />
       {/* Header */}
       <section className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <SectionHeading
+            as="h1"
             title="Our Programs"
             subtitle="Four color-coded levels guide your child from first paddle to tournament play. Every level builds on the last."
           />

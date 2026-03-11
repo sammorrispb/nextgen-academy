@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
 import { faq } from "@/data/faq";
+import JsonLd from "@/components/JsonLd";
 import FAQSection from "@/components/FAQSection";
+import CTABanner from "@/components/CTABanner";
 
 export const metadata: Metadata = {
   title: seo.faq.title,
   description: seo.faq.description,
+  alternates: { canonical: "/faq" },
 };
 
-// Generated from hardcoded src/data/faq.ts — no user input, safe to render as raw JSON
 const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",
@@ -25,11 +27,14 @@ const faqJsonLd = {
 export default function FaqPage() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      <JsonLd data={faqJsonLd} />
+      <FAQSection headingAs="h1" />
+      <CTABanner
+        heading="Ready to Register?"
+        description="Check the schedule, pick a session, and sign up — it takes two minutes."
+        buttonText="View Schedule & Register"
+        buttonHref="/schedule"
       />
-      <FAQSection />
     </>
   );
 }

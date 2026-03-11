@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat, Inter, Roboto_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import JsonLd from "@/components/JsonLd";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -25,12 +26,13 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://nextgenpbacademy.com"),
   title: {
-    default: "Next Gen Pickleball Academy",
+    default: "Next Gen PB Academy | Youth Pickleball in Montgomery County, MD",
     template: "%s | Next Gen Pickleball Academy",
   },
   description:
-    "Structured pickleball coaching for ages 5\u201316. We build confident players through competitive play, real strategy, and a growth mindset.",
+    "Youth pickleball for ages 5\u201316 at Dill Dinkers Rockville & North Bethesda. Structured coaching, small groups, beginner to tournament in Montgomery County.",
   icons: {
     icon: "/images/og-image.png",
     apple: "/images/og-image.png",
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
     siteName: "Next Gen Pickleball Academy",
     title: "Next Gen Pickleball Academy",
     description:
-      "Structured pickleball coaching for ages 5\u201316 in Montgomery County, MD. Better than yesterday\u2014together.",
+      "Youth pickleball academy for ages 5\u201316 at Dill Dinkers in Rockville & North Bethesda, MD. Structured coaching with a clear pathway from beginner to tournament play.",
     images: [{
       url: "/images/og-image.png",
       width: 512,
@@ -52,7 +54,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Next Gen Pickleball Academy",
-    description: "Structured pickleball coaching for ages 5\u201316 in Montgomery County, MD.",
+    description: "Youth pickleball lessons for ages 5\u201316 at Dill Dinkers in Montgomery County, MD. Small groups, real strategy, tournament pathway.",
     images: ["/images/og-image.png"],
   },
 };
@@ -67,6 +69,50 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${inter.variable} ${robotoMono.variable} antialiased bg-ngpa-navy text-ngpa-white`}
       >
+        <JsonLd data={{
+          "@context": "https://schema.org",
+          "@type": "SportsActivityLocation",
+          name: "Next Gen Pickleball Academy",
+          description: "Structured youth pickleball coaching for ages 5\u201316 in Montgomery County, MD.",
+          url: "https://nextgenpbacademy.com",
+          telephone: "301-325-4731",
+          email: "nextgenacademypb@gmail.com",
+          sameAs: ["https://www.instagram.com/nextgenpickleballacademy"],
+          areaServed: {
+            "@type": "AdministrativeArea",
+            name: "Montgomery County, MD",
+          },
+          founder: [
+            { "@type": "Person", name: "Sam Morris" },
+            { "@type": "Person", name: "Amine Belkadi" },
+          ],
+          location: [
+            {
+              "@type": "Place",
+              name: "Dill Dinkers Rockville",
+              address: {
+                "@type": "PostalAddress",
+                streetAddress: "40 Southlawn Court, Suite C",
+                addressLocality: "Rockville",
+                addressRegion: "MD",
+                postalCode: "20850",
+                addressCountry: "US",
+              },
+            },
+            {
+              "@type": "Place",
+              name: "Dill Dinkers North Bethesda",
+              address: {
+                "@type": "PostalAddress",
+                streetAddress: "4942 Boiling Brook Parkway",
+                addressLocality: "North Bethesda",
+                addressRegion: "MD",
+                postalCode: "20852",
+                addressCountry: "US",
+              },
+            },
+          ],
+        }} />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-ngpa-lime focus:text-ngpa-black focus:font-bold focus:rounded-lg"

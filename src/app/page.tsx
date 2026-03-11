@@ -4,6 +4,10 @@ import LevelGrid from "@/components/LevelGrid";
 import SectionHeading from "@/components/SectionHeading";
 import CTABanner from "@/components/CTABanner";
 
+export const metadata = {
+  alternates: { canonical: "/" },
+};
+
 export default function Home() {
   return (
     <>

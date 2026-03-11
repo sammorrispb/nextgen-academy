@@ -5,15 +5,18 @@ import { levels } from "@/data/levels";
 import SectionHeading from "@/components/SectionHeading";
 import ScheduleLocationCard from "@/components/ScheduleLocation";
 import CTABanner from "@/components/CTABanner";
+import RegistrationNotice from "@/components/RegistrationNotice";
 
 export const metadata: Metadata = {
   title: seo.schedule.title,
   description: seo.schedule.description,
+  alternates: { canonical: "/schedule" },
 };
 
 export default function SchedulePage() {
   return (
     <>
+      <h1 className="sr-only">Class Schedule &amp; Registration</h1>
       {seasons.map((season) => (
         <section key={season.label} className="bg-ngpa-navy py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto">
@@ -99,6 +102,32 @@ export default function SchedulePage() {
                       </div>
                     </div>
                   ))}
+              </div>
+            )}
+
+            {/* Registration instructions */}
+            <RegistrationNotice />
+
+            {/* Spring Preseason Meetup — renders only for Spring season */}
+            {season.label === "Spring 2026" && (
+              <div className="bg-ngpa-panel border border-ngpa-slate rounded-2xl p-6 sm:p-8 border-l-4 border-l-ngpa-lime mb-10">
+                <div className="flex items-start gap-3 mb-3">
+                  <span className="text-2xl shrink-0">&#127992;</span>
+                  <div>
+                    <h3 className="font-heading text-lg font-bold text-ngpa-white">
+                      Spring Preseason Meetup
+                    </h3>
+                    <p className="text-sm text-ngpa-lime font-medium mt-1">
+                      Saturday, April 11 &middot; 11:00 AM &ndash; 12:30 PM
+                    </p>
+                    <p className="text-sm text-ngpa-muted mt-0.5">
+                      Dill Dinkers North Bethesda
+                    </p>
+                  </div>
+                </div>
+                <p className="text-sm text-ngpa-muted leading-relaxed">
+                  Kick off the season &mdash; hit the courts with your kids and meet other Next Gen families.
+                </p>
               </div>
             )}
 
