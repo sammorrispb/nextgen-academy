@@ -53,10 +53,8 @@ function formatDateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function buildRegistrationUrl(event: CREvent, orgId: number): string {
-  if (event.PublicEventUrl) return event.PublicEventUrl;
-  const eventId = event.Id;
-  return `https://app.courtreserve.com/Online/Events/Public/${orgId}/${eventId}`;
+function buildRegistrationUrl(loc: LocationConfig): string {
+  return loc.widgetUrl;
 }
 
 export function transformEvents(events: CREvent[], loc: LocationConfig): LiveLocation {
@@ -82,7 +80,7 @@ export function transformEvents(events: CREvent[], loc: LocationConfig): LiveLoc
       spotsTotal,
       spotsFilled,
       spotsRemaining: Math.max(0, spotsTotal - spotsFilled),
-      registrationUrl: buildRegistrationUrl(event, loc.orgId),
+      registrationUrl: buildRegistrationUrl(loc),
     };
 
     const existing = slotMap.get(slotKey);

@@ -62,4 +62,5 @@ export interface LocationConfig {
   venue: string;
   address: string;
   orgId: number;
+  widgetUrl: string;
 }

@@ -11,6 +11,7 @@ export const LOCATIONS: LocationConfig[] = [
     venue: "Dill Dinkers",
     address: "40 Southlawn Court, Suite C, Rockville, MD 20850",
     orgId: 10869,
+    widgetUrl: "https://widgets.courtreserve.com/Online/Public/EmbedCode/10869/100672",
   },
   {
     key: "northbethesda",
@@ -18,6 +19,7 @@ export const LOCATIONS: LocationConfig[] = [
     venue: "Dill Dinkers",
     address: "4942 Boiling Brook Parkway, North Bethesda, MD 20852",
     orgId: 10483,
+    widgetUrl: "https://widgets.courtreserve.com/Online/Public/EmbedCode/10483/100673",
   },
 ];
 

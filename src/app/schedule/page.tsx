@@ -143,22 +143,19 @@ export default async function SchedulePage() {
                 View the full schedule and register directly on CourtReserve.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <a
-                  href="https://app.courtreserve.com/Online/Events/Public/10869"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-ngpa-lime text-ngpa-navy text-sm font-bold hover:scale-105 transition-transform min-h-[44px]"
-                >
-                  Rockville Schedule
-                </a>
-                <a
-                  href="https://app.courtreserve.com/Online/Events/Public/10483"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-ngpa-cyan text-ngpa-navy text-sm font-bold hover:scale-105 transition-transform min-h-[44px]"
-                >
-                  North Bethesda Schedule
-                </a>
+                {LOCATIONS.map((loc) => (
+                  <a
+                    key={loc.key}
+                    href={loc.widgetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center justify-center px-5 py-2.5 rounded-full text-ngpa-navy text-sm font-bold hover:scale-105 transition-transform min-h-[44px] ${
+                      loc.key === "rockville" ? "bg-ngpa-lime" : "bg-ngpa-cyan"
+                    }`}
+                  >
+                    {loc.location} Schedule
+                  </a>
+                ))}
               </div>
             </div>
           )}
