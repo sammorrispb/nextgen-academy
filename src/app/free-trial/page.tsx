@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { seo } from "@/data/seo";
 import { locations } from "@/data/locations";
 import { fetchFreeTrialSessions } from "@/lib/courtreserve";
-import { testimonials } from "@/data/testimonials";
+
 import { site } from "@/data/site";
 import SectionHeading from "@/components/SectionHeading";
 import CTABanner from "@/components/CTABanner";
@@ -246,33 +246,6 @@ export default async function FreeTrialPage() {
               continue.
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* ─── Social Proof ─────────────────────────── */}
-      <section className="bg-ngpa-panel py-16 sm:py-20 px-4">
-        <div className="max-w-5xl mx-auto">
-          <SectionHeading title="What Parents Say" centered />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            {testimonials.map((t, i) => (
-              <blockquote
-                key={i}
-                className="bg-ngpa-slate/50 rounded-xl p-6 border border-ngpa-slate"
-              >
-                <p className="text-ngpa-white text-sm leading-relaxed mb-4 italic">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-                <footer className="text-ngpa-muted text-xs font-semibold">
-                  {t.attribution}
-                </footer>
-              </blockquote>
-            ))}
-          </div>
-          <p className="text-center text-ngpa-muted text-sm max-w-xl mx-auto">
-            <span className="text-ngpa-lime font-semibold">Did you know?</span>{" "}
-            MCPS made pickleball a varsity sport at all 25 high schools — give
-            your child a head start.
-          </p>
         </div>
       </section>
 
