@@ -9,9 +9,9 @@ import CTABanner from "@/components/CTABanner";
 import JsonLd from "@/components/JsonLd";
 import FreeTrialForm from "@/components/FreeTrialForm";
 
-// Force dynamic rendering so CR sessions are always fresh
-// (ISR would cache empty results from build-time when env vars aren't available)
-export const dynamic = "force-dynamic";
+// ISR — revalidate every 5 min (same as schedule page)
+// Sessions are fetched from CR at build time and refreshed in the background
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: seo.freeTrial.title,
