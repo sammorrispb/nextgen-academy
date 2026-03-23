@@ -36,6 +36,7 @@ const emptyForm: FreeTrialFormData = {
   childAge: "",
   location: "",
   sessionId: "",
+  sessionLabel: "",
   howHeard: "",
   notes: "",
 };
@@ -58,7 +59,15 @@ export default function FreeTrialForm({
     setForm((prev) => {
       const next = { ...prev, [field]: value };
       // Reset session when location changes
-      if (field === "location") next.sessionId = "";
+      if (field === "location") {
+        next.sessionId = "";
+        next.sessionLabel = "";
+      }
+      // Store the human-readable label alongside the session ID
+      if (field === "sessionId") {
+        const match = sessions.find((s) => String(s.eventId) === value);
+        next.sessionLabel = match?.label ?? "";
+      }
       return next;
     });
     // Clear field error on change
