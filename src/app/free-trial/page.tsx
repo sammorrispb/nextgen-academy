@@ -9,9 +9,7 @@ import CTABanner from "@/components/CTABanner";
 import JsonLd from "@/components/JsonLd";
 import FreeTrialForm from "@/components/FreeTrialForm";
 
-// ISR — revalidate every 5 min (same as schedule page)
-// Sessions are fetched from CR at build time and refreshed in the background
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: seo.freeTrial.title,

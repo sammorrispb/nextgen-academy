@@ -127,7 +127,10 @@ function fmtTime(iso: string): string {
 
 /** Fetch all upcoming Red Ball + Orange Ball sessions from both locations. */
 export async function fetchFreeTrialSessions(): Promise<FreeTrialSession[]> {
-  if (!hasCredentials()) return [];
+  if (!hasCredentials()) {
+    console.warn("[free-trial] Missing CR credentials, returning empty sessions");
+    return [];
+  }
 
   const today = new Date();
   const end = new Date(today);
@@ -160,8 +163,18 @@ export async function fetchFreeTrialSessions(): Promise<FreeTrialSession[]> {
     }),
   );
 
-  return results
+  // Log any failures for debugging
+  for (const r of results) {
+    if (r.status === "rejected") {
+      console.error("[free-trial] CR fetch failed:", r.reason);
+    }
+  }
+
+  const sessions = results
     .filter((r): r is PromiseFulfilledResult<FreeTrialSession[]> => r.status === "fulfilled")
     .flatMap((r) => r.value)
     .sort((a, b) => a.date.localeCompare(b.date) || a.location.localeCompare(b.location));
+
+  console.log(`[free-trial] Fetched ${sessions.length} sessions from CR`);
+  return sessions;
 }
