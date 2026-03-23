@@ -1,5 +1,16 @@
 import type { CREvent, LocationConfig } from "@/types/schedule";
 
+/** Simplified session for the free trial RSVP form */
+export interface FreeTrialSession {
+  eventId: number;
+  eventName: string;
+  location: "Rockville" | "North Bethesda";
+  orgId: number;
+  date: string;
+  label: string;
+  level: "Red Ball" | "Orange Ball";
+}
+
 const CR_BASE = "https://api.courtreserve.com";
 
 const NEXT_GEN_CATEGORY = /(Next Gen|Kids Program)/i;
@@ -90,4 +101,67 @@ export async function fetchNextGenEvents(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// ─── Free Trial Sessions ─────────────────────────
+const RED_ORANGE_RE = /\b(red|orange)\b/i;
+
+const FULL_DAY_NAMES: Record<number, string> = {
+  0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday",
+  4: "Thursday", 5: "Friday", 6: "Saturday",
+};
+const FULL_MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  const mins = m === 0 ? "" : `:${String(m).padStart(2, "0")}`;
+  return `${h}${mins} ${ap}`;
+}
+
+/** Fetch all upcoming Red Ball + Orange Ball sessions from both locations. */
+export async function fetchFreeTrialSessions(): Promise<FreeTrialSession[]> {
+  if (!hasCredentials()) return [];
+
+  const today = new Date();
+  const end = new Date(today);
+  end.setDate(end.getDate() + 60);
+
+  const startStr = today.toISOString().slice(0, 10);
+  const endStr = end.toISOString().slice(0, 10);
+
+  const results = await Promise.allSettled(
+    LOCATIONS.map(async (loc) => {
+      const events = await fetchNextGenEvents(loc, startStr, endStr);
+      return events
+        .filter((e) => RED_ORANGE_RE.test(e.EventName))
+        .map((e): FreeTrialSession => {
+          const start = new Date(e.StartDateTime);
+          const colorMatch = e.EventName.match(RED_ORANGE_RE);
+          const color = colorMatch ? colorMatch[1].charAt(0).toUpperCase() + colorMatch[1].slice(1).toLowerCase() : "Red";
+          const dayName = FULL_DAY_NAMES[start.getDay()] ?? "";
+          const monthName = FULL_MONTH_NAMES[start.getMonth()] ?? "";
+          return {
+            eventId: e.Id,
+            eventName: e.EventName,
+            location: loc.location as "Rockville" | "North Bethesda",
+            orgId: loc.orgId,
+            date: start.toISOString().slice(0, 10),
+            label: `${dayName}, ${monthName} ${start.getDate()} — ${fmtTime(e.StartDateTime)}–${fmtTime(e.EndDateTime)} (${loc.location})`,
+            level: `${color} Ball` as "Red Ball" | "Orange Ball",
+          };
+        });
+    }),
+  );
+
+  return results
+    .filter((r): r is PromiseFulfilledResult<FreeTrialSession[]> => r.status === "fulfilled")
+    .flatMap((r) => r.value)
+    .sort((a, b) => a.date.localeCompare(b.date) || a.location.localeCompare(b.location));
 }

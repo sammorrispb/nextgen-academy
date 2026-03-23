@@ -29,4 +29,9 @@ export const seo = {
     description:
       "Frequently asked questions about Next Gen Pickleball Academy in Montgomery County, MD — registration, pricing, cancellation policy, levels, and more.",
   },
+  freeTrial: {
+    title: "Free Trial Session",
+    description:
+      "Try a free youth pickleball session at Dill Dinkers in Rockville or North Bethesda. Ages 10 and under, no experience needed. Reserve your child's spot today.",
+  },
 } as const;
