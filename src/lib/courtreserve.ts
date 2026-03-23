@@ -1,6 +1,6 @@
 import type { CREvent, LocationConfig } from "@/types/schedule";
 
-/** Simplified session for the free trial RSVP form */
+/** Simplified session for the free trial RSVP form (one per time slot) */
 export interface FreeTrialSession {
   eventId: number;
   eventName: string;
@@ -8,7 +8,6 @@ export interface FreeTrialSession {
   orgId: number;
   date: string;
   label: string;
-  level: "Red Ball" | "Orange Ball";
 }
 
 const CR_BASE = "https://api.courtreserve.com";
@@ -146,8 +145,6 @@ export async function fetchFreeTrialSessions(): Promise<FreeTrialSession[]> {
         .filter((e) => RED_ORANGE_RE.test(e.EventName))
         .map((e): FreeTrialSession => {
           const start = new Date(e.StartDateTime);
-          const colorMatch = e.EventName.match(RED_ORANGE_RE);
-          const color = colorMatch ? colorMatch[1].charAt(0).toUpperCase() + colorMatch[1].slice(1).toLowerCase() : "Red";
           const dayName = FULL_DAY_NAMES[start.getDay()] ?? "";
           const monthName = FULL_MONTH_NAMES[start.getMonth()] ?? "";
           return {
@@ -157,7 +154,6 @@ export async function fetchFreeTrialSessions(): Promise<FreeTrialSession[]> {
             orgId: loc.orgId,
             date: start.toISOString().slice(0, 10),
             label: `${dayName}, ${monthName} ${start.getDate()} — ${fmtTime(e.StartDateTime)}–${fmtTime(e.EndDateTime)} (${loc.location})`,
-            level: `${color} Ball` as "Red Ball" | "Orange Ball",
           };
         });
     }),
@@ -175,11 +171,21 @@ export async function fetchFreeTrialSessions(): Promise<FreeTrialSession[]> {
     }
   }
 
-  const sessions = results
+  const allSessions = results
     .filter((r): r is PromiseFulfilledResult<FreeTrialSession[]> => r.status === "fulfilled")
     .flatMap((r) => r.value)
     .sort((a, b) => a.date.localeCompare(b.date) || a.location.localeCompare(b.location));
 
-  console.log(`[free-trial] Fetched ${sessions.length} sessions from CR`);
+  // Deduplicate by time slot — Red and Orange run at the same time,
+  // we only need one dropdown entry per slot
+  const seen = new Set<string>();
+  const sessions = allSessions.filter((s) => {
+    const key = `${s.location}|${s.label}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  console.log(`[free-trial] Fetched ${sessions.length} sessions (deduped from ${allSessions.length})`);
   return sessions;
 }
