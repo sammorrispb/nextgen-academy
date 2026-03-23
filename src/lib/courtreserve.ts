@@ -164,9 +164,14 @@ export async function fetchFreeTrialSessions(): Promise<FreeTrialSession[]> {
   );
 
   // Log any failures for debugging
-  for (const r of results) {
+  for (const [i, r] of results.entries()) {
     if (r.status === "rejected") {
-      console.error("[free-trial] CR fetch failed:", r.reason);
+      const loc = LOCATIONS[i]?.location ?? `index-${i}`;
+      const reason = r.reason instanceof Error ? r.reason.message : String(r.reason);
+      console.error(`[free-trial] CR fetch failed for ${loc}: ${reason}`);
+    } else {
+      const loc = LOCATIONS[i]?.location ?? `index-${i}`;
+      console.log(`[free-trial] ${loc}: ${r.value.length} red/orange sessions`);
     }
   }
 
