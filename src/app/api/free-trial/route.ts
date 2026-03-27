@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
   // Look up session from live CR data
   const allSessions = await fetchFreeTrialSessions();
   const session = allSessions.find((s) => String(s.eventId) === body.sessionId);
-  const sessionLabel = session?.label ?? `Event #${body.sessionId}`;
+  const sessionLabel = session?.label ?? (body.sessionLabel || `Event #${body.sessionId}`);
 
   // Look up location address
   const location = locations.find((l) => l.name === body.location);

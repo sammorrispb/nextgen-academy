@@ -8,6 +8,7 @@ export interface FreeTrialFormData {
   childAge: string;
   location: string;
   sessionId: string;
+  sessionLabel: string;
   howHeard: string;
   notes: string;
 }
