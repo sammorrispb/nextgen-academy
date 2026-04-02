@@ -3,6 +3,13 @@
 ## What This Is
 Marketing website for Next Gen Pickleball Academy — a lead-gen tool for families with kids ages 5-16 in Montgomery County, MD. Drives parents toward free evaluations and CourtReserve session registration.
 
+## Ecosystem
+Part of Sam Morris's pickleball platform ecosystem. See also:
+- **The Hub** (`sammorrispb/The-Hub`) — Core community platform at play.linkanddink.com
+- **Open Brain** (`sammorrispb/open-brain`) — Semantic knowledge + MCP server (handles Next Gen attendance sync via `nextgen-sync` Edge Function)
+- **Sam Morris Website** (`sammorrispb/sam-morris-website`) — Personal coaching site
+- **CourtReserve Ops** (`sammorrispb/courtreserve-ops`) — DD operations plugin
+
 ## Stack
 - Next.js 16 (App Router, TypeScript)
 - Tailwind CSS v4
