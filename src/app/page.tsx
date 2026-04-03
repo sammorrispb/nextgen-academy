@@ -40,6 +40,31 @@ export default function Home() {
 
       <Hero />
 
+      {/* ─── Tournament Banner ───────────────────── */}
+      <div className="bg-ngpa-skill-yellow/10 border-y border-ngpa-skill-yellow/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-center sm:text-left">
+            <span className="text-2xl" aria-hidden="true">🏆</span>
+            <div>
+              <p className="font-heading font-bold text-ngpa-white text-sm sm:text-base">
+                Spring Tournament — 14 &amp; Under Juniors
+              </p>
+              <p className="text-xs sm:text-sm text-ngpa-muted">
+                Sun, May 3 &middot; 4:00 PM &middot; Dill Dinkers Rockville &middot; 3.0&ndash;3.5
+              </p>
+            </div>
+          </div>
+          <a
+            href="https://app.courtreserve.com/Online/Events/Public/10869/1913614"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-5 py-2 bg-ngpa-skill-yellow text-ngpa-black text-sm font-bold rounded-full hover:brightness-110 transition shrink-0"
+          >
+            Register Now
+          </a>
+        </div>
+      </div>
+
       {/* ─── Programs / Ball Pathway ─────────────── */}
       <section
         id="levels"
