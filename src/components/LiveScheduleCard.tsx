@@ -24,7 +24,7 @@ function SlotSection({ slot }: { slot: LiveSlot }) {
       {/* Day + register */}
       <div className="flex items-center justify-between mb-1">
         <h4 className="font-heading text-base font-bold text-ngpa-white">
-          {slot.dayOfWeek}s
+          {slot.dayOfWeek}
         </h4>
         <a
           href={nextSession.registrationUrl}
