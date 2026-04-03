@@ -66,7 +66,7 @@ export default async function SchedulePage() {
         <div className="max-w-6xl mx-auto">
           <SectionHeading
             title="Upcoming Sessions"
-            subtitle="Drop in anytime or commit to the full season. Tap a session to register on CourtReserve."
+            subtitle="Tap Register to sign up for a session."
           />
 
           {/* Registration instructions */}
