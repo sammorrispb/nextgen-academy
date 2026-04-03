@@ -30,17 +30,17 @@ export default function Hero() {
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
-          <Link
-            href="/schedule"
+          <a
+            href="#contact-form"
             className="inline-flex items-center justify-center px-8 py-3.5 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors text-base"
           >
-            See Schedule & Register
-          </Link>
+            Get Started
+          </a>
           <Link
-            href="/programs"
+            href="/schedule"
             className="inline-flex items-center justify-center px-8 py-3.5 border-2 border-ngpa-lime text-ngpa-lime font-bold rounded-full hover:bg-ngpa-lime hover:text-ngpa-black transition-colors text-base"
           >
-            Explore Programs
+            View Schedule
           </Link>
         </div>
       </div>

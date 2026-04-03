@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
-import { levels } from "@/data/levels";
 import { LOCATIONS, fetchNextGenEvents, hasCredentials } from "@/lib/courtreserve";
 import { transformEvents } from "@/lib/schedule-transform";
 import type { LiveScheduleData } from "@/types/schedule";
@@ -70,53 +69,6 @@ export default async function SchedulePage() {
             subtitle="Drop in anytime or commit to the full season. Tap a session to register on CourtReserve."
           />
 
-          {/* Color legend */}
-          <div className="flex flex-wrap gap-4 mb-8">
-            {levels
-              .filter((l) => l.dropIn)
-              .map((l) => (
-                <div key={l.key} className="flex items-center gap-2 text-sm">
-                  <span
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: l.color }}
-                  />
-                  <span className="font-medium text-ngpa-white">{l.label}</span>
-                </div>
-              ))}
-          </div>
-
-          {/* Pricing summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
-            {levels
-              .filter((l) => l.dropIn)
-              .map((l) => (
-                <div
-                  key={l.key}
-                  className="bg-ngpa-panel rounded-xl p-4 border"
-                  style={{ borderColor: `${l.color}30` }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: l.color }}
-                    />
-                    <span className="font-heading font-bold text-sm text-ngpa-white">
-                      {l.label}
-                    </span>
-                  </div>
-                  <div className="text-sm font-mono" style={{ color: l.color }}>
-                    <span className="font-bold">{l.dropIn}</span>
-                    {l.season && (
-                      <>
-                        <span className="mx-2 text-ngpa-muted">|</span>
-                        <span className="font-bold">{l.season}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-          </div>
-
           {/* Registration instructions */}
           <RegistrationNotice />
 
@@ -164,9 +116,9 @@ export default async function SchedulePage() {
 
       <CTABanner
         heading="Questions About Registration?"
-        description="Email us for help choosing the right session or to schedule a free evaluation for your child."
-        buttonText="Contact Us"
-        buttonHref="/contact"
+        description="Tell us about your child and we'll help you find the right group."
+        buttonText="Get Started"
+        buttonHref="/#contact-form"
         variant="dark"
       />
     </>

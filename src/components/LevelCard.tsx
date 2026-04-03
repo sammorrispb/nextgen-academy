@@ -1,12 +1,12 @@
-import Link from "next/link";
 import type { Level } from "@/data/levels";
 
 interface LevelCardProps {
   level: Level;
-  variant?: "compact" | "expanded";
 }
 
-export default function LevelCard({ level, variant = "compact" }: LevelCardProps) {
+export default function LevelCard({ level }: LevelCardProps) {
+  const isYellow = level.key === "yellow";
+
   return (
     <article
       className="bg-ngpa-panel rounded-xl p-6 border border-ngpa-slate shadow-sm"
@@ -32,7 +32,7 @@ export default function LevelCard({ level, variant = "compact" }: LevelCardProps
             color: '#000000',
           }}
         >
-          Ages {level.ages} &middot; {level.tag}
+          Ages {level.ages}
         </span>
       </div>
 
@@ -40,48 +40,31 @@ export default function LevelCard({ level, variant = "compact" }: LevelCardProps
       <p className="font-medium text-ngpa-white mb-1">{level.focus}</p>
       <p className="text-sm text-ngpa-muted leading-relaxed mb-4">{level.detail}</p>
 
-      {/* Action link (compact only) */}
-      {variant === "compact" && (
-        <div className="pt-3 border-t border-ngpa-slate">
-          <Link
-            href={level.dropIn ? "/schedule" : "/contact"}
+      {/* Action */}
+      <div className="pt-3 border-t border-ngpa-slate">
+        {isYellow ? (
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-ngpa-skill-yellow italic">
+              Invite Only
+            </span>
+            <a
+              href="mailto:nextgenacademypb@gmail.com?subject=Yellow%20Ball%20Inquiry"
+              className="text-sm font-bold transition-colors"
+              style={{ color: level.color }}
+            >
+              Inquire &rarr;
+            </a>
+          </div>
+        ) : (
+          <a
+            href="#contact-form"
             className="text-sm font-bold transition-colors"
             style={{ color: level.color }}
           >
-            {level.dropIn ? "View Schedule →" : "Contact Us →"}
-          </Link>
-        </div>
-      )}
-
-      {/* Pricing + CTA (expanded only) */}
-      {variant === "expanded" && (
-        <div className="flex items-center justify-between pt-3 border-t border-ngpa-slate">
-          {level.dropIn ? (
-            <div className="text-sm font-bold text-ngpa-lime font-mono">
-              <span itemProp="price" content={level.dropIn?.replace(/[^0-9]/g, "") ?? ""}>{level.dropIn}</span> &middot; {level.season}
-            </div>
-          ) : (
-            <div className="text-sm font-bold italic text-ngpa-lime font-mono">
-              Email for pricing
-            </div>
-          )}
-          {level.dropIn ? (
-            <Link
-              href="/schedule"
-              className="text-sm font-bold px-4 py-1.5 rounded-full transition-colors bg-ngpa-lime text-ngpa-black hover:bg-ngpa-cyan"
-            >
-              View Schedule
-            </Link>
-          ) : (
-            <a
-              href="mailto:nextgenacademypb@gmail.com?subject=Yellow%20Ball%20Inquiry"
-              className="text-sm font-bold px-4 py-1.5 rounded-full transition-colors bg-ngpa-lime text-ngpa-black hover:bg-ngpa-cyan"
-            >
-              Contact Us
-            </a>
-          )}
-        </div>
-      )}
+            Get Started &rarr;
+          </a>
+        )}
+      </div>
     </article>
   );
 }

@@ -22,12 +22,11 @@ export default function Footer() {
               Quick Links
             </h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/programs" className="hover:text-ngpa-lime transition-colors">Programs</Link></li>
+              <li><a href="#levels" className="hover:text-ngpa-lime transition-colors">Programs</a></li>
               <li><Link href="/schedule" className="hover:text-ngpa-lime transition-colors">Schedule & Register</Link></li>
-              <li><Link href="/free-trial" className="hover:text-ngpa-lime transition-colors">Free Trial</Link></li>
-              <li><Link href="/about" className="hover:text-ngpa-lime transition-colors">About Us</Link></li>
-              <li><Link href="/contact" className="hover:text-ngpa-lime transition-colors">Contact</Link></li>
-              <li><Link href="/faq" className="hover:text-ngpa-lime transition-colors">FAQ</Link></li>
+              <li><a href="#contact-form" className="hover:text-ngpa-lime transition-colors">Get Started</a></li>
+              <li><a href="#about" className="hover:text-ngpa-lime transition-colors">About Us</a></li>
+              <li><a href="#faq" className="hover:text-ngpa-lime transition-colors">FAQ</a></li>
             </ul>
           </div>
 
@@ -40,6 +39,11 @@ export default function Footer() {
               <li>
                 <a href={`mailto:${site.email}`} className="hover:text-ngpa-lime transition-colors">
                   {site.email}
+                </a>
+              </li>
+              <li>
+                <a href={`tel:${site.phone.replace(/\D/g, "")}`} className="hover:text-ngpa-lime transition-colors">
+                  {site.phone}
                 </a>
               </li>
               <li>

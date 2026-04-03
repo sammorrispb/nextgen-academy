@@ -6,12 +6,10 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/", label: "Home" },
-  { href: "/programs", label: "Programs" },
+  { href: "#levels", label: "Programs" },
   { href: "/schedule", label: "Schedule" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-  { href: "/faq", label: "FAQ" },
+  { href: "#about", label: "About" },
+  { href: "#faq", label: "FAQ" },
 ];
 
 export default function Navbar() {
@@ -19,6 +17,16 @@ export default function Navbar() {
   const pathname = usePathname();
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const isHome = pathname === "/";
+
+  // Resolve anchor links: on homepage use bare #anchor, elsewhere prefix with /
+  function resolveHref(href: string) {
+    if (href.startsWith("#")) {
+      return isHome ? href : `/${href}`;
+    }
+    return href;
+  }
 
   const closeMenu = useCallback(() => {
     setOpen(false);
@@ -71,25 +79,29 @@ export default function Navbar() {
 
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-1">
-            {links.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  pathname === link.href
-                    ? "text-ngpa-lime bg-ngpa-slate"
-                    : "text-ngpa-white hover:text-ngpa-lime hover:bg-ngpa-slate"
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
-            <Link
-              href="/schedule"
+            {links.map((link) => {
+              const resolved = resolveHref(link.href);
+              const isActive = !link.href.startsWith("#") && pathname === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  href={resolved}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    isActive
+                      ? "text-ngpa-lime bg-ngpa-slate"
+                      : "text-ngpa-white hover:text-ngpa-lime hover:bg-ngpa-slate"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <a
+              href={resolveHref("#contact-form")}
               className="ml-3 px-5 py-2 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
             >
-              Register
-            </Link>
+              Get Started
+            </a>
           </div>
 
           {/* Mobile hamburger */}
@@ -121,27 +133,31 @@ export default function Navbar() {
             className="md:hidden pb-4 border-t border-ngpa-slate"
           >
             <div className="flex flex-col gap-1 pt-3">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                    pathname === link.href
-                      ? "text-ngpa-lime bg-ngpa-slate"
-                      : "text-ngpa-white hover:bg-ngpa-slate"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <Link
-                href="/schedule"
+              {links.map((link) => {
+                const resolved = resolveHref(link.href);
+                const isActive = !link.href.startsWith("#") && pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={resolved}
+                    onClick={() => setOpen(false)}
+                    className={`px-3 py-2 text-sm font-medium rounded-lg ${
+                      isActive
+                        ? "text-ngpa-lime bg-ngpa-slate"
+                        : "text-ngpa-white hover:bg-ngpa-slate"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+              <a
+                href={resolveHref("#contact-form")}
                 onClick={() => setOpen(false)}
                 className="mt-2 mx-3 px-5 py-2.5 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full text-center hover:bg-ngpa-cyan transition-colors"
               >
-                Register
-              </Link>
+                Get Started
+              </a>
             </div>
           </div>
         )}

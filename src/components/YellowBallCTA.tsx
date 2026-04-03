@@ -7,10 +7,13 @@ export default function YellowBallCTA() {
       <h3 className="font-heading text-2xl font-bold text-ngpa-white mb-3">
         Ready for Tournament Play?
       </h3>
-      <p className="text-ngpa-muted leading-relaxed mb-4">
+      <p className="text-ngpa-muted leading-relaxed mb-2">
         Yellow Ball is our coach-curated competitive track for players 12+ rated
         3.0 or above. Small groups of 3&ndash;5 athletes, custom scheduling,
         and focused preparation for tournament play.
+      </p>
+      <p className="text-sm text-ngpa-skill-yellow font-semibold mb-4">
+        $45/session (with 4 players) &middot; Minimum 4-session initial commitment
       </p>
 
       {/* Pricing table */}
