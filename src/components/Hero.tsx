@@ -10,38 +10,60 @@ export default function Hero() {
       {/* Subtle radial gradient accent */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,rgba(170,220,0,0.06)_0%,transparent_70%)]" />
 
-      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-        {/* Season badge */}
-        <div className="inline-block px-4 py-1.5 rounded-full bg-ngpa-slate text-ngpa-lime text-xs font-bold tracking-wider uppercase mb-6">
-          {heroSeason.label} &middot; {heroSeason.dates}
-        </div>
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          {/* Left: text */}
+          <div>
+            {/* Season badge */}
+            <div className="inline-block px-4 py-1.5 rounded-full bg-ngpa-slate text-ngpa-lime text-xs font-bold tracking-wider uppercase mb-6">
+              {heroSeason.label} &middot; {heroSeason.dates}
+            </div>
 
-        <Image src="/images/logo.png" alt="Next Gen Pickleball Academy" width={400} height={115} className="w-64 sm:w-80 lg:w-96 h-auto mb-6" priority />
+            <Image src="/images/logo.png" alt="Next Gen Pickleball Academy" width={400} height={115} className="w-56 sm:w-72 lg:w-80 h-auto mb-6" priority />
 
-        <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-900 text-ngpa-white leading-tight max-w-3xl">
-          Better than yesterday
-          <span className="text-ngpa-lime">&mdash;</span>together.
-        </h1>
+            <h1 className="font-heading text-3xl sm:text-4xl lg:text-5xl font-900 text-ngpa-white leading-tight">
+              Better than yesterday
+              <span className="text-ngpa-lime">&mdash;</span>together.
+            </h1>
 
-        <p className="mt-6 text-lg sm:text-xl text-ngpa-muted leading-relaxed max-w-2xl">
-          Structured pickleball coaching for ages 5&ndash;16. We build confident
-          players through competitive play, real strategy, and a growth mindset
-          that lasts beyond the court.
-        </p>
+            <p className="mt-5 text-base sm:text-lg text-ngpa-muted leading-relaxed max-w-lg">
+              Structured pickleball coaching for ages 5&ndash;16. We build confident
+              players through competitive play, real strategy, and a growth mindset
+              that lasts beyond the court.
+            </p>
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-4">
-          <a
-            href="#contact-form"
-            className="inline-flex items-center justify-center px-8 py-3.5 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors text-base"
-          >
-            Get Started
-          </a>
-          <Link
-            href="/schedule"
-            className="inline-flex items-center justify-center px-8 py-3.5 border-2 border-ngpa-lime text-ngpa-lime font-bold rounded-full hover:bg-ngpa-lime hover:text-ngpa-black transition-colors text-base"
-          >
-            View Schedule
-          </Link>
+            <div className="mt-7 flex flex-col sm:flex-row gap-4">
+              <a
+                href="#contact-form"
+                className="inline-flex items-center justify-center px-8 py-3.5 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors text-base"
+              >
+                Get Started
+              </a>
+              <Link
+                href="/schedule"
+                className="inline-flex items-center justify-center px-8 py-3.5 border-2 border-ngpa-lime text-ngpa-lime font-bold rounded-full hover:bg-ngpa-lime hover:text-ngpa-black transition-colors text-base"
+              >
+                View Schedule
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: hero photo */}
+          <div className="relative hidden lg:block">
+            <div className="rounded-2xl overflow-hidden border-2 border-ngpa-slate shadow-2xl">
+              <Image
+                src="/images/hero-action.jpeg"
+                alt="Young player hitting a pickleball at Dill Dinkers"
+                width={600}
+                height={750}
+                className="w-full h-auto object-cover"
+                priority
+              />
+            </div>
+            {/* Decorative accent */}
+            <div className="absolute -bottom-4 -left-4 w-24 h-24 rounded-full bg-ngpa-lime/10 blur-2xl" />
+            <div className="absolute -top-4 -right-4 w-32 h-32 rounded-full bg-ngpa-cyan/10 blur-2xl" />
+          </div>
         </div>
       </div>
     </section>

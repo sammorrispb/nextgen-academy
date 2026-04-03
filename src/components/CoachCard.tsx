@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Coach } from "@/data/coaches";
 
 interface CoachCardProps {
@@ -7,11 +8,23 @@ interface CoachCardProps {
 export default function CoachCard({ coach }: CoachCardProps) {
   return (
     <div className="bg-ngpa-panel rounded-2xl p-6 border border-ngpa-slate shadow-sm">
-      <div className="w-24 h-24 rounded-full bg-ngpa-slate flex items-center justify-center mb-4">
-        <span className="text-ngpa-lime font-heading font-bold text-2xl">
-          {coach.name.split(" ").map(w => w[0]).join("")}
-        </span>
-      </div>
+      {coach.photo ? (
+        <div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-2 border-ngpa-slate">
+          <Image
+            src={coach.photo}
+            alt={coach.name}
+            width={96}
+            height={96}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="w-24 h-24 rounded-full bg-ngpa-slate flex items-center justify-center mb-4">
+          <span className="text-ngpa-lime font-heading font-bold text-2xl">
+            {coach.name.split(" ").map(w => w[0]).join("")}
+          </span>
+        </div>
+      )}
 
       <h3 className="font-heading text-xl font-bold text-ngpa-white">
         {coach.name}
