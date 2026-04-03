@@ -3,6 +3,7 @@ import { Montserrat, Inter, Roboto_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
+import Analytics from "@/components/Analytics";
 import JsonLd from "@/components/JsonLd";
 import "./globals.css";
 
@@ -124,6 +125,7 @@ export default function RootLayout({
         <main id="main" className="pb-16 md:pb-0">{children}</main>
         <Footer />
         <StickyMobileCTA />
+        <Analytics />
       </body>
     </html>
   );
