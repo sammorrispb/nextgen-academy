@@ -39,3 +39,10 @@ Part of Sam Morris's pickleball platform ecosystem. See also:
 - `npm run dev` — local dev server
 - `npm run build` — production build (must pass with no errors)
 - Schedule page uses ISR (revalidate every 5min) with CourtReserve API; all other pages static
+
+## Testing Standards
+- **Test behavior, not implementation** — validate what the page renders and what the API returns, not internal function calls
+- **Build must pass**: `npm run build` with zero errors before every push — this is the minimum bar
+- **CR API integration**: Test that schedule page handles CR API failures gracefully (timeout, empty response, malformed data)
+- **Mobile-first**: Visually verify all pages on mobile viewport before shipping layout changes
+- **Security**: Validate any form inputs (contact form, evaluation requests) against XSS and injection
