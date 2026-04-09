@@ -5,6 +5,7 @@ import type { FreeTrialFormData } from "@/lib/validate-free-trial";
 import { fetchFreeTrialSessions, LOCATIONS } from "@/lib/courtreserve";
 import { locations } from "@/data/locations";
 import { site } from "@/data/site";
+import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -399,6 +400,32 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    // Ingest to Open Brain master CRM (fire-and-forget)
+    // Free trial = stage "trialed" since they've actually committed to an
+    // in-person session, further down the funnel than a lead form.
+    void ingestToOpenBrain({
+      email: body.parentEmail,
+      name: `${body.parentFirstName} ${body.parentLastName}`,
+      phone: body.parentPhone,
+      business: "nga",
+      source: "nga_free_trial",
+      initial_stage: "trialed",
+      interest: `Age ${body.childAge}`,
+      metadata: {
+        child_first_name: body.childFirstName,
+        child_last_name: body.childLastName,
+        child_age: Number(body.childAge),
+        location: body.location,
+        session_id: body.sessionId,
+        session_label: sessionLabel,
+        how_heard: body.howHeard || null,
+        cr_member_id: crMemberId === "N/A" ? null : crMemberId,
+        cr_status: crStatus,
+        notion_status: notionStatus,
+        is_parent: true,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {

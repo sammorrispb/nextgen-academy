@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { validateLeadForm } from "@/lib/validate-lead";
 import type { LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
+import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -280,6 +281,27 @@ export async function POST(request: NextRequest) {
         { error: "Failed to send confirmation. Please contact us directly." },
         { status: 500 },
       );
+    }
+
+    // Ingest to Open Brain master CRM (fire-and-forget)
+    // Only include email if we actually have one — OB requires a valid email
+    // for dedup. If the parent only provided a phone, we skip OB ingest for
+    // now (they'll be picked up by the Notion → OB backfill script later).
+    if (email) {
+      void ingestToOpenBrain({
+        email,
+        name: body.parentName,
+        phone: phone ?? undefined,
+        business: "nga",
+        source: "nga_lead_form",
+        interest: `Age ${body.childAge}`,
+        metadata: {
+          child_age: Number(body.childAge),
+          location: body.location || null,
+          notion_status: notionStatus,
+          is_parent: true,
+        },
+      });
     }
 
     return NextResponse.json({ success: true });
