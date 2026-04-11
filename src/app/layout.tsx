@@ -60,6 +60,9 @@ export const metadata: Metadata = {
     description: "Youth pickleball lessons for ages 5\u201316 at Dill Dinkers in Montgomery County, MD. Small groups, real strategy, tournament pathway.",
     images: ["/images/og-image.png"],
   },
+  verification: {
+    google: "Ty8UVMg8N631eo1CfPQKrtauyqq8HCFzC6GvOBZnCcI",
+  },
 };
 
 export default function RootLayout({
