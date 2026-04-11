@@ -60,6 +60,19 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Parent cross-sell */}
+        <div className="mt-8 text-center">
+          <a
+            href="https://linkanddink.com?utm_source=nextgen_academy&utm_medium=website&utm_campaign=parent_crosssell"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 border border-ngpa-slate rounded-full text-sm text-ngpa-white hover:border-ngpa-lime hover:text-ngpa-lime transition-colors"
+          >
+            <span aria-hidden="true">&#127955;</span>
+            Parents play too &mdash; Join the adult pickleball community
+          </a>
+        </div>
+
         <div className="mt-10 pt-6 border-t border-ngpa-slate text-center text-xs text-ngpa-muted">
           &copy; {new Date().getFullYear()} Next Gen Pickleball Academy. All rights reserved.
           <span className="mx-1.5">&middot;</span>

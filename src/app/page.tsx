@@ -143,6 +143,19 @@ export default function Home() {
               aren&rsquo;t spectators, they&rsquo;re partners. Families learn the
               game together so everyone grows through the sport.
             </p>
+            <p className="text-ngpa-muted leading-relaxed mt-4">
+              Want to play too?{" "}
+              <a
+                href="https://linkanddink.com?utm_source=nextgen_academy&utm_medium=website&utm_campaign=parent_crosssell"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ngpa-lime hover:underline"
+              >
+                Link &amp; Dink
+              </a>{" "}
+              connects adult players across Montgomery County with groups, events, and
+              community&mdash;built by the same team behind Next Gen.
+            </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {coaches.map((coach) => (
