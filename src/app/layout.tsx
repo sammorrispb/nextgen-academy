@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import Analytics from "@/components/Analytics";
 import JsonLd from "@/components/JsonLd";
+import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -126,6 +127,7 @@ export default function RootLayout({
         <Footer />
         <StickyMobileCTA />
         <Analytics />
+        <VercelAnalytics />
       </body>
     </html>
   );
