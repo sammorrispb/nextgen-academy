@@ -10,7 +10,7 @@ export default function StickyMobileCTA() {
           href="#contact-form"
           className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-ngpa-lime text-ngpa-black font-heading font-bold text-sm rounded-full hover:bg-ngpa-cyan transition-colors min-h-[48px]"
         >
-          Get Started
+          Book Free Evaluation
         </a>
         <a
           href={`tel:${site.phone.replace(/\D/g, "")}`}

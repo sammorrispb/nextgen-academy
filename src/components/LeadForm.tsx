@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LeadFormData, LeadValidationErrors } from "@/lib/validate-lead";
 import { validateLeadForm } from "@/lib/validate-lead";
 import { site } from "@/data/site";
@@ -16,13 +16,69 @@ const emptyForm: LeadFormData = {
   location: "",
 };
 
+type TrackingContext = {
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
+  fbclid?: string;
+  referrer?: string;
+  landing_page?: string;
+  event_id?: string;
+  fbp?: string;
+  fbc?: string;
+};
+
+function readCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${name}=`));
+  return match ? decodeURIComponent(match.split("=")[1]) : undefined;
+}
+
+function generateEventId(): string {
+  // crypto.randomUUID is available in all modern browsers we support
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `lead_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function LeadForm() {
   const [form, setForm] = useState<LeadFormData>(emptyForm);
   const [errors, setErrors] = useState<LeadValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
+  const trackingRef = useRef<TrackingContext>({});
 
-  function updateField(field: keyof LeadFormData, value: string) {
+  // Capture attribution context once on mount — URL params + referrer + fb cookies.
+  // Persisted in a ref so re-renders don't reset it and we have a stable event_id
+  // for Pixel ↔ CAPI dedup.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ctx: TrackingContext = {
+      utm_source: params.get("utm_source") ?? undefined,
+      utm_medium: params.get("utm_medium") ?? undefined,
+      utm_campaign: params.get("utm_campaign") ?? undefined,
+      utm_content: params.get("utm_content") ?? undefined,
+      utm_term: params.get("utm_term") ?? undefined,
+      fbclid: params.get("fbclid") ?? undefined,
+      referrer: document.referrer || undefined,
+      landing_page: window.location.href,
+      event_id: generateEventId(),
+      fbp: readCookie("_fbp"),
+      fbc: readCookie("_fbc"),
+    };
+    trackingRef.current = ctx;
+  }, []);
+
+  // Only the 4 user-facing fields can be edited via the form UI or produce
+  // validation errors. Tracking fields are populated server-side from state.
+  type EditableField = "parentName" | "contact" | "childAge" | "location";
+
+  function updateField(field: EditableField, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => {
@@ -33,7 +89,7 @@ export default function LeadForm() {
     }
   }
 
-  function handleBlur(field: keyof LeadFormData) {
+  function handleBlur(field: EditableField) {
     const fieldErrors = validateLeadForm(form);
     if (fieldErrors[field]) {
       setErrors((prev) => ({ ...prev, [field]: fieldErrors[field] }));
@@ -54,11 +110,21 @@ export default function LeadForm() {
 
     setStatus("submitting");
 
+    // Re-read fb cookies at submit time — the Pixel sets _fbp on PageView,
+    // which may not have existed yet when we mounted.
+    const tracking: TrackingContext = {
+      ...trackingRef.current,
+      fbp: trackingRef.current.fbp ?? readCookie("_fbp"),
+      fbc: trackingRef.current.fbc ?? readCookie("_fbc"),
+    };
+
+    const payload: LeadFormData = { ...form, ...tracking };
+
     try {
       const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -77,11 +143,25 @@ export default function LeadForm() {
       if (typeof window !== "undefined") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const w = window as any;
-        if (w.fbq) w.fbq("track", "Lead");
+        // Pass eventID so Meta can dedup against the server-side CAPI event.
+        if (w.fbq)
+          w.fbq(
+            "track",
+            "Lead",
+            {
+              content_name: "Free Evaluation",
+              content_category: "youth_pickleball",
+              value: 0,
+              currency: "USD",
+            },
+            tracking.event_id ? { eventID: tracking.event_id } : undefined,
+          );
         if (w.gtag)
           w.gtag("event", "lead_form_submit", {
             location: form.location,
             child_age: form.childAge,
+            utm_source: tracking.utm_source,
+            utm_campaign: tracking.utm_campaign,
           });
       }
     } catch (err) {

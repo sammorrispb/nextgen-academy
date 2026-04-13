@@ -305,7 +305,7 @@ test.describe("Redirects", () => {
     { from: "/about", to: "/#about" },
     { from: "/faq", to: "/#faq" },
     { from: "/contact", to: "/#contact" },
-    { from: "/free-trial", to: "/#contact-form" },
+    { from: "/free-trial", to: "/free-evaluation" },
   ]) {
     test(`${from} redirects to ${to}`, async ({ page }) => {
       const response = await page.goto(from, { waitUntil: "domcontentloaded" });

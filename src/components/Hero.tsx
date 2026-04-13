@@ -14,8 +14,14 @@ export default function Hero() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           {/* Left: text */}
           <div>
-            {/* Season badge */}
-            <div className="inline-block px-4 py-1.5 rounded-full bg-ngpa-slate text-ngpa-lime text-xs font-bold tracking-wider uppercase mb-6">
+            {/* Offer badge — primary signal for ad traffic */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-ngpa-lime text-ngpa-black text-xs font-bold tracking-wider uppercase mb-3">
+              <span aria-hidden="true">🎾</span>
+              Free 30-Minute Evaluation
+            </div>
+
+            {/* Season sub-badge */}
+            <div className="block text-ngpa-muted text-xs font-bold tracking-wider uppercase mb-6">
               {heroSeason.label} &middot; {heroSeason.dates}
             </div>
 
@@ -32,12 +38,17 @@ export default function Hero() {
               that lasts beyond the court.
             </p>
 
+            <p className="mt-4 text-sm sm:text-base text-ngpa-white leading-relaxed max-w-lg">
+              <span className="font-bold text-ngpa-lime">Meet a coach on the court for 30 minutes — free.</span>{" "}
+              We&rsquo;ll see where your child is at and recommend the right group. No commitment.
+            </p>
+
             <div className="mt-7 flex flex-col sm:flex-row gap-4">
               <a
                 href="#contact-form"
                 className="inline-flex items-center justify-center px-8 py-3.5 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors text-base"
               >
-                Get Started
+                Book Free Evaluation
               </a>
               <Link
                 href="/schedule"
