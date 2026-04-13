@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       { source: "/about", destination: "/#about", permanent: true },
       { source: "/contact", destination: "/#contact", permanent: true },
       { source: "/faq", destination: "/#faq", permanent: true },
-      { source: "/free-trial", destination: "/#contact-form", permanent: true },
+      { source: "/free-trial", destination: "/free-evaluation", permanent: true },
     ];
   },
 };
