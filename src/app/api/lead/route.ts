@@ -4,6 +4,7 @@ import { validateLeadForm } from "@/lib/validate-lead";
 import type { LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { sendMetaLead } from "@/lib/meta-capi";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -74,6 +75,30 @@ async function findNotionPlayer(contact: string): Promise<string | null> {
   return data.results?.length > 0 ? data.results[0].id : null;
 }
 
+function formatAttribution(body: LeadFormData): string {
+  const lines: string[] = [];
+  if (body.utm_source) lines.push(`utm_source: ${body.utm_source}`);
+  if (body.utm_medium) lines.push(`utm_medium: ${body.utm_medium}`);
+  if (body.utm_campaign) lines.push(`utm_campaign: ${body.utm_campaign}`);
+  if (body.utm_content) lines.push(`utm_content: ${body.utm_content}`);
+  if (body.utm_term) lines.push(`utm_term: ${body.utm_term}`);
+  if (body.fbclid) lines.push(`fbclid: ${body.fbclid}`);
+  if (body.referrer) lines.push(`referrer: ${body.referrer}`);
+  if (body.landing_page) lines.push(`landing: ${body.landing_page}`);
+  return lines.join(" | ");
+}
+
+function attributedSource(body: LeadFormData): string {
+  // Map common ad sources to clean Notion select values.
+  const src = body.utm_source?.toLowerCase();
+  if (src === "facebook" || src === "fb") return "Facebook Ad";
+  if (src === "instagram" || src === "ig") return "Instagram Ad";
+  if (src === "google") return "Google Ad";
+  if (body.fbclid) return "Facebook Ad";
+  if (body.utm_source) return `Ad: ${body.utm_source}`;
+  return "Website Lead Form";
+}
+
 async function createNotionPlayer(
   body: LeadFormData,
 ): Promise<{ id?: string; error?: string }> {
@@ -81,6 +106,10 @@ async function createNotionPlayer(
   if (!notionKey) return { error: "NOTION_API_KEY not configured" };
 
   const { email, phone } = parseContact(body.contact);
+  const attribution = formatAttribution(body);
+  const notesContent = attribution
+    ? `Lead form submission. Child age: ${body.childAge}. Attribution: ${attribution}`
+    : `Lead form submission. Child age: ${body.childAge}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const properties: Record<string, any> = {
@@ -93,10 +122,10 @@ async function createNotionPlayer(
     },
     Level: { select: { name: "Eval Needed" } },
     Status: { select: { name: "Lead" } },
-    Source: { select: { name: "Website Lead Form" } },
+    Source: { select: { name: attributedSource(body) } },
     Season: { select: { name: "Spring 2026" } },
     Notes: {
-      rich_text: [{ text: { content: `Lead form submission. Child age: ${body.childAge}` } }],
+      rich_text: [{ text: { content: notesContent } }],
     },
     "Next Action": {
       rich_text: [{ text: { content: "Reach out within 24 hours" } }],
@@ -207,6 +236,14 @@ export async function POST(request: NextRequest) {
       <td style="padding: 10px 8px; color: #7A88B8;">Notion CRM</td>
       <td style="padding: 10px 8px; color: #EEF2FF;">${notionStatus}</td>
     </tr>
+    ${
+      formatAttribution(body)
+        ? `<tr style="border-bottom: 1px solid #1A3060;">
+      <td style="padding: 10px 8px; color: #7A88B8; vertical-align: top;">Attribution</td>
+      <td style="padding: 10px 8px; color: #EEF2FF; font-size: 12px; word-break: break-all;">${formatAttribution(body)}</td>
+    </tr>`
+        : ""
+    }
   </table>
   <div style="margin-top: 24px; padding: 16px; background: #0C1F47; border-radius: 8px; border-left: 4px solid #AADC00;">
     <p style="margin: 0; font-size: 14px; font-weight: 600; color: #AADC00;">ACTION NEEDED</p>
@@ -295,12 +332,44 @@ export async function POST(request: NextRequest) {
         business: "nga",
         source: "nga_lead_form",
         interest: `Age ${body.childAge}`,
+        utm: {
+          source: body.utm_source,
+          medium: body.utm_medium,
+          campaign: body.utm_campaign,
+        },
         metadata: {
           child_age: Number(body.childAge),
           location: body.location || null,
           notion_status: notionStatus,
           is_parent: true,
+          utm_content: body.utm_content ?? null,
+          utm_term: body.utm_term ?? null,
+          fbclid: body.fbclid ?? null,
+          referrer: body.referrer ?? null,
+          landing_page: body.landing_page ?? null,
         },
+      });
+    }
+
+    // Fire Meta CAPI Lead event (fire-and-forget). The event_id matches the
+    // browser Pixel's eventID so Meta dedups client + server.
+    if (body.event_id) {
+      const [firstName, ...rest] = body.parentName.trim().split(/\s+/);
+      const lastName = rest.join(" ") || undefined;
+      void sendMetaLead({
+        email,
+        phone,
+        firstName: firstName || undefined,
+        lastName,
+        city: body.location || undefined,
+        state: body.location ? "MD" : undefined,
+        eventId: body.event_id,
+        eventSourceUrl:
+          body.landing_page || "https://nextgenpbacademy.com/#contact-form",
+        clientIp: ip,
+        userAgent: request.headers.get("user-agent") || "",
+        fbp: body.fbp,
+        fbc: body.fbc,
       });
     }
 
