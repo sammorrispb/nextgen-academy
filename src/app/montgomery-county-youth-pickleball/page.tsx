@@ -10,6 +10,7 @@ import { testimonials } from "@/data/testimonials";
 import { yellowBallPricing } from "@/data/schedule";
 import LocationMap from "@/components/LocationMap";
 import JsonLd from "@/components/JsonLd";
+import LeadForm from "@/components/LeadForm";
 
 export const metadata: Metadata = {
   title: seo.montgomeryCounty.title,
@@ -100,7 +101,7 @@ export default function MontgomeryCountyPage() {
 
           <div className="mt-7 flex flex-col sm:flex-row gap-3">
             <Link
-              href="/free-evaluation"
+              href="#contact-form"
               className="inline-flex items-center justify-center px-7 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
             >
               Book Free 30-Minute Evaluation
@@ -323,15 +324,7 @@ export default function MontgomeryCountyPage() {
             ))}
           </div>
 
-          <div className="mt-10 text-center">
-            <Link
-              href="/free-evaluation"
-              className="inline-flex items-center justify-center px-7 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
-            >
-              Book Free 30-Minute Evaluation
-            </Link>
-          </div>
-          <p className="text-center text-sm text-ngpa-muted mt-4">
+          <p className="text-center text-sm text-ngpa-muted mt-10">
             Questions? Call or text Sam at{" "}
             <a
               href={`tel:${site.phone.replace(/\D/g, "")}`}
@@ -341,6 +334,23 @@ export default function MontgomeryCountyPage() {
             </a>
             .
           </p>
+        </div>
+      </section>
+
+      {/* ─── Lead form ────────────────────────── */}
+      <section id="contact-form" className="bg-ngpa-navy py-14 px-4 sm:px-6 lg:px-8 scroll-mt-20">
+        <div className="max-w-xl mx-auto">
+          <div className="text-center mb-6">
+            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white">
+              Book your free 30-minute evaluation
+            </h2>
+            <p className="text-ngpa-muted mt-2">
+              We&rsquo;ll call or text within 24 hours to schedule.
+            </p>
+          </div>
+          <div className="bg-ngpa-panel rounded-2xl p-1 border border-ngpa-lime/30 shadow-2xl shadow-ngpa-lime/5">
+            <LeadForm />
+          </div>
         </div>
       </section>
     </>
