@@ -7,17 +7,14 @@ import { testimonials } from "@/data/testimonials";
 import { site } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "Free 30-Minute Pickleball Evaluation — Next Gen PB Academy",
+  title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
   description:
-    "Book a free 30-minute evaluation for your child (ages 5–16) at Dill Dinkers Rockville or North Bethesda. Meet a coach, see where they fit, no commitment.",
+    "Book a free 30-minute evaluation for your child (ages 5–16) at Dill Dinkers Rockville or North Bethesda. Meet a coach, see where your child fits in our Red/Orange/Green/Yellow Ball pathway. No cost. No commitment.",
   alternates: { canonical: "/free-evaluation" },
-  // Paid landing page — exclude from organic index to avoid duplicate-content
-  // competition with the homepage. Meta Ads ignores robots directives.
-  robots: { index: false, follow: true },
   openGraph: {
-    title: "Free 30-Minute Pickleball Evaluation for Kids",
+    title: "Free 30-Minute Pickleball Evaluation for Kids — Montgomery County, MD",
     description:
-      "Youth pickleball coaching for ages 5–16 in Montgomery County, MD. Your first 30 minutes are on us.",
+      "Youth pickleball coaching for ages 5–16 at Dill Dinkers Rockville & North Bethesda. Your first 30 minutes are on us.",
     url: "https://nextgenpbacademy.com/free-evaluation",
   },
 };

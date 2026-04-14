@@ -21,10 +21,17 @@ function SlotSection({ slot }: { slot: LiveSlot }) {
 
   return (
     <div className="bg-ngpa-navy/50 rounded-xl p-4">
-      {/* Day + register */}
-      <div className="flex items-center justify-between mb-1">
+      {/* Day + time + register */}
+      <div className="flex items-center justify-between mb-1 gap-3">
         <h4 className="font-heading text-base font-bold text-ngpa-white">
-          {slot.dayOfWeek}
+          {slot.dayOfWeek}{" "}
+          <span className="text-ngpa-muted font-medium">{slot.timeRange}</span>
+          {" · "}
+          <span className="text-ngpa-cyan font-medium">
+            {slot.levels.length === 1
+              ? `${slot.levels[0].charAt(0).toUpperCase()}${slot.levels[0].slice(1)} Ball`
+              : "All levels"}
+          </span>
         </h4>
         <a
           href={nextSession.registrationUrl}
