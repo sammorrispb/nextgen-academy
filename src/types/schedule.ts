@@ -25,6 +25,10 @@ export interface CRResponse {
 export interface LiveSession {
   date: string;
   displayDate: string;
+  /** ISO 8601 start datetime (from CR StartDateTime) — used for SportsEvent schema */
+  startIso: string;
+  /** ISO 8601 end datetime (from CR EndDateTime) — used for SportsEvent schema */
+  endIso: string;
   level: BallColor;
   spotsTotal: number;
   spotsFilled: number;

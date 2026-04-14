@@ -65,7 +65,6 @@ export function transformEvents(events: CREvent[], loc: LocationConfig): LiveLoc
     if (!level) continue;
 
     const start = new Date(event.StartDateTime);
-    const end = new Date(event.EndDateTime);
     const dayOfWeek = DAY_NAMES[start.getDay()] ?? "Unknown";
     const timeRange = `${formatTime(event.StartDateTime)}\u2013${formatTime(event.EndDateTime)}`;
     const slotKey = `${dayOfWeek} ${timeRange}`;
@@ -76,6 +75,8 @@ export function transformEvents(events: CREvent[], loc: LocationConfig): LiveLoc
     const session: LiveSession = {
       date: formatDateKey(start),
       displayDate: formatDisplayDate(start),
+      startIso: event.StartDateTime,
+      endIso: event.EndDateTime,
       level,
       spotsTotal,
       spotsFilled,

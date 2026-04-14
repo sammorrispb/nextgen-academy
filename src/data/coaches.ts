@@ -7,6 +7,8 @@ export interface Coach {
   bio: string;
   highlights: string[];
   specialty?: string;
+  /** Structured credentials for Person JSON-LD (schema.org knowsAbout) */
+  knowsAbout?: string[];
 }
 
 export const coaches: Coach[] = [
@@ -22,6 +24,12 @@ export const coaches: Coach[] = [
       "Former physical education teacher",
       "Playing since 2019, coaching since 2021",
     ],
+    knowsAbout: [
+      "Pickleball",
+      "Youth Sports Coaching",
+      "USA Pickleball Youth Progression",
+      "Physical Education",
+    ],
   },
   {
     name: "Amine Lahlou",
@@ -35,5 +43,11 @@ export const coaches: Coach[] = [
       "Dad of 3 \u2014 brings the family perspective to every session",
     ],
     specialty: "Racket Sport Fundamentals & Family Development",
+    knowsAbout: [
+      "Pickleball",
+      "Tennis",
+      "Youth Sports Coaching",
+      "Racket Sport Fundamentals",
+    ],
   },
 ];

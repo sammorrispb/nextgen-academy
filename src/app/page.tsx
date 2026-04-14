@@ -38,6 +38,27 @@ export default function Home() {
         }}
       />
 
+      {/* Coach Person Schema (E-E-A-T signals for AI citation) */}
+      {coaches.map((coach) => (
+        <JsonLd
+          key={`person-${coach.name}`}
+          data={{
+            "@context": "https://schema.org",
+            "@type": "Person",
+            name: coach.name,
+            jobTitle: coach.role,
+            description: coach.bio,
+            ...(coach.photo ? { image: `https://nextgenpbacademy.com${coach.photo}` } : {}),
+            worksFor: {
+              "@type": "SportsOrganization",
+              name: "Next Gen Pickleball Academy",
+              url: "https://nextgenpbacademy.com",
+            },
+            ...(coach.knowsAbout ? { knowsAbout: coach.knowsAbout } : {}),
+          }}
+        />
+      ))}
+
       <Hero />
 
       {/* ─── Tournament Banner ───────────────────── */}

@@ -7,7 +7,7 @@ export const faq: FaqItem[] = [
   {
     question: "What ages do you accept?",
     answer:
-      "We welcome players ages 5–16. Our Red Ball program starts at age 5, Orange Ball at 7, Green Ball at 9, and Yellow Ball (tournament track) at 12+.",
+      "We welcome players ages 5\u201316. Our Red Ball program starts at age 5, Orange Ball at 7, Green Ball at 9, and Yellow Ball (tournament track) at 12+.",
   },
   {
     question: "Does my child need experience?",
@@ -27,11 +27,41 @@ export const faq: FaqItem[] = [
   {
     question: "Where are you located?",
     answer:
-      "We operate at two Dill Dinkers locations: Rockville (40 Southlawn Court, Suite C) and North Bethesda (4942 Boiling Brook Parkway).",
+      "We operate at two Dill Dinkers locations in Montgomery County, MD: Rockville (40 Southlawn Court, Suite C) and North Bethesda (4942 Boiling Brook Parkway). Families commonly drive in from Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill.",
   },
   {
     question: "How do free evaluations work?",
     answer:
-      "Fill out the form below or email us at nextgenacademypb@gmail.com to schedule a 30-minute evaluation. Our coaches will assess your child\u2019s current level and recommend the right program.",
+      "Fill out the form below or email us at nextgenacademypb@gmail.com to schedule a 30-minute evaluation. Our coaches will assess your child\u2019s current level and recommend the right program. There\u2019s no cost and no commitment.",
+  },
+  {
+    question: "How much do youth pickleball lessons cost at Next Gen?",
+    answer:
+      "Group classes at the Red, Orange, and Green Ball levels are priced per season on CourtReserve \u2014 browse exact sessions on our Schedule page. Our Yellow Ball small-group tournament track runs $36\u2013$90 per player per session depending on group size (2\u20135 athletes). The 30-minute evaluation that determines placement is always free.",
+  },
+  {
+    question: "Is pickleball safe for kids?",
+    answer:
+      "Yes. Pickleball is one of the safest racket sports for children: the court is smaller than tennis, the paddle is lightweight, and the ball moves at lower speeds than a tennis ball. USA Pickleball\u2019s official youth progression uses color-coded balls (Red, Orange, Green, Yellow) with reduced bounce and compression so kids learn proper technique before the game speeds up. Our coaches are trained in youth-appropriate drills, warmups, and game formats.",
+  },
+  {
+    question: "What\u2019s the difference between Red, Orange, Green, and Yellow Ball?",
+    answer:
+      "Red Ball (ages 5+) uses a soft, slow foam ball and a smaller court \u2014 ideal for first-time players learning movement and basic rules. Orange Ball (ages 7+) has a slightly higher bounce for sustained rallies and full-court play. Green Ball (ages 9+) introduces doubles strategy, shot selection, and positioning. Yellow Ball (ages 12+) is the standard tournament ball and our competitive-pathway track for players who want to compete. Every child is placed based on skill during a free evaluation, not age alone.",
+  },
+  {
+    question: "Do you offer private pickleball lessons for kids?",
+    answer:
+      "Yes. In addition to group classes, we offer private and semi-private lessons tailored to each athlete. Head Coach Sam Morris is Director of Pickleball Programming at Dill Dinkers; Co-Founder Amine Lahlou is a former professional tennis player. Email nextgenacademypb@gmail.com or call 301-325-4731 to schedule.",
+  },
+  {
+    question: "Can my child join mid-season?",
+    answer:
+      "Yes. We accept new players throughout the season. Start with a free 30-minute evaluation and our coaches will place your child into the current session that fits their level and schedule. Pro-rated pricing is available for partial-season joins.",
+  },
+  {
+    question: "Which Montgomery County towns do you serve?",
+    answer:
+      "Our two locations in Rockville and North Bethesda are within 15 minutes of Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, Aspen Hill, and most of the DMV. Families regularly travel from across Montgomery County and Northwest DC.",
   },
 ];
