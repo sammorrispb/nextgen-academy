@@ -26,6 +26,12 @@ function SlotSection({ slot }: { slot: LiveSlot }) {
         <h4 className="font-heading text-base font-bold text-ngpa-white">
           {slot.dayOfWeek}{" "}
           <span className="text-ngpa-muted font-medium">{slot.timeRange}</span>
+          {" · "}
+          <span className="text-ngpa-cyan font-medium">
+            {slot.levels.length === 1
+              ? `${slot.levels[0].charAt(0).toUpperCase()}${slot.levels[0].slice(1)} Ball`
+              : "All levels"}
+          </span>
         </h4>
         <a
           href={nextSession.registrationUrl}
