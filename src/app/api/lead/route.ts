@@ -373,6 +373,60 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Forward to Hub CRM (inbound_leads) so Sam can track Meta ad conversions.
+    try {
+      const [hubFirstName, ...hubRest] = body.parentName.trim().split(/\s+/);
+      const hubLastName = hubRest.join(" ") || null;
+      const hubRes = await fetch(
+        `${process.env.HUB_SUPABASE_URL}/rest/v1/inbound_leads`,
+        {
+          method: "POST",
+          headers: {
+            apikey: process.env.HUB_SERVICE_ROLE_KEY!,
+            Authorization: `Bearer ${process.env.HUB_SERVICE_ROLE_KEY!}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal",
+          },
+          body: JSON.stringify({
+            email: email ?? null,
+            phone: phone ?? null,
+            first_name: hubFirstName || null,
+            last_name: hubLastName,
+            source: "nga_meta",
+            source_ref: body.utm_source ?? null,
+            intent: "free_eval",
+            intent_confidence: 1.0,
+            raw_text: `NGA free eval — child age ${body.childAge}, location ${body.location || "no preference"}`,
+            extracted_data: {
+              child_age: Number(body.childAge),
+              location: body.location || null,
+              utm_source: body.utm_source ?? null,
+              utm_medium: body.utm_medium ?? null,
+              utm_campaign: body.utm_campaign ?? null,
+              utm_content: body.utm_content ?? null,
+              utm_term: body.utm_term ?? null,
+              fbclid: body.fbclid ?? null,
+              referrer: body.referrer ?? null,
+              landing_page: body.landing_page ?? null,
+            },
+            status: "new",
+          }),
+        },
+      );
+      if (!hubRes.ok) {
+        console.warn(
+          "[nga-lead] Hub inbound_leads insert failed:",
+          hubRes.status,
+          await hubRes.text(),
+        );
+      }
+    } catch (e: unknown) {
+      console.warn(
+        "[nga-lead] Hub CRM forward error:",
+        e instanceof Error ? e.message : e,
+      );
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Email send failed:", err);
