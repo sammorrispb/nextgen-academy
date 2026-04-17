@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { site } from "@/data/site";
+import { hubUrl } from "@/lib/urls";
 
 export default function Footer() {
   return (
@@ -63,7 +64,7 @@ export default function Footer() {
         {/* Parent cross-sell */}
         <div className="mt-8 text-center">
           <a
-            href="https://linkanddink.com?utm_source=nextgen_academy&utm_medium=website&utm_campaign=parent_crosssell"
+            href={hubUrl("/")}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 border border-ngpa-slate rounded-full text-sm text-ngpa-white hover:border-ngpa-lime hover:text-ngpa-lime transition-colors"

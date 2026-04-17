@@ -14,6 +14,7 @@ import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
 import { locations } from "@/data/locations";
 import { faq } from "@/data/faq";
+import { hubUrl, crUrl } from "@/lib/urls";
 
 export const metadata = {
   alternates: { canonical: "/" },
@@ -76,7 +77,7 @@ export default function Home() {
             </div>
           </div>
           <a
-            href="https://app.courtreserve.com/Online/Events/Public/10869/1913614"
+            href={crUrl("https://app.courtreserve.com/Online/Events/Public/10869/1913614")}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center px-5 py-2 bg-ngpa-skill-yellow text-ngpa-black text-sm font-bold rounded-full hover:brightness-110 transition shrink-0"
@@ -167,7 +168,7 @@ export default function Home() {
             <p className="text-ngpa-muted leading-relaxed mt-4">
               Want to play too?{" "}
               <a
-                href="https://linkanddink.com?utm_source=nextgen_academy&utm_medium=website&utm_campaign=parent_crosssell"
+                href={hubUrl("/")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-ngpa-lime hover:underline"
