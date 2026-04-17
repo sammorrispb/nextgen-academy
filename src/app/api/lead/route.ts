@@ -4,7 +4,8 @@ import { validateLeadForm } from "@/lib/validate-lead";
 import type { LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
-import { sendMetaLead } from "@/lib/meta-capi";
+import { sendFunnelEvent } from "@/lib/funnelServer";
+import { getRefSource } from "@/lib/urls";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -82,7 +83,6 @@ function formatAttribution(body: LeadFormData): string {
   if (body.utm_campaign) lines.push(`utm_campaign: ${body.utm_campaign}`);
   if (body.utm_content) lines.push(`utm_content: ${body.utm_content}`);
   if (body.utm_term) lines.push(`utm_term: ${body.utm_term}`);
-  if (body.fbclid) lines.push(`fbclid: ${body.fbclid}`);
   if (body.referrer) lines.push(`referrer: ${body.referrer}`);
   if (body.landing_page) lines.push(`landing: ${body.landing_page}`);
   return lines.join(" | ");
@@ -94,7 +94,6 @@ function attributedSource(body: LeadFormData): string {
   if (src === "facebook" || src === "fb") return "Facebook Ad";
   if (src === "instagram" || src === "ig") return "Instagram Ad";
   if (src === "google") return "Google Ad";
-  if (body.fbclid) return "Facebook Ad";
   if (body.utm_source) return `Ad: ${body.utm_source}`;
   return "Website Lead Form";
 }
@@ -344,34 +343,29 @@ export async function POST(request: NextRequest) {
           is_parent: true,
           utm_content: body.utm_content ?? null,
           utm_term: body.utm_term ?? null,
-          fbclid: body.fbclid ?? null,
           referrer: body.referrer ?? null,
           landing_page: body.landing_page ?? null,
         },
       });
     }
 
-    // Fire Meta CAPI Lead event (fire-and-forget). The event_id matches the
-    // browser Pixel's eventID so Meta dedups client + server.
-    if (body.event_id) {
-      const [firstName, ...rest] = body.parentName.trim().split(/\s+/);
-      const lastName = rest.join(" ") || undefined;
-      void sendMetaLead({
-        email,
-        phone,
-        firstName: firstName || undefined,
-        lastName,
-        city: body.location || undefined,
-        state: body.location ? "MD" : undefined,
-        eventId: body.event_id,
-        eventSourceUrl:
-          body.landing_page || "https://nextgenpbacademy.com/#contact-form",
-        clientIp: ip,
-        userAgent: request.headers.get("user-agent") || "",
-        fbp: body.fbp,
-        fbc: body.fbc,
-      });
-    }
+    // Unified funnel: server-side lead_submitted event to the Hub.
+    const marketingRef = getRefSource(
+      body.landing_page ? new URL(body.landing_page).pathname : null,
+    );
+    void sendFunnelEvent({
+      eventType: "lead_submitted",
+      email,
+      marketingRef,
+      properties: {
+        interest: "free_evaluation",
+        child_age: Number(body.childAge),
+        location: body.location || null,
+        utm_source: body.utm_source ?? null,
+        utm_medium: body.utm_medium ?? null,
+        utm_campaign: body.utm_campaign ?? null,
+      },
+    });
 
     // Forward to Hub CRM (inbound_leads) so Sam can track Meta ad conversions.
     try {
@@ -405,7 +399,6 @@ export async function POST(request: NextRequest) {
               utm_campaign: body.utm_campaign ?? null,
               utm_content: body.utm_content ?? null,
               utm_term: body.utm_term ?? null,
-              fbclid: body.fbclid ?? null,
               referrer: body.referrer ?? null,
               landing_page: body.landing_page ?? null,
             },
