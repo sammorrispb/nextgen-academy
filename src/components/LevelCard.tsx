@@ -48,11 +48,11 @@ export default function LevelCard({ level }: LevelCardProps) {
               Invite Only
             </span>
             <a
-              href="mailto:nextgenacademypb@gmail.com?subject=Yellow%20Ball%20Inquiry"
+              href="/yellowball/inquiry"
               className="text-sm font-bold transition-colors"
               style={{ color: level.color }}
             >
-              Inquire &rarr;
+              Request an eval &rarr;
             </a>
           </div>
         ) : (

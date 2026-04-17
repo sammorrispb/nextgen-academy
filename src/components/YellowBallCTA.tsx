@@ -1,5 +1,5 @@
+import Link from "next/link";
 import { yellowBallPricing } from "@/data/schedule";
-import { site } from "@/data/site";
 
 export default function YellowBallCTA() {
   return (
@@ -36,12 +36,12 @@ export default function YellowBallCTA() {
         Minimum 4-week commitment required.
       </p>
 
-      <a
-        href={`mailto:${site.email}?subject=Yellow%20Ball%20Inquiry`}
+      <Link
+        href="/yellowball/inquiry"
         className="inline-block px-6 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
       >
-        Email Us About Yellow Ball
-      </a>
+        Request an eval
+      </Link>
     </div>
   );
 }
