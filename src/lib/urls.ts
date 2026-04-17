@@ -1,0 +1,28 @@
+const DEFAULT_REF = "nga";
+const UTM_SOURCE = "nga";
+
+export function getRefSource(pathname?: string | null): string {
+  if (!pathname) return DEFAULT_REF;
+  if (pathname.startsWith("/yellowball")) return "nga_yellowball";
+  if (pathname.startsWith("/leagues")) return "nga_leagues";
+  return DEFAULT_REF;
+}
+
+export function hubUrl(
+  path: string = "/",
+  extraParams: Record<string, string> = {},
+  ref: string = DEFAULT_REF,
+): string {
+  const url = new URL(path, "https://linkanddink.com");
+  url.searchParams.set("ref", ref);
+  for (const [k, v] of Object.entries(extraParams)) {
+    url.searchParams.set(k, v);
+  }
+  return url.toString();
+}
+
+export function crUrl(target: string, ref: string = UTM_SOURCE): string {
+  const url = new URL(target);
+  url.searchParams.set("utm_source", ref);
+  return url.toString();
+}
