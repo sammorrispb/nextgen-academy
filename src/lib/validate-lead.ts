@@ -3,19 +3,15 @@ export interface LeadFormData {
   contact: string;
   childAge: string;
   location: string;
-  // Attribution fields — all optional, captured client-side from URL/cookies.
+  // Attribution fields — all optional, captured client-side from URL params.
   // Never validated (accepted as-is) and never shown as form errors.
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
   utm_content?: string;
   utm_term?: string;
-  fbclid?: string;
   referrer?: string;
   landing_page?: string;
-  event_id?: string;
-  fbp?: string;
-  fbc?: string;
 }
 
 // Only the four user-facing fields can produce validation errors.

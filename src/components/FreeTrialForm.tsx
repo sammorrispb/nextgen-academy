@@ -8,6 +8,7 @@ import type {
   ValidationErrors,
 } from "@/lib/validate-free-trial";
 import { validateFreeTrialForm } from "@/lib/validate-free-trial";
+import { trackEvent } from "@/lib/funnelClient";
 
 interface FreeTrialFormProps {
   sessions: FreeTrialSession[];
@@ -123,17 +124,10 @@ export default function FreeTrialForm({
 
       setStatus("success");
 
-      // Fire conversion events for tracking
-      if (typeof window !== "undefined") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const w = window as any;
-        if (w.fbq) w.fbq("track", "Lead");
-        if (w.gtag)
-          w.gtag("event", "free_trial_rsvp", {
-            location: form.location,
-            session_id: form.sessionId,
-          });
-      }
+      trackEvent("free_trial_rsvp", {
+        location: form.location,
+        session_id: form.sessionId,
+      });
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Something went wrong",

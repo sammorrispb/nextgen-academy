@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LeadFormData, LeadValidationErrors } from "@/lib/validate-lead";
 import { validateLeadForm } from "@/lib/validate-lead";
+import { trackEvent } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 13 }, (_, i) => i + 4); // 4-16
@@ -22,29 +23,9 @@ type TrackingContext = {
   utm_campaign?: string;
   utm_content?: string;
   utm_term?: string;
-  fbclid?: string;
   referrer?: string;
   landing_page?: string;
-  event_id?: string;
-  fbp?: string;
-  fbc?: string;
 };
-
-function readCookie(name: string): string | undefined {
-  if (typeof document === "undefined") return undefined;
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${name}=`));
-  return match ? decodeURIComponent(match.split("=")[1]) : undefined;
-}
-
-function generateEventId(): string {
-  // crypto.randomUUID is available in all modern browsers we support
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `lead_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
 
 export default function LeadForm() {
   const [form, setForm] = useState<LeadFormData>(emptyForm);
@@ -53,9 +34,7 @@ export default function LeadForm() {
   const [serverError, setServerError] = useState("");
   const trackingRef = useRef<TrackingContext>({});
 
-  // Capture attribution context once on mount — URL params + referrer + fb cookies.
-  // Persisted in a ref so re-renders don't reset it and we have a stable event_id
-  // for Pixel ↔ CAPI dedup.
+  // Capture attribution context once on mount — URL params + referrer.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ctx: TrackingContext = {
@@ -64,12 +43,8 @@ export default function LeadForm() {
       utm_campaign: params.get("utm_campaign") ?? undefined,
       utm_content: params.get("utm_content") ?? undefined,
       utm_term: params.get("utm_term") ?? undefined,
-      fbclid: params.get("fbclid") ?? undefined,
       referrer: document.referrer || undefined,
       landing_page: window.location.href,
-      event_id: generateEventId(),
-      fbp: readCookie("_fbp"),
-      fbc: readCookie("_fbc"),
     };
     trackingRef.current = ctx;
   }, []);
@@ -110,14 +85,7 @@ export default function LeadForm() {
 
     setStatus("submitting");
 
-    // Re-read fb cookies at submit time — the Pixel sets _fbp on PageView,
-    // which may not have existed yet when we mounted.
-    const tracking: TrackingContext = {
-      ...trackingRef.current,
-      fbp: trackingRef.current.fbp ?? readCookie("_fbp"),
-      fbc: trackingRef.current.fbc ?? readCookie("_fbc"),
-    };
-
+    const tracking: TrackingContext = { ...trackingRef.current };
     const payload: LeadFormData = { ...form, ...tracking };
 
     try {
@@ -140,30 +108,11 @@ export default function LeadForm() {
 
       setStatus("success");
 
-      if (typeof window !== "undefined") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const w = window as any;
-        // Pass eventID so Meta can dedup against the server-side CAPI event.
-        if (w.fbq)
-          w.fbq(
-            "track",
-            "Lead",
-            {
-              content_name: "Free Evaluation",
-              content_category: "youth_pickleball",
-              value: 0,
-              currency: "USD",
-            },
-            tracking.event_id ? { eventID: tracking.event_id } : undefined,
-          );
-        if (w.gtag)
-          w.gtag("event", "lead_form_submit", {
-            location: form.location,
-            child_age: form.childAge,
-            utm_source: tracking.utm_source,
-            utm_campaign: tracking.utm_campaign,
-          });
-      }
+      trackEvent("lead_form", {
+        action: "submitted",
+        interest: "free_evaluation",
+        page: window.location.pathname,
+      });
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Something went wrong",
