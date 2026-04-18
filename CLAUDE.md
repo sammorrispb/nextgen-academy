@@ -1,5 +1,14 @@
 # Next Gen Pickleball Academy — Website
 
+## Brand
+NGA has its own brand guide — not LD's. Review all copy against these before shipping:
+- `docs/brand-guide.md` — Part 1: design system (Pathway Rainbow palette, Montserrat/Inter, logo, imagery)
+- `docs/brand-guide-part2.md` — Part 2: positioning, voice (Coach register, parent-aware), EASE values, ball-color pathway, Parent–Coach–Kid Triangle
+
+**Key divergences from LD:** "Free evaluation" is an approved CTA (NGA's main conversion lever). Always CC `nextgenacademypb@gmail.com`. Sign emails as "Coach Sam" and "Coach Amine" (co-founders). Tagline is "Better than yesterday—together." (NOT "Play up.").
+
+Use `/brand-review-nga` to audit copy against the NGA guide. `/brand-review` (no suffix) is LD-only.
+
 ## What This Is
 Marketing website for Next Gen Pickleball Academy — a lead-gen tool for families with kids ages 5-16 in Montgomery County, MD. Drives parents toward free evaluations and CourtReserve session registration.
 
