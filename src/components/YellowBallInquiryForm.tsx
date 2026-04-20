@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { trackEvent } from "@/lib/funnelClient";
+import { trackEvent, getVisitorIdForForm } from "@/lib/funnelClient";
 
 const AGE_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 10); // 10-17
 
@@ -90,6 +90,7 @@ export default function YellowBallInquiryForm() {
           contact_phone: form.phone,
           notes: form.notes || undefined,
           landing_page: window.location.href,
+          visitor_id: getVisitorIdForForm() || null,
         }),
       });
       const data = await res.json();

@@ -45,6 +45,7 @@ interface YellowBallLeadBody {
   contact_phone?: string;
   notes?: string;
   landing_page?: string;
+  visitor_id?: string | null;
 }
 
 function validate(body: YellowBallLeadBody): string | null {
@@ -213,6 +214,7 @@ export async function POST(request: NextRequest) {
 
     void sendFunnelEvent({
       eventType: "yellowball_lead_submitted",
+      visitorId: body.visitor_id ?? null,
       email,
       marketingRef: "nga_yellowball",
       properties: {

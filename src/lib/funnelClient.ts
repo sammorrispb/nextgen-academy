@@ -70,6 +70,16 @@ export function getOrCreateVisitorId(): string {
   return id;
 }
 
+/**
+ * Get the current visitor_id for inclusion in a form submission payload.
+ * Safe to call during client render; returns empty string if run outside
+ * a browser (SSR), so it can be spread into request bodies unconditionally.
+ */
+export function getVisitorIdForForm(): string {
+  if (typeof document === "undefined") return "";
+  return getOrCreateVisitorId();
+}
+
 export function trackEvent<K extends keyof AnalyticsEventMap>(
   name: K,
   props: AnalyticsEventMap[K],
