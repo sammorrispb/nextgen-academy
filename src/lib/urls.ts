@@ -35,6 +35,24 @@ const FAMILY_BASES: Record<FamilyDest, string> = {
   mocopb: "https://mocopb.com",
 };
 
+/**
+ * Reads the `ld_visitor` cookie (set by funnelClient.ts getOrCreateVisitorId).
+ * SSR-safe: returns null when document is undefined.
+ * Fail-open: any parse error returns null rather than throwing.
+ */
+function readLdVisitorCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  try {
+    const pair = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("ld_visitor="));
+    if (!pair) return null;
+    return decodeURIComponent(pair.slice("ld_visitor=".length)) || null;
+  } catch {
+    return null;
+  }
+}
+
 export function familySiteUrl(dest: FamilyDest, path: string = "/"): string {
   const url = new URL(path, FAMILY_BASES[dest]);
   url.searchParams.set("utm_source", "nga");
@@ -43,6 +61,10 @@ export function familySiteUrl(dest: FamilyDest, path: string = "/"): string {
   url.searchParams.set("utm_content", `footer_${dest}`);
   if (dest === "linkanddink") {
     url.searchParams.set("ref", `nga_footer_${dest}`);
+  }
+  const ldPid = readLdVisitorCookie();
+  if (ldPid) {
+    url.searchParams.set("ld_pid", ldPid);
   }
   return url.toString();
 }
