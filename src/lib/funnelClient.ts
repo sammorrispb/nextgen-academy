@@ -73,11 +73,13 @@ export function getOrCreateVisitorId(): string {
 export function trackEvent<K extends keyof AnalyticsEventMap>(
   name: K,
   props: AnalyticsEventMap[K],
+  marketingRefOverride?: string,
 ): void {
   if (typeof window === "undefined") return;
   const visitorId = getOrCreateVisitorId();
   const page_url = window.location.href;
-  const marketing_ref = getRefSource(window.location.pathname);
+  const marketing_ref =
+    marketingRefOverride ?? getRefSource(window.location.pathname);
   const body = JSON.stringify({
     event_type: name,
     visitor_id: visitorId,

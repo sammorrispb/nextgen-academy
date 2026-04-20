@@ -26,3 +26,27 @@ export function crUrl(target: string, ref: string = UTM_SOURCE): string {
   url.searchParams.set("utm_source", ref);
   return url.toString();
 }
+
+export type FamilyDest = "linkanddink" | "sammorrispb" | "mocopb";
+
+const FAMILY_BASES: Record<FamilyDest, string> = {
+  linkanddink: "https://linkanddink.com",
+  sammorrispb: "https://sammorrispb.com",
+  mocopb: "https://mocopb.com",
+};
+
+export function familySiteUrl(dest: FamilyDest, path: string = "/"): string {
+  const url = new URL(path, FAMILY_BASES[dest]);
+  url.searchParams.set("utm_source", "nga");
+  url.searchParams.set("utm_medium", "cross_family_nav");
+  url.searchParams.set("utm_campaign", "family_reciprocal");
+  url.searchParams.set("utm_content", `footer_${dest}`);
+  if (dest === "linkanddink") {
+    url.searchParams.set("ref", `nga_footer_${dest}`);
+  }
+  return url.toString();
+}
+
+export function familyMarketingRef(dest: FamilyDest): string {
+  return `nga_footer_${dest}`;
+}
