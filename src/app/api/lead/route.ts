@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: LeadFormData;
+  let body: LeadFormData & { visitor_id?: string | null };
   try {
     body = await request.json();
   } catch {
@@ -355,6 +355,7 @@ export async function POST(request: NextRequest) {
     );
     void sendFunnelEvent({
       eventType: "lead_submitted",
+      visitorId: body.visitor_id ?? null,
       email,
       marketingRef,
       properties: {

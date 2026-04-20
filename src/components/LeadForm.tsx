@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LeadFormData, LeadValidationErrors } from "@/lib/validate-lead";
 import { validateLeadForm } from "@/lib/validate-lead";
-import { trackEvent } from "@/lib/funnelClient";
+import { trackEvent, getVisitorIdForForm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 13 }, (_, i) => i + 4); // 4-16
@@ -86,7 +86,11 @@ export default function LeadForm() {
     setStatus("submitting");
 
     const tracking: TrackingContext = { ...trackingRef.current };
-    const payload: LeadFormData = { ...form, ...tracking };
+    const payload = {
+      ...form,
+      ...tracking,
+      visitor_id: getVisitorIdForForm() || null,
+    };
 
     try {
       const res = await fetch("/api/lead", {
