@@ -1,6 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { site } from "@/data/site";
-import { hubUrl } from "@/lib/urls";
+import { familySiteUrl, familyMarketingRef, type FamilyDest } from "@/lib/urls";
+import { trackEvent } from "@/lib/funnelClient";
+
+type FamilyLink = { dest: FamilyDest; label: string; icon?: string };
+
+const FAMILY_LINKS: FamilyLink[] = [
+  { dest: "linkanddink", label: "Parents play too — join the adult community", icon: "\u{1F3D3}" },
+  { dest: "sammorrispb", label: "Private lessons with Sam" },
+  { dest: "mocopb", label: "Find pickleball across MoCo" },
+];
 
 export default function Footer() {
   return (
@@ -61,26 +72,47 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Parent cross-sell */}
-        <div className="mt-8 text-center">
-          <a
-            href={hubUrl("/")}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 border border-ngpa-slate rounded-full text-sm text-ngpa-white hover:border-ngpa-lime hover:text-ngpa-lime transition-colors"
-          >
-            <span aria-hidden="true">&#127955;</span>
-            Parents play too &mdash; Join the adult pickleball community
-          </a>
+        {/* Family nav — cross-site reciprocal links */}
+        <div className="mt-8 flex flex-col md:flex-row flex-wrap justify-center items-center gap-3">
+          {FAMILY_LINKS.map((link) => {
+            const href = familySiteUrl(link.dest);
+            return (
+              <a
+                key={link.dest}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() =>
+                  trackEvent(
+                    "external_link",
+                    { label: `family_${link.dest}`, url: href, page: "footer" },
+                    familyMarketingRef(link.dest),
+                  )
+                }
+                className="inline-flex items-center gap-2 px-5 py-2.5 border border-ngpa-slate rounded-full text-sm text-ngpa-white hover:border-ngpa-lime hover:text-ngpa-lime transition-colors"
+              >
+                {link.icon && <span aria-hidden="true">{link.icon}</span>}
+                {link.label}
+              </a>
+            );
+          })}
         </div>
 
         <div className="mt-10 pt-6 border-t border-ngpa-slate text-center text-xs text-ngpa-muted">
           &copy; {new Date().getFullYear()} Next Gen Pickleball Academy. All rights reserved.
           <span className="mx-1.5">&middot;</span>
           <a
-            href="https://sammorrispb.com"
+            href={familySiteUrl("sammorrispb")}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              const href = familySiteUrl("sammorrispb");
+              trackEvent(
+                "external_link",
+                { label: "built_by_sam_morris", url: href, page: "footer" },
+                familyMarketingRef("sammorrispb"),
+              );
+            }}
             className="hover:text-ngpa-lime transition-colors"
           >
             Built by Sam Morris
