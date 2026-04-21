@@ -27,12 +27,13 @@ export function crUrl(target: string, ref: string = UTM_SOURCE): string {
   return url.toString();
 }
 
-export type FamilyDest = "linkanddink" | "sammorrispb" | "mocopb";
+export type FamilyDest = "linkanddink" | "sammorrispb" | "mocopb" | "tournaments";
 
 const FAMILY_BASES: Record<FamilyDest, string> = {
   linkanddink: "https://linkanddink.com",
   sammorrispb: "https://sammorrispb.com",
   mocopb: "https://mocopb.com",
+  tournaments: "https://tournamentwebsite.vercel.app",
 };
 
 /**
