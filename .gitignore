@@ -45,3 +45,4 @@ next-env.d.ts
 # data exports & Windows metadata
 *.xlsx
 *:Zone.Identifier
+.env*.local

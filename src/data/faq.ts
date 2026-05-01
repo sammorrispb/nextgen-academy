@@ -17,7 +17,7 @@ export const faq: FaqItem[] = [
   {
     question: "How do I sign up?",
     answer:
-      "Fill out the form on this page and we\u2019ll reach out within 24 hours to help place your child in the right group. You can also visit our Schedule page to browse upcoming sessions and register directly through CourtReserve.",
+      "Registration is by email. Send us a note at nextgenacademypb@gmail.com (or fill out the form on this page) and we\u2019ll confirm your child\u2019s weekly day-and-time slot within 24 hours. Browse the Schedule page to see what\u2019s running, then email us to enroll \u2014 we handle the rest.",
   },
   {
     question: "What should my child bring?",
@@ -37,7 +37,7 @@ export const faq: FaqItem[] = [
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
     answer:
-      "Group classes at the Red, Orange, and Green Ball levels are priced per season on CourtReserve \u2014 browse exact sessions on our Schedule page. Our Yellow Ball small-group tournament track runs $36\u2013$90 per player per session depending on group size (2\u20135 athletes). The 30-minute evaluation that determines placement is always free.",
+      "Red Ball is $35/session and Orange, Green, and Yellow Ball are $45/session. Each enrollment reserves a specific weekly day-and-time slot. Parents are charged at the start of each month for the full month (amount depends on how many weeks fall in that month). To pause or cancel, email nextgenacademypb@gmail.com at least 5 days before the 1st of the month. The 30-minute evaluation that determines placement is always free.",
   },
   {
     question: "Is pickleball safe for kids?",
@@ -57,7 +57,7 @@ export const faq: FaqItem[] = [
   {
     question: "Can my child join mid-season?",
     answer:
-      "Yes. We accept new players throughout the season. Start with a free 30-minute evaluation and our coaches will place your child into the current session that fits their level and schedule. Pro-rated pricing is available for partial-season joins.",
+      "Yes. We accept new players any time. Start with a free 30-minute evaluation and our coaches will place your child into the weekly slot that fits their level and schedule. Your first month is pro-rated to the remaining weeks; after that, you’re billed at the start of each month for that month’s sessions.",
   },
   {
     question: "Which Montgomery County towns do you serve?",

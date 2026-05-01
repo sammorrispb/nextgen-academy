@@ -7,7 +7,7 @@ import { levels } from "@/data/levels";
 import { coaches } from "@/data/coaches";
 import { faq } from "@/data/faq";
 import { testimonials } from "@/data/testimonials";
-import { yellowBallPricing } from "@/data/schedule";
+import { sessionPricing } from "@/data/schedule";
 import LocationMap from "@/components/LocationMap";
 import JsonLd from "@/components/JsonLd";
 import LeadForm from "@/components/LeadForm";
@@ -264,35 +264,30 @@ export default function MontgomeryCountyPage() {
             Pricing
           </h2>
           <p className="text-ngpa-muted leading-relaxed mb-6">
-            Group classes at the Red, Orange, and Green Ball levels are priced
-            per season on CourtReserve —{" "}
-            <Link href="/schedule" className="text-ngpa-lime hover:underline">
-              view the current schedule
-            </Link>
-            . Our Yellow Ball small-group tournament track is priced by group
-            size:
+            Reserve your child&apos;s weekly day-and-time slot and pay one flat
+            per-session rate. Parents are charged at the start of each month
+            for the full month (amount depends on how many weeks fall in that
+            month).
           </p>
           <div className="bg-ngpa-panel rounded-2xl border border-ngpa-slate overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-ngpa-black/50">
                 <tr>
                   <th className="text-left px-5 py-3 font-heading font-bold text-ngpa-white">
-                    Group size
+                    Level
                   </th>
                   <th className="text-left px-5 py-3 font-heading font-bold text-ngpa-white">
-                    Yellow Ball price
+                    Price
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {yellowBallPricing.map((row) => (
+                {sessionPricing.map((row) => (
                   <tr
-                    key={row.players}
+                    key={row.level}
                     className="border-t border-ngpa-slate/50"
                   >
-                    <td className="px-5 py-3 text-ngpa-white">
-                      {row.players} players
-                    </td>
+                    <td className="px-5 py-3 text-ngpa-white">{row.level}</td>
                     <td className="px-5 py-3 text-ngpa-muted">{row.price}</td>
                   </tr>
                 ))}
@@ -300,7 +295,15 @@ export default function MontgomeryCountyPage() {
             </table>
           </div>
           <p className="text-sm text-ngpa-muted mt-4">
-            The 30-minute evaluation that determines placement is always free.
+            To pause or cancel, email{" "}
+            <a
+              href={`mailto:${site.email}`}
+              className="text-ngpa-lime hover:underline"
+            >
+              {site.email}
+            </a>{" "}
+            at least 5 days before the 1st of the month. The 30-minute
+            evaluation that determines placement is always free.
           </p>
         </div>
       </section>

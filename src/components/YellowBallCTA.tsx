@@ -1,31 +1,26 @@
-import { yellowBallPricing } from "@/data/schedule";
+import { sessionPricing } from "@/data/schedule";
 import { site } from "@/data/site";
 
 export default function YellowBallCTA() {
   return (
     <div className="bg-ngpa-panel border border-ngpa-slate rounded-2xl p-8">
       <h3 className="font-heading text-2xl font-bold text-ngpa-white mb-3">
-        Ready for Tournament Play?
+        Simple monthly pricing
       </h3>
-      <p className="text-ngpa-muted leading-relaxed mb-2">
-        Yellow Ball is our coach-curated competitive track for players 12+ rated
-        3.0 or above. Small groups of 3&ndash;5 athletes, custom scheduling,
-        and focused preparation for tournament play.
-      </p>
-      <p className="text-sm text-ngpa-skill-yellow font-semibold mb-4">
-        $45/session (with 4 players) &middot; Minimum 4-session initial commitment
+      <p className="text-ngpa-muted leading-relaxed mb-4">
+        Reserve your child&apos;s weekly day-and-time slot and pay one flat
+        per-session rate. We bill at the start of each month for the weeks in
+        that month &mdash; no seasons, no packages.
       </p>
 
       {/* Pricing table */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-        {yellowBallPricing.map((tier) => (
+        {sessionPricing.map((tier) => (
           <div
-            key={tier.players}
+            key={tier.level}
             className="bg-ngpa-slate rounded-lg p-3 text-center border border-ngpa-slate"
           >
-            <div className="text-xs text-ngpa-muted mb-1">
-              {tier.players} players
-            </div>
+            <div className="text-xs text-ngpa-muted mb-1">{tier.level}</div>
             <div className="font-mono font-bold text-ngpa-skill-yellow">
               {tier.price}
             </div>
@@ -33,14 +28,18 @@ export default function YellowBallCTA() {
         ))}
       </div>
       <p className="text-xs text-ngpa-muted mb-6">
-        Minimum 4-week commitment required.
+        To pause or cancel, email{" "}
+        <a href={`mailto:${site.email}`} className="text-ngpa-lime hover:underline">
+          {site.email}
+        </a>{" "}
+        at least 5 days before the 1st of the month.
       </p>
 
       <a
-        href={`mailto:${site.email}?subject=Yellow%20Ball%20Inquiry`}
+        href={`mailto:${site.email}?subject=Enrollment%20Inquiry`}
         className="inline-block px-6 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
       >
-        Email Us About Yellow Ball
+        Email Us to Enroll
       </a>
     </div>
   );

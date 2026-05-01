@@ -152,7 +152,7 @@ export default async function SchedulePage() {
         <div className="max-w-6xl mx-auto">
           <SectionHeading
             title="Upcoming Sessions"
-            subtitle="Tap Register to sign up for a session."
+            subtitle="Registration is by email — see the notice below."
           />
 
           {/* Registration instructions */}
@@ -175,10 +175,17 @@ export default async function SchedulePage() {
           ) : (
             <div className="bg-ngpa-panel rounded-2xl p-8 border border-ngpa-slate text-center">
               <p className="text-ngpa-white font-medium mb-2">
-                Schedule is loading from CourtReserve.
+                Schedule is loading.
               </p>
               <p className="text-sm text-ngpa-muted mb-4">
-                View the full schedule and register directly on CourtReserve.
+                Browse the live schedule at either location, then email{" "}
+                <a
+                  href="mailto:nextgenacademypb@gmail.com?subject=Enrollment%20Inquiry"
+                  className="text-ngpa-cyan hover:underline"
+                >
+                  nextgenacademypb@gmail.com
+                </a>{" "}
+                to enroll your child in a weekly slot.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 {LOCATIONS.map((loc) => (

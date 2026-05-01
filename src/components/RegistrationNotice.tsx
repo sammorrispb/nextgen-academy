@@ -7,10 +7,11 @@ export default function RegistrationNotice() {
         How to Register
       </h3>
       <p className="text-sm text-ngpa-muted leading-relaxed">
-        Tap <strong className="text-ngpa-white">Register</strong> to sign up on
-        CourtReserve. If registration is closed or you need help, email us at{" "}
+        Registration is by email. The schedule below is a live reference of
+        what&rsquo;s running &mdash; to enroll your child in a weekly slot,
+        email{" "}
         <a
-          href={`mailto:${site.email}`}
+          href={`mailto:${site.email}?subject=Enrollment%20Inquiry`}
           className="text-ngpa-cyan hover:underline"
         >
           {site.email}
@@ -22,7 +23,8 @@ export default function RegistrationNotice() {
         >
           {site.phone}
         </a>
-        . Times may vary — check your CourtReserve confirmation for exact start times.
+        . Once placed, you&rsquo;re billed at the start of each month for that
+        month&rsquo;s sessions.
       </p>
     </div>
   );

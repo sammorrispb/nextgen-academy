@@ -34,12 +34,12 @@ function SlotSection({ slot }: { slot: LiveSlot }) {
           </span>
         </h4>
         <a
-          href={nextSession.registrationUrl}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`mailto:nextgenacademypb@gmail.com?subject=${encodeURIComponent(
+            `Enrollment Inquiry — ${slot.dayOfWeek} ${slot.timeRange}`,
+          )}`}
           className="inline-flex items-center px-4 py-1.5 bg-ngpa-lime text-ngpa-black text-xs font-bold rounded-full hover:bg-ngpa-cyan transition-colors min-h-[36px]"
         >
-          Register
+          Email to Enroll
         </a>
       </div>
 
@@ -60,15 +60,12 @@ function SlotSection({ slot }: { slot: LiveSlot }) {
           {expanded && (
             <div className="mt-2 flex flex-wrap gap-2">
               {uniqueDates.slice(1).map((s) => (
-                <a
+                <span
                   key={s.date}
-                  href={s.registrationUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-ngpa-muted hover:text-ngpa-lime transition-colors bg-ngpa-slate/50 px-2.5 py-1 rounded-md"
+                  className="text-xs text-ngpa-muted bg-ngpa-slate/50 px-2.5 py-1 rounded-md"
                 >
                   {s.displayDate}
-                </a>
+                </span>
               ))}
             </div>
           )}
