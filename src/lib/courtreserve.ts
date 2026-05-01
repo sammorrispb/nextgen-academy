@@ -53,10 +53,9 @@ function crHeaders(locationKey: string): HeadersInit {
 }
 
 export function hasCredentials(): boolean {
-  return LOCATIONS.every((loc) => {
-    const { username, password } = getCredentials(loc.key);
-    return !!username && !!password;
-  });
+  // Disabled 2026-05-01: NGA decoupled from DD CourtReserve.
+  // Re-enable once NGA points at its own venue/CR org.
+  return false;
 }
 
 export async function fetchNextGenEvents(
