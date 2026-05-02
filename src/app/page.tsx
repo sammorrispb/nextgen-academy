@@ -12,7 +12,6 @@ import JsonLd from "@/components/JsonLd";
 import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
 import { faq } from "@/data/faq";
-import { hubUrl } from "@/lib/urls";
 
 export const metadata = {
   alternates: { canonical: "/" },
@@ -137,19 +136,6 @@ export default function Home() {
               <strong className="text-ngpa-white">Parent&ndash;Coach&ndash;Kid Triangle</strong>&mdash;parents
               aren&rsquo;t spectators, they&rsquo;re partners. Families learn the
               game together so everyone grows through the sport.
-            </p>
-            <p className="text-ngpa-muted leading-relaxed mt-4">
-              Want to play too?{" "}
-              <a
-                href={hubUrl("/")}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ngpa-lime hover:underline"
-              >
-                Link &amp; Dink
-              </a>{" "}
-              connects adult players across Montgomery County with groups, events, and
-              community&mdash;built by the same team behind Next Gen.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -4,6 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 **NOTE (2026-05-01):** This site was decoupled from Dill Dinkers / CourtReserve on 2026-05-01. No DD/CR references should be re-introduced.
+**2026-05-02:** Hub coupling fully removed (funnel POSTs, inbound_leads forward, the legacy Hub URL helper, and the /api/funnel-track proxy are all gone).
 
 Marketing / lead-gen website for **Next Gen Pickleball Academy** — youth pickleball (ages 5–16) in Montgomery County, MD. Drives parents to free evaluations and the Yellow Ball tournament track.
 
@@ -11,7 +12,6 @@ Live at https://nextgenpbacademy.com (deployed on Vercel, auto-deploy from `main
 
 ## Ecosystem
 Part of Sam Morris's pickleball platform. Other repos this site talks to:
-- **The Hub** (`sammorrispb/The-Hub`) at linkanddink.com — receives unified-funnel events (`/api/funnel-event`) and `inbound_leads` rows for Meta-ad attribution.
 - **Open Brain** (`sammorrispb/open-brain`) — semantic CRM; receives `ingestToOpenBrain` POSTs.
 - Cross-family nav links use `familySiteUrl()` helpers that stamp UTMs + `ld_pid`.
 
@@ -63,16 +63,8 @@ A single lead submission fans out to multiple destinations. Order in `src/app/ap
 3. **Notion CRM** dedup-and-create (`NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7"`). Skipped if `NOTION_API_KEY` missing.
 4. **Resend** emails: admin notification to `sam.morris2131@gmail.com` (cc `nextgenacademypb@gmail.com`) + parent confirmation if email provided.
 5. **Open Brain** ingest (`ingestToOpenBrain`, fire-and-forget, requires email — phone-only leads are skipped here and backfilled later).
-6. **Unified funnel** event to the Hub (`sendFunnelEvent` → `linkanddink.com/api/funnel-event`).
-7. **Hub `inbound_leads`** direct insert via Supabase REST (used for Meta-ad conversion tracking).
 
 If any optional integration's env var is missing, that step logs a warning and is skipped — the response still succeeds as long as Resend works.
-
-### Unified funnel (`src/lib/funnelClient.ts` + `funnelServer.ts` + `funnelSign.ts`)
-- Visitor identity: `ld_visitor` cookie (1y, SameSite=Lax) set by `getOrCreateVisitorId()`. Read by `familySiteUrl()` to stamp `ld_pid` on cross-site links.
-- Client events POST to `/api/funnel-track` (proxy) which signs with `FUNNEL_INGEST_SECRET_NGA` and forwards to the Hub. Signature format is `v1:<ms>:<site_id>:<event_type>:<visitor_id>:<email>:<marketing_ref>` HMAC-SHA256 — must stay byte-identical to the Hub's verifier. `scripts/verify-funnel.mjs` snapshots this.
-- `site_id` is always `"nga"`. `marketing_ref` defaults to `"nga"` and is upgraded by `getRefSource()` in `src/lib/urls.ts` (e.g. `/yellowball` → `"nga_yellowball"`).
-- **No third-party pixels.** GA4, Meta Pixel, `@vercel/analytics`, `gtag`, `fbq` are explicitly banned — `verify-funnel.mjs` greps for them.
 
 ### Cron: block re-register reminders (`/api/cron/block-reminders`)
 - Triggered by Vercel Cron (`vercel.json` → `0 14 * * *` daily 14:00 UTC). Auth: `Authorization: Bearer ${CRON_SECRET}`.
@@ -83,7 +75,6 @@ If any optional integration's env var is missing, that step logs a warning and i
 
 ### URL helpers (`src/lib/urls.ts`)
 Always route outbound links through these — they handle UTM/`ref` stamping consistently:
-- `hubUrl(path, extraParams?, ref?)` → linkanddink.com with `ref=nga` default.
 - `familySiteUrl(dest, path)` → cross-family link with full UTM block + `ld_pid` cookie value.
 - `getRefSource(pathname)` → maps page paths to specific `marketing_ref` values.
 
@@ -95,6 +86,7 @@ Always route outbound links through these — they handle UTM/`ref` stamping con
 - **Schema.org JSON-LD** is required: `SportsActivityLocation` in the root layout, `FAQPage` + `Person` (per coach) on the home page, one `SportsEvent` per upcoming session on `/schedule`. Use the `<JsonLd />` component.
 - **All program dates use `<time datetime="YYYY-MM-DD">`** and prices use `itemprop="price" content="N"` (numeric, no `$`). This is for AI/scheduler parsing — see BRAND_GUIDELINES "AI-PARSING OPTIMIZATION".
 - **Yellow Ball is invite-only.** No public registration link, no `mailto:` CTAs — route all interest to `/yellowball/inquiry`. `verify-funnel.mjs` enforces this.
+- **No third-party pixels.** GA4, Meta Pixel, `@vercel/analytics`, `gtag`, `fbq` are explicitly banned — `verify-funnel.mjs` greps for them.
 - Don't add comments that describe what code does. Add a comment only when the *why* isn't obvious (e.g. the CR API shape unwrap, the `remindersSent[]` git-as-audit-trail decision).
 
 ## Environment Variables
@@ -102,8 +94,6 @@ See `.env.example`. Categories:
 - `RESEND_API_KEY` — required for any lead form to succeed.
 - `NOTION_API_KEY` — optional; if absent Notion step is skipped.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
-- `HUB_SUPABASE_URL` + `HUB_SERVICE_ROLE_KEY` — direct Hub `inbound_leads` insert.
-- `FUNNEL_INGEST_SECRET_NGA` — HMAC secret; **must match The-Hub's value of the same name**.
 - `CRON_SECRET` — Vercel Cron auth for `/api/cron/block-reminders`.
 
 ## Testing Standards

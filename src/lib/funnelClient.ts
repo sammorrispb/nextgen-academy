@@ -1,7 +1,5 @@
 "use client";
 
-import { getRefSource } from "./urls";
-
 export type AnalyticsEventMap = {
   cta_click: {
     label: string;
@@ -80,30 +78,13 @@ export function getVisitorIdForForm(): string {
   return getOrCreateVisitorId();
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export function trackEvent<K extends keyof AnalyticsEventMap>(
   name: K,
   props: AnalyticsEventMap[K],
   marketingRefOverride?: string,
 ): void {
-  if (typeof window === "undefined") return;
-  const visitorId = getOrCreateVisitorId();
-  const page_url = window.location.href;
-  const marketing_ref =
-    marketingRefOverride ?? getRefSource(window.location.pathname);
-  const body = JSON.stringify({
-    event_type: name,
-    visitor_id: visitorId,
-    marketing_ref,
-    properties: { ...props, page_url },
-  });
-  try {
-    void fetch("/api/funnel-track", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      keepalive: true,
-      body,
-    }).catch(() => {});
-  } catch {
-    // Never block UI on tracking failure.
-  }
+  // No-op: Hub funnel ingest decommissioned 2026-05-02.
+  return;
 }
+/* eslint-enable @typescript-eslint/no-unused-vars */

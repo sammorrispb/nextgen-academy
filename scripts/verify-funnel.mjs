@@ -88,10 +88,8 @@ assert(
 
 // 5) urls.ts exports helpers with correct ref stamping.
 const urls = readFileSync("src/lib/urls.ts", "utf8");
-assert(/export function hubUrl/.test(urls), "hubUrl export missing from src/lib/urls.ts");
 assert(/export function crUrl/.test(urls), "crUrl export missing from src/lib/urls.ts");
 assert(/export function getRefSource/.test(urls), "getRefSource export missing from src/lib/urls.ts");
-assert(/DEFAULT_REF\s*=\s*"nga"/.test(urls), "hubUrl no longer defaults ref=nga");
 assert(/UTM_SOURCE\s*=\s*"nga"/.test(urls), "crUrl no longer stamps utm_source=nga");
 assert(/"nga_yellowball"/.test(urls), "getRefSource no longer maps /yellowball → nga_yellowball");
 assert(/"nga_leagues"/.test(urls), "getRefSource no longer maps /leagues → nga_leagues");

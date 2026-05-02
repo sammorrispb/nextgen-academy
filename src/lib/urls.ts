@@ -8,29 +8,15 @@ export function getRefSource(pathname?: string | null): string {
   return DEFAULT_REF;
 }
 
-export function hubUrl(
-  path: string = "/",
-  extraParams: Record<string, string> = {},
-  ref: string = DEFAULT_REF,
-): string {
-  const url = new URL(path, "https://linkanddink.com");
-  url.searchParams.set("ref", ref);
-  for (const [k, v] of Object.entries(extraParams)) {
-    url.searchParams.set(k, v);
-  }
-  return url.toString();
-}
-
 export function crUrl(target: string, ref: string = UTM_SOURCE): string {
   const url = new URL(target);
   url.searchParams.set("utm_source", ref);
   return url.toString();
 }
 
-export type FamilyDest = "linkanddink" | "sammorrispb" | "mocopb" | "tournaments";
+export type FamilyDest = "sammorrispb" | "mocopb" | "tournaments";
 
 const FAMILY_BASES: Record<FamilyDest, string> = {
-  linkanddink: "https://linkanddink.com",
   sammorrispb: "https://sammorrispb.com",
   mocopb: "https://mocopb.com",
   tournaments: "https://tournamentwebsite.vercel.app",
@@ -60,9 +46,6 @@ export function familySiteUrl(dest: FamilyDest, path: string = "/"): string {
   url.searchParams.set("utm_medium", "cross_family_nav");
   url.searchParams.set("utm_campaign", "family_reciprocal");
   url.searchParams.set("utm_content", `footer_${dest}`);
-  if (dest === "linkanddink") {
-    url.searchParams.set("ref", `nga_footer_${dest}`);
-  }
   const ldPid = readLdVisitorCookie();
   if (ldPid) {
     url.searchParams.set("ld_pid", ldPid);
