@@ -18,9 +18,9 @@ export const coaches: Coach[] = [
     initials: "SM",
     initialsBg: "#FF4040",
     photo: "/images/coach-sam.jpeg",
-    bio: "Sam is a former physical education teacher and father to two boys, Kobe and Owen. As Director of Pickleball Programming at Dill Dinkers (North Bethesda and Rockville), he's been playing since 2019 and coaching since 2021. Sam and his son Kobe spend hours each week throwing, catching, chasing, and playing — this purposeful play helped Kobe start pickleball at age 5, playing full games.",
+    bio: "Sam is a former physical education teacher and father to two boys, Kobe and Owen. He's been playing pickleball since 2019 and coaching since 2021. Sam and his son Kobe spend hours each week throwing, catching, chasing, and playing — this purposeful play helped Kobe start pickleball at age 5, playing full games.",
     highlights: [
-      "Director of Pickleball Programming, Dill Dinkers",
+      "Co-Founder, Next Gen Pickleball Academy",
       "Former physical education teacher",
       "Playing since 2019, coaching since 2021",
     ],

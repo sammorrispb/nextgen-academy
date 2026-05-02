@@ -2,13 +2,11 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
 import { site } from "@/data/site";
-import { locations } from "@/data/locations";
 import { levels } from "@/data/levels";
 import { coaches } from "@/data/coaches";
 import { faq } from "@/data/faq";
 import { testimonials } from "@/data/testimonials";
 import { yellowBallPricing } from "@/data/schedule";
-import LocationMap from "@/components/LocationMap";
 import JsonLd from "@/components/JsonLd";
 import LeadForm from "@/components/LeadForm";
 
@@ -91,10 +89,8 @@ export default function MontgomeryCountyPage() {
           </h1>
           <p className="mt-5 text-base sm:text-lg text-ngpa-muted leading-relaxed max-w-2xl">
             Next Gen Pickleball Academy is a family-first youth pickleball
-            academy for ages 5–16, based at Dill Dinkers in{" "}
-            <strong className="text-ngpa-white">Rockville</strong> and{" "}
-            <strong className="text-ngpa-white">North Bethesda</strong>. We
-            serve families across Bethesda, Potomac, Chevy Chase, Kensington,
+            academy for ages 5–16, serving families across Montgomery County.
+            We reach families in Bethesda, Potomac, Chevy Chase, Kensington,
             Silver Spring, Gaithersburg, and the broader DMV — with a clear
             pathway from first rally to tournament play.
           </p>
@@ -123,16 +119,19 @@ export default function MontgomeryCountyPage() {
             Where Montgomery County families play with us
           </h2>
           <p className="text-ngpa-muted leading-relaxed mb-6">
-            Our two locations sit within 15 minutes of most of Montgomery County.
-            Both are inside <strong className="text-ngpa-white">Dill Dinkers</strong>,
-            the DMV’s dedicated indoor pickleball facility — so sessions run
-            year-round regardless of weather.
+            Sessions move between Montgomery County courts each season.
+            Email or text us and we&rsquo;ll share the current cohort&rsquo;s
+            location and time.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
-            {locations.map((loc) => (
-              <LocationMap key={loc.name} location={loc} />
-            ))}
+          <div className="max-w-2xl mx-auto bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 text-center mb-8">
+            <h3 className="font-heading text-lg font-bold text-ngpa-white mb-2">
+              Locations Rotate Seasonally
+            </h3>
+            <p className="text-sm text-ngpa-muted leading-relaxed">
+              Sessions move between Montgomery County courts each season.
+              Email or text us and we&rsquo;ll share the current location.
+            </p>
           </div>
 
           <h3 className="font-heading text-lg font-bold text-ngpa-white mb-3">
@@ -148,10 +147,6 @@ export default function MontgomeryCountyPage() {
               </li>
             ))}
           </ul>
-          <p className="text-ngpa-muted text-sm mt-4">
-            Rockville is minutes from Rockville Town Center and Twinbrook Metro.
-            North Bethesda sits beside Pike &amp; Rose and Grosvenor-Strathmore Metro.
-          </p>
         </div>
       </section>
 
@@ -265,7 +260,7 @@ export default function MontgomeryCountyPage() {
           </h2>
           <p className="text-ngpa-muted leading-relaxed mb-6">
             Group classes at the Red, Orange, and Green Ball levels are priced
-            per season on CourtReserve —{" "}
+            per season —{" "}
             <Link href="/schedule" className="text-ngpa-lime hover:underline">
               view the current schedule
             </Link>

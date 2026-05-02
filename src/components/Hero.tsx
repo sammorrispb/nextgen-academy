@@ -64,7 +64,7 @@ export default function Hero() {
             <div className="rounded-2xl overflow-hidden border-2 border-ngpa-slate shadow-2xl">
               <Image
                 src="/images/hero-action.jpeg"
-                alt="Young player hitting a pickleball at Dill Dinkers"
+                alt="Young player hitting a pickleball"
                 width={600}
                 height={750}
                 className="w-full h-auto object-cover"
