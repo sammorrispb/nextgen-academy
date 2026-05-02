@@ -17,7 +17,7 @@ export const faq: FaqItem[] = [
   {
     question: "How do I sign up?",
     answer:
-      "Fill out the form on this page and we\u2019ll reach out within 24 hours to help place your child in the right group. You can also visit our Schedule page to browse upcoming sessions and register directly through CourtReserve.",
+      "Fill out the form on this page and we'll reach out within 24 hours to help place your child in the right group. You can also email nextgenacademypb@gmail.com or text Sam at 301-325-4731 for the current session schedule.",
   },
   {
     question: "What should my child bring?",
@@ -27,7 +27,7 @@ export const faq: FaqItem[] = [
   {
     question: "Where are you located?",
     answer:
-      "We operate at two Dill Dinkers locations in Montgomery County, MD: Rockville (40 Southlawn Court, Suite C) and North Bethesda (4942 Boiling Brook Parkway). Families commonly drive in from Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill.",
+      "We run sessions across Montgomery County, MD. Locations rotate seasonally based on court availability — common areas include Rockville, North Bethesda, Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill. Email or text us and we'll share the current session location.",
   },
   {
     question: "How do free evaluations work?",
@@ -37,7 +37,7 @@ export const faq: FaqItem[] = [
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
     answer:
-      "Group classes at the Red, Orange, and Green Ball levels are priced per season on CourtReserve \u2014 browse exact sessions on our Schedule page. Our Yellow Ball small-group tournament track runs $36\u2013$90 per player per session depending on group size (2\u20135 athletes). The 30-minute evaluation that determines placement is always free.",
+      "Group classes at the Red, Orange, and Green Ball levels are priced per season \u2014 reach out for the current cohort's pricing and schedule. Our Yellow Ball small-group tournament track runs $36\u2013$90 per player per session depending on group size (2\u20135 athletes). The 30-minute evaluation that determines placement is always free.",
   },
   {
     question: "Is pickleball safe for kids?",
@@ -52,7 +52,7 @@ export const faq: FaqItem[] = [
   {
     question: "Do you offer private pickleball lessons for kids?",
     answer:
-      "Yes. In addition to group classes, we offer private and semi-private lessons tailored to each athlete. Head Coach Sam Morris is Director of Pickleball Programming at Dill Dinkers; Co-Founder Amine Lahlou is a former professional tennis player. Email nextgenacademypb@gmail.com or call 301-325-4731 to schedule.",
+      "Yes. In addition to group classes, we offer private and semi-private lessons tailored to each athlete. Head Coach Sam Morris is a former physical education teacher and Co-Founder of Next Gen Academy; Co-Founder Amine Lahlou is a former professional tennis player. Email nextgenacademypb@gmail.com or call 301-325-4731 to schedule.",
   },
   {
     question: "Can my child join mid-season?",
@@ -62,6 +62,6 @@ export const faq: FaqItem[] = [
   {
     question: "Which Montgomery County towns do you serve?",
     answer:
-      "Our two locations in Rockville and North Bethesda are within 15 minutes of Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, Aspen Hill, and most of the DMV. Families regularly travel from across Montgomery County and Northwest DC.",
+      "We serve families across Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Rockville, North Bethesda, Gaithersburg, Derwood, Aspen Hill, and most of the DMV. Sessions rotate seasonally between Montgomery County courts — reach out for the current location.",
   },
 ];

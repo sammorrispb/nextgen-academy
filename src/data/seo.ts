@@ -2,21 +2,21 @@ export const seo = {
   home: {
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball for ages 5\u201316 at Dill Dinkers Rockville & North Bethesda. Free evaluations, structured coaching, and a clear pathway from beginner to tournament play in Montgomery County, MD.",
+      "Youth pickleball for ages 5–16 in Montgomery County, MD. Free evaluations, structured coaching, and a clear pathway from beginner to tournament play.",
   },
   schedule: {
-    title: "Youth Pickleball Classes in Montgomery County \u2014 Schedule & Registration",
+    title: "Youth Pickleball Classes in Montgomery County — Schedule & Registration",
     description:
-      "Spring 2026 youth pickleball schedules at Dill Dinkers Rockville & North Bethesda. Register for sessions for ages 5\u201316 in Montgomery County, MD \u2014 serving Rockville, Bethesda, North Bethesda, Potomac, Chevy Chase, and the DMV.",
+      "Upcoming youth pickleball sessions for ages 5–16 in Montgomery County, MD — serving Rockville, Bethesda, North Bethesda, Potomac, Chevy Chase, and the DMV. Locations rotate seasonally.",
   },
   freeEvaluation: {
-    title: "Free 30-Minute Youth Pickleball Evaluation \u2014 Montgomery County, MD",
+    title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
     description:
-      "Book a free 30-minute evaluation for your child (ages 5\u201316) at Dill Dinkers Rockville or North Bethesda. Meet a coach, see where your child fits in our Red/Orange/Green/Yellow Ball pathway. No cost. No commitment.",
+      "Book a free 30-minute evaluation for your child (ages 5–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Red/Orange/Green/Yellow Ball pathway. No cost. No commitment.",
   },
   montgomeryCounty: {
-    title: "Youth Pickleball in Montgomery County, MD \u2014 Ages 5\u201316",
+    title: "Youth Pickleball in Montgomery County, MD — Ages 5–16",
     description:
-      "Next Gen Pickleball Academy offers structured youth pickleball coaching for ages 5\u201316 in Montgomery County, MD. Classes at Dill Dinkers Rockville and North Bethesda \u2014 serving Bethesda, Potomac, Chevy Chase, Gaithersburg, Kensington, and the DMV.",
+      "Next Gen Pickleball Academy offers structured youth pickleball coaching for ages 5–16 in Montgomery County, MD — serving Bethesda, Rockville, Potomac, Chevy Chase, Gaithersburg, Kensington, and the DMV.",
   },
 } as const;

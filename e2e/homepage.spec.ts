@@ -147,14 +147,13 @@ test.describe("Coaches / About", () => {
 // ─── Lead Form ────────────────────────────────────
 
 test.describe("Lead Form", () => {
-  test("has exactly 4 input fields", async ({ page }) => {
+  test("has exactly 3 input fields", async ({ page }) => {
     await page.goto("/");
     const form = page.locator("#contact-form form");
 
     await expect(form.locator("#parentName")).toBeVisible();
     await expect(form.locator("#contact")).toBeVisible();
     await expect(form.locator("#childAge")).toBeVisible();
-    await expect(form.locator("#location")).toBeVisible();
   });
 
   test("shows validation errors on empty submit", async ({ page }) => {
@@ -182,12 +181,6 @@ test.describe("Lead Form", () => {
     await expect(options).toHaveCount(14);
   });
 
-  test("location dropdown has both locations", async ({ page }) => {
-    await page.goto("/");
-    const select = page.locator("#contact-form #location");
-    await expect(select.locator('option[value="Rockville"]')).toBeAttached();
-    await expect(select.locator('option[value="North Bethesda"]')).toBeAttached();
-  });
 });
 
 // ─── FAQ ──────────────────────────────────────────
@@ -234,11 +227,10 @@ test.describe("Contact Strip", () => {
     await expect(contact.getByRole("link", { name: "WhatsApp" })).toBeVisible();
   });
 
-  test("shows 2 location maps", async ({ page }) => {
+  test("shows rotating-locations panel", async ({ page }) => {
     await page.goto("/");
     const contact = page.locator("#contact");
-    const maps = contact.locator("iframe");
-    await expect(maps).toHaveCount(2);
+    await expect(contact.getByText("Locations Rotate Seasonally")).toBeVisible();
   });
 });
 

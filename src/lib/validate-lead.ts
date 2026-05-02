@@ -2,7 +2,9 @@ export interface LeadFormData {
   parentName: string;
   contact: string;
   childAge: string;
-  location: string;
+  // Optional free-text — UI no longer collects it, but the API still forwards
+  // it to Notion + Hub if a caller (e.g. legacy form, server) supplies one.
+  location?: string;
   // Attribution fields — all optional, captured client-side from URL params.
   // Never validated (accepted as-is) and never shown as form errors.
   utm_source?: string;
@@ -14,13 +16,12 @@ export interface LeadFormData {
   landing_page?: string;
 }
 
-// Only the four user-facing fields can produce validation errors.
+// Only the three user-facing fields can produce validation errors.
 export type LeadValidationErrors = Partial<
-  Record<"parentName" | "contact" | "childAge" | "location", string>
+  Record<"parentName" | "contact" | "childAge", string>
 >;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VALID_LOCATIONS = ["Rockville", "North Bethesda"] as const;
 
 export function validateLeadForm(
   data: Partial<LeadFormData>,
@@ -50,13 +51,6 @@ export function validateLeadForm(
     if (isNaN(age) || age < 4 || age > 16) {
       errors.childAge = "Age must be between 4 and 16";
     }
-  }
-
-  if (
-    data.location &&
-    !VALID_LOCATIONS.includes(data.location as (typeof VALID_LOCATIONS)[number])
-  ) {
-    errors.location = "Invalid location";
   }
 
   return errors;

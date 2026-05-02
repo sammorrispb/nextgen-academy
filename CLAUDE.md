@@ -3,7 +3,9 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What This Is
-Marketing / lead-gen website for **Next Gen Pickleball Academy** — youth pickleball (ages 5–16) in Montgomery County, MD. Drives parents to free evaluations, CourtReserve registration, and the Yellow Ball tournament track.
+**NOTE (2026-05-01):** This site was decoupled from Dill Dinkers / CourtReserve on 2026-05-01. No DD/CR references should be re-introduced.
+
+Marketing / lead-gen website for **Next Gen Pickleball Academy** — youth pickleball (ages 5–16) in Montgomery County, MD. Drives parents to free evaluations and the Yellow Ball tournament track.
 
 Live at https://nextgenpbacademy.com (deployed on Vercel, auto-deploy from `main`).
 
@@ -46,26 +48,18 @@ node scripts/verify-funnel.mjs
 All pages render against the dark theme set in `layout.tsx` (`bg-ngpa-navy`).
 
 - `/` (`src/app/page.tsx`) — Home. Single long page with anchor sections: `#levels`, `#ease`, `#testimonials`, `#about`, `#contact-form`, `#faq`, `#contact`. Old top-level routes (`/programs`, `/about`, `/contact`, `/faq`) are 301-redirected to anchors via `next.config.ts`.
-- `/schedule` — Live from CourtReserve via ISR (`export const revalidate = 300`). Falls back to widget links if CR credentials missing or fetch fails.
+- `/schedule` — Static placeholder. Locations rotate seasonally; visitors are routed to the lead form.
 - `/free-evaluation` — Dedicated lead-gen landing page (was `/free-trial`, redirected).
 - `/yellowball/inquiry` — Separate inquiry form for the tournament track (Yellow Ball is invite-only — no public registration).
 - `/montgomery-county-youth-pickleball` — SEO landing page targeting local search.
 
 ### Content vs. Live Data
-- **Static content** lives in `src/data/*.ts` and is the single source of truth: `levels.ts`, `coaches.ts`, `faq.ts`, `testimonials.ts`, `locations.ts`, `site.ts`, `seo.ts`, `ease.ts`, `blocks.ts` (cohort roster), `block-emails.ts`, `schedule.ts`.
-- **Live data** comes from CourtReserve (`src/lib/courtreserve.ts`) — only the schedule page and the free-trial RSVP form fetch live events.
+All content is static under `src/data/*.ts`. There is no live data fetch — the site previously pulled CourtReserve event lists, but that integration was removed 2026-05-01.
 
-### CourtReserve integration (`src/lib/courtreserve.ts` + `src/lib/schedule-transform.ts`)
-- Two locations are hard-coded: Rockville (orgId 10869) and North Bethesda (orgId 10483).
-- `fetchNextGenEvents()` calls `https://api.courtreserve.com/api/v1/eventcalendar/eventlist` with Basic auth. Per-location credentials in env: `COURTRESERVE_{ROCKVILLE,NORTHBETHESDA}_{USERNAME,PASSWORD,ORG_ID}`.
-- Filters events by `EventCategoryName` matching `/Next Gen|Kids Program/i`, drops cancelled.
-- `transformEvents()` parses ball level from event name (`/(red|orange|green)/i`), groups sessions by `dayOfWeek + timeRange`, sorts, computes `spotsRemaining`.
-- Defensive about CR's response shape: handles both `{ Data: [...] }` and raw arrays. 10s timeout via `AbortController`. Schedule page uses `Promise.allSettled` so one location failing doesn't blank the page.
-
-### Lead flow (`/api/lead`, `/api/yellowball-lead`, `/api/free-trial`)
+### Lead flow (`/api/lead`, `/api/yellowball-lead`)
 A single lead submission fans out to multiple destinations. Order in `src/app/api/lead/route.ts`:
 1. **Rate limit** by IP (in-memory map, 5 req/hr — resets on deploy).
-2. **Validate** with `src/lib/validate-lead.ts` (or `validate-free-trial.ts`).
+2. **Validate** with `src/lib/validate-lead.ts`.
 3. **Notion CRM** dedup-and-create (`NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7"`). Skipped if `NOTION_API_KEY` missing.
 4. **Resend** emails: admin notification to `sam.morris2131@gmail.com` (cc `nextgenacademypb@gmail.com`) + parent confirmation if email provided.
 5. **Open Brain** ingest (`ingestToOpenBrain`, fire-and-forget, requires email — phone-only leads are skipped here and backfilled later).
@@ -90,7 +84,6 @@ If any optional integration's env var is missing, that step logs a warning and i
 ### URL helpers (`src/lib/urls.ts`)
 Always route outbound links through these — they handle UTM/`ref` stamping consistently:
 - `hubUrl(path, extraParams?, ref?)` → linkanddink.com with `ref=nga` default.
-- `crUrl(target, ref?)` → adds `utm_source=nga` to a CourtReserve URL.
 - `familySiteUrl(dest, path)` → cross-family link with full UTM block + `ld_pid` cookie value.
 - `getRefSource(pathname)` → maps page paths to specific `marketing_ref` values.
 
@@ -111,16 +104,13 @@ See `.env.example`. Categories:
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
 - `HUB_SUPABASE_URL` + `HUB_SERVICE_ROLE_KEY` — direct Hub `inbound_leads` insert.
 - `FUNNEL_INGEST_SECRET_NGA` — HMAC secret; **must match The-Hub's value of the same name**.
-- `COURTRESERVE_{ROCKVILLE,NORTHBETHESDA}_{USERNAME,PASSWORD,ORG_ID}` — schedule page returns the fallback widget UI if these are absent.
 - `CRON_SECRET` — Vercel Cron auth for `/api/cron/block-reminders`.
 
 ## Testing Standards
 - **`npm run build` must pass with zero errors before every push.** Minimum bar.
 - Test behaviour, not implementation — Playwright specs in `e2e/` assert what the page renders / what the API returns.
 - Tag mobile-only / desktop-only tests by checking `testInfo.project.name` and calling `test.skip()` (see `homepage.spec.ts`).
-- **CR API integration**: handle timeout, empty response, and malformed shapes gracefully — the schedule page must never blank out on a CR failure (use the widget fallback UI).
 - Validate any form input (XSS / injection) before persisting or echoing back.
 
 ## Reference Files
 - `BRAND_GUIDELINES.md` — single source of truth for colors, typography, component naming (BEM `card__title` etc.), thumb-zone rules, copywriting do/don't lists. Read this before any visual change.
-- `docs/spring-2026-emails.md` — current email-campaign templates with merge fields.

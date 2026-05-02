@@ -1,20 +1,18 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import LeadForm from "@/components/LeadForm";
-import LocationMap from "@/components/LocationMap";
-import { locations } from "@/data/locations";
 import { testimonials } from "@/data/testimonials";
 import { site } from "@/data/site";
 
 export const metadata: Metadata = {
   title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
   description:
-    "Book a free 30-minute evaluation for your child (ages 5–16) at Dill Dinkers Rockville or North Bethesda. Meet a coach, see where your child fits in our Red/Orange/Green/Yellow Ball pathway. No cost. No commitment.",
+    "Book a free 30-minute evaluation for your child (ages 5–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Red/Orange/Green/Yellow Ball pathway. No cost. No commitment.",
   alternates: { canonical: "/free-evaluation" },
   openGraph: {
     title: "Free 30-Minute Pickleball Evaluation for Kids — Montgomery County, MD",
     description:
-      "Youth pickleball coaching for ages 5–16 at Dill Dinkers Rockville & North Bethesda. Your first 30 minutes are on us.",
+      "Youth pickleball coaching for ages 5–16 in Montgomery County, MD. Your first 30 minutes are on us.",
     url: "https://nextgenpbacademy.com/free-evaluation",
   },
 };
@@ -87,11 +85,7 @@ export default function FreeEvaluationPage() {
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm text-ngpa-muted">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-lime" aria-hidden="true" />
-                  Dill Dinkers Rockville
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-ngpa-lime" aria-hidden="true" />
-                  Dill Dinkers North Bethesda
+                  Locations rotate seasonally
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-lime" aria-hidden="true" />
@@ -164,12 +158,16 @@ export default function FreeEvaluationPage() {
       <section className="bg-ngpa-navy py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto">
           <h2 className="font-heading text-xl sm:text-2xl font-bold text-ngpa-white text-center mb-8">
-            Two Montgomery County locations
+            Where we play
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {locations.map((loc) => (
-              <LocationMap key={loc.name} location={loc} />
-            ))}
+          <div className="max-w-2xl mx-auto bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 text-center">
+            <h3 className="font-heading text-lg font-bold text-ngpa-white mb-2">
+              Locations Rotate Seasonally
+            </h3>
+            <p className="text-sm text-ngpa-muted leading-relaxed">
+              Sessions move between Montgomery County courts each season.
+              Email or text us and we&rsquo;ll share the current location.
+            </p>
           </div>
           <div className="mt-10 text-center text-sm text-ngpa-muted">
             Questions?{" "}
