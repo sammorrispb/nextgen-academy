@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { sendFunnelEvent } from "@/lib/funnelServer";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { site } from "@/data/site";
 
@@ -209,18 +208,6 @@ export async function POST(request: NextRequest) {
         notes: notes || null,
         landing_page: body.landing_page || null,
         is_parent: true,
-      },
-    });
-
-    void sendFunnelEvent({
-      eventType: "yellowball_lead_submitted",
-      visitorId: body.visitor_id ?? null,
-      email,
-      marketingRef: "nga_yellowball",
-      properties: {
-        parent_name: parentName,
-        child_age: age,
-        source: "yellowball_inquiry",
       },
     });
 
