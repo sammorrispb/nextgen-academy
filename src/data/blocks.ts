@@ -6,7 +6,7 @@ import type { BallColor } from "./levels";
  * 4 weeks at a time and decide whether to extend at the end of the block.
  *
  * Today this list is maintained by hand. Once a block cycle is codified,
- * we can generate it from CourtReserve recurring series instead.
+ * we can generate it programmatically.
  */
 export interface BlockParticipant {
   parentName: string;
@@ -19,7 +19,7 @@ export interface Block {
   id: string;
   level: BallColor;
   label: string;
-  location: "Rockville" | "North Bethesda";
+  location: string;
   dayOfWeek:
     | "Monday"
     | "Tuesday"
@@ -49,10 +49,10 @@ export const blocks: Block[] = [
   // Example placeholder — replace with the real Spring 2026 blocks before
   // enabling the cron. Keeping one example in the file documents the shape.
   {
-    id: "2026-04-green-mon-5pm-rockville",
+    id: "2026-04-green-mon-5pm-moco",
     level: "green",
-    label: "Green Ball — Rockville Mondays 5pm",
-    location: "Rockville",
+    label: "Green Ball — Mondays 5pm",
+    location: "Montgomery County",
     dayOfWeek: "Monday",
     timeSlot: "5:00–6:00 PM",
     startDate: "2026-04-06",

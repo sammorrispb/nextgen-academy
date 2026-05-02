@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     template: "%s | Next Gen Pickleball Academy",
   },
   description:
-    "Youth pickleball for ages 5\u201316 at Dill Dinkers Rockville & North Bethesda. Structured coaching, small groups, beginner to tournament in Montgomery County.",
+    "Youth pickleball for ages 5\u201316 in Montgomery County, MD. Structured coaching, small groups, beginner to tournament.",
   icons: {
     icon: "/images/og-image.png",
     apple: "/images/og-image.png",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     siteName: "Next Gen Pickleball Academy",
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball academy for ages 5\u201316 at Dill Dinkers in Rockville & North Bethesda, MD. Structured coaching with a clear pathway from beginner to tournament play.",
+      "Youth pickleball academy for ages 5\u201316 in Montgomery County, MD. Structured coaching with a clear pathway from beginner to tournament play.",
     images: [{
       url: "/images/og-image.png",
       width: 512,
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Next Gen Pickleball Academy",
-    description: "Youth pickleball lessons for ages 5\u201316 at Dill Dinkers in Montgomery County, MD. Small groups, real strategy, tournament pathway.",
+    description: "Youth pickleball lessons for ages 5\u201316 in Montgomery County, MD. Small groups, real strategy, tournament pathway.",
     images: ["/images/og-image.png"],
   },
   verification: {
@@ -89,32 +89,6 @@ export default function RootLayout({
           founder: [
             { "@type": "Person", name: "Sam Morris" },
             { "@type": "Person", name: "Amine Belkadi" },
-          ],
-          location: [
-            {
-              "@type": "Place",
-              name: "Dill Dinkers Rockville",
-              address: {
-                "@type": "PostalAddress",
-                streetAddress: "40 Southlawn Court, Suite C",
-                addressLocality: "Rockville",
-                addressRegion: "MD",
-                postalCode: "20850",
-                addressCountry: "US",
-              },
-            },
-            {
-              "@type": "Place",
-              name: "Dill Dinkers North Bethesda",
-              address: {
-                "@type": "PostalAddress",
-                streetAddress: "4942 Boiling Brook Parkway",
-                addressLocality: "North Bethesda",
-                addressRegion: "MD",
-                postalCode: "20852",
-                addressCountry: "US",
-              },
-            },
           ],
         }} />
         <a

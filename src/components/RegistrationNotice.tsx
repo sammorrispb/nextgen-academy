@@ -7,22 +7,21 @@ export default function RegistrationNotice() {
         How to Register
       </h3>
       <p className="text-sm text-ngpa-muted leading-relaxed">
-        Tap <strong className="text-ngpa-white">Register</strong> to sign up on
-        CourtReserve. If registration is closed or you need help, email us at{" "}
+        Sessions are organized in 4-week cohorts. Email us at{" "}
         <a
           href={`mailto:${site.email}`}
           className="text-ngpa-cyan hover:underline"
         >
           {site.email}
         </a>{" "}
-        or call{" "}
+        or text Sam at{" "}
         <a
           href={`tel:${site.phone.replace(/\D/g, "")}`}
           className="text-ngpa-cyan hover:underline"
         >
           {site.phone}
-        </a>
-        . Times may vary — check your CourtReserve confirmation for exact start times.
+        </a>{" "}
+        for the current schedule and to reserve a spot. We&rsquo;ll confirm location and time within 24 hours.
       </p>
     </div>
   );

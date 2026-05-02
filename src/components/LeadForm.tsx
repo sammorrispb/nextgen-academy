@@ -14,7 +14,6 @@ const emptyForm: LeadFormData = {
   parentName: "",
   contact: "",
   childAge: "",
-  location: "",
 };
 
 type TrackingContext = {
@@ -49,9 +48,9 @@ export default function LeadForm() {
     trackingRef.current = ctx;
   }, []);
 
-  // Only the 4 user-facing fields can be edited via the form UI or produce
+  // Only the 3 user-facing fields can be edited via the form UI or produce
   // validation errors. Tracking fields are populated server-side from state.
-  type EditableField = "parentName" | "contact" | "childAge" | "location";
+  type EditableField = "parentName" | "contact" | "childAge";
 
   function updateField(field: EditableField, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -231,51 +230,28 @@ export default function LeadForm() {
           {errors.contact && <p className={errorClass}>{errors.contact}</p>}
         </div>
 
-        {/* Child's Age + Location in one row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="childAge" className={labelClass}>
-              Child&rsquo;s Age
-            </label>
-            <select
-              id="childAge"
-              className={selectClass}
-              value={form.childAge}
-              onChange={(e) => updateField("childAge", e.target.value)}
-              onBlur={() => handleBlur("childAge")}
-            >
-              <option value="">Select age</option>
-              {AGE_OPTIONS.map((age) => (
-                <option key={age} value={String(age)}>
-                  {age} years old
-                </option>
-              ))}
-            </select>
-            {errors.childAge && (
-              <p className={errorClass}>{errors.childAge}</p>
-            )}
-          </div>
-          <div>
-            <label htmlFor="location" className={labelClass}>
-              Preferred Location{" "}
-              <span className="text-ngpa-muted font-normal">(optional)</span>
-            </label>
-            <select
-              id="location"
-              className={selectClass}
-              value={form.location}
-              onChange={(e) => updateField("location", e.target.value)}
-            >
-              <option value="">No preference</option>
-              <option value="Rockville">Dill Dinkers — Rockville</option>
-              <option value="North Bethesda">
-                Dill Dinkers — North Bethesda
+        {/* Child's Age */}
+        <div>
+          <label htmlFor="childAge" className={labelClass}>
+            Child&rsquo;s Age
+          </label>
+          <select
+            id="childAge"
+            className={selectClass}
+            value={form.childAge}
+            onChange={(e) => updateField("childAge", e.target.value)}
+            onBlur={() => handleBlur("childAge")}
+          >
+            <option value="">Select age</option>
+            {AGE_OPTIONS.map((age) => (
+              <option key={age} value={String(age)}>
+                {age} years old
               </option>
-            </select>
-            {errors.location && (
-              <p className={errorClass}>{errors.location}</p>
-            )}
-          </div>
+            ))}
+          </select>
+          {errors.childAge && (
+            <p className={errorClass}>{errors.childAge}</p>
+          )}
         </div>
       </div>
 
