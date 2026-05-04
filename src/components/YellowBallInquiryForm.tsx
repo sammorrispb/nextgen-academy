@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { trackEvent, getVisitorIdForForm } from "@/lib/funnelClient";
+import { useRef, useState } from "react";
+import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 
 const AGE_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 10); // 10-17
 
@@ -52,6 +52,7 @@ export default function YellowBallInquiryForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
+  const startedFiredRef = useRef(false);
 
   function updateField<K extends keyof FormState>(field: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -60,6 +61,14 @@ export default function YellowBallInquiryForm() {
         const next = { ...prev };
         delete next[field];
         return next;
+      });
+    }
+    if (!startedFiredRef.current && value) {
+      startedFiredRef.current = true;
+      trackEvent("lead_form_started", {
+        interest: "yellow_ball",
+        page:
+          typeof window !== "undefined" ? window.location.pathname : undefined,
       });
     }
   }
@@ -78,6 +87,9 @@ export default function YellowBallInquiryForm() {
 
     setStatus("submitting");
 
+    const params = new URLSearchParams(window.location.search);
+    const stashed = getUtm();
+
     try {
       const res = await fetch("/api/yellowball-lead", {
         method: "POST",
@@ -91,6 +103,10 @@ export default function YellowBallInquiryForm() {
           notes: form.notes || undefined,
           landing_page: window.location.href,
           visitor_id: getVisitorIdForForm() || null,
+          utm_source: params.get("utm_source") ?? stashed.utm_source ?? null,
+          utm_medium: params.get("utm_medium") ?? stashed.utm_medium ?? null,
+          utm_campaign:
+            params.get("utm_campaign") ?? stashed.utm_campaign ?? null,
         }),
       });
       const data = await res.json();
@@ -98,6 +114,13 @@ export default function YellowBallInquiryForm() {
         throw new Error(data.error || "Something went wrong");
       }
       setStatus("success");
+      trackEvent("lead_form_submitted", {
+        interest: "yellow_ball",
+        page:
+          typeof window !== "undefined" ? window.location.pathname : undefined,
+      });
+      // Legacy event kept for back-compat with any consumers that still
+      // listen for the bespoke yellowball event.
       trackEvent("yellowball_lead_submitted", {
         child_age: Number(form.age),
         parent_name: form.parentName,

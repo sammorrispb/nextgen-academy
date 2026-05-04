@@ -45,6 +45,9 @@ interface YellowBallLeadBody {
   notes?: string;
   landing_page?: string;
   visitor_id?: string | null;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
 }
 
 function validate(body: YellowBallLeadBody): string | null {
@@ -202,6 +205,11 @@ export async function POST(request: NextRequest) {
       business: "nga",
       source: "nga_yellowball_inquiry",
       interest: "yellow_ball",
+      utm: {
+        source: body.utm_source ?? undefined,
+        medium: body.utm_medium ?? undefined,
+        campaign: body.utm_campaign ?? undefined,
+      },
       metadata: {
         child_name: childName,
         child_age: age,

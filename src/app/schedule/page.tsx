@@ -42,6 +42,7 @@ export default function SchedulePage() {
         buttonText="Get Started"
         buttonHref="/#contact-form"
         variant="dark"
+        trackingSection="schedule_cta_banner"
       />
     </>
   );

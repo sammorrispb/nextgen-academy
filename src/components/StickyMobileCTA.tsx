@@ -1,6 +1,7 @@
 "use client";
 
 import { site } from "@/data/site";
+import { trackEvent } from "@/lib/funnelClient";
 
 export default function StickyMobileCTA() {
   return (
@@ -8,12 +9,26 @@ export default function StickyMobileCTA() {
       <div className="flex items-center gap-3 max-w-lg mx-auto">
         <a
           href="#contact-form"
+          onClick={() =>
+            trackEvent("cta_click", {
+              label: "sticky_mobile_book_eval",
+              destination: "#contact-form",
+              section: "sticky_mobile",
+            })
+          }
           className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-ngpa-lime text-ngpa-black font-heading font-bold text-sm rounded-full hover:bg-ngpa-cyan transition-colors min-h-[48px]"
         >
           Book Free Evaluation
         </a>
         <a
           href={`tel:${site.phone.replace(/\D/g, "")}`}
+          onClick={() =>
+            trackEvent("cta_click", {
+              label: "sticky_mobile_call",
+              destination: `tel:${site.phone}`,
+              section: "sticky_mobile",
+            })
+          }
           className="inline-flex items-center justify-center w-12 h-12 rounded-full border-2 border-ngpa-lime text-ngpa-lime hover:bg-ngpa-lime hover:text-ngpa-black transition-colors shrink-0"
           aria-label="Call us"
         >
