@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { trackEvent } from "@/lib/funnelClient";
 
 const links = [
   { href: "#levels", label: "Programs" },
@@ -98,6 +99,13 @@ export default function Navbar() {
             })}
             <a
               href={resolveHref("#contact-form")}
+              onClick={() =>
+                trackEvent("cta_click", {
+                  label: "navbar_get_started",
+                  destination: resolveHref("#contact-form"),
+                  section: "navbar_desktop",
+                })
+              }
               className="ml-3 px-5 py-2 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
             >
               Get Started
@@ -153,7 +161,14 @@ export default function Navbar() {
               })}
               <a
                 href={resolveHref("#contact-form")}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  setOpen(false);
+                  trackEvent("cta_click", {
+                    label: "navbar_get_started",
+                    destination: resolveHref("#contact-form"),
+                    section: "navbar_mobile",
+                  });
+                }}
                 className="mt-2 mx-3 px-5 py-2.5 bg-ngpa-lime text-ngpa-black text-sm font-bold rounded-full text-center hover:bg-ngpa-cyan transition-colors"
               >
                 Get Started

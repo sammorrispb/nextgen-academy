@@ -9,6 +9,7 @@ import { testimonials } from "@/data/testimonials";
 import { yellowBallPricing } from "@/data/schedule";
 import JsonLd from "@/components/JsonLd";
 import LeadForm from "@/components/LeadForm";
+import TrackedCTA from "@/components/TrackedCTA";
 
 export const metadata: Metadata = {
   title: seo.montgomeryCounty.title,
@@ -96,18 +97,24 @@ export default function MontgomeryCountyPage() {
           </p>
 
           <div className="mt-7 flex flex-col sm:flex-row gap-3">
-            <Link
+            <TrackedCTA
               href="#contact-form"
+              label="moco_hero_book_eval"
+              section="moco_hero"
+              asNextLink
               className="inline-flex items-center justify-center px-7 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
             >
               Book Free 30-Minute Evaluation
-            </Link>
-            <Link
+            </TrackedCTA>
+            <TrackedCTA
               href="/schedule"
+              label="moco_hero_view_schedule"
+              section="moco_hero"
+              asNextLink
               className="inline-flex items-center justify-center px-7 py-3 bg-ngpa-slate text-ngpa-white font-bold rounded-full hover:bg-ngpa-panel transition-colors"
             >
               See Class Schedule
-            </Link>
+            </TrackedCTA>
           </div>
         </div>
       </section>

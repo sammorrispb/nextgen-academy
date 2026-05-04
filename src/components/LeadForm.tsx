@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LeadFormData, LeadValidationErrors } from "@/lib/validate-lead";
 import { validateLeadForm } from "@/lib/validate-lead";
-import { trackEvent, getVisitorIdForForm } from "@/lib/funnelClient";
+import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 13 }, (_, i) => i + 4); // 4-16
@@ -32,14 +32,20 @@ export default function LeadForm() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
   const trackingRef = useRef<TrackingContext>({});
+  const startedFiredRef = useRef(false);
 
   // Capture attribution context once on mount — URL params + referrer.
+  // Falls back to the sessionStorage stash (populated by UtmCapture on the
+  // landing page) so a user who lands with UTM and then navigates can still
+  // submit the form with full attribution.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const stashed = getUtm();
     const ctx: TrackingContext = {
-      utm_source: params.get("utm_source") ?? undefined,
-      utm_medium: params.get("utm_medium") ?? undefined,
-      utm_campaign: params.get("utm_campaign") ?? undefined,
+      utm_source: params.get("utm_source") ?? stashed.utm_source ?? undefined,
+      utm_medium: params.get("utm_medium") ?? stashed.utm_medium ?? undefined,
+      utm_campaign:
+        params.get("utm_campaign") ?? stashed.utm_campaign ?? undefined,
       utm_content: params.get("utm_content") ?? undefined,
       utm_term: params.get("utm_term") ?? undefined,
       referrer: document.referrer || undefined,
@@ -59,6 +65,13 @@ export default function LeadForm() {
         const next = { ...prev };
         delete next[field];
         return next;
+      });
+    }
+    if (!startedFiredRef.current && value) {
+      startedFiredRef.current = true;
+      trackEvent("lead_form_started", {
+        interest: "free_evaluation",
+        page: window.location.pathname,
       });
     }
   }
@@ -111,6 +124,12 @@ export default function LeadForm() {
 
       setStatus("success");
 
+      trackEvent("lead_form_submitted", {
+        interest: "free_evaluation",
+        page: window.location.pathname,
+      });
+      // Legacy event kept for back-compat with any consumers that still
+      // listen for `lead_form` with action="submitted".
       trackEvent("lead_form", {
         action: "submitted",
         interest: "free_evaluation",

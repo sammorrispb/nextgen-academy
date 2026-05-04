@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { yellowBallPricing } from "@/data/schedule";
+import TrackedCTA from "@/components/TrackedCTA";
 
 export default function YellowBallCTA() {
   return (
@@ -36,12 +36,15 @@ export default function YellowBallCTA() {
         Minimum 4-week commitment required.
       </p>
 
-      <Link
+      <TrackedCTA
         href="/yellowball/inquiry"
+        label="yellowball_request_eval"
+        section="yellowball_cta"
+        asNextLink
         className="inline-block px-6 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
       >
         Request an eval
-      </Link>
+      </TrackedCTA>
     </div>
   );
 }

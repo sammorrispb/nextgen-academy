@@ -1,6 +1,6 @@
-import Link from "next/link";
 import Image from "next/image";
 import { seasons } from "@/data/schedule";
+import TrackedCTA from "@/components/TrackedCTA";
 
 const heroSeason = seasons[seasons.length - 1];
 
@@ -44,18 +44,23 @@ export default function Hero() {
             </p>
 
             <div className="mt-7 flex flex-col sm:flex-row gap-4">
-              <a
+              <TrackedCTA
                 href="#contact-form"
+                label="hero_book_eval"
+                section="hero"
                 className="inline-flex items-center justify-center px-8 py-3.5 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors text-base"
               >
                 Book Free Evaluation
-              </a>
-              <Link
+              </TrackedCTA>
+              <TrackedCTA
                 href="/schedule"
+                label="hero_view_schedule"
+                section="hero"
+                asNextLink
                 className="inline-flex items-center justify-center px-8 py-3.5 border-2 border-ngpa-lime text-ngpa-lime font-bold rounded-full hover:bg-ngpa-lime hover:text-ngpa-black transition-colors text-base"
               >
                 View Schedule
-              </Link>
+              </TrackedCTA>
             </div>
           </div>
 

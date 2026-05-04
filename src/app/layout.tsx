@@ -4,6 +4,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import JsonLd from "@/components/JsonLd";
+import PageViewTracker from "@/components/PageViewTracker";
+import UtmCapture from "@/components/UtmCapture";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -101,6 +103,8 @@ export default function RootLayout({
         <main id="main" className="pb-16 md:pb-0">{children}</main>
         <Footer />
         <StickyMobileCTA />
+        <UtmCapture />
+        <PageViewTracker />
       </body>
     </html>
   );
