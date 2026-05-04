@@ -12,6 +12,7 @@ import JsonLd from "@/components/JsonLd";
 import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
 import { faq } from "@/data/faq";
+import { familySiteUrl } from "@/lib/urls";
 
 export const metadata = {
   alternates: { canonical: "/" },
@@ -131,11 +132,23 @@ export default function Home() {
               building a roadmap for our own kids: structured lessons, a positive
               culture, and a clear path from curiosity to competition.
             </p>
-            <p className="text-ngpa-muted leading-relaxed">
+            <p className="text-ngpa-muted leading-relaxed mb-4">
               Our approach is built on the{" "}
               <strong className="text-ngpa-white">Parent&ndash;Coach&ndash;Kid Triangle</strong>&mdash;parents
               aren&rsquo;t spectators, they&rsquo;re partners. Families learn the
               game together so everyone grows through the sport.
+            </p>
+            <p className="text-ngpa-muted leading-relaxed">
+              And if you&rsquo;re wondering &mdash; yes, Sam coaches adults too,
+              separately from NGA.{" "}
+              <a
+                href={familySiteUrl("sammorrispb", "/evaluation", "about_adults")}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ngpa-lime hover:text-ngpa-cyan font-semibold transition-colors"
+              >
+                Book a free 30-minute skill evaluation &rarr;
+              </a>
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

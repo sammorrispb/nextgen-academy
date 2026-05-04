@@ -8,7 +8,7 @@ import { trackEvent } from "@/lib/funnelClient";
 type FamilyLink = { dest: FamilyDest; label: string; icon?: string };
 
 const FAMILY_LINKS: FamilyLink[] = [
-  { dest: "sammorrispb", label: "Private lessons with Sam" },
+  { dest: "sammorrispb", label: "Adult lessons with Coach Sam" },
   { dest: "mocopb", label: "Find pickleball across MoCo" },
 ];
 
