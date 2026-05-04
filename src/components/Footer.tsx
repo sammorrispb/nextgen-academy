@@ -10,7 +10,6 @@ type FamilyLink = { dest: FamilyDest; label: string; icon?: string };
 const FAMILY_LINKS: FamilyLink[] = [
   { dest: "sammorrispb", label: "Private lessons with Sam" },
   { dest: "mocopb", label: "Find pickleball across MoCo" },
-  { dest: "tournaments", label: "Tournament Series in MoCo" },
 ];
 
 export default function Footer() {

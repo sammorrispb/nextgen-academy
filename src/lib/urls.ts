@@ -14,12 +14,11 @@ export function crUrl(target: string, ref: string = UTM_SOURCE): string {
   return url.toString();
 }
 
-export type FamilyDest = "sammorrispb" | "mocopb" | "tournaments";
+export type FamilyDest = "sammorrispb" | "mocopb";
 
 const FAMILY_BASES: Record<FamilyDest, string> = {
   sammorrispb: "https://sammorrispb.com",
   mocopb: "https://mocopb.com",
-  tournaments: "https://tournamentwebsite.vercel.app",
 };
 
 /**
