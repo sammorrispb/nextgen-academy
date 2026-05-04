@@ -64,4 +64,9 @@ export const faq: FaqItem[] = [
     answer:
       "We serve families across Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Rockville, North Bethesda, Gaithersburg, Derwood, Aspen Hill, and most of the DMV. Sessions rotate seasonally between Montgomery County courts — reach out for the current location.",
   },
+  {
+    question: "Do you offer lessons for adults?",
+    answer:
+      "Next Gen is youth-only (ages 5–16). For adults, Head Coach Sam Morris offers private lessons separately at sammorrispb.com — start with a free 30-minute skill evaluation, no commitment. Many of our NGA parents pick up the paddle alongside their kids.",
+  },
 ];

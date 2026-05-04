@@ -39,12 +39,16 @@ function readLdVisitorCookie(): string | null {
   }
 }
 
-export function familySiteUrl(dest: FamilyDest, path: string = "/"): string {
+export function familySiteUrl(
+  dest: FamilyDest,
+  path: string = "/",
+  utmContent?: string,
+): string {
   const url = new URL(path, FAMILY_BASES[dest]);
   url.searchParams.set("utm_source", "nga");
   url.searchParams.set("utm_medium", "cross_family_nav");
   url.searchParams.set("utm_campaign", "family_reciprocal");
-  url.searchParams.set("utm_content", `footer_${dest}`);
+  url.searchParams.set("utm_content", utmContent ?? `footer_${dest}`);
   const ldPid = readLdVisitorCookie();
   if (ldPid) {
     url.searchParams.set("ld_pid", ldPid);
