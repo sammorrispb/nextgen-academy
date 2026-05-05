@@ -68,7 +68,7 @@ If any optional integration's env var is missing, that step logs a warning and i
 
 ### Cron: block re-register reminders (`/api/cron/block-reminders`)
 - Triggered by Vercel Cron (`vercel.json` → `0 14 * * *` daily 14:00 UTC). Auth: `Authorization: Bearer ${CRON_SECRET}`.
-- Iterates `blocks` in `src/data/blocks.ts`. A "block" = 4-week cohort at a specific day/time/location with a `participants[]` roster.
+- Iterates `blocks` in `src/data/blocks.ts`. A "block" = one calendar month of programming for a specific day/time/location with a `participants[]` roster. Pricing is $35/session, billed monthly via Stripe Subscription. The cron emails a "next month at NGA" recap a few days before the 1st.
 - `blocksNeedingReminder()` finds blocks past `REMINDER_THRESHOLD = 0.7` (~3/4 done) whose id isn't in `remindersSent[]`.
 - Sends per-participant emails via `renderBlockReminderEmail()` and a summary to admin.
 - **Dedup is by hand-edit:** the cron does NOT write back to `blocks.ts` — Sam manually appends to `remindersSent[]` and commits, keeping the audit trail in git.

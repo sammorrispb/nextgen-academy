@@ -1,12 +1,13 @@
 import type { BallColor } from "./levels";
 
 /**
- * A Block is a 4-week cohort of a single ball-color group at a specific
- * day/time/location. Blocks are the unit of re-registration: families commit
- * 4 weeks at a time and decide whether to extend at the end of the block.
+ * A Block is one calendar month of programming for a single ball-color group at
+ * a specific day/time/location. Pricing is $35/session, billed monthly via
+ * Stripe Subscription. The cron sends a "next month at NGA" recap email a few
+ * days before the 1st so families know what's coming + what'll be charged.
  *
- * Today this list is maintained by hand. Once a block cycle is codified,
- * we can generate it programmatically.
+ * Today this list is maintained by hand. Once the registration app's
+ * `enrollments` table is live, generate this from active subscriptions.
  */
 export interface BlockParticipant {
   parentName: string;
@@ -29,12 +30,13 @@ export interface Block {
     | "Saturday"
     | "Sunday";
   timeSlot: string;
-  startDate: string;
-  endDate: string;
-  sessionCount: number;
-  reregisterUrl: string;
-  nextBlockStartDate: string;
-  nextBlockPriceUsd: number;
+  startDate: string;              // first day of this month's block
+  endDate: string;                // last day of this month's block
+  sessionCount: number;           // sessions in this month (4 or 5 depending on the calendar)
+  reregisterUrl: string;          // points to /account on the registration app
+  nextBlockStartDate: string;     // first day of next month
+  nextBlockSessionCount: number;  // sessions in next month (4 or 5 depending on the calendar)
+  nextBlockPriceUsd: number;      // nextBlockSessionCount × $35
   participants: BlockParticipant[];
   /**
    * ISO dates of reminder sends already completed. Used to prevent duplicate
@@ -46,21 +48,23 @@ export interface Block {
 }
 
 export const blocks: Block[] = [
-  // Example placeholder — replace with the real Spring 2026 blocks before
-  // enabling the cron. Keeping one example in the file documents the shape.
+  // Example placeholder documenting the monthly-block shape. Replace with real
+  // active monthly cohorts (one entry per group per month) before enabling the
+  // cron. nextBlockPriceUsd = sessionsInNextMonth × $35.
   {
-    id: "2026-04-green-mon-5pm-moco",
+    id: "2026-05-green-mon-5pm-moco",
     level: "green",
     label: "Green Ball — Mondays 5pm",
     location: "Montgomery County",
     dayOfWeek: "Monday",
     timeSlot: "5:00–6:00 PM",
-    startDate: "2026-04-06",
-    endDate: "2026-04-27",
-    sessionCount: 4,
+    startDate: "2026-05-01",
+    endDate: "2026-05-31",
+    sessionCount: 4, // 4 Mondays in May 2026
     reregisterUrl: "https://nextgenpbacademy.com/schedule",
-    nextBlockStartDate: "2026-05-04",
-    nextBlockPriceUsd: 140,
+    nextBlockStartDate: "2026-06-01",
+    nextBlockSessionCount: 5, // 5 Mondays in June 2026
+    nextBlockPriceUsd: 175, // 5 × $35
     participants: [],
     remindersSent: [],
   },
