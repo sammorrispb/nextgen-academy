@@ -9,8 +9,11 @@ export const seasons: Season[] = [
 ];
 
 /**
- * NGA pricing is uniform: $35/session across all levels (Red/Orange/Green/Yellow),
- * billed monthly via Stripe Subscription. Mid-month signups are prorated.
+ * NGA pricing is uniform $35 per session, drop-in only across all levels
+ * (Red/Orange/Green/Yellow). No subscription, no refunds. Each session opens
+ * for registration 7 days ahead and is capped at 4 players per court.
  */
 export const PRICE_PER_SESSION_USD = 35;
+export const REGISTRATION_WINDOW_DAYS = 7;
+export const PLAYERS_PER_COURT = 4;
 

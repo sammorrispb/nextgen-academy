@@ -7,22 +7,25 @@ export default function RegistrationNotice() {
         How to Register
       </h3>
       <p className="text-sm text-ngpa-muted leading-relaxed">
-        Sessions run weekly at $35/session, billed monthly via subscription.
-        Mid-month signups are prorated. Email us at{" "}
+        <strong className="text-ngpa-white">$35 per session.</strong> Drop-in
+        only — no subscription, no commitment. Pick the dates that work for
+        you below. Sessions open for registration 7 days ahead. Spots are
+        capped at 4 players per court, so reserve early. Payments are
+        non-refundable. Questions? Email{" "}
         <a
           href={`mailto:${site.email}`}
           className="text-ngpa-cyan hover:underline"
         >
           {site.email}
         </a>{" "}
-        or text Sam at{" "}
+        or text{" "}
         <a
           href={`tel:${site.phone.replace(/\D/g, "")}`}
           className="text-ngpa-cyan hover:underline"
         >
           {site.phone}
-        </a>{" "}
-        for the current schedule and to reserve a spot. We&rsquo;ll confirm location and time within 24 hours.
+        </a>
+        .
       </p>
     </div>
   );

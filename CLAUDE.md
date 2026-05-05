@@ -66,12 +66,21 @@ A single lead submission fans out to multiple destinations. Order in `src/app/ap
 
 If any optional integration's env var is missing, that step logs a warning and is skipped — the response still succeeds as long as Resend works.
 
-### Cron: block re-register reminders (`/api/cron/block-reminders`)
-- Triggered by Vercel Cron (`vercel.json` → `0 14 * * *` daily 14:00 UTC). Auth: `Authorization: Bearer ${CRON_SECRET}`.
-- Iterates `blocks` in `src/data/blocks.ts`. A "block" = one calendar month of programming for a specific day/time/location with a `participants[]` roster. Pricing is $35/session, billed monthly via Stripe Subscription. The cron emails a "next month at NGA" recap a few days before the 1st.
-- `blocksNeedingReminder()` finds blocks past `REMINDER_THRESHOLD = 0.7` (~3/4 done) whose id isn't in `remindersSent[]`.
-- Sends per-participant emails via `renderBlockReminderEmail()` and a summary to admin.
-- **Dedup is by hand-edit:** the cron does NOT write back to `blocks.ts` — Sam manually appends to `remindersSent[]` and commits, keeping the audit trail in git.
+### Drop-in registration flow (`/schedule` + Stripe)
+Pricing is **$35 per session, drop-in only — no subscription, no refunds**. Each session opens for registration **7 days ahead** and caps at 4 players per court.
+
+Source of truth for the public class schedule is the **NGA Sessions Schedule** Notion DB (`NOTION_SESSIONS_DB_ID`). Sam edits it (or a connected Google Sheet); the site reads it via `src/lib/notion-sessions.ts` with 5-min ISR.
+
+User flow:
+1. Parent visits `/schedule`, picks one open session.
+2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($35, qty 1) on NGA Stripe `acct_1SOoW57210nhTc4j` with metadata `{parent, child, sessionId}`.
+3. Parent pays in Stripe Checkout, lands on `/schedule/success`.
+4. `/api/stripe/webhook` (signed by `STRIPE_WEBHOOK_SECRET`) on `checkout.session.completed`:
+   - Sends real-time email to `nextgenacademypb@gmail.com` via Resend.
+   - Increments `Registered count` on the Notion session row, flips `Status` to "Full" if at capacity.
+   - Inserts a row into the NGA Drop-in Registrations Notion DB (`NOTION_DROPINS_DB_ID`) with status "Confirmed".
+
+The pre-2026-05-05 monthly subscription / blocks-cron model has been retired. Do not reintroduce per-month "blocks", `remindersSent[]`, or the `/api/cron/block-reminders` route.
 
 ### URL helpers (`src/lib/urls.ts`)
 Always route outbound links through these — they handle UTM/`ref` stamping consistently:
@@ -91,10 +100,14 @@ Always route outbound links through these — they handle UTM/`ref` stamping con
 
 ## Environment Variables
 See `.env.example`. Categories:
-- `RESEND_API_KEY` — required for any lead form to succeed.
-- `NOTION_API_KEY` — optional; if absent Notion step is skipped.
+- `RESEND_API_KEY` — required for any lead form / Stripe webhook email to succeed.
+- `NOTION_API_KEY` — required for the public schedule and webhook DB writes.
+- `NOTION_SESSIONS_DB_ID` — NGA Sessions Schedule data source ID (`2a3f2fa4-...`).
+- `NOTION_DROPINS_DB_ID` — NGA Drop-in Registrations data source ID (`21281d02-...`).
+- `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1SOoW57210nhTc4j`.
+- `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret.
+- `STRIPE_DROPIN_PRICE_ID` — price ID for the single $35 NGA Drop-in product.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
-- `CRON_SECRET` — Vercel Cron auth for `/api/cron/block-reminders`.
 
 ## Testing Standards
 - **`npm run build` must pass with zero errors before every push.** Minimum bar.
