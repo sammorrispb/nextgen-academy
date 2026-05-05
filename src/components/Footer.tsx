@@ -35,6 +35,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li><a href="#levels" className="hover:text-ngpa-lime transition-colors">Programs</a></li>
               <li><Link href="/schedule" className="hover:text-ngpa-lime transition-colors">Schedule & Register</Link></li>
+              <li><Link href="/schools" className="hover:text-ngpa-lime transition-colors">For Schools & Camps</Link></li>
               <li><a href="#contact-form" className="hover:text-ngpa-lime transition-colors">Get Started</a></li>
               <li><a href="#about" className="hover:text-ngpa-lime transition-colors">About Us</a></li>
               <li><a href="#faq" className="hover:text-ngpa-lime transition-colors">FAQ</a></li>
