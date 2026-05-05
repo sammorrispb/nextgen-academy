@@ -37,7 +37,7 @@ export const faq: FaqItem[] = [
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
     answer:
-      "Group classes at the Red, Orange, and Green Ball levels are priced per season \u2014 reach out for the current cohort's pricing and schedule. Our Yellow Ball small-group tournament track runs $36\u2013$90 per player per session depending on group size (2\u20135 athletes). The 30-minute evaluation that determines placement is always free.",
+      "All group classes are $35 per session, billed monthly on the 1st. We charge for the actual number of sessions in your month \u2014 that's $35 \u00d7 the number of times your class day falls in that month, which works out to 4 or 5 depending on the calendar. Mid-month signups are prorated automatically \u2014 you only pay for the sessions remaining this month, then the standard monthly rate on the 1st thereafter. The 30-minute evaluation that determines placement is always free.",
   },
   {
     question: "Is pickleball safe for kids?",

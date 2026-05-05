@@ -6,7 +6,6 @@ import { levels } from "@/data/levels";
 import { coaches } from "@/data/coaches";
 import { faq } from "@/data/faq";
 import { testimonials } from "@/data/testimonials";
-import { yellowBallPricing } from "@/data/schedule";
 import JsonLd from "@/components/JsonLd";
 import LeadForm from "@/components/LeadForm";
 import TrackedCTA from "@/components/TrackedCTA";
@@ -266,40 +265,27 @@ export default function MontgomeryCountyPage() {
             Pricing
           </h2>
           <p className="text-ngpa-muted leading-relaxed mb-6">
-            Group classes at the Red, Orange, and Green Ball levels are priced
-            per season —{" "}
+            All group classes are <strong className="text-ngpa-white">$35
+            per session</strong>, billed monthly on the 1st. We charge for the
+            actual number of sessions in your month — usually 4, sometimes 5,
+            depending on how often your class day falls in that month.
+            Mid-month signups are prorated — you only pay for the sessions
+            remaining this month, then the standard monthly rate on the 1st
+            thereafter.{" "}
             <Link href="/schedule" className="text-ngpa-lime hover:underline">
-              view the current schedule
+              View the current schedule
             </Link>
-            . Our Yellow Ball small-group tournament track is priced by group
-            size:
+            .
           </p>
-          <div className="bg-ngpa-panel rounded-2xl border border-ngpa-slate overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-ngpa-black/50">
-                <tr>
-                  <th className="text-left px-5 py-3 font-heading font-bold text-ngpa-white">
-                    Group size
-                  </th>
-                  <th className="text-left px-5 py-3 font-heading font-bold text-ngpa-white">
-                    Yellow Ball price
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {yellowBallPricing.map((row) => (
-                  <tr
-                    key={row.players}
-                    className="border-t border-ngpa-slate/50"
-                  >
-                    <td className="px-5 py-3 text-ngpa-white">
-                      {row.players} players
-                    </td>
-                    <td className="px-5 py-3 text-ngpa-muted">{row.price}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6">
+            <div className="flex items-baseline gap-2 mb-2">
+              <span className="font-mono font-bold text-3xl text-ngpa-lime">$35</span>
+              <span className="text-ngpa-muted">per session</span>
+            </div>
+            <p className="text-sm text-ngpa-muted leading-relaxed">
+              Same rate across all levels — Red, Orange, Green, Yellow.
+              Billed monthly. Cancel anytime.
+            </p>
           </div>
           <p className="text-sm text-ngpa-muted mt-4">
             The 30-minute evaluation that determines placement is always free.

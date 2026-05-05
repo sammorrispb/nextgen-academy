@@ -11,50 +11,51 @@ export interface BlockEmailCopy {
 }
 
 /**
- * Per-ball-color copy for the "3/4 through the block" re-registration email.
- * Progress recap is tied to the EASE values and what the level is actually
- * working on — keep these specific, not generic.
+ * Per-ball-color copy for the end-of-month "next month at NGA" recap email.
+ * Sent a few days before the 1st as a heads-up before Stripe auto-renews the
+ * monthly subscription. Progress recap is tied to EASE values and what the
+ * level actually worked on this month — keep specific, not generic.
  */
 export const blockEmailCopy: Record<BallColor, BlockEmailCopy> = {
   red: {
-    subject: "Red Ball — next 4-week block opens soon",
+    subject: "Red Ball — your next month at NGA",
     heading: "{childFirstName} has been building real rally habits",
     progressRecap:
-      "Over the last three weeks {childFirstName} has worked on paddle control, tracking the ball, and the first rallies with a partner. The next block builds on that foundation with consistent contact and court movement.",
+      "This month {childFirstName} worked on paddle control, tracking the ball, and the first rallies with a partner. Next month builds on that foundation with consistent contact and court movement.",
     whyContinue:
       "This is the age where showing up every week is the whole game — skills compound fast when kids keep the rhythm.",
     nextStepHint:
-      "Same day and time next block, and coaches will nudge you on readiness for Orange Ball if {childFirstName} is tracking ahead.",
+      "Same day and time next month. Coaches will nudge you on readiness for Orange Ball if {childFirstName} is tracking ahead.",
   },
   orange: {
-    subject: "Orange Ball — next 4-week block opens soon",
+    subject: "Orange Ball — your next month at NGA",
     heading: "{childFirstName} is starting to compete, not just rally",
     progressRecap:
-      "This block focused on rules mastery, sustained rallies, and full-court movement. You've seen {childFirstName} start to think about where the ball is going, not just where it is.",
+      "This month focused on rules mastery, sustained rallies, and full-court movement. You've seen {childFirstName} start to think about where the ball is going, not just where it is.",
     whyContinue:
-      "The jump from rallying to real points happens in the next 4 weeks. Missing a block here is the single biggest reason players stall.",
+      "The jump from rallying to real points happens over the next four weeks. Missing a month here is the single biggest reason players stall.",
     nextStepHint:
-      "Same day and time next block. If {childFirstName} is ready for Green Ball, we'll flag it after the final session.",
+      "Same day and time next month. If {childFirstName} is ready for Green Ball, we'll flag it after the next evaluation window.",
   },
   green: {
-    subject: "Green Ball — next 4-week block opens soon",
+    subject: "Green Ball — your next month at NGA",
     heading: "{childFirstName} is making real tactical decisions",
     progressRecap:
-      "Shot selection, court positioning, and doubles teamwork were the focus this block. {childFirstName} is starting to own the kitchen line and play points on purpose.",
+      "Shot selection, court positioning, and doubles teamwork were the focus this month. {childFirstName} is starting to own the kitchen line and play points on purpose.",
     whyContinue:
-      "Green is where strategy sticks. The next block adds pressure situations and partner communication — that's what carries into tournament play.",
+      "Green is where strategy sticks. Next month adds pressure situations and partner communication — that's what carries into tournament play.",
     nextStepHint:
-      "Same day and time next block. Ask us about Yellow Ball evaluation if {childFirstName} wants the competitive track.",
+      "Same day and time next month. Ask us about Yellow Ball evaluation if {childFirstName} wants the competitive track.",
   },
   yellow: {
-    subject: "Yellow Ball — next block & scheduling",
-    heading: "{childFirstName}'s next 4 weeks of competitive prep",
+    subject: "Yellow Ball — your next month at NGA",
+    heading: "{childFirstName}'s next month of competitive prep",
     progressRecap:
       "Small-group, coach-curated work on match play, shot patterns, and tournament readiness. You know the drill — {childFirstName} is here because they want the next level.",
     whyContinue:
-      "Yellow Ball runs on 4-week commitments so we can build real progression, not one-off sessions. Continuity matters most at this level.",
+      "Continuity matters most at this level. We build real progression month over month, not one-off sessions.",
     nextStepHint:
-      "Reply to this email to lock in scheduling for the next block — we'll coordinate around tournaments and school.",
+      "Reply to this email if you want to coordinate scheduling around tournaments or school next month.",
   },
 };
 
@@ -96,16 +97,16 @@ export function renderBlockReminderEmail(
   <p style="font-size: 15px; line-height: 1.6;">${copy.whyContinue}</p>
 
   <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0;">
-    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">Next block</p>
+    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">Next month</p>
     <p style="margin: 0 0 4px; font-size: 16px; line-height: 1.5; color: #EEF2FF;">
       <strong>${block.label}</strong>
     </p>
     <p style="margin: 0 0 12px; font-size: 14px; color: #AAB4D4;">
-      Starts ${nextStart} · 4 sessions · $${block.nextBlockPriceUsd}
+      Starts ${nextStart} · ${block.nextBlockSessionCount} sessions × $35 · $${block.nextBlockPriceUsd} on the 1st
     </p>
     <a href="${block.reregisterUrl}"
        style="display: inline-block; background: #AADC00; color: #05132B; font-weight: 700; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-size: 15px;">
-      Re-register ${participant.childFirstName}
+      Manage ${participant.childFirstName}'s subscription
     </a>
   </div>
 

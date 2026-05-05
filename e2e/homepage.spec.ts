@@ -86,20 +86,20 @@ test.describe("Level Cards", () => {
 // ─── Yellow Ball CTA ──────────────────────────────
 
 test.describe("Yellow Ball CTA", () => {
-  test("shows $45/session and 4-session minimum", async ({ page }) => {
+  test("shows $35 per session and monthly billing copy", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("$45/session")).toBeVisible();
-    await expect(page.getByText(/4-session initial commitment/)).toBeVisible();
+    await expect(page.getByText("$35").first()).toBeVisible();
+    await expect(page.getByText(/per session/i).first()).toBeVisible();
+    await expect(page.getByText(/Billed monthly/i)).toBeVisible();
   });
 
-  test("shows pricing tiers (2-5 players)", async ({ page }) => {
+  test("links to the inquiry page", async ({ page }) => {
     await page.goto("/");
-    // Target the Yellow Ball CTA pricing grid specifically
-    const ybCta = page.locator("#levels .grid.grid-cols-2");
-    await expect(ybCta.getByText("2 players")).toBeVisible();
-    await expect(ybCta.getByText("3 players")).toBeVisible();
-    await expect(ybCta.getByText("4 players")).toBeVisible();
-    await expect(ybCta.getByText("5 players")).toBeVisible();
+    const cta = page
+      .getByRole("link", { name: /Request an eval/i })
+      .first();
+    await expect(cta).toBeVisible();
+    await expect(cta).toHaveAttribute("href", "/yellowball/inquiry");
   });
 });
 

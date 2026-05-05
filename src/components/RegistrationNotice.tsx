@@ -7,7 +7,8 @@ export default function RegistrationNotice() {
         How to Register
       </h3>
       <p className="text-sm text-ngpa-muted leading-relaxed">
-        Sessions are organized in 4-week cohorts. Email us at{" "}
+        Sessions run weekly at $35/session, billed monthly via subscription.
+        Mid-month signups are prorated. Email us at{" "}
         <a
           href={`mailto:${site.email}`}
           className="text-ngpa-cyan hover:underline"
