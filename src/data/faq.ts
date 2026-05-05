@@ -37,7 +37,7 @@ export const faq: FaqItem[] = [
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
     answer:
-      "All group classes are $35 per session, billed monthly on the 1st. We charge for the actual number of sessions in your month \u2014 that's $35 \u00d7 the number of times your class day falls in that month, which works out to 4 or 5 depending on the calendar. Mid-month signups are prorated automatically \u2014 you only pay for the sessions remaining this month, then the standard monthly rate on the 1st thereafter. The 30-minute evaluation that determines placement is always free.",
+      "All group classes are $35 per session, drop-in. There\u2019s no subscription and no commitment \u2014 you pay for each session you attend. Sessions open for registration 7 days in advance, and each court is capped at 4 players so quality stays high. Payments are non-refundable. The 30-minute evaluation that determines placement is always free.",
   },
   {
     question: "Is pickleball safe for kids?",

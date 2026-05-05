@@ -266,12 +266,9 @@ export default function MontgomeryCountyPage() {
           </h2>
           <p className="text-ngpa-muted leading-relaxed mb-6">
             All group classes are <strong className="text-ngpa-white">$35
-            per session</strong>, billed monthly on the 1st. We charge for the
-            actual number of sessions in your month — usually 4, sometimes 5,
-            depending on how often your class day falls in that month.
-            Mid-month signups are prorated — you only pay for the sessions
-            remaining this month, then the standard monthly rate on the 1st
-            thereafter.{" "}
+            per session</strong>, drop-in only — no subscription, no
+            commitment. Sessions open for registration 7 days in advance and
+            each court is capped at 4 players. Payments are non-refundable.{" "}
             <Link href="/schedule" className="text-ngpa-lime hover:underline">
               View the current schedule
             </Link>
