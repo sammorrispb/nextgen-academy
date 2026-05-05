@@ -96,6 +96,18 @@ function attributedSource(body: LeadFormData): string {
   return "Website Lead Form";
 }
 
+// Pick the cohort tag a fresh lead should be slotted into. New leads in May
+// are signing up for Summer; spring slots are already filled or sub-piloting.
+function currentSeasonLabel(now: Date = new Date()): string {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth(); // 0-11
+  if (m >= 0 && m <= 1) return `Winter ${y}`;
+  if (m === 11) return `Winter ${y + 1}`;
+  if (m >= 2 && m <= 4) return `Spring ${y}`;
+  if (m >= 5 && m <= 7) return `Summer ${y}`;
+  return `Fall ${y}`;
+}
+
 async function createNotionPlayer(
   body: LeadFormData,
 ): Promise<{ id?: string; error?: string }> {
@@ -120,7 +132,8 @@ async function createNotionPlayer(
     Level: { select: { name: "Eval Needed" } },
     Status: { select: { name: "Lead" } },
     Source: { select: { name: attributedSource(body) } },
-    Season: { select: { name: "Spring 2026" } },
+    Season: { select: { name: currentSeasonLabel() } },
+    Audience: { select: { name: Number(body.childAge) >= 17 ? "Adult" : "Youth" } },
     Notes: {
       rich_text: [{ text: { content: notesContent } }],
     },
