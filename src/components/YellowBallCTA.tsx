@@ -20,7 +20,7 @@ export default function YellowBallCTA() {
           <span className="text-sm text-ngpa-muted">per session</span>
         </div>
         <p className="text-xs text-ngpa-muted leading-relaxed">
-          Billed monthly &middot; same rate as every other NGA level &middot; cancel anytime
+          Drop-in &middot; non-refundable &middot; same rate across all NGA levels (Red&ndash;Yellow)
         </p>
       </div>
 

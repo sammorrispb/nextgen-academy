@@ -73,7 +73,7 @@ Source of truth for the public class schedule is the **NGA Sessions Schedule** N
 
 User flow:
 1. Parent visits `/schedule`, picks one open session.
-2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($35, qty 1) on NGA Stripe `acct_1SOoW57210nhTc4j` with metadata `{parent, child, sessionId}`.
+2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($35, qty 1) on NGA Stripe `acct_1TU4iSBpXOfTC961` with metadata `{parent, child, sessionId}`.
 3. Parent pays in Stripe Checkout, lands on `/schedule/success`.
 4. `/api/stripe/webhook` (signed by `STRIPE_WEBHOOK_SECRET`) on `checkout.session.completed`:
    - Sends real-time email to `nextgenacademypb@gmail.com` via Resend.
@@ -102,9 +102,9 @@ Always route outbound links through these — they handle UTM/`ref` stamping con
 See `.env.example`. Categories:
 - `RESEND_API_KEY` — required for any lead form / Stripe webhook email to succeed.
 - `NOTION_API_KEY` — required for the public schedule and webhook DB writes.
-- `NOTION_SESSIONS_DB_ID` — NGA Sessions Schedule data source ID (`2a3f2fa4-...`).
-- `NOTION_DROPINS_DB_ID` — NGA Drop-in Registrations data source ID (`21281d02-...`).
-- `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1SOoW57210nhTc4j`.
+- `NOTION_SESSIONS_DB_ID` — NGA Sessions Schedule database ID (`3eed8a91-f328-4b63-a4aa-b890f133a80a`).
+- `NOTION_DROPINS_DB_ID` — NGA Drop-in Registrations database ID (`557f01d8-e4c6-47d9-a67b-f0817dd8724f`).
+- `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1TU4iSBpXOfTC961`.
 - `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret.
 - `STRIPE_DROPIN_PRICE_ID` — price ID for the single $35 NGA Drop-in product.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.

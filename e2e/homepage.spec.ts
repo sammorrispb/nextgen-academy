@@ -86,11 +86,11 @@ test.describe("Level Cards", () => {
 // ─── Yellow Ball CTA ──────────────────────────────
 
 test.describe("Yellow Ball CTA", () => {
-  test("shows $35 per session and monthly billing copy", async ({ page }) => {
+  test("shows $35 per session drop-in copy", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText("$35").first()).toBeVisible();
     await expect(page.getByText(/per session/i).first()).toBeVisible();
-    await expect(page.getByText(/Billed monthly/i)).toBeVisible();
+    await expect(page.getByText(/Drop-in/i).first()).toBeVisible();
   });
 
   test("links to the inquiry page", async ({ page }) => {
