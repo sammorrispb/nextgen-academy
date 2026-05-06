@@ -12,7 +12,7 @@ import {
 export const runtime = "nodejs";
 
 const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
-const FROM_EMAIL = "Next Gen Academy <hello@nextgenpbacademy.com>";
+const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 
 function metaString(meta: Stripe.Metadata, key: string): string {
   return typeof meta[key] === "string" ? meta[key] : "";
@@ -43,12 +43,15 @@ async function emailAdmin(session: Stripe.Checkout.Session) {
     `Stripe: ${session.id}`,
   ];
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
     subject,
     text: lines.join("\n"),
   });
+  if (error) {
+    console.error("[stripe-webhook] Resend rejected admin email", error);
+  }
 }
 
 export async function POST(req: NextRequest) {
