@@ -281,7 +281,7 @@ export default function MontgomeryCountyPage() {
             </div>
             <p className="text-sm text-ngpa-muted leading-relaxed">
               Same rate across all levels — Red, Orange, Green, Yellow.
-              Billed monthly. Cancel anytime.
+              Drop-in only. No monthly subscription. Non-refundable.
             </p>
           </div>
           <p className="text-sm text-ngpa-muted mt-4">
