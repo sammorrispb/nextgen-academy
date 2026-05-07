@@ -1,6 +1,5 @@
 import Image from "next/image";
 import type { Metadata } from "next";
-import { yellowBallPricing } from "@/data/schedule";
 import YellowBallInquiryForm from "@/components/YellowBallInquiryForm";
 
 export const metadata: Metadata = {
@@ -95,29 +94,22 @@ export default function YellowBallInquiryPage() {
                 ))}
               </ul>
 
-              {/* Pricing strip */}
+              {/* Pricing strip — uniform $35 across all NGA levels */}
               <div className="mt-10">
                 <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-white/60 mb-3">
-                  Group-size pricing
+                  Pricing
                 </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {yellowBallPricing.map((tier) => (
-                    <div
-                      key={tier.players}
-                      className="bg-ngpa-panel/80 backdrop-blur-sm rounded-xl p-4 text-center border border-ngpa-slate/60"
-                    >
-                      <div className="text-xs text-ngpa-white/55 mb-1.5">
-                        {tier.players} players
-                      </div>
-                      <div className="font-mono font-bold text-ngpa-skill-yellow">
-                        {tier.price}
-                      </div>
-                    </div>
-                  ))}
+                <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-xl p-5 border border-ngpa-skill-yellow/30 max-w-md">
+                  <div className="flex items-baseline gap-2 mb-1.5">
+                    <span className="font-mono font-bold text-3xl text-ngpa-skill-yellow">
+                      $35
+                    </span>
+                    <span className="text-sm text-ngpa-white/65">per session</span>
+                  </div>
+                  <p className="text-xs text-ngpa-white/60 leading-relaxed">
+                    Drop-in &middot; non-refundable &middot; same rate across all NGA levels (Red&ndash;Yellow)
+                  </p>
                 </div>
-                <p className="mt-3 text-xs text-ngpa-white/50">
-                  Minimum 4-session initial commitment.
-                </p>
               </div>
             </div>
 
