@@ -2,26 +2,28 @@ import { testimonials } from "@/data/testimonials";
 
 export default function TestimonialsSection() {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
       {testimonials.map((t, i) => (
-        <div
+        <figure
           key={i}
-          className="bg-ngpa-panel rounded-xl p-6 border border-ngpa-slate relative"
+          className="relative bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl p-7 border border-ngpa-slate/60 hover:border-ngpa-teal/40 transition-colors overflow-hidden"
         >
           {/* Quote mark accent */}
           <span
-            className="text-ngpa-lime/20 text-6xl font-heading font-bold leading-none absolute top-3 left-4 select-none"
+            className="text-ngpa-teal/30 text-7xl font-heading font-black leading-none absolute -top-2 left-4 select-none"
             aria-hidden="true"
           >
             &ldquo;
           </span>
           <blockquote className="relative z-10">
-            <p className="text-ngpa-white leading-relaxed mb-4 pt-4">
+            <p className="text-ngpa-white text-base leading-relaxed mb-5 pt-5">
               {t.quote}
             </p>
-            <footer className="text-sm text-ngpa-muted">{t.attribution}</footer>
+            <footer className="text-sm text-ngpa-white/60 border-t border-ngpa-slate/50 pt-4">
+              {t.attribution}
+            </footer>
           </blockquote>
-        </div>
+        </figure>
       ))}
     </div>
   );

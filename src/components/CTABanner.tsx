@@ -1,3 +1,4 @@
+import Image from "next/image";
 import TrackedCTA from "@/components/TrackedCTA";
 
 interface CTABannerProps {
@@ -24,27 +25,48 @@ export default function CTABanner({
   description,
   buttonText,
   buttonHref,
-  variant = "red",
   trackingLabel,
   trackingSection = "cta_banner",
 }: CTABannerProps) {
-  const bg = variant === "dark" ? "bg-ngpa-panel" : "bg-ngpa-slate";
   const label = trackingLabel ?? `${trackingSection}_${slugify(buttonText)}`;
   return (
-    <section className={`${bg} py-16 px-4`}>
-      <div className="max-w-3xl mx-auto text-center">
-        <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-4">
+    <section className="relative isolate overflow-hidden bg-ngpa-deep py-16 sm:py-20 px-4">
+      {/* Photo backdrop — courts in motion */}
+      <div aria-hidden="true" className="absolute inset-0 -z-10">
+        <Image
+          src="/images/multi-court-outdoor.jpeg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center opacity-25"
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-ngpa-deep/85 via-ngpa-deep/75 to-ngpa-deep/90" />
+      </div>
+
+      {/* Teal glow accent */}
+      <div
+        aria-hidden="true"
+        className="absolute -top-24 left-1/2 -translate-x-1/2 w-[28rem] h-[28rem] rounded-full bg-ngpa-teal/15 blur-3xl"
+      />
+
+      <div className="relative max-w-3xl mx-auto text-center">
+        <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-5 tracking-tight">
           {heading}
         </h2>
-        <p className="text-ngpa-muted text-lg mb-8 leading-relaxed">{description}</p>
+        <p className="text-ngpa-white/75 text-lg mb-9 leading-relaxed">
+          {description}
+        </p>
         <TrackedCTA
           href={buttonHref}
           label={label}
           section={trackingSection}
           asNextLink
-          className="inline-block px-8 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
+          className="inline-flex items-center gap-2 px-8 py-4 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
         >
           {buttonText}
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
         </TrackedCTA>
       </div>
     </section>

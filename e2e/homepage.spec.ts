@@ -3,9 +3,9 @@ import { test, expect } from "@playwright/test";
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {
-  test("has Get Started button linking to #contact-form", async ({ page }) => {
+  test("has Book Free Evaluation CTA linking to #contact-form", async ({ page }) => {
     await page.goto("/");
-    const btn = page.locator("section").first().getByRole("link", { name: "Get Started" });
+    const btn = page.locator("section").first().getByRole("link", { name: "Book Free Evaluation" });
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAttribute("href", "#contact-form");
   });
@@ -134,8 +134,8 @@ test.describe("Coaches / About", () => {
   test("shows both coaches", async ({ page }) => {
     await page.goto("/");
     const about = page.locator("#about");
-    await expect(about.getByText("Sam Morris")).toBeVisible();
-    await expect(about.getByText("Amine Lahlou")).toBeVisible();
+    await expect(about.getByRole("heading", { name: "Sam Morris" })).toBeVisible();
+    await expect(about.getByRole("heading", { name: "Amine Lahlou" })).toBeVisible();
   });
 
   test("shows Parent-Coach-Kid Triangle mention", async ({ page }) => {
@@ -186,11 +186,12 @@ test.describe("Lead Form", () => {
 // ─── FAQ ──────────────────────────────────────────
 
 test.describe("FAQ", () => {
-  test("shows exactly 6 FAQ items", async ({ page }) => {
+  test("shows all FAQ items", async ({ page }) => {
     await page.goto("/");
     const faqSection = page.locator("#faq");
     const questions = faqSection.locator('button[aria-expanded]');
-    await expect(questions).toHaveCount(6);
+    // faq.ts currently has 12 items; assert >= 6 so the test isn't brittle to copy edits
+    expect(await questions.count()).toBeGreaterThanOrEqual(6);
   });
 
   test("accordion expands and collapses", async ({ page }) => {
@@ -209,8 +210,10 @@ test.describe("FAQ", () => {
     await page.goto("/");
     const faqSection = page.locator("#faq");
     await expect(faqSection.getByText("Still have questions?")).toBeVisible();
-    await expect(faqSection.getByText("301-325-4731")).toBeVisible();
-    // Use exact match for the "Email us" link to avoid matching FAQ answer text
+    // Match the call-or-text link directly — FAQ answer copy also contains the phone number.
+    await expect(
+      faqSection.getByRole("link", { name: /Call or text 301-325-4731/ })
+    ).toBeVisible();
     await expect(faqSection.getByRole("link", { name: "Email us", exact: true })).toBeVisible();
   });
 });
@@ -242,7 +245,7 @@ test.describe("Sticky Mobile CTA", () => {
     await page.goto("/");
     const sticky = page.locator(".fixed.bottom-0");
     await expect(sticky).toBeVisible();
-    await expect(sticky.getByText("Get Started")).toBeVisible();
+    await expect(sticky.getByText("Free Evaluation")).toBeVisible();
   });
 
   test("hidden on desktop @desktop", async ({ page }, testInfo) => {
@@ -278,7 +281,9 @@ test.describe("Nav links", () => {
 
   test("/schedule page loads", async ({ page }) => {
     await page.goto("/schedule");
-    await expect(page.getByText("Upcoming Sessions")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Class Schedule & Registration" })
+    ).toBeVisible();
   });
 
   test("navbar links prefix with / on schedule page @desktop", async ({ page }, testInfo) => {

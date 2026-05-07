@@ -92,11 +92,11 @@ export default function BallPathway() {
       </div>
 
       {/* Help text */}
-      <p className="text-center text-ngpa-muted text-sm mt-6">
+      <p className="text-center text-ngpa-white/65 text-sm mt-8">
         Not sure where your child fits?{" "}
         <a
           href="#contact-form"
-          className="text-ngpa-lime font-semibold hover:text-ngpa-cyan transition-colors"
+          className="text-ngpa-teal font-semibold hover:text-ngpa-teal-bright transition-colors"
         >
           We&rsquo;ll help you find the right level &darr;
         </a>

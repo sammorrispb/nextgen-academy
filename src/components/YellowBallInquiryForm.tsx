@@ -134,7 +134,7 @@ export default function YellowBallInquiryForm() {
 
   if (status === "success") {
     return (
-      <div className="bg-ngpa-panel rounded-2xl p-8 sm:p-10 border border-ngpa-slate text-center">
+      <div className="bg-ngpa-panel/85 backdrop-blur rounded-2xl p-8 sm:p-10 border border-ngpa-slate/60 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-ngpa-skill-yellow/20 mb-6">
           <svg
             className="w-8 h-8 text-ngpa-skill-yellow"
@@ -146,10 +146,10 @@ export default function YellowBallInquiryForm() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-3">
+        <h2 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white mb-3 tracking-tight">
           Got it, {form.parentName.split(" ")[0]}.
         </h2>
-        <p className="text-ngpa-muted text-lg mb-6 max-w-md mx-auto">
+        <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
           A coach will reach out within 24 hours to set up {form.childName.split(" ")[0]}&rsquo;s
           eval.
         </p>
@@ -158,16 +158,16 @@ export default function YellowBallInquiryForm() {
   }
 
   const inputClass =
-    "w-full bg-ngpa-slate border border-ngpa-slate rounded-lg px-4 py-3 text-ngpa-white placeholder:text-ngpa-muted/50 focus:outline-none focus:ring-2 focus:ring-ngpa-skill-yellow focus:border-transparent transition-colors";
+    "w-full bg-ngpa-deep/60 border border-ngpa-slate/60 rounded-xl px-4 py-3.5 text-ngpa-white placeholder:text-ngpa-white/40 focus:outline-none focus:ring-2 focus:ring-ngpa-skill-yellow focus:border-ngpa-skill-yellow transition-all";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
-  const labelClass = "block font-heading text-sm font-bold text-ngpa-white mb-1";
-  const errorClass = "text-ngpa-red text-sm mt-1";
+  const labelClass = "block font-heading text-sm font-bold text-ngpa-white mb-1.5";
+  const errorClass = "text-ngpa-red text-sm mt-1.5";
 
   return (
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="bg-ngpa-panel rounded-2xl p-6 sm:p-8 border border-ngpa-slate"
+      className="bg-ngpa-panel/85 backdrop-blur rounded-2xl p-6 sm:p-8 border border-ngpa-slate/60 shadow-xl shadow-black/20"
     >
       {serverError && (
         <div className="bg-ngpa-red/10 border border-ngpa-red/30 rounded-lg p-4 mb-6">
@@ -278,12 +278,12 @@ export default function YellowBallInquiryForm() {
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="mt-6 w-full px-8 py-4 bg-ngpa-skill-yellow text-ngpa-black font-heading font-bold text-lg rounded-full hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-7 w-full px-8 py-4 bg-ngpa-skill-yellow text-ngpa-deep font-heading font-bold text-lg rounded-full hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-xl shadow-ngpa-skill-yellow/20 min-h-[48px]"
       >
         {status === "submitting" ? "Sending…" : "Request an eval"}
       </button>
 
-      <p className="text-ngpa-muted text-xs text-center mt-3">
+      <p className="text-ngpa-white/55 text-xs text-center mt-4">
         A coach will reach out within 24 hours.
       </p>
     </form>

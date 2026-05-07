@@ -146,7 +146,7 @@ export default function LeadForm() {
   // ─── Success State ────────────────────────────
   if (status === "success") {
     return (
-      <div className="bg-ngpa-panel rounded-2xl p-8 sm:p-10 border border-ngpa-slate text-center">
+      <div className="bg-ngpa-panel/80 backdrop-blur rounded-2xl p-8 sm:p-10 border border-ngpa-slate/60 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-ngpa-green/15 mb-6">
           <svg
             className="w-8 h-8 text-ngpa-green"
@@ -162,17 +162,17 @@ export default function LeadForm() {
             />
           </svg>
         </div>
-        <h3 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-3">
+        <h3 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white mb-3 tracking-tight">
           Thanks, {form.parentName.split(" ")[0]}!
         </h3>
-        <p className="text-ngpa-muted text-lg mb-6 max-w-md mx-auto">
+        <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
           We&rsquo;ll reach out within 24 hours to help find the right group for
           your child.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a
             href={`tel:${site.phone.replace(/\D/g, "")}`}
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
@@ -181,7 +181,7 @@ export default function LeadForm() {
           </a>
           <a
             href="/schedule"
-            className="inline-flex items-center justify-center px-6 py-3 border-2 border-ngpa-lime text-ngpa-lime font-bold rounded-full hover:bg-ngpa-lime hover:text-ngpa-black transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 border-2 border-ngpa-teal text-ngpa-teal font-bold rounded-full hover:bg-ngpa-teal hover:text-ngpa-deep transition-colors min-h-[48px]"
           >
             View Schedule
           </a>
@@ -192,17 +192,17 @@ export default function LeadForm() {
 
   // ─── Form ─────────────────────────────────────
   const inputClass =
-    "w-full bg-ngpa-slate border border-ngpa-slate rounded-lg px-4 py-3 text-ngpa-white placeholder:text-ngpa-muted/50 focus:outline-none focus:ring-2 focus:ring-ngpa-lime focus:border-transparent transition-colors";
+    "w-full bg-ngpa-deep/60 border border-ngpa-slate/60 rounded-xl px-4 py-3.5 text-ngpa-white placeholder:text-ngpa-white/40 focus:outline-none focus:ring-2 focus:ring-ngpa-teal focus:border-ngpa-teal transition-all";
   const selectClass = `${inputClass} appearance-none cursor-pointer`;
   const labelClass =
-    "block font-heading text-sm font-bold text-ngpa-white mb-1";
-  const errorClass = "text-ngpa-red text-sm mt-1";
+    "block font-heading text-sm font-bold text-ngpa-white mb-1.5";
+  const errorClass = "text-ngpa-red text-sm mt-1.5";
 
   return (
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="bg-ngpa-panel rounded-2xl p-6 sm:p-8 border border-ngpa-slate"
+      className="bg-ngpa-panel/85 backdrop-blur rounded-2xl p-6 sm:p-8 border border-ngpa-slate/60 shadow-xl shadow-black/20"
     >
       {serverError && (
         <div className="bg-ngpa-red/10 border border-ngpa-red/30 rounded-lg p-4 mb-6">
@@ -278,7 +278,7 @@ export default function LeadForm() {
       <button
         type="submit"
         disabled={status === "submitting"}
-        className="mt-6 w-full px-8 py-4 bg-ngpa-lime text-ngpa-black font-heading font-bold text-lg rounded-full hover:bg-ngpa-cyan transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        className="mt-7 w-full px-8 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
       >
         {status === "submitting" ? (
           <span className="inline-flex items-center gap-2">
@@ -308,7 +308,7 @@ export default function LeadForm() {
         )}
       </button>
 
-      <p className="text-ngpa-muted text-xs text-center mt-3">
+      <p className="text-ngpa-white/55 text-xs text-center mt-4">
         No commitment required. We&rsquo;ll never share your info.
       </p>
     </form>

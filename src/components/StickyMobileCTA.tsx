@@ -5,7 +5,7 @@ import { trackEvent } from "@/lib/funnelClient";
 
 export default function StickyMobileCTA() {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-ngpa-black/95 backdrop-blur border-t border-ngpa-slate px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+    <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-ngpa-deep/95 backdrop-blur-md border-t border-ngpa-slate/60 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <div className="flex items-center gap-3 max-w-lg mx-auto">
         <a
           href="#contact-form"
@@ -16,9 +16,9 @@ export default function StickyMobileCTA() {
               section: "sticky_mobile",
             })
           }
-          className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-ngpa-lime text-ngpa-black font-heading font-bold text-sm rounded-full hover:bg-ngpa-cyan transition-colors min-h-[48px]"
+          className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-sm rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-lg shadow-ngpa-teal/20"
         >
-          Book Free Evaluation
+          Free Evaluation
         </a>
         <a
           href={`tel:${site.phone.replace(/\D/g, "")}`}
@@ -29,7 +29,7 @@ export default function StickyMobileCTA() {
               section: "sticky_mobile",
             })
           }
-          className="inline-flex items-center justify-center w-12 h-12 rounded-full border-2 border-ngpa-lime text-ngpa-lime hover:bg-ngpa-lime hover:text-ngpa-black transition-colors shrink-0"
+          className="inline-flex items-center justify-center w-12 h-12 rounded-full border-2 border-ngpa-teal text-ngpa-teal hover:bg-ngpa-teal hover:text-ngpa-deep transition-colors shrink-0"
           aria-label="Call us"
         >
           <svg

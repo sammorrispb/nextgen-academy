@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
@@ -34,7 +35,6 @@ const SERVED_TOWNS = [
   "Aspen Hill",
 ];
 
-// FAQ subset relevant to localized page (by question string for clarity)
 const LOCAL_FAQ_QUESTIONS = new Set([
   "What ages do you accept?",
   "How much do youth pickleball lessons cost at Next Gen?",
@@ -47,7 +47,6 @@ const localFaq = faq.filter((item) => LOCAL_FAQ_QUESTIONS.has(item.question));
 export default function MontgomeryCountyPage() {
   return (
     <>
-      {/* ─── Breadcrumb schema ─────────────────── */}
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -64,7 +63,6 @@ export default function MontgomeryCountyPage() {
         }}
       />
 
-      {/* ─── Localized FAQ schema ─────────────── */}
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -78,39 +76,55 @@ export default function MontgomeryCountyPage() {
       />
 
       {/* ─── Hero ─────────────────────────────── */}
-      <section className="bg-ngpa-black py-14 sm:py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-xs font-bold tracking-wider uppercase text-ngpa-lime mb-3">
-            Montgomery County, MD · Ages 5–16
+      <section className="relative isolate overflow-hidden bg-ngpa-deep">
+        <div className="absolute inset-0 -z-10">
+          <Image
+            src="/images/outdoor-courts.jpeg"
+            alt=""
+            fill
+            priority
+            className="object-cover object-center opacity-30"
+            sizes="100vw"
+          />
+          <div className="absolute inset-0 bg-photo-overlay" />
+        </div>
+        <div className="absolute inset-x-0 top-0 h-96 bg-teal-glow pointer-events-none" />
+
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 sm:pt-24 pb-20 sm:pb-24">
+          <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-4">
+            Montgomery County, MD &middot; Ages 5&ndash;16
           </p>
-          <h1 className="font-heading text-3xl sm:text-5xl font-900 text-ngpa-white leading-tight">
-            Youth Pickleball in{" "}
-            <span className="text-ngpa-lime">Montgomery County</span>
+          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight">
+            Youth pickleball in{" "}
+            <span className="text-ngpa-teal">Montgomery County</span>.
           </h1>
-          <p className="mt-5 text-base sm:text-lg text-ngpa-muted leading-relaxed max-w-2xl">
-            Next Gen Pickleball Academy is a family-first youth pickleball
-            academy for ages 5–16, serving families across Montgomery County.
-            We reach families in Bethesda, Potomac, Chevy Chase, Kensington,
-            Silver Spring, Gaithersburg, and the broader DMV — with a clear
-            pathway from first rally to tournament play.
+          <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
+            Next Gen Pickleball Academy is a family-first youth pickleball academy
+            for ages 5&ndash;16, serving families across Montgomery County. We
+            reach families in Bethesda, Potomac, Chevy Chase, Kensington, Silver
+            Spring, Gaithersburg, and the broader DMV — with a clear pathway from
+            first rally to tournament play.
           </p>
 
-          <div className="mt-7 flex flex-col sm:flex-row gap-3">
+          <div className="mt-9 flex flex-col sm:flex-row gap-3">
             <TrackedCTA
               href="#contact-form"
               label="moco_hero_book_eval"
               section="moco_hero"
               asNextLink
-              className="inline-flex items-center justify-center px-7 py-3 bg-ngpa-lime text-ngpa-black font-bold rounded-full hover:bg-ngpa-cyan transition-colors"
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-xl shadow-ngpa-teal/20"
             >
               Book Free 30-Minute Evaluation
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
             </TrackedCTA>
             <TrackedCTA
               href="/schedule"
               label="moco_hero_view_schedule"
               section="moco_hero"
               asNextLink
-              className="inline-flex items-center justify-center px-7 py-3 bg-ngpa-slate text-ngpa-white font-bold rounded-full hover:bg-ngpa-panel transition-colors"
+              className="inline-flex items-center justify-center px-7 py-3.5 bg-white/10 ring-1 ring-white/30 text-ngpa-white font-bold rounded-full hover:bg-white/15 hover:ring-white/50 transition-all min-h-[48px]"
             >
               See Class Schedule
             </TrackedCTA>
@@ -119,35 +133,37 @@ export default function MontgomeryCountyPage() {
       </section>
 
       {/* ─── Where we serve ───────────────────── */}
-      <section className="bg-ngpa-navy py-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-3">
-            Where Montgomery County families play with us
+      <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+            Service Area
+          </p>
+          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
+            Where Montgomery County families play with us.
           </h2>
-          <p className="text-ngpa-muted leading-relaxed mb-6">
-            Sessions move between Montgomery County courts each season.
-            Email or text us and we&rsquo;ll share the current cohort&rsquo;s
-            location and time.
+          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
+            Sessions move between Montgomery County courts each season. Email or
+            text us and we&rsquo;ll share the current cohort&rsquo;s location and time.
           </p>
 
-          <div className="max-w-2xl mx-auto bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 text-center mb-8">
-            <h3 className="font-heading text-lg font-bold text-ngpa-white mb-2">
-              Locations Rotate Seasonally
+          <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 mb-10">
+            <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
+              Locations rotate seasonally
             </h3>
-            <p className="text-sm text-ngpa-muted leading-relaxed">
+            <p className="text-base text-ngpa-white/70 leading-relaxed">
               Sessions move between Montgomery County courts each season.
               Email or text us and we&rsquo;ll share the current location.
             </p>
           </div>
 
-          <h3 className="font-heading text-lg font-bold text-ngpa-white mb-3">
-            Families regularly drive in from:
+          <h3 className="font-heading text-base font-bold text-ngpa-white uppercase tracking-[0.15em] mb-4">
+            Families regularly drive in from
           </h3>
           <ul className="flex flex-wrap gap-2">
             {SERVED_TOWNS.map((town) => (
               <li
                 key={town}
-                className="px-3 py-1.5 bg-ngpa-panel border border-ngpa-slate rounded-full text-sm text-ngpa-white"
+                className="px-4 py-2 bg-ngpa-panel/80 border border-ngpa-slate/60 rounded-full text-sm font-medium text-ngpa-white/85"
               >
                 {town}
               </li>
@@ -157,39 +173,52 @@ export default function MontgomeryCountyPage() {
       </section>
 
       {/* ─── Pathway ──────────────────────────── */}
-      <section className="bg-ngpa-black py-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-3">
-            The Red → Yellow Ball pathway
+      <section className="relative bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10 overflow-hidden">
+        <div
+          aria-hidden="true"
+          className="absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-ngpa-teal/10 blur-3xl"
+        />
+        <div className="relative max-w-5xl mx-auto">
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+            The Pathway
+          </p>
+          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
+            The Red &rarr; Yellow Ball pathway.
           </h2>
-          <p className="text-ngpa-muted leading-relaxed mb-8 max-w-2xl">
-            We follow USA Pickleball’s official youth progression — a proven
-            system of color-coded balls with reduced bounce and compression.
-            Every child is placed based on skill during a free evaluation, not
-            age alone.
+          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
+            We follow USA Pickleball&rsquo;s official youth progression — a proven
+            system of color-coded balls with reduced bounce and compression. Every
+            child is placed based on skill during a free evaluation, not age alone.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {levels.map((level) => (
               <div
                 key={level.key}
-                className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate"
+                className="relative bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl p-6 border border-ngpa-slate/60 overflow-hidden"
               >
-                <div className="flex items-center gap-3 mb-2">
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-1"
+                  style={{ backgroundColor: level.color }}
+                />
+                <div className="flex items-center gap-3 mb-3">
                   <span
                     aria-hidden="true"
                     className="w-4 h-4 rounded-full"
                     style={{ backgroundColor: level.color }}
                   />
-                  <h3 className="font-heading text-lg font-bold text-ngpa-white">
+                  <h3 className="font-heading text-lg font-black text-ngpa-white tracking-tight">
                     {level.label}{" "}
-                    <span className="text-ngpa-muted font-medium text-sm">
-                      · Ages {level.ages}
+                    <span className="text-ngpa-white/55 font-medium text-sm">
+                      &middot; Ages {level.ages}
                     </span>
                   </h3>
                 </div>
-                <p className="text-sm text-ngpa-white mb-1">{level.focus}</p>
-                <p className="text-xs text-ngpa-muted">{level.detail}</p>
+                <p className="text-base text-ngpa-white/90 mb-1 font-medium">
+                  {level.focus}
+                </p>
+                <p className="text-sm text-ngpa-white/65">{level.detail}</p>
               </div>
             ))}
           </div>
@@ -197,29 +226,32 @@ export default function MontgomeryCountyPage() {
       </section>
 
       {/* ─── Coaches ──────────────────────────── */}
-      <section className="bg-ngpa-navy py-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-3">
-            Built by Montgomery County parents, for Montgomery County parents
+      <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
+        <div className="max-w-5xl mx-auto">
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+            The Team
+          </p>
+          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
+            Built by Montgomery County parents, for Montgomery County parents.
           </h2>
-          <p className="text-ngpa-muted leading-relaxed mb-8 max-w-2xl">
+          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
             Next Gen was started by two dads who coach the program they wished
             existed for their own kids.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {coaches.map((coach) => (
               <div
                 key={coach.name}
-                className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate"
+                className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl p-6 border border-ngpa-slate/60"
               >
-                <h3 className="font-heading text-lg font-bold text-ngpa-white">
+                <h3 className="font-heading text-xl font-black text-ngpa-white tracking-tight">
                   {coach.name}
                 </h3>
-                <p className="text-sm text-ngpa-lime font-medium mb-2">
+                <p className="text-sm text-ngpa-teal font-bold uppercase tracking-wider mt-1 mb-3">
                   {coach.role}
                 </p>
-                <p className="text-sm text-ngpa-muted leading-relaxed">
+                <p className="text-sm text-ngpa-white/75 leading-relaxed">
                   {coach.bio}
                 </p>
               </div>
@@ -229,29 +261,31 @@ export default function MontgomeryCountyPage() {
       </section>
 
       {/* ─── Testimonials ─────────────────────── */}
-      <section className="bg-ngpa-black py-14 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-8">
-            What Montgomery County parents are saying
+      <section className="bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-10 tracking-tight">
+            What Montgomery County parents are saying.
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {testimonials.slice(0, 2).map((t) => (
               <figure
                 key={t.attribution}
-                className="bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6"
+                className="relative bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 overflow-hidden"
               >
-                <div
-                  className="text-ngpa-lime text-3xl leading-none mb-2"
+                <span
                   aria-hidden="true"
+                  className="absolute -top-2 left-4 text-7xl font-heading font-black text-ngpa-teal/30 leading-none select-none"
                 >
-                  “
-                </div>
-                <blockquote className="text-ngpa-white text-sm sm:text-base leading-relaxed">
-                  {t.quote}
+                  &ldquo;
+                </span>
+                <blockquote className="relative z-10 pt-5">
+                  <p className="text-ngpa-white text-base sm:text-lg leading-relaxed">
+                    {t.quote}
+                  </p>
+                  <figcaption className="mt-5 pt-4 border-t border-ngpa-slate/50 text-sm text-ngpa-white/60">
+                    {t.attribution}
+                  </figcaption>
                 </blockquote>
-                <figcaption className="mt-4 text-xs sm:text-sm text-ngpa-muted">
-                  {t.attribution}
-                </figcaption>
               </figure>
             ))}
           </div>
@@ -259,61 +293,74 @@ export default function MontgomeryCountyPage() {
       </section>
 
       {/* ─── Pricing snapshot ─────────────────── */}
-      <section className="bg-ngpa-navy py-14 px-4 sm:px-6 lg:px-8">
+      <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-3">
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
             Pricing
+          </p>
+          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
+            Transparent, drop-in pricing.
           </h2>
-          <p className="text-ngpa-muted leading-relaxed mb-6">
-            All group classes are <strong className="text-ngpa-white">$35
-            per session</strong>, drop-in only — no subscription, no
-            commitment. Sessions open for registration 7 days in advance and
-            each court is capped at 4 players. Payments are non-refundable.{" "}
-            <Link href="/schedule" className="text-ngpa-lime hover:underline">
+          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8">
+            All group classes are{" "}
+            <strong className="text-ngpa-white font-bold">$35 per session</strong>, drop-in only — no
+            subscription, no commitment. Sessions open for registration 7 days
+            in advance and each court is capped at 4 players. Payments are
+            non-refundable.{" "}
+            <Link
+              href="/schedule"
+              className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
+            >
               View the current schedule
             </Link>
             .
           </p>
-          <div className="bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6">
+          <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7">
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="font-mono font-bold text-3xl text-ngpa-lime">$35</span>
-              <span className="text-ngpa-muted">per session</span>
+              <span className="font-mono font-bold text-4xl text-ngpa-teal">$35</span>
+              <span className="text-ngpa-white/65">per session</span>
             </div>
-            <p className="text-sm text-ngpa-muted leading-relaxed">
+            <p className="text-base text-ngpa-white/70 leading-relaxed">
               Same rate across all levels — Red, Orange, Green, Yellow.
               Drop-in only. No monthly subscription. Non-refundable.
             </p>
           </div>
-          <p className="text-sm text-ngpa-muted mt-4">
+          <p className="text-sm text-ngpa-white/60 mt-5">
             The 30-minute evaluation that determines placement is always free.
           </p>
         </div>
       </section>
 
       {/* ─── FAQ ──────────────────────────────── */}
-      <section className="bg-ngpa-black py-14 px-4 sm:px-6 lg:px-8">
+      <section className="bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-3xl mx-auto">
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-8">
-            Montgomery County parent FAQ
+          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+            Parent FAQ
+          </p>
+          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-10 tracking-tight">
+            Montgomery County parent FAQ.
           </h2>
-          <div className="space-y-5">
+          <div className="space-y-7">
             {localFaq.map((item) => (
-              <div key={item.question}>
-                <h3 className="font-heading text-base font-bold text-ngpa-lime mb-2">
+              <div
+                key={item.question}
+                className="bg-ngpa-panel/60 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-6"
+              >
+                <h3 className="font-heading text-base font-bold text-ngpa-teal mb-2">
                   {item.question}
                 </h3>
-                <p className="text-sm text-ngpa-muted leading-relaxed">
+                <p className="text-base text-ngpa-white/75 leading-relaxed">
                   {item.answer}
                 </p>
               </div>
             ))}
           </div>
 
-          <p className="text-center text-sm text-ngpa-muted mt-10">
+          <p className="text-center text-base text-ngpa-white/65 mt-12">
             Questions? Call or text Sam at{" "}
             <a
               href={`tel:${site.phone.replace(/\D/g, "")}`}
-              className="text-ngpa-lime hover:underline"
+              className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
             >
               {site.phone}
             </a>
@@ -323,17 +370,27 @@ export default function MontgomeryCountyPage() {
       </section>
 
       {/* ─── Lead form ────────────────────────── */}
-      <section id="contact-form" className="bg-ngpa-navy py-14 px-4 sm:px-6 lg:px-8 scroll-mt-20">
-        <div className="max-w-xl mx-auto">
-          <div className="text-center mb-6">
-            <h2 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white">
-              Book your free 30-minute evaluation
+      <section
+        id="contact-form"
+        className="relative bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[36rem] h-[36rem] rounded-full bg-ngpa-teal/10 blur-3xl"
+        />
+        <div className="relative max-w-xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+              Free 30-min Evaluation
+            </p>
+            <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight">
+              Book your free evaluation.
             </h2>
-            <p className="text-ngpa-muted mt-2">
+            <p className="text-ngpa-white/70 mt-3 text-lg">
               We&rsquo;ll call or text within 24 hours to schedule.
             </p>
           </div>
-          <div className="bg-ngpa-panel rounded-2xl p-1 border border-ngpa-lime/30 shadow-2xl shadow-ngpa-lime/5">
+          <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
             <LeadForm />
           </div>
         </div>
