@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
 
@@ -44,7 +45,13 @@ export default async function ScheduleSuccessPage({ searchParams }: PageProps) {
     <section className="bg-ngpa-navy py-20 px-4 sm:px-6 lg:px-8 min-h-[60vh]">
       <div className="max-w-2xl mx-auto text-center">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-ngpa-lime text-ngpa-black text-xs font-bold tracking-wider uppercase mb-4">
-          <span aria-hidden="true">🎾</span>
+          <Image
+            src="/images/pickleball-single.webp"
+            alt=""
+            width={16}
+            height={16}
+            className="inline-block"
+          />
           Drop-in confirmed
         </div>
 
