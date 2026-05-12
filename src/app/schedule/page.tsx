@@ -6,7 +6,12 @@ import SectionHeading from "@/components/SectionHeading";
 import CTABanner from "@/components/CTABanner";
 import RegistrationNotice from "@/components/RegistrationNotice";
 import ReserveButton from "@/components/ReserveButton";
+import ShareButton from "@/components/ShareButton";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
+import { sessionToSlug } from "@/lib/session-slug";
+
+const SITE_ORIGIN =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
 
 export const metadata: Metadata = {
   title: seo.schedule.title,
@@ -184,7 +189,14 @@ function SessionCard({ session }: { session: NgaSession }) {
           <p className="text-sm text-ngpa-white/65 mt-0.5">{session.title}</p>
         )}
       </div>
-      <ReserveButton session={session} />
+      <div className="flex items-center gap-2 sm:flex-col sm:items-stretch">
+        <ReserveButton session={session} />
+        <ShareButton
+          url={`${SITE_ORIGIN}/schedule/${sessionToSlug(session)}`}
+          title={`${session.title} · ${session.startTime}`}
+          text={`Reserve a $40 drop-in slot at NGA — ${session.title}`}
+        />
+      </div>
     </div>
   );
 }

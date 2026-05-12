@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import type { LeadFormData, LeadValidationErrors } from "@/lib/validate-lead";
 import { validateLeadForm } from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
@@ -179,12 +180,12 @@ export default function LeadForm() {
             </svg>
             Call or Text Sam
           </a>
-          <a
+          <Link
             href="/schedule"
             className="inline-flex items-center justify-center px-6 py-3 border-2 border-ngpa-teal text-ngpa-teal font-bold rounded-full hover:bg-ngpa-teal hover:text-ngpa-deep transition-colors min-h-[48px]"
           >
             View Schedule
-          </a>
+          </Link>
         </div>
       </div>
     );
