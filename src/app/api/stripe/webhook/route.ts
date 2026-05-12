@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
@@ -124,6 +125,10 @@ export async function POST(req: NextRequest) {
     sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
     createDropInRegistration(row),
   ]);
+
+  // Bust the /schedule ISR cache so the seat count reflects the new
+  // registration on the next request, not after the 5-min revalidate window.
+  revalidatePath("/schedule");
 
   return NextResponse.json({ received: true });
 }
