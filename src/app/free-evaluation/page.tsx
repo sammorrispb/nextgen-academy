@@ -20,8 +20,8 @@ export const metadata: Metadata = {
 const topTestimonials = testimonials.slice(0, 2);
 
 const VALUE_BULLETS = [
-  "30 minutes one-on-one with a certified coach",
-  "On-court assessment — not a sales pitch",
+  "30 minutes one-on-one with Coach Sam or Coach Amine",
+  "Your coach watches your child play, then recommends a level",
   "Skill-level placement so your child starts in the right group",
   "All equipment provided — just show up",
 ];
@@ -101,7 +101,7 @@ export default function FreeEvaluationPage() {
               <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ngpa-white/70">
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                  Locations rotate seasonally
+                  MCPS venues across MoCo
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
@@ -122,13 +122,20 @@ export default function FreeEvaluationPage() {
               <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
                 <div className="px-5 pt-6 pb-3 text-center">
                   <p className="font-heading text-xl font-black text-ngpa-white tracking-tight">
-                    Reserve your free spot
+                    Schedule your free evaluation
                   </p>
                   <p className="text-ngpa-white/65 text-sm mt-1.5">
                     We&rsquo;ll call or text within 24 hours to schedule.
                   </p>
+                  <p className="text-ngpa-white/55 text-xs mt-2.5 leading-relaxed">
+                    After the eval, sessions are{" "}
+                    <span className="text-ngpa-white/80 font-bold">
+                      $40 each
+                    </span>{" "}
+                    &mdash; drop in anytime. No contracts.
+                  </p>
                 </div>
-                <LeadForm />
+                <LeadForm submitLabel="Schedule my free evaluation" />
               </div>
             </div>
           </div>
@@ -200,11 +207,12 @@ export default function FreeEvaluationPage() {
           </h2>
           <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
             <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              Locations Rotate Seasonally
+              MCPS courts across Montgomery County.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions move between Montgomery County courts each season.
-              Email or text us and we&rsquo;ll share the current location.
+              Sessions rotate by demand &mdash; closer to more zip codes than a
+              single fixed venue. We&rsquo;ll share the venue when we confirm
+              your evaluation.
             </p>
           </div>
           <p className="mt-10 text-center text-base text-ngpa-white/65">

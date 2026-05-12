@@ -3,18 +3,111 @@ import { test, expect } from "@playwright/test";
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {
-  test("has Book Free Evaluation CTA linking to #contact-form", async ({ page }) => {
+  test("has primary Book a free 30-min evaluation CTA linking to #contact-form", async ({ page }) => {
     await page.goto("/");
-    const btn = page.locator("section").first().getByRole("link", { name: "Book Free Evaluation" });
+    const btn = page.locator("section").first().getByRole("link", { name: /Book a free 30-min evaluation/ });
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAttribute("href", "#contact-form");
   });
 
-  test("has View Schedule button linking to /schedule", async ({ page }) => {
+  test("has secondary schedule link", async ({ page }) => {
     await page.goto("/");
-    const btn = page.locator("section").first().getByRole("link", { name: "View Schedule" });
+    const btn = page.locator("section").first().getByRole("link", { name: /Already evaluated\? See the schedule/ });
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAttribute("href", "/schedule");
+  });
+});
+
+// ─── How It Works (PR 1) ──────────────────────────
+
+test.describe("How It Works", () => {
+  test("shows 3 steps with pricing in step 2", async ({ page }) => {
+    await page.goto("/");
+    const section = page.locator("#how-it-works");
+    await expect(section).toBeVisible();
+    await expect(section.getByRole("heading", { name: "Free evaluation" })).toBeVisible();
+    await expect(section.getByRole("heading", { name: "Drop in to sessions" })).toBeVisible();
+    await expect(section.getByRole("heading", { name: "Move up the pathway" })).toBeVisible();
+    await expect(section.getByText("$40 per 1-hour session")).toBeVisible();
+  });
+});
+
+// ─── Upcoming Sessions (PR 3) ─────────────────────
+
+test.describe("Upcoming Sessions strip", () => {
+  test("renders the heading and either sessions or empty-state waitlist", async ({ page }) => {
+    await page.goto("/");
+    const section = page.getByRole("region", { name: /Montgomery County Public Schools/ });
+    await expect(section).toBeVisible();
+    // Renders EITHER session cards + 'See all upcoming sessions' link
+    // OR the EmptyStateWaitlist form (PR 5).
+    const seeAll = section.getByRole("link", { name: /See all upcoming sessions/ });
+    const waitlistBtn = section.getByRole("button", { name: /Add me to the waitlist/ });
+    const hasEither = (await seeAll.count()) > 0 || (await waitlistBtn.count()) > 0;
+    expect(hasEither).toBe(true);
+  });
+});
+
+// ─── Waitlist API (PR 5) ──────────────────────────
+
+test.describe("Waitlist API", () => {
+  test("rejects empty body with 400 + validation errors", async ({ request }) => {
+    const res = await request.post("/api/waitlist", {
+      data: {},
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status()).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("Validation failed");
+    expect(json.errors.parentName).toBeTruthy();
+    expect(json.errors.contact).toBeTruthy();
+    expect(json.errors.preferredArea).toBeTruthy();
+  });
+
+  test("rejects unknown preferredArea", async ({ request }) => {
+    const res = await request.post("/api/waitlist", {
+      data: {
+        parentName: "Test Parent",
+        contact: "test@example.com",
+        preferredArea: "Mars",
+      },
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status()).toBe(400);
+    const json = await res.json();
+    expect(json.errors.preferredArea).toBe("Invalid area");
+  });
+});
+
+test.describe("Notion Session Webhook", () => {
+  test("rejects requests without the shared secret", async ({ request }) => {
+    const res = await request.post("/api/notion-session-webhook", {
+      data: {
+        sessionTitle: "Test",
+        sessionDate: "2026-06-01",
+        sessionLocation: "Sherwood HS",
+      },
+      headers: { "Content-Type": "application/json" },
+    });
+    // Either 401 (secret set, didn't match) or 503 (secret not configured) —
+    // both are safe responses that prove the endpoint won't fire emails
+    // without auth.
+    expect([401, 503]).toContain(res.status());
+  });
+});
+
+// ─── Coach Strip (PR 2) ───────────────────────────
+
+test.describe("Coach Strip", () => {
+  test("shows both coaches above the fold with tagline", async ({ page }) => {
+    await page.goto("/");
+    const strip = page.getByRole("region", { name: /Sam and Amine/ });
+    await expect(strip).toBeVisible();
+    await expect(strip.getByText("Sam Morris")).toBeVisible();
+    await expect(strip.getByText("Amine Lahlou")).toBeVisible();
+    await expect(strip.getByText(/Former PE teacher/)).toBeVisible();
+    await expect(strip.getByText(/Former pro tennis/)).toBeVisible();
+    await expect(strip.getByText("Built by parents, for parents.")).toBeVisible();
   });
 });
 
@@ -86,10 +179,10 @@ test.describe("Level Cards", () => {
 // ─── Yellow Ball CTA ──────────────────────────────
 
 test.describe("Yellow Ball CTA", () => {
-  test("shows $35 per session drop-in copy", async ({ page }) => {
+  test("shows $40 per slot drop-in copy", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("$35").first()).toBeVisible();
-    await expect(page.getByText(/per session/i).first()).toBeVisible();
+    await expect(page.getByText("$40").first()).toBeVisible();
+    await expect(page.getByText(/per 1-hour slot/i).first()).toBeVisible();
     await expect(page.getByText(/Drop-in/i).first()).toBeVisible();
   });
 
@@ -159,7 +252,7 @@ test.describe("Lead Form", () => {
   test("shows validation errors on empty submit", async ({ page }) => {
     await page.goto("/");
     const form = page.locator("#contact-form form");
-    await form.getByRole("button", { name: "Get Started" }).click();
+    await form.getByRole("button", { name: "Book my free evaluation" }).click();
 
     await expect(form.getByText("Your name is required")).toBeVisible();
     await expect(form.getByText("Email or phone number is required")).toBeVisible();
@@ -230,10 +323,15 @@ test.describe("Contact Strip", () => {
     await expect(contact.getByRole("link", { name: "WhatsApp" })).toBeVisible();
   });
 
-  test("shows rotating-locations panel", async ({ page }) => {
+  test("shows MCPS framing in contact panel", async ({ page }) => {
     await page.goto("/");
     const contact = page.locator("#contact");
-    await expect(contact.getByText("Locations Rotate Seasonally")).toBeVisible();
+    await expect(
+      contact.getByText("Your closest court, every week.")
+    ).toBeVisible();
+    await expect(
+      contact.getByText(/Montgomery County Public Schools/)
+    ).toBeVisible();
   });
 });
 

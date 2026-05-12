@@ -27,7 +27,7 @@ export const faq: FaqItem[] = [
   {
     question: "Where are you located?",
     answer:
-      "We run sessions across Montgomery County, MD. Locations rotate seasonally based on court availability — common areas include Rockville, North Bethesda, Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill. Email or text us and we'll share the current session location.",
+      "We coach across Montgomery County Public Schools. Sessions rotate weekly based on court availability — common areas include Rockville, North Bethesda, Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill. The /schedule page shows this week's confirmed venues; email or text us if you don't see one near you.",
   },
   {
     question: "How do free evaluations work?",
@@ -38,6 +38,11 @@ export const faq: FaqItem[] = [
     question: "How much do youth pickleball lessons cost at Next Gen?",
     answer:
       "All group classes are $40 per 1-hour slot ($80 for both slots in a session), drop-in. Sessions split into Early and Late slots \u2014 pick one or both. There\u2019s no subscription and no commitment \u2014 you pay for each slot you attend. Each pickleball court is capped at 4 players so quality stays high. Payments are non-refundable. The 30-minute evaluation that determines placement is always free.",
+  },
+  {
+    question: "What\u2019s your refund policy?",
+    answer:
+      "All session registrations are non-refundable. There is no 7-day refund window. Please register only when you\u2019re confident your child can attend \u2014 we can\u2019t offer credits or transfers for missed sessions. The free 30-minute evaluation is always free and never charged.",
   },
   {
     question: "Is pickleball safe for kids?",

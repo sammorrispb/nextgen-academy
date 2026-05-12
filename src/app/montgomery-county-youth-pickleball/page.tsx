@@ -142,17 +142,18 @@ export default function MontgomeryCountyPage() {
             Where Montgomery County families play with us.
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            Sessions move between Montgomery County courts each season. Email or
-            text us and we&rsquo;ll share the current cohort&rsquo;s location and time.
+            We coach across Montgomery County Public Schools. Sessions rotate by
+            demand &mdash; closer to more zip codes than a single fixed venue.
           </p>
 
           <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 mb-10">
             <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              Locations rotate seasonally
+              MCPS courts across Montgomery County.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions move between Montgomery County courts each season.
-              Email or text us and we&rsquo;ll share the current location.
+              Sessions rotate weekly based on court availability. Check the
+              schedule for this week&rsquo;s location, or book a free evaluation
+              and we&rsquo;ll confirm the venue when we schedule.
             </p>
           </div>
 

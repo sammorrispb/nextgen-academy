@@ -36,17 +36,16 @@ export default function Hero() {
             </div>
 
             <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-black text-ngpa-white leading-[1.02] tracking-tight">
-              Youth pickleball,
+              Real pickleball
               <br />
-              <span className="text-ngpa-teal">built for the</span>
+              <span className="text-ngpa-teal">coaching for</span>
               <br />
-              next generation.
+              kids 5&ndash;16.
             </h1>
 
             <p className="mt-7 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-              Structured coaching for ages 5&ndash;16 in Montgomery County, MD. Real
-              strategy, small groups, and a clear pathway from first paddle to
-              tournament play.
+              Small groups, real strategy, and a clear pathway from first paddle to
+              tournament play &mdash; across Montgomery County, MD.
             </p>
 
             <p className="mt-5 text-base sm:text-lg text-ngpa-white/95 leading-relaxed max-w-xl">
@@ -54,14 +53,14 @@ export default function Hero() {
               We&rsquo;ll see where your child is at and recommend the right group. No commitment.
             </p>
 
-            <div className="mt-9 flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
               <TrackedCTA
                 href="#contact-form"
                 label="hero_book_eval"
                 section="hero"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors text-base shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
               >
-                Book Free Evaluation
+                Book a free 30-min evaluation
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
@@ -71,9 +70,9 @@ export default function Hero() {
                 label="hero_view_schedule"
                 section="hero"
                 asNextLink
-                className="inline-flex items-center justify-center px-8 py-4 bg-white/10 ring-1 ring-white/30 text-ngpa-white font-bold rounded-full hover:bg-white/15 hover:ring-white/50 backdrop-blur-sm transition-all text-base min-h-[48px]"
+                className="inline-flex items-center justify-center text-base font-semibold text-ngpa-white/85 hover:text-ngpa-teal transition-colors min-h-[48px]"
               >
-                View Schedule
+                Already evaluated? See the schedule &rarr;
               </TrackedCTA>
             </div>
 
@@ -85,11 +84,11 @@ export default function Hero() {
               </span>
               <span className="inline-flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                Ages 5&ndash;16
+                Small groups
               </span>
               <span className="inline-flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                Small groups
+                MCPS venues
               </span>
             </div>
           </div>

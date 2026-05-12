@@ -69,11 +69,9 @@ export default function Footer() {
             <ul className="space-y-2.5 text-sm">
               <li><a href="#levels" className="hover:text-ngpa-teal transition-colors">Programs</a></li>
               <li><Link href="/schedule" className="hover:text-ngpa-teal transition-colors">Schedule &amp; Register</Link></li>
-              <li><Link href="/schools" className="hover:text-ngpa-teal transition-colors">For Schools &amp; Camps</Link></li>
               <li><a href="#contact-form" className="hover:text-ngpa-teal transition-colors">Get Started</a></li>
               <li><a href="#about" className="hover:text-ngpa-teal transition-colors">About Us</a></li>
               <li><a href="#faq" className="hover:text-ngpa-teal transition-colors">FAQ</a></li>
-              <li><Link href="/yellowball/inquiry" className="hover:text-ngpa-teal transition-colors">Yellow Ball Inquiry</Link></li>
             </ul>
           </div>
 
@@ -122,8 +120,29 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Family nav */}
+        {/* For Schools & Organizations */}
         <div className="mt-12 pt-8 border-t border-ngpa-slate/40">
+          <h4 className="font-heading text-xs font-bold text-ngpa-white uppercase tracking-[0.2em] mb-4 text-center">
+            For Schools &amp; Organizations
+          </h4>
+          <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-3">
+            <Link
+              href="/schools"
+              className="inline-flex items-center gap-2 px-5 py-2.5 border border-ngpa-slate/60 rounded-full text-sm text-ngpa-white/85 hover:border-ngpa-teal/60 hover:text-ngpa-teal transition-colors"
+            >
+              Programs for schools &amp; camps
+            </Link>
+            <Link
+              href="/yellowball/inquiry"
+              className="inline-flex items-center gap-2 px-5 py-2.5 border border-ngpa-slate/60 rounded-full text-sm text-ngpa-white/85 hover:border-ngpa-teal/60 hover:text-ngpa-teal transition-colors"
+            >
+              Yellow Ball inquiry (invite-only)
+            </Link>
+          </div>
+        </div>
+
+        {/* Family nav */}
+        <div className="mt-10 pt-8 border-t border-ngpa-slate/40">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-white/50 text-center mb-5">
             Part of the Sam Morris pickleball family
           </p>
@@ -153,7 +172,17 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-ngpa-slate/30 text-center text-xs text-ngpa-white/55">
+        <div className="mt-10 pt-8 border-t border-ngpa-slate/40 text-center">
+          <p className="font-heading text-sm sm:text-base font-bold text-ngpa-white tracking-tight">
+            Built by parents, for parents.
+          </p>
+          <p className="mt-1.5 text-xs sm:text-sm text-ngpa-white/65 max-w-xl mx-auto">
+            Sam and Amine are dads first. The coach you meet on the court is the
+            one who built this program.
+          </p>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-ngpa-slate/30 text-center text-xs text-ngpa-white/55">
           &copy; {new Date().getFullYear()} Next Gen Pickleball Academy. All rights reserved.
           <span className="mx-1.5">&middot;</span>
           <a

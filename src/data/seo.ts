@@ -7,7 +7,7 @@ export const seo = {
   schedule: {
     title: "Youth Pickleball Classes in Montgomery County — Schedule & Registration",
     description:
-      "Upcoming youth pickleball sessions for ages 5–16 in Montgomery County, MD — serving Rockville, Bethesda, North Bethesda, Potomac, Chevy Chase, and the DMV. Locations rotate seasonally.",
+      "Upcoming youth pickleball sessions for ages 5–16 in Montgomery County, MD — serving Rockville, Bethesda, North Bethesda, Potomac, Chevy Chase, and the DMV. We coach across MCPS public schools.",
   },
   freeEvaluation: {
     title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
