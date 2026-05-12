@@ -330,13 +330,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ingest to Open Brain master CRM (fire-and-forget)
-    // Only include email if we actually have one — OB requires a valid email
-    // for dedup. If the parent only provided a phone, we skip OB ingest for
-    // now (they'll be picked up by the Notion → OB backfill script later).
-    if (email) {
+    // Ingest to Open Brain master CRM (fire-and-forget).
+    // OB accepts either email or phone as the dedup key; phone-only leads
+    // now flow through instead of being dropped.
+    if (email || phone) {
       void ingestToOpenBrain({
-        email,
+        email: email ?? undefined,
         name: body.parentName,
         phone: phone ?? undefined,
         business: "nga",
@@ -352,6 +351,7 @@ export async function POST(request: NextRequest) {
           location: body.location || null,
           notion_status: notionStatus,
           is_parent: true,
+          phone_only: !email && !!phone,
           utm_content: body.utm_content ?? null,
           utm_term: body.utm_term ?? null,
           referrer: body.referrer ?? null,
