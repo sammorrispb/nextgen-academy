@@ -89,113 +89,115 @@ export default function ReserveButton({ session }: Props) {
 
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-ngpa-deep/90 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 z-50 bg-ngpa-deep/90 backdrop-blur-md overflow-y-auto overscroll-contain"
           role="dialog"
           aria-modal="true"
           aria-labelledby="reserve-title"
           onClick={() => setOpen(false)}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-ngpa-panel w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-ngpa-slate/60 shadow-2xl shadow-black/60 max-h-[92dvh] flex flex-col"
-          >
-            <div className="flex items-start justify-between p-5 border-b border-ngpa-slate/60 shrink-0">
-              <div className="min-w-0 pr-3">
-                <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-1">
-                  Reserve a Slot
-                </p>
-                <h3
-                  id="reserve-title"
-                  className="font-heading text-lg font-black text-ngpa-white tracking-tight"
-                >
-                  {session.title || `${session.level ?? ""} Ball`}
-                </h3>
-                <p className="text-sm text-ngpa-white/70 mt-1">
-                  {formatLongDate(session.date)} · {session.startTime}–
-                  {session.endTime}
-                </p>
-                <p className="text-xs text-ngpa-white/55 mt-0.5">
-                  {session.location}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="text-ngpa-white/60 hover:text-ngpa-white text-3xl leading-none -mt-1 shrink-0 min-w-[32px] min-h-[32px] flex items-center justify-center"
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={onSubmit} className="flex flex-col min-h-0 flex-1">
-              <div className="overflow-y-auto px-5 py-5 space-y-4 flex-1">
-                <Field label="Parent name" error={errors.parentName}>
-                  <input
-                    name="parentName"
-                    type="text"
-                    autoComplete="name"
-                    className={FIELD_INPUT}
-                  />
-                </Field>
-                <Field label="Email" error={errors.email}>
-                  <input
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    className={FIELD_INPUT}
-                  />
-                </Field>
-                <Field label="Phone" error={errors.phone}>
-                  <input
-                    name="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    className={FIELD_INPUT}
-                  />
-                </Field>
-                <Field
-                  label="Child's first name"
-                  error={errors.childFirstName}
-                >
-                  <input
-                    name="childFirstName"
-                    type="text"
-                    className={FIELD_INPUT}
-                  />
-                </Field>
-                <Field label="Child's age" error={errors.childAge}>
-                  <input
-                    name="childAge"
-                    type="number"
-                    inputMode="numeric"
-                    min={4}
-                    max={16}
-                    className={FIELD_INPUT}
-                  />
-                </Field>
-
-                {serverError && (
-                  <p className="text-sm text-red-400" role="alert">
-                    {serverError}
+          <div className="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-ngpa-panel w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl border border-ngpa-slate/60 shadow-2xl shadow-black/60"
+            >
+              <div className="flex items-start justify-between p-5 border-b border-ngpa-slate/60">
+                <div className="min-w-0 pr-3">
+                  <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-1">
+                    Reserve a Slot
                   </p>
-                )}
-              </div>
-
-              <div className="px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel shrink-0 space-y-3">
-                <p className="text-xs text-ngpa-white/60 leading-relaxed">
-                  You&rsquo;ll be redirected to Stripe to pay $40 for this
-                  1-hour slot. Drop-in payments are non-refundable.
-                </p>
+                  <h3
+                    id="reserve-title"
+                    className="font-heading text-lg font-black text-ngpa-white tracking-tight"
+                  >
+                    {session.title || `${session.level ?? ""} Ball`}
+                  </h3>
+                  <p className="text-sm text-ngpa-white/70 mt-1">
+                    {formatLongDate(session.date)} · {session.startTime}–
+                    {session.endTime}
+                  </p>
+                  <p className="text-xs text-ngpa-white/55 mt-0.5">
+                    {session.location}
+                  </p>
+                </div>
                 <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full px-6 py-3.5 rounded-full bg-ngpa-lime text-ngpa-deep font-bold hover:brightness-110 transition-all disabled:opacity-60 min-h-[48px] shadow-xl shadow-ngpa-lime/20"
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="text-ngpa-white/60 hover:text-ngpa-white text-3xl leading-none -mt-1 shrink-0 min-w-[32px] min-h-[32px] flex items-center justify-center"
+                  aria-label="Close"
                 >
-                  {submitting ? "Redirecting…" : "Continue to payment · $40"}
+                  ×
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={onSubmit}>
+                <div className="px-5 py-5 space-y-4">
+                  <Field label="Parent name" error={errors.parentName}>
+                    <input
+                      name="parentName"
+                      type="text"
+                      autoComplete="name"
+                      className={FIELD_INPUT}
+                    />
+                  </Field>
+                  <Field label="Email" error={errors.email}>
+                    <input
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      className={FIELD_INPUT}
+                    />
+                  </Field>
+                  <Field label="Phone" error={errors.phone}>
+                    <input
+                      name="phone"
+                      type="tel"
+                      autoComplete="tel"
+                      className={FIELD_INPUT}
+                    />
+                  </Field>
+                  <Field
+                    label="Child's first name"
+                    error={errors.childFirstName}
+                  >
+                    <input
+                      name="childFirstName"
+                      type="text"
+                      className={FIELD_INPUT}
+                    />
+                  </Field>
+                  <Field label="Child's age" error={errors.childAge}>
+                    <input
+                      name="childAge"
+                      type="number"
+                      inputMode="numeric"
+                      min={4}
+                      max={16}
+                      className={FIELD_INPUT}
+                    />
+                  </Field>
+
+                  {serverError && (
+                    <p className="text-sm text-red-400" role="alert">
+                      {serverError}
+                    </p>
+                  )}
+                </div>
+
+                <div className="sticky bottom-0 px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel sm:rounded-b-2xl space-y-3">
+                  <p className="text-xs text-ngpa-white/60 leading-relaxed">
+                    You&rsquo;ll be redirected to Stripe to pay $40 for this
+                    1-hour slot. Drop-in payments are non-refundable.
+                  </p>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full px-6 py-3.5 rounded-full bg-ngpa-lime text-ngpa-deep font-bold hover:brightness-110 transition-all disabled:opacity-60 min-h-[48px] shadow-xl shadow-ngpa-lime/20"
+                  >
+                    {submitting ? "Redirecting…" : "Continue to payment · $40"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
