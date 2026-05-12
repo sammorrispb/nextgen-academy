@@ -12,13 +12,18 @@ import { inferCity } from "@/lib/venue-lookup";
  * Auth: requires `NOTION_WEBHOOK_SECRET` env, passed by the Notion automation
  * in the `x-nga-webhook-secret` header.
  *
- * Body shape (the minimum the handler needs — the Notion automation can be
- * configured to send the full page payload but only these fields are read):
+ * Body shape: Notion's built-in "Send webhook" action sends the page's
+ * properties in Notion's native shape. We accept both the bare property
+ * object and any of the wrappers Notion has used historically
+ * ({data: {...}}, {properties: {...}}, {data: {properties: {...}}}) so the
+ * handler doesn't break if Notion changes the envelope.
+ *
+ * Example shape we read:
  *   {
- *     "sessionTitle": "Walter Johnson HS — Early",
- *     "sessionDate": "2026-06-14",
- *     "sessionLocation": "Walter Johnson HS Tennis Courts",
- *     "sessionLevel": "Orange" | null
+ *     "Session":  {"title": [{"plain_text": "Walter Johnson HS — Early"}]},
+ *     "Date":     {"date": {"start": "2026-06-14"}},
+ *     "Location": {"rich_text": [{"plain_text": "Walter Johnson HS Tennis Courts"}]},
+ *     "Level":    {"select": {"name": "Orange"}}
  *   }
  */
 
@@ -27,19 +32,11 @@ const NOTION_VERSION = "2022-06-28";
 
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 
-interface WebhookBody {
-  sessionTitle?: string;
-  sessionDate?: string;
-  sessionLocation?: string;
-  sessionLevel?: string | null;
-}
-
-interface WaitlistRow {
-  pageId: string;
-  parentName: string;
-  email: string | null;
-  preferredArea: string;
-  status: string;
+interface ExtractedSession {
+  sessionTitle: string;
+  sessionDate: string;
+  sessionLocation: string;
+  sessionLevel: string | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -48,6 +45,61 @@ function readPlainText(prop: any): string {
   const arr = prop.rich_text ?? prop.title ?? [];
   if (!Array.isArray(arr)) return "";
   return arr.map((r: { plain_text?: string }) => r.plain_text ?? "").join("");
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function unwrapProperties(payload: any): Record<string, unknown> | null {
+  if (!payload || typeof payload !== "object") return null;
+  // Try common envelope shapes Notion has used.
+  if (payload.properties && typeof payload.properties === "object") {
+    return payload.properties as Record<string, unknown>;
+  }
+  if (payload.data?.properties && typeof payload.data.properties === "object") {
+    return payload.data.properties as Record<string, unknown>;
+  }
+  if (payload.data && typeof payload.data === "object") {
+    return payload.data as Record<string, unknown>;
+  }
+  // Fallback: assume the payload itself is the property map.
+  return payload as Record<string, unknown>;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractSession(payload: any): ExtractedSession | null {
+  const props = unwrapProperties(payload);
+  if (!props) return null;
+
+  const sessionTitle = readPlainText(props["Session"]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dateProp = props["Date"] as any;
+  const sessionDate =
+    typeof dateProp === "string"
+      ? dateProp
+      : (dateProp?.date?.start ?? dateProp?.start ?? "");
+  const sessionLocation = readPlainText(props["Location"]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const levelProp = props["Level"] as any;
+  const sessionLevel =
+    typeof levelProp === "string"
+      ? levelProp
+      : (levelProp?.select?.name ?? levelProp?.name ?? null);
+
+  if (!sessionTitle || !sessionDate || !sessionLocation) return null;
+
+  return {
+    sessionTitle,
+    sessionDate,
+    sessionLocation,
+    sessionLevel,
+  };
+}
+
+interface WaitlistRow {
+  pageId: string;
+  parentName: string;
+  email: string | null;
+  preferredArea: string;
+  status: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,7 +157,7 @@ async function queryMatchingWaitlist(area: string): Promise<WaitlistRow[]> {
   }));
 }
 
-function notifyHtml(parentName: string, body: Required<WebhookBody>): string {
+function notifyHtml(parentName: string, body: ExtractedSession): string {
   const dateLabel = new Date(`${body.sessionDate}T12:00:00Z`).toLocaleDateString(
     "en-US",
     { weekday: "long", month: "long", day: "numeric" },
@@ -155,27 +207,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: WebhookBody;
+  let rawBody: unknown;
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
-  if (
-    !body.sessionTitle ||
-    !body.sessionDate ||
-    !body.sessionLocation
-  ) {
+
+  const session = extractSession(rawBody);
+  if (!session) {
     return NextResponse.json(
       {
         error:
-          "Required fields: sessionTitle, sessionDate, sessionLocation (sessionLevel optional)",
+          "Could not extract session fields. Expected Notion page properties with Session (title), Date, Location (rich_text), and optionally Level (select).",
       },
       { status: 400 },
     );
   }
 
-  const city = inferCity(body.sessionLocation) ?? "Anywhere in MoCo";
+  const city = inferCity(session.sessionLocation) ?? "Anywhere in MoCo";
   const matches = await queryMatchingWaitlist(city);
 
   if (matches.length === 0) {
@@ -191,12 +241,6 @@ export async function POST(request: NextRequest) {
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const filled: Required<WebhookBody> = {
-    sessionTitle: body.sessionTitle,
-    sessionDate: body.sessionDate,
-    sessionLocation: body.sessionLocation,
-    sessionLevel: body.sessionLevel ?? null,
-  };
 
   let sent = 0;
   let failed = 0;
@@ -207,8 +251,8 @@ export async function POST(request: NextRequest) {
         from: FROM_EMAIL,
         to: row.email,
         replyTo: site.email,
-        subject: `New ${filled.sessionLevel ? `${filled.sessionLevel} Ball ` : ""}session in ${city} — register now`,
-        html: notifyHtml(row.parentName, filled),
+        subject: `New ${session.sessionLevel ? `${session.sessionLevel} Ball ` : ""}session in ${city} — register now`,
+        html: notifyHtml(row.parentName, session),
       });
       if (result.error) {
         failed++;
