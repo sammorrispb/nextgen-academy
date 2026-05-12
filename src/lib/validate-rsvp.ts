@@ -3,7 +3,7 @@ export interface RsvpFormData {
   email: string;
   phone: string;
   childFirstName: string;
-  childAge: string;
+  childBirthYear: string;
   sessionId: string;
 }
 
@@ -12,6 +12,14 @@ export type RsvpValidationErrors = Partial<
 >;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Plausible birth-year range for an NGA player. Recomputed each call so the
+// range stays anchored to the current year (no stale baked-in window).
+function birthYearRange(): { min: number; max: number } {
+  const thisYear = new Date().getFullYear();
+  // ages 4..18 — covers NGA (5–16) plus a year of slack on each end.
+  return { min: thisYear - 18, max: thisYear - 4 };
+}
 
 export function validateRsvpForm(
   data: Partial<RsvpFormData>,
@@ -32,12 +40,13 @@ export function validateRsvpForm(
   if (!data.childFirstName?.trim()) {
     errors.childFirstName = "Child first name is required";
   }
-  if (!data.childAge?.trim()) {
-    errors.childAge = "Child age is required";
+  if (!data.childBirthYear?.trim()) {
+    errors.childBirthYear = "Child's birth year is required";
   } else {
-    const n = Number(data.childAge);
-    if (Number.isNaN(n) || n < 4 || n > 16) {
-      errors.childAge = "Age must be between 4 and 16";
+    const n = Number(data.childBirthYear);
+    const { min, max } = birthYearRange();
+    if (Number.isNaN(n) || !Number.isInteger(n) || n < min || n > max) {
+      errors.childBirthYear = `Birth year must be between ${min} and ${max}`;
     }
   }
   if (!data.sessionId?.trim()) errors.sessionId = "Pick a session";

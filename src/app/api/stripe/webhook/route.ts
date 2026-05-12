@@ -27,13 +27,17 @@ async function emailAdmin(session: Stripe.Checkout.Session) {
   const resend = new Resend(apiKey);
   const m = session.metadata ?? {};
   const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const birthYear = Number(metaString(m, "child_birth_year")) || 0;
+  const childAgeStr = birthYear
+    ? `${new Date().getFullYear() - birthYear}, born ${birthYear}`
+    : "unknown";
 
   const subject = `New drop-in: ${metaString(m, "child_first_name")} — ${metaString(m, "session_title") || metaString(m, "session_date")}`;
   const lines = [
     `Parent: ${metaString(m, "parent_name")}`,
     `Email: ${session.customer_email ?? metaString(m, "parent_email")}`,
     `Phone: ${metaString(m, "parent_phone")}`,
-    `Child: ${metaString(m, "child_first_name")} (age ${metaString(m, "child_age")})`,
+    `Child: ${metaString(m, "child_first_name")} (age ${childAgeStr})`,
     "",
     `Session: ${metaString(m, "session_title")}`,
     `Date: ${metaString(m, "session_date")} ${metaString(m, "session_start")}`,
@@ -107,7 +111,7 @@ export async function POST(req: NextRequest) {
     parentEmail: session.customer_email ?? "",
     parentPhone: metaString(m, "parent_phone"),
     childFirstName: metaString(m, "child_first_name"),
-    childAge: Number(metaString(m, "child_age")) || 0,
+    childBirthYear: Number(metaString(m, "child_birth_year")) || 0,
     sessionTitle: metaString(m, "session_title"),
     sessionDate: metaString(m, "session_date"),
     sessionStartTime: metaString(m, "session_start"),

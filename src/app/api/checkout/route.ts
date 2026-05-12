@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       parent_name: data.parentName,
       parent_phone: data.phone,
       child_first_name: data.childFirstName,
-      child_age: data.childAge,
+      child_birth_year: data.childBirthYear,
     },
     success_url: `${origin}/schedule/success?cs={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/schedule`,
