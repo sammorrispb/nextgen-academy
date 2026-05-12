@@ -11,8 +11,9 @@
 
 export type OpenBrainBusiness = "ld" | "nga" | "coaching" | "dd" | "mocopb";
 
+// At least one of `email` or `phone` is required (server-side enforced).
 export interface OpenBrainIngestPayload {
-  email: string;
+  email?: string;
   name?: string;
   phone?: string;
   business: OpenBrainBusiness;

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { NgaSession } from "@/lib/notion-sessions";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import {
@@ -21,6 +22,15 @@ export default function ReserveButton({ session }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<RsvpValidationErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   const disabled =
     session.status !== "Open" ||
@@ -87,7 +97,7 @@ export default function ReserveButton({ session }: Props) {
         {label}
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-50 bg-ngpa-deep/90 backdrop-blur-md overflow-y-auto overscroll-contain"
           role="dialog"
@@ -199,7 +209,8 @@ export default function ReserveButton({ session }: Props) {
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
