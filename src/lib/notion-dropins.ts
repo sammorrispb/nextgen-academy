@@ -6,7 +6,7 @@ export interface DropInRow {
   parentEmail: string;
   parentPhone: string;
   childFirstName: string;
-  childAge: number;
+  childBirthYear: number;
   sessionTitle: string;
   sessionDate: string;
   sessionStartTime: string;
@@ -36,7 +36,7 @@ export async function createDropInRegistration(row: DropInRow): Promise<void> {
     "Child First Name": {
       rich_text: [{ text: { content: row.childFirstName } }],
     },
-    "Child Age": { number: row.childAge },
+    "Child Birth Year": { number: row.childBirthYear },
     "Session Title": {
       rich_text: [{ text: { content: row.sessionTitle } }],
     },

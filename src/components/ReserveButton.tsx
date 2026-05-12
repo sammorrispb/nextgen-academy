@@ -55,7 +55,7 @@ export default function ReserveButton({ session }: Props) {
       email: String(fd.get("email") ?? ""),
       phone: String(fd.get("phone") ?? ""),
       childFirstName: String(fd.get("childFirstName") ?? ""),
-      childAge: String(fd.get("childAge") ?? ""),
+      childBirthYear: String(fd.get("childBirthYear") ?? ""),
       sessionId: session.id,
     };
     const ve = validateRsvpForm(data);
@@ -175,13 +175,17 @@ export default function ReserveButton({ session }: Props) {
                       className={FIELD_INPUT}
                     />
                   </Field>
-                  <Field label="Child's age" error={errors.childAge}>
+                  <Field
+                    label="Child's birth year"
+                    error={errors.childBirthYear}
+                  >
                     <input
-                      name="childAge"
+                      name="childBirthYear"
                       type="number"
                       inputMode="numeric"
-                      min={4}
-                      max={16}
+                      placeholder="e.g., 2015"
+                      min={new Date().getFullYear() - 18}
+                      max={new Date().getFullYear() - 4}
                       className={FIELD_INPUT}
                     />
                   </Field>
