@@ -9,6 +9,7 @@ import ReserveButton from "@/components/ReserveButton";
 import ShareButton from "@/components/ShareButton";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { sessionToSlug } from "@/lib/session-slug";
+import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
@@ -112,15 +113,7 @@ export default async function SchedulePage() {
           <RegistrationNotice />
 
           {sessions.length === 0 ? (
-            <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
-              <h3 className="font-heading text-lg font-black text-ngpa-white mb-2 tracking-tight">
-                No sessions open right now
-              </h3>
-              <p className="text-base text-ngpa-white/70 leading-relaxed">
-                Sessions roll out as bookings confirm. Check back soon, or
-                email us to be notified when a slot opens near you.
-              </p>
-            </div>
+            <EmptyStateWaitlist source="schedule_empty" />
           ) : (
             <div className="space-y-7">
               {Array.from(grouped.entries()).map(([date, daySessions]) => (

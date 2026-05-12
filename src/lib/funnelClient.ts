@@ -37,6 +37,11 @@ export type AnalyticsEventMap = {
     parent_name?: string;
     source: string;
   };
+  waitlist_submitted: {
+    preferredArea: string;
+    marketingOptIn: boolean;
+    source: string;
+  };
   external_link: {
     label: string;
     url: string;

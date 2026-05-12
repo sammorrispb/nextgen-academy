@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { NgaSession } from "@/lib/notion-sessions";
 import { sessionToSlug } from "@/lib/session-slug";
 import { inferCity } from "@/lib/venue-lookup";
+import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 
 interface UpcomingSessionsProps {
   sessions: NgaSession[];
@@ -49,16 +50,11 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
         </div>
 
         {upcoming.length === 0 ? (
-          <div className="max-w-xl mx-auto rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-slate/60 p-6 sm:p-7 text-center">
-            <p className="text-base text-ngpa-white/80 leading-relaxed">
-              New sessions post 30 days ahead of each date.{" "}
-              <Link
-                href="/schedule"
-                className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
-              >
-                See the schedule &rarr;
-              </Link>
-            </p>
+          <div className="max-w-xl mx-auto">
+            <EmptyStateWaitlist
+              heading="No sessions open this week."
+              source="home_upcoming_empty"
+            />
           </div>
         ) : (
           <>

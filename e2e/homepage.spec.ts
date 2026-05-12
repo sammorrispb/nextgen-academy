@@ -35,13 +35,64 @@ test.describe("How It Works", () => {
 // ─── Upcoming Sessions (PR 3) ─────────────────────
 
 test.describe("Upcoming Sessions strip", () => {
-  test("renders the heading and link to schedule", async ({ page }) => {
+  test("renders the heading and either sessions or empty-state waitlist", async ({ page }) => {
     await page.goto("/");
     const section = page.getByRole("region", { name: /Montgomery County Public Schools/ });
     await expect(section).toBeVisible();
-    // Either renders empty-state link OR a 'See all upcoming sessions' link
-    const seeAll = section.getByRole("link", { name: /See all upcoming sessions|See the schedule/ });
-    await expect(seeAll.first()).toBeVisible();
+    // Renders EITHER session cards + 'See all upcoming sessions' link
+    // OR the EmptyStateWaitlist form (PR 5).
+    const seeAll = section.getByRole("link", { name: /See all upcoming sessions/ });
+    const waitlistBtn = section.getByRole("button", { name: /Add me to the waitlist/ });
+    const hasEither = (await seeAll.count()) > 0 || (await waitlistBtn.count()) > 0;
+    expect(hasEither).toBe(true);
+  });
+});
+
+// ─── Waitlist API (PR 5) ──────────────────────────
+
+test.describe("Waitlist API", () => {
+  test("rejects empty body with 400 + validation errors", async ({ request }) => {
+    const res = await request.post("/api/waitlist", {
+      data: {},
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status()).toBe(400);
+    const json = await res.json();
+    expect(json.error).toBe("Validation failed");
+    expect(json.errors.parentName).toBeTruthy();
+    expect(json.errors.contact).toBeTruthy();
+    expect(json.errors.preferredArea).toBeTruthy();
+  });
+
+  test("rejects unknown preferredArea", async ({ request }) => {
+    const res = await request.post("/api/waitlist", {
+      data: {
+        parentName: "Test Parent",
+        contact: "test@example.com",
+        preferredArea: "Mars",
+      },
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status()).toBe(400);
+    const json = await res.json();
+    expect(json.errors.preferredArea).toBe("Invalid area");
+  });
+});
+
+test.describe("Notion Session Webhook", () => {
+  test("rejects requests without the shared secret", async ({ request }) => {
+    const res = await request.post("/api/notion-session-webhook", {
+      data: {
+        sessionTitle: "Test",
+        sessionDate: "2026-06-01",
+        sessionLocation: "Sherwood HS",
+      },
+      headers: { "Content-Type": "application/json" },
+    });
+    // Either 401 (secret set, didn't match) or 503 (secret not configured) —
+    // both are safe responses that prove the endpoint won't fire emails
+    // without auth.
+    expect([401, 503]).toContain(res.status());
   });
 });
 
