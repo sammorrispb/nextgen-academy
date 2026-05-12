@@ -32,6 +32,21 @@ test.describe("How It Works", () => {
   });
 });
 
+// ─── Coach Strip (PR 2) ───────────────────────────
+
+test.describe("Coach Strip", () => {
+  test("shows both coaches above the fold with tagline", async ({ page }) => {
+    await page.goto("/");
+    const strip = page.getByRole("region", { name: /Two dads who actually coach/ });
+    await expect(strip).toBeVisible();
+    await expect(strip.getByText("Sam Morris")).toBeVisible();
+    await expect(strip.getByText("Amine Lahlou")).toBeVisible();
+    await expect(strip.getByText(/Former PE teacher/)).toBeVisible();
+    await expect(strip.getByText(/Former pro tennis/)).toBeVisible();
+    await expect(strip.getByText("Built by parents, for parents.")).toBeVisible();
+  });
+});
+
 // ─── Ball Pathway ─────────────────────────────────
 
 test.describe("Ball Pathway", () => {

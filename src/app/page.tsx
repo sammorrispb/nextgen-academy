@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
+import CoachStrip from "@/components/CoachStrip";
 import BallPathway from "@/components/BallPathway";
 import LevelGrid from "@/components/LevelGrid";
 import YellowBallCTA from "@/components/YellowBallCTA";
@@ -65,6 +66,9 @@ export default function Home() {
       {/* ─── How It Works ────────────────────────── */}
       <HowItWorks />
 
+      {/* ─── Coach Strip (above-the-fold trust) ──── */}
+      <CoachStrip />
+
       {/* ─── Programs / Ball Pathway ─────────────── */}
       <section
         id="levels"
@@ -83,7 +87,7 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto">
           <SectionHeading
             eyebrow="The Pathway"
-            title="Find your level. Build from there."
+            title="We don't just teach pickleball. We develop athletes."
             subtitle="Four color-coded levels guide your child from first paddle to tournament play — placed by skill, never age alone."
           />
           <BallPathway />
@@ -107,8 +111,8 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto">
           <SectionHeading
             eyebrow="Our Philosophy"
-            title="We don't just teach pickleball. We develop athletes."
-            subtitle="Every drill, every cue, every reset is a chance to build the four habits that travel beyond the court."
+            title="Four habits that travel beyond the court."
+            subtitle="Every drill, every cue, every reset is a chance to build EASE — the framework Sam and Amine teach every session."
           />
           <EaseValues />
           <div className="mt-10 max-w-3xl">

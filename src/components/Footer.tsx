@@ -172,7 +172,17 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-ngpa-slate/30 text-center text-xs text-ngpa-white/55">
+        <div className="mt-10 pt-8 border-t border-ngpa-slate/40 text-center">
+          <p className="font-heading text-sm sm:text-base font-bold text-ngpa-white tracking-tight">
+            Built by parents, for parents.
+          </p>
+          <p className="mt-1.5 text-xs sm:text-sm text-ngpa-white/65 max-w-xl mx-auto">
+            Sam and Amine are dads first. The coach you meet on the court is the
+            one who built this program.
+          </p>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-ngpa-slate/30 text-center text-xs text-ngpa-white/55">
           &copy; {new Date().getFullYear()} Next Gen Pickleball Academy. All rights reserved.
           <span className="mx-1.5">&middot;</span>
           <a
