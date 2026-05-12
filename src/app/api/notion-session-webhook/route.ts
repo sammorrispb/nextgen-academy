@@ -9,8 +9,11 @@ import { inferCity } from "@/lib/venue-lookup";
  * `Preferred Area` matches the new session's inferred city (or "Anywhere in
  * MoCo"), and sends a one-off Resend notification to each.
  *
- * Auth: requires `NOTION_WEBHOOK_SECRET` env, passed by the Notion automation
- * in the `x-nga-webhook-secret` header.
+ * Auth: requires `NOTION_WEBHOOK_SECRET` env. The Notion automation can pass
+ * the secret in either:
+ *   - the `x-nga-webhook-secret` request header (preferred when supported)
+ *   - the `?secret=<value>` URL query param (fallback, since Notion's built-in
+ *     "Send webhook" action blocks user-added custom headers on some plans)
  *
  * Body shape: Notion's built-in "Send webhook" action sends the page's
  * properties in Notion's native shape. We accept both the bare property
@@ -202,7 +205,14 @@ export async function POST(request: NextRequest) {
     console.error("[session-webhook] NOTION_WEBHOOK_SECRET not configured");
     return NextResponse.json({ error: "Not configured" }, { status: 503 });
   }
-  const provided = request.headers.get("x-nga-webhook-secret");
+  // Accept the secret from either the x-nga-webhook-secret header OR a `secret`
+  // query param. Notion's built-in "Send webhook" action blocks custom headers
+  // on some plans, so the query-param fallback keeps auth working there.
+  // HTTPS encrypts the URL in transit; the only exposure is server-side logs,
+  // which is acceptable for this low-stakes notification trigger.
+  const provided =
+    request.headers.get("x-nga-webhook-secret") ??
+    request.nextUrl.searchParams.get("secret");
   if (provided !== expected) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
