@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
   const checkout = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [{ price: priceId, quantity: 1 }],
+    allow_promotion_codes: true,
     customer_email: data.email,
     payment_intent_data: {
       description: `${session.title} — ${data.childFirstName}`,
