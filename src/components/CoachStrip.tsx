@@ -16,7 +16,7 @@ export default function CoachStrip() {
             id="coach-strip-heading"
             className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white tracking-tight"
           >
-            Two dads who actually coach the sessions.
+            Sam and Amine. On court, every session.
           </h2>
         </div>
 
@@ -65,8 +65,7 @@ export default function CoachStrip() {
           <span className="font-bold text-ngpa-white">
             Built by parents, for parents.
           </span>{" "}
-          When you book a session, the coach on court is one of us &mdash; not a
-          rotating roster.
+          The coach you meet on the court is the one who built this program.
         </p>
       </div>
     </section>

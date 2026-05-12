@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 const topTestimonials = testimonials.slice(0, 2);
 
 const VALUE_BULLETS = [
-  "30 minutes one-on-one with one of our coaches",
+  "30 minutes one-on-one with Coach Sam or Coach Amine",
   "Your coach watches your child play, then recommends a level",
   "Skill-level placement so your child starts in the right group",
   "All equipment provided — just show up",

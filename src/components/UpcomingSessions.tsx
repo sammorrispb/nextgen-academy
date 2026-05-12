@@ -41,7 +41,7 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
             id="upcoming-sessions-heading"
             className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight"
           >
-            We coach across Montgomery County Public Schools.
+            Find a session near you &mdash; across Montgomery County Public Schools.
           </h2>
           <p className="mt-3 text-base sm:text-lg text-ngpa-white/70 max-w-2xl mx-auto">
             Sessions rotate by demand &mdash; closer to more zip codes than a

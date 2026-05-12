@@ -137,14 +137,6 @@ async function createWaitlistEntry(body: Required<WaitlistBody>): Promise<{
 }
 
 export async function POST(request: NextRequest) {
-  const ip = getClientIp(request);
-  if (isRateLimited(ip)) {
-    return NextResponse.json(
-      { error: "Too many submissions. Please try again later." },
-      { status: 429 },
-    );
-  }
-
   let body: WaitlistBody;
   try {
     body = await request.json();
@@ -157,6 +149,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Validation failed", errors },
       { status: 400 },
+    );
+  }
+
+  const ip = getClientIp(request);
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "Too many submissions. Please try again later." },
+      { status: 429 },
     );
   }
 

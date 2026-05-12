@@ -101,7 +101,7 @@ test.describe("Notion Session Webhook", () => {
 test.describe("Coach Strip", () => {
   test("shows both coaches above the fold with tagline", async ({ page }) => {
     await page.goto("/");
-    const strip = page.getByRole("region", { name: /Two dads who actually coach/ });
+    const strip = page.getByRole("region", { name: /Sam and Amine/ });
     await expect(strip).toBeVisible();
     await expect(strip.getByText("Sam Morris")).toBeVisible();
     await expect(strip.getByText("Amine Lahlou")).toBeVisible();
@@ -327,7 +327,10 @@ test.describe("Contact Strip", () => {
     await page.goto("/");
     const contact = page.locator("#contact");
     await expect(
-      contact.getByText("We coach across Montgomery County Public Schools.")
+      contact.getByText("Your closest court, every week.")
+    ).toBeVisible();
+    await expect(
+      contact.getByText(/Montgomery County Public Schools/)
     ).toBeVisible();
   });
 });

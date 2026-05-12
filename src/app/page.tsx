@@ -364,11 +364,11 @@ export default async function Home() {
 
           <div className="max-w-2xl mx-auto bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
             <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              We coach across Montgomery County Public Schools.
+              Your closest court, every week.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions rotate by demand &mdash; closer to more zip codes than a
-              single fixed venue.{" "}
+              Sessions rotate across Montgomery County Public Schools by demand
+              &mdash; closer to more zip codes than a single fixed venue.{" "}
               <Link
                 href="/schedule"
                 className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"

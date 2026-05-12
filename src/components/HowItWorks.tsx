@@ -52,7 +52,7 @@ export default function HowItWorks() {
             How it works
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight">
-            Three steps from curious to court-ready.
+            Three steps onto the pathway.
           </h2>
         </div>
 
