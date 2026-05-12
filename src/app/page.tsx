@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Hero from "@/components/Hero";
+import HowItWorks from "@/components/HowItWorks";
 import BallPathway from "@/components/BallPathway";
 import LevelGrid from "@/components/LevelGrid";
 import YellowBallCTA from "@/components/YellowBallCTA";
@@ -60,6 +61,9 @@ export default function Home() {
       ))}
 
       <Hero />
+
+      {/* ─── How It Works ────────────────────────── */}
+      <HowItWorks />
 
       {/* ─── Programs / Ball Pathway ─────────────── */}
       <section

@@ -3,18 +3,32 @@ import { test, expect } from "@playwright/test";
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {
-  test("has Book Free Evaluation CTA linking to #contact-form", async ({ page }) => {
+  test("has primary Book a free 30-min evaluation CTA linking to #contact-form", async ({ page }) => {
     await page.goto("/");
-    const btn = page.locator("section").first().getByRole("link", { name: "Book Free Evaluation" });
+    const btn = page.locator("section").first().getByRole("link", { name: /Book a free 30-min evaluation/ });
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAttribute("href", "#contact-form");
   });
 
-  test("has View Schedule button linking to /schedule", async ({ page }) => {
+  test("has secondary schedule link", async ({ page }) => {
     await page.goto("/");
-    const btn = page.locator("section").first().getByRole("link", { name: "View Schedule" });
+    const btn = page.locator("section").first().getByRole("link", { name: /Already evaluated\? See the schedule/ });
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAttribute("href", "/schedule");
+  });
+});
+
+// ─── How It Works (PR 1) ──────────────────────────
+
+test.describe("How It Works", () => {
+  test("shows 3 steps with pricing in step 2", async ({ page }) => {
+    await page.goto("/");
+    const section = page.locator("#how-it-works");
+    await expect(section).toBeVisible();
+    await expect(section.getByRole("heading", { name: "Free evaluation" })).toBeVisible();
+    await expect(section.getByRole("heading", { name: "Drop in to sessions" })).toBeVisible();
+    await expect(section.getByRole("heading", { name: "Move up the pathway" })).toBeVisible();
+    await expect(section.getByText("$40 per 1-hour session")).toBeVisible();
   });
 });
 
@@ -86,10 +100,10 @@ test.describe("Level Cards", () => {
 // ─── Yellow Ball CTA ──────────────────────────────
 
 test.describe("Yellow Ball CTA", () => {
-  test("shows $35 per session drop-in copy", async ({ page }) => {
+  test("shows $40 per slot drop-in copy", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("$35").first()).toBeVisible();
-    await expect(page.getByText(/per session/i).first()).toBeVisible();
+    await expect(page.getByText("$40").first()).toBeVisible();
+    await expect(page.getByText(/per 1-hour slot/i).first()).toBeVisible();
     await expect(page.getByText(/Drop-in/i).first()).toBeVisible();
   });
 
