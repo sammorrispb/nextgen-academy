@@ -6,14 +6,16 @@ export interface Season {
 export const seasons: Season[] = [
   { label: "Spring 2026", dates: "April 11 – June 15" },
   { label: "Summer 2026", dates: "June 18 – August 15" },
+  { label: "Late Spring 2026", dates: "May 23 – June (rolling)" },
 ];
 
 /**
- * NGA pricing is uniform $35 per session, drop-in only across all levels
- * (Red/Orange/Green/Yellow). No subscription, no refunds. Each session opens
- * for registration 7 days ahead and is capped at 4 players per court.
+ * NGA pricing is uniform $40 per 1-hour slot, drop-in only across all levels
+ * (Red/Orange/Green/Yellow). Sessions split into Early and Late slots — pick
+ * one or both ($80 for both). No subscription, no refunds. Each pickleball
+ * court is capped at 4 players.
  */
-export const PRICE_PER_SESSION_USD = 35;
-export const REGISTRATION_WINDOW_DAYS = 7;
+export const PRICE_PER_SESSION_USD = 40;
+export const REGISTRATION_WINDOW_DAYS = 30;
 export const PLAYERS_PER_COURT = 4;
 

@@ -7,10 +7,12 @@ export default function RegistrationNotice() {
         How to Register
       </h3>
       <p className="text-base text-ngpa-white/80 leading-relaxed">
-        <strong className="text-ngpa-white">$35 per session.</strong> Drop-in
-        only — no subscription, no commitment. Pick the dates that work for
-        you below. Sessions open for registration 7 days ahead. Spots are
-        capped at 4 players per court, so reserve early. Payments are
+        <strong className="text-ngpa-white">
+          $40 per 1-hour slot ($80 for both slots in a session).
+        </strong>{" "}
+        Drop-in only — no subscription, no commitment. Sessions split into
+        Early and Late slots — pick one or both below. Spots are capped at 4
+        players per pickleball court, so reserve early. Payments are
         non-refundable. Questions? Email{" "}
         <a
           href={`mailto:${site.email}`}
