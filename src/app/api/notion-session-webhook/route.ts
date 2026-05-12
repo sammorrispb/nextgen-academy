@@ -251,6 +251,7 @@ export async function POST(request: NextRequest) {
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
+  const notionKey = process.env.NOTION_API_KEY;
 
   let sent = 0;
   let failed = 0;
@@ -267,8 +268,44 @@ export async function POST(request: NextRequest) {
       if (result.error) {
         failed++;
         console.error("[session-webhook] resend error for", row.email, result.error);
-      } else {
-        sent++;
+        continue;
+      }
+      sent++;
+
+      // Mark this waitlist row as Notified so the same parent isn't re-spammed
+      // when the next session opens in their area. They can still re-join the
+      // waitlist via the form if they want future notifications. Failures here
+      // don't fail the email send — we log and move on.
+      if (notionKey) {
+        try {
+          const patchRes = await fetch(`${NOTION_API}/pages/${row.pageId}`, {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${notionKey}`,
+              "Content-Type": "application/json",
+              "Notion-Version": NOTION_VERSION,
+            },
+            body: JSON.stringify({
+              properties: {
+                Status: { select: { name: "Notified" } },
+              },
+            }),
+          });
+          if (!patchRes.ok) {
+            console.error(
+              "[session-webhook] failed to mark waitlist row as Notified",
+              row.pageId,
+              patchRes.status,
+              await patchRes.text().catch(() => ""),
+            );
+          }
+        } catch (err) {
+          console.error(
+            "[session-webhook] error marking waitlist row as Notified",
+            row.pageId,
+            err,
+          );
+        }
       }
     } catch (err) {
       failed++;
