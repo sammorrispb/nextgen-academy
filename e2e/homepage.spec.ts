@@ -188,7 +188,7 @@ test.describe("Lead Form", () => {
   test("shows validation errors on empty submit", async ({ page }) => {
     await page.goto("/");
     const form = page.locator("#contact-form form");
-    await form.getByRole("button", { name: "Get Started" }).click();
+    await form.getByRole("button", { name: "Book my free evaluation" }).click();
 
     await expect(form.getByText("Your name is required")).toBeVisible();
     await expect(form.getByText("Email or phone number is required")).toBeVisible();

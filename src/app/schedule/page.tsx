@@ -84,6 +84,10 @@ export default async function SchedulePage() {
             split into Early and Late slots. Each pickleball court is capped
             at 4 players.
           </p>
+          <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
+            All sessions are non-refundable. No 7-day window &mdash; please
+            register only when you&rsquo;re confident you can attend.
+          </p>
 
           <div className="mt-7 inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-teal/30">
             <span className="w-2 h-2 rounded-full bg-ngpa-teal animate-pulse" aria-hidden="true" />

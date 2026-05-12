@@ -40,6 +40,11 @@ export const faq: FaqItem[] = [
       "All group classes are $40 per 1-hour slot ($80 for both slots in a session), drop-in. Sessions split into Early and Late slots \u2014 pick one or both. There\u2019s no subscription and no commitment \u2014 you pay for each slot you attend. Each pickleball court is capped at 4 players so quality stays high. Payments are non-refundable. The 30-minute evaluation that determines placement is always free.",
   },
   {
+    question: "What\u2019s your refund policy?",
+    answer:
+      "All session registrations are non-refundable. There is no 7-day refund window. Please register only when you\u2019re confident your child can attend \u2014 we can\u2019t offer credits or transfers for missed sessions. The free 30-minute evaluation is always free and never charged.",
+  },
+  {
     question: "Is pickleball safe for kids?",
     answer:
       "Yes. Pickleball is one of the safest racket sports for children: the court is smaller than tennis, the paddle is lightweight, and the ball moves at lower speeds than a tennis ball. USA Pickleball\u2019s official youth progression uses color-coded balls (Red, Orange, Green, Yellow) with reduced bounce and compression so kids learn proper technique before the game speeds up. Our coaches are trained in youth-appropriate drills, warmups, and game formats.",

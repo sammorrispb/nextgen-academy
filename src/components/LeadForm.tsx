@@ -27,7 +27,11 @@ type TrackingContext = {
   landing_page?: string;
 };
 
-export default function LeadForm() {
+interface LeadFormProps {
+  submitLabel?: string;
+}
+
+export default function LeadForm({ submitLabel = "Book my free evaluation" }: LeadFormProps = {}) {
   const [form, setForm] = useState<LeadFormData>(emptyForm);
   const [errors, setErrors] = useState<LeadValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
@@ -305,7 +309,7 @@ export default function LeadForm() {
             Sending...
           </span>
         ) : (
-          "Get Started"
+          submitLabel
         )}
       </button>
 
