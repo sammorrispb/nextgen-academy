@@ -27,9 +27,9 @@ export default function YellowBallCTA() {
         <div className="bg-ngpa-deep/60 rounded-xl p-5 mb-7 border border-ngpa-slate/60 max-w-md">
           <div className="flex items-baseline gap-2 mb-1.5">
             <span className="font-mono font-bold text-3xl text-ngpa-skill-yellow">
-              $35
+              $40
             </span>
-            <span className="text-sm text-ngpa-white/65">per session</span>
+            <span className="text-sm text-ngpa-white/65">per 1-hour slot</span>
           </div>
           <p className="text-xs text-ngpa-white/60 leading-relaxed">
             Drop-in &middot; non-refundable &middot; same rate across all NGA levels (Red&ndash;Yellow)

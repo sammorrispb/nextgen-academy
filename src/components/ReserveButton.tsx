@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { NgaSession } from "@/lib/notion-sessions";
+import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import {
   validateRsvpForm,
   type RsvpFormData,
@@ -24,16 +25,16 @@ export default function ReserveButton({ session }: Props) {
   const disabled =
     session.status !== "Open" ||
     session.spotsLeft <= 0 ||
-    !isWithin7Days(session.date);
+    !isWithinRegistrationWindow(session.date);
 
   const label =
     session.status === "Cancelled"
       ? "Cancelled"
       : session.spotsLeft <= 0
         ? "Full"
-        : !isWithin7Days(session.date)
-          ? "Opens 7 days out"
-          : "Reserve · $35";
+        : !isWithinRegistrationWindow(session.date)
+          ? `Opens ${REGISTRATION_WINDOW_DAYS} days out`
+          : "Reserve · $40";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -168,8 +169,8 @@ export default function ReserveButton({ session }: Props) {
               )}
 
               <p className="text-xs text-ngpa-muted">
-                You&rsquo;ll be redirected to Stripe to pay $35. Drop-in
-                payments are non-refundable.
+                You&rsquo;ll be redirected to Stripe to pay $40 for this
+                1-hour slot. Drop-in payments are non-refundable.
               </p>
 
               <button
@@ -177,7 +178,7 @@ export default function ReserveButton({ session }: Props) {
                 disabled={submitting}
                 className="w-full px-6 py-3.5 rounded-full bg-ngpa-lime text-ngpa-black font-bold hover:bg-ngpa-cyan transition-colors disabled:opacity-60"
               >
-                {submitting ? "Redirecting…" : "Continue to payment · $35"}
+                {submitting ? "Redirecting…" : "Continue to payment · $40"}
               </button>
             </form>
           </div>
@@ -207,11 +208,12 @@ function Field({
   );
 }
 
-function isWithin7Days(date: string): boolean {
+function isWithinRegistrationWindow(date: string): boolean {
   if (!date) return false;
   const d = new Date(`${date}T00:00:00Z`);
   const ms = d.getTime() - Date.now();
-  return ms <= 7 * 24 * 60 * 60 * 1000 && ms > -24 * 60 * 60 * 1000;
+  const windowMs = REGISTRATION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  return ms <= windowMs && ms > -24 * 60 * 60 * 1000;
 }
 
 function formatLongDate(date: string): string {

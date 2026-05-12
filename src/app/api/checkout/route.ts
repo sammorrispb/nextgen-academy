@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSessionById } from "@/lib/notion-sessions";
 import { getStripe } from "@/lib/stripe";
+import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import {
   validateRsvpForm,
   type RsvpFormData,
 } from "@/lib/validate-rsvp";
 
-const REGISTRATION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const REGISTRATION_WINDOW_MS = REGISTRATION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   let body: Partial<RsvpFormData>;
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   const now = Date.now();
   if (sessionDate.getTime() - now > REGISTRATION_WINDOW_MS) {
     return NextResponse.json(
-      { error: "Registration opens 7 days before the session" },
+      { error: `Registration opens ${REGISTRATION_WINDOW_DAYS} days before the session` },
       { status: 409 },
     );
   }

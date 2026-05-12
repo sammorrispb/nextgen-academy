@@ -67,13 +67,13 @@ A single lead submission fans out to multiple destinations. Order in `src/app/ap
 If any optional integration's env var is missing, that step logs a warning and is skipped — the response still succeeds as long as Resend works.
 
 ### Drop-in registration flow (`/schedule` + Stripe)
-Pricing is **$35 per session, drop-in only — no subscription, no refunds**. Each session opens for registration **7 days ahead** and caps at 4 players per court.
+Pricing is **$40 per 1-hour slot, drop-in only — no subscription, no refunds** ($80 for both slots in a session). Sessions split into Early and Late slots. Each session opens for registration **30 days ahead** and caps at 4 players per pickleball court.
 
 Source of truth for the public class schedule is the **NGA Sessions Schedule** Notion DB (`NOTION_SESSIONS_DB_ID`). Sam edits it (or a connected Google Sheet); the site reads it via `src/lib/notion-sessions.ts` with 5-min ISR.
 
 User flow:
 1. Parent visits `/schedule`, picks one open session.
-2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($35, qty 1) on NGA Stripe `acct_1TU4iSBpXOfTC961` with metadata `{parent, child, sessionId}`.
+2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($40, qty 1) on NGA Stripe `acct_1TU4iSBpXOfTC961` with metadata `{parent, child, sessionId}`.
 3. Parent pays in Stripe Checkout, lands on `/schedule/success`.
 4. `/api/stripe/webhook` (signed by `STRIPE_WEBHOOK_SECRET`) on `checkout.session.completed`:
    - Sends real-time email to `nextgenacademypb@gmail.com` via Resend.
@@ -106,7 +106,7 @@ See `.env.example`. Categories:
 - `NOTION_DROPINS_DB_ID` — NGA Drop-in Registrations database ID (`557f01d8-e4c6-47d9-a67b-f0817dd8724f`).
 - `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1TU4iSBpXOfTC961`.
 - `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret.
-- `STRIPE_DROPIN_PRICE_ID` — price ID for the single $35 NGA Drop-in product.
+- `STRIPE_DROPIN_PRICE_ID` — price ID for the single $40 NGA Drop-in slot product.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
 
 ## Testing Standards

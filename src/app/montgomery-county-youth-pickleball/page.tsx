@@ -303,9 +303,10 @@ export default function MontgomeryCountyPage() {
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8">
             All group classes are{" "}
-            <strong className="text-ngpa-white font-bold">$35 per session</strong>, drop-in only — no
-            subscription, no commitment. Sessions open for registration 7 days
-            in advance and each court is capped at 4 players. Payments are
+            <strong className="text-ngpa-white font-bold">$40 per 1-hour slot</strong>{" "}
+            ($80 for both slots in a session), drop-in only — no subscription,
+            no commitment. Sessions split into Early and Late slots. Each
+            pickleball court is capped at 4 players. Payments are
             non-refundable.{" "}
             <Link
               href="/schedule"
@@ -317,8 +318,8 @@ export default function MontgomeryCountyPage() {
           </p>
           <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7">
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="font-mono font-bold text-4xl text-ngpa-teal">$35</span>
-              <span className="text-ngpa-white/65">per session</span>
+              <span className="font-mono font-bold text-4xl text-ngpa-teal">$40</span>
+              <span className="text-ngpa-white/65">per 1-hour slot</span>
             </div>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
               Same rate across all levels — Red, Orange, Green, Yellow.
