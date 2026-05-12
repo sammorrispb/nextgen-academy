@@ -27,7 +27,7 @@ export const faq: FaqItem[] = [
   {
     question: "Where are you located?",
     answer:
-      "We run sessions across Montgomery County, MD. Locations rotate seasonally based on court availability — common areas include Rockville, North Bethesda, Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill. Email or text us and we'll share the current session location.",
+      "We coach across Montgomery County Public Schools. Sessions rotate weekly based on court availability — common areas include Rockville, North Bethesda, Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill. The /schedule page shows this week's confirmed venues; email or text us if you don't see one near you.",
   },
   {
     question: "How do free evaluations work?",

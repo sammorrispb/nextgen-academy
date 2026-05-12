@@ -101,7 +101,7 @@ export default function FreeEvaluationPage() {
               <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ngpa-white/70">
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                  Locations rotate seasonally
+                  MCPS venues across MoCo
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
@@ -207,11 +207,12 @@ export default function FreeEvaluationPage() {
           </h2>
           <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
             <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              Locations Rotate Seasonally
+              MCPS courts across Montgomery County.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions move between Montgomery County courts each season.
-              Email or text us and we&rsquo;ll share the current location.
+              Sessions rotate by demand &mdash; closer to more zip codes than a
+              single fixed venue. We&rsquo;ll share the venue when we confirm
+              your evaluation.
             </p>
           </div>
           <p className="mt-10 text-center text-base text-ngpa-white/65">

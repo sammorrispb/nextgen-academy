@@ -1,7 +1,9 @@
 import Image from "next/image";
+import Link from "next/link";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
 import CoachStrip from "@/components/CoachStrip";
+import UpcomingSessions from "@/components/UpcomingSessions";
 import BallPathway from "@/components/BallPathway";
 import LevelGrid from "@/components/LevelGrid";
 import YellowBallCTA from "@/components/YellowBallCTA";
@@ -16,12 +18,18 @@ import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
 import { faq } from "@/data/faq";
 import { familySiteUrl } from "@/lib/urls";
+import { fetchUpcomingSessions } from "@/lib/notion-sessions";
+import { inferCity } from "@/lib/venue-lookup";
 
 export const metadata = {
   alternates: { canonical: "/" },
 };
 
-export default function Home() {
+export const revalidate = 300;
+
+export default async function Home() {
+  const sessions = await fetchUpcomingSessions();
+  const upcomingForSchema = sessions.slice(0, 4);
   return (
     <>
       {/* FAQ Schema */}
@@ -61,6 +69,60 @@ export default function Home() {
         />
       ))}
 
+      {/* Per-session Event schema — surfaces upcoming sessions to local search
+         and AI assistants. Address city is inferred from the location string
+         when recognized; falls back to "Montgomery County" otherwise. */}
+      {upcomingForSchema.map((session) => {
+        const city = inferCity(session.location) ?? "Montgomery County";
+        return (
+          <JsonLd
+            key={`event-${session.id}`}
+            data={{
+              "@context": "https://schema.org",
+              "@type": "SportsEvent",
+              name: session.title || `NGA Drop-in${session.level ? ` (${session.level} Ball)` : ""}`,
+              startDate: session.startTime
+                ? `${session.date}T${session.startTime}`
+                : session.date,
+              ...(session.endTime
+                ? { endDate: `${session.date}T${session.endTime}` }
+                : {}),
+              eventStatus:
+                session.status === "Cancelled"
+                  ? "https://schema.org/EventCancelled"
+                  : "https://schema.org/EventScheduled",
+              eventAttendanceMode:
+                "https://schema.org/OfflineEventAttendanceMode",
+              location: {
+                "@type": "Place",
+                name: session.location,
+                address: {
+                  "@type": "PostalAddress",
+                  addressLocality: city,
+                  addressRegion: "MD",
+                  addressCountry: "US",
+                },
+              },
+              organizer: {
+                "@type": "SportsOrganization",
+                name: "Next Gen Pickleball Academy",
+                url: "https://nextgenpbacademy.com",
+              },
+              offers: {
+                "@type": "Offer",
+                price: "40",
+                priceCurrency: "USD",
+                availability:
+                  session.spotsLeft > 0
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/SoldOut",
+                url: "https://nextgenpbacademy.com/schedule",
+              },
+            }}
+          />
+        );
+      })}
+
       <Hero />
 
       {/* ─── How It Works ────────────────────────── */}
@@ -68,6 +130,9 @@ export default function Home() {
 
       {/* ─── Coach Strip (above-the-fold trust) ──── */}
       <CoachStrip />
+
+      {/* ─── This Week's Sessions (live from Notion) ── */}
+      <UpcomingSessions sessions={sessions} />
 
       {/* ─── Programs / Ball Pathway ─────────────── */}
       <section
@@ -299,11 +364,17 @@ export default function Home() {
 
           <div className="max-w-2xl mx-auto bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
             <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              Locations Rotate Seasonally
+              We coach across Montgomery County Public Schools.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions move between Montgomery County courts each season.
-              Email or text us and we&rsquo;ll share the current location.
+              Sessions rotate by demand &mdash; closer to more zip codes than a
+              single fixed venue.{" "}
+              <Link
+                href="/schedule"
+                className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
+              >
+                See this week&rsquo;s locations &rarr;
+              </Link>
             </p>
           </div>
         </div>

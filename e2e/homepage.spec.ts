@@ -32,6 +32,19 @@ test.describe("How It Works", () => {
   });
 });
 
+// ─── Upcoming Sessions (PR 3) ─────────────────────
+
+test.describe("Upcoming Sessions strip", () => {
+  test("renders the heading and link to schedule", async ({ page }) => {
+    await page.goto("/");
+    const section = page.getByRole("region", { name: /Montgomery County Public Schools/ });
+    await expect(section).toBeVisible();
+    // Either renders empty-state link OR a 'See all upcoming sessions' link
+    const seeAll = section.getByRole("link", { name: /See all upcoming sessions|See the schedule/ });
+    await expect(seeAll.first()).toBeVisible();
+  });
+});
+
 // ─── Coach Strip (PR 2) ───────────────────────────
 
 test.describe("Coach Strip", () => {
@@ -259,10 +272,12 @@ test.describe("Contact Strip", () => {
     await expect(contact.getByRole("link", { name: "WhatsApp" })).toBeVisible();
   });
 
-  test("shows rotating-locations panel", async ({ page }) => {
+  test("shows MCPS framing in contact panel", async ({ page }) => {
     await page.goto("/");
     const contact = page.locator("#contact");
-    await expect(contact.getByText("Locations Rotate Seasonally")).toBeVisible();
+    await expect(
+      contact.getByText("We coach across Montgomery County Public Schools.")
+    ).toBeVisible();
   });
 });
 
