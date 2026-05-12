@@ -9,14 +9,29 @@ import {
   findDropInByCheckoutId,
   type DropInRow,
 } from "@/lib/notion-dropins";
+import { sessionToSlug } from "@/lib/session-slug";
 
 export const runtime = "nodejs";
 
 const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
+const REPLY_TO = "nextgenacademypb@gmail.com";
+const SITE_ORIGIN =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
 
 function metaString(meta: Stripe.Metadata, key: string): string {
   return typeof meta[key] === "string" ? meta[key] : "";
+}
+
+function formatLongDate(date: string): string {
+  if (!date) return "";
+  const d = new Date(`${date}T12:00:00Z`);
+  return d.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 async function emailAdmin(session: Stripe.Checkout.Session) {
@@ -56,6 +71,72 @@ async function emailAdmin(session: Stripe.Checkout.Session) {
   });
   if (error) {
     console.error("[stripe-webhook] Resend rejected admin email", error);
+  }
+}
+
+async function emailParent(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = session.customer_email;
+  if (!apiKey) {
+    console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping parent email");
+    return;
+  }
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    console.warn("[stripe-webhook] no customer_email — skipping parent email");
+    return;
+  }
+
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const parentName = metaString(m, "parent_name");
+  const parentFirst = parentName.split(/\s+/)[0] || "there";
+  const childFirst = metaString(m, "child_first_name") || "your player";
+  const sessionTitle = metaString(m, "session_title");
+  const sessionDate = metaString(m, "session_date");
+  const sessionStart = metaString(m, "session_start");
+  const sessionLocation = metaString(m, "session_location");
+
+  const slug =
+    sessionTitle && sessionDate
+      ? sessionToSlug({ title: sessionTitle, date: sessionDate })
+      : "";
+  const detailUrl = slug ? `${SITE_ORIGIN}/schedule/${slug}` : `${SITE_ORIGIN}/schedule`;
+
+  const subject = `You're registered — ${sessionTitle || formatLongDate(sessionDate)}`;
+  const lines = [
+    `Hi ${parentFirst},`,
+    "",
+    `You're confirmed for an NGA drop-in:`,
+    "",
+    `${sessionTitle}`,
+    `${formatLongDate(sessionDate)} · ${sessionStart}`,
+    `${sessionLocation}`,
+    "",
+    `${childFirst} is registered for the 1-hour slot. Paid: $${amount}.`,
+    "",
+    `What to bring:`,
+    `· Water bottle`,
+    `· Court shoes (no flat-soled sneakers)`,
+    `· A paddle if you have one — we have loaners if not`,
+    "",
+    `Drop-in payments are non-refundable, but if something comes up, reply to this email or text 301-325-4731 and we'll work it out.`,
+    "",
+    `Session link (re-share or check details): ${detailUrl}`,
+    "",
+    `See you on the court,`,
+    `Sam · Next Gen Pickleball Academy`,
+  ];
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    replyTo: REPLY_TO,
+    subject,
+    text: lines.join("\n"),
+  });
+  if (error) {
+    console.error("[stripe-webhook] Resend rejected parent email", error);
   }
 }
 
@@ -123,9 +204,10 @@ export async function POST(req: NextRequest) {
     stripePaymentIntentId: piId,
   };
 
-  // Run all three side effects concurrently. Failures in one shouldn't block the others.
+  // Run side effects concurrently. Failures in one shouldn't block the others.
   await Promise.allSettled([
     emailAdmin(session),
+    emailParent(session),
     sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
     createDropInRegistration(row),
   ]);
