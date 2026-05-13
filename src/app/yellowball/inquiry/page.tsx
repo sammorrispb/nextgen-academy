@@ -94,7 +94,7 @@ export default function YellowBallInquiryPage() {
                 ))}
               </ul>
 
-              {/* Pricing strip — uniform $40 / 1-hour slot across all NGA levels */}
+              {/* Pricing strip — $40 group rate (Orange/Green/Yellow). Private rates not published. */}
               <div className="mt-10">
                 <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-white/60 mb-3">
                   Pricing
@@ -104,10 +104,10 @@ export default function YellowBallInquiryPage() {
                     <span className="font-mono font-bold text-3xl text-ngpa-skill-yellow">
                       $40
                     </span>
-                    <span className="text-sm text-ngpa-white/65">per 1-hour slot</span>
+                    <span className="text-sm text-ngpa-white/65">per 1-hour group slot</span>
                   </div>
                   <p className="text-xs text-ngpa-white/60 leading-relaxed">
-                    Drop-in &middot; non-refundable &middot; same rate across all NGA levels (Red&ndash;Yellow)
+                    Drop-in &middot; non-refundable &middot; same group rate for Orange, Green &amp; Yellow Ball. Private-lesson rates quoted after the evaluation.
                   </p>
                 </div>
               </div>

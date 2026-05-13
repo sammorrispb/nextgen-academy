@@ -32,7 +32,7 @@ export default function YellowBallCTA() {
             <span className="text-sm text-ngpa-white/65">per 1-hour slot</span>
           </div>
           <p className="text-xs text-ngpa-white/60 leading-relaxed">
-            Drop-in &middot; non-refundable &middot; same rate across all NGA levels (Red&ndash;Yellow)
+            Drop-in &middot; non-refundable &middot; same group rate for Orange, Green &amp; Yellow Ball. Private-lesson rates quoted after the evaluation.
           </p>
         </div>
 

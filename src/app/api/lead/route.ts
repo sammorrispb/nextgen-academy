@@ -116,9 +116,11 @@ async function createNotionPlayer(
 
   const { email, phone } = parseContact(body.contact);
   const attribution = formatAttribution(body);
-  const notesContent = attribution
-    ? `Lead form submission. Child age: ${body.childAge}. Attribution: ${attribution}`
-    : `Lead form submission. Child age: ${body.childAge}`;
+  const parentNote = body.notes?.trim();
+  const parts = [`Lead form submission. Child age: ${body.childAge}`];
+  if (parentNote) parts.push(`Parent says: "${parentNote}"`);
+  if (attribution) parts.push(`Attribution: ${attribution}`);
+  const notesContent = parts.join(". ");
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const properties: Record<string, any> = {
@@ -238,6 +240,14 @@ export async function POST(request: NextRequest) {
       <td style="padding: 10px 8px; color: #7A88B8;">Child's Age</td>
       <td style="padding: 10px 8px; color: #EEF2FF;">${body.childAge} years old</td>
     </tr>
+    ${
+      body.notes?.trim()
+        ? `<tr style="border-bottom: 1px solid #1A3060;">
+      <td style="padding: 10px 8px; color: #7A88B8; vertical-align: top;">Parent Notes</td>
+      <td style="padding: 10px 8px; color: #EEF2FF; white-space: pre-wrap;">${body.notes.trim().replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)}</td>
+    </tr>`
+        : ""
+    }
     <tr style="border-bottom: 1px solid #1A3060;">
       <td style="padding: 10px 8px; color: #7A88B8;">Preferred Location</td>
       <td style="padding: 10px 8px; color: #EEF2FF;">${body.location || "No preference"}</td>
@@ -349,6 +359,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           child_age: Number(body.childAge),
           location: body.location || null,
+          parent_notes: body.notes?.trim() || null,
           notion_status: notionStatus,
           is_parent: true,
           phone_only: !email && !!phone,

@@ -36,21 +36,23 @@ export default function Hero() {
             </div>
 
             <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-black text-ngpa-white leading-[1.02] tracking-tight">
-              Real pickleball
+              Real coaching for
               <br />
-              <span className="text-ngpa-teal">coaching for</span>
+              <span className="text-ngpa-teal">kids 8&ndash;16</span>
               <br />
-              kids 5&ndash;16.
+              who can rally.
             </h1>
 
             <p className="mt-7 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-              Small groups, real strategy, and a clear pathway from first paddle to
-              tournament play &mdash; across Montgomery County, MD.
+              Small groups, real strategy, and a clear pathway to tournament
+              play &mdash; across Montgomery County, MD. Still learning to
+              rally? Start with a private lesson.
             </p>
 
             <p className="mt-5 text-base sm:text-lg text-ngpa-white/95 leading-relaxed max-w-xl">
               <span className="font-bold text-ngpa-teal">Meet a coach on the court for 30 minutes &mdash; free.</span>{" "}
-              We&rsquo;ll see where your child is at and recommend the right group. No commitment.
+              We&rsquo;ll see where your child is at and recommend a group &mdash;
+              or a private-lesson plan to get them group-ready. No commitment.
             </p>
 
             <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">

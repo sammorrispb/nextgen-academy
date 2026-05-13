@@ -6,6 +6,7 @@ interface LevelCardProps {
 
 export default function LevelCard({ level }: LevelCardProps) {
   const isYellow = level.key === "yellow";
+  const isPrivate = level.key === "red";
 
   return (
     <article
@@ -89,6 +90,23 @@ export default function LevelCard({ level }: LevelCardProps) {
                 style={{ color: level.color }}
               >
                 Request an eval
+                <span aria-hidden="true">&rarr;</span>
+              </a>
+            </div>
+          ) : isPrivate ? (
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="text-xs font-bold uppercase tracking-wider"
+                style={{ color: level.color }}
+              >
+                1:1 Only
+              </span>
+              <a
+                href="#contact-form"
+                className="inline-flex items-center gap-1.5 text-sm font-bold transition-colors hover:gap-2"
+                style={{ color: level.color }}
+              >
+                Schedule a private
                 <span aria-hidden="true">&rarr;</span>
               </a>
             </div>

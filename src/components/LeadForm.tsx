@@ -7,7 +7,7 @@ import { validateLeadForm } from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
-const AGE_OPTIONS = Array.from({ length: 13 }, (_, i) => i + 4); // 4-16
+const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 7); // 7-17 (NGA 8-16 + 1yr slack)
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -15,6 +15,7 @@ const emptyForm: LeadFormData = {
   parentName: "",
   contact: "",
   childAge: "",
+  notes: "",
 };
 
 type TrackingContext = {
@@ -59,13 +60,13 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
     trackingRef.current = ctx;
   }, []);
 
-  // Only the 3 user-facing fields can be edited via the form UI or produce
-  // validation errors. Tracking fields are populated server-side from state.
-  type EditableField = "parentName" | "contact" | "childAge";
+  // User-facing fields. childAge + notes are the only ones a parent edits;
+  // notes is optional and never produces validation errors.
+  type EditableField = "parentName" | "contact" | "childAge" | "notes";
 
   function updateField(field: EditableField, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (field !== "notes" && errors[field]) {
       setErrors((prev) => {
         const next = { ...prev };
         delete next[field];
@@ -82,6 +83,7 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
   }
 
   function handleBlur(field: EditableField) {
+    if (field === "notes") return;
     const fieldErrors = validateLeadForm(form);
     if (fieldErrors[field]) {
       setErrors((prev) => ({ ...prev, [field]: fieldErrors[field] }));
@@ -171,8 +173,9 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
           Thanks, {form.parentName.split(" ")[0]}!
         </h3>
         <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
-          We&rsquo;ll reach out within 24 hours to help find the right group for
-          your child.
+          We&rsquo;ll reach out within 24 hours to schedule a free evaluation
+          and figure out the right next step &mdash; a group level, or private
+          lessons if your child is still learning to rally.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a
@@ -276,6 +279,23 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
           {errors.childAge && (
             <p className={errorClass}>{errors.childAge}</p>
           )}
+        </div>
+
+        {/* Notes — optional self-identified intent */}
+        <div>
+          <label htmlFor="notes" className={labelClass}>
+            Anything we should know?{" "}
+            <span className="text-ngpa-white/50 font-normal">(optional)</span>
+          </label>
+          <textarea
+            id="notes"
+            rows={3}
+            className={inputClass}
+            placeholder="Can your child rally yet? Looking for group or private? Anything else…"
+            value={form.notes ?? ""}
+            onChange={(e) => updateField("notes", e.target.value)}
+            maxLength={500}
+          />
         </div>
       </div>
 
