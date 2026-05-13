@@ -2,8 +2,9 @@ export interface LeadFormData {
   parentName: string;
   contact: string;
   childAge: string;
-  // Optional free-text — UI no longer collects it, but the API still forwards
-  // it to Notion + Hub if a caller (e.g. legacy form, server) supplies one.
+  // Part of Montgomery County the parent lives in (Bethesda, Rockville, etc.).
+  // Optional — surfaces as a dropdown on the lead form and lets us match the
+  // family to the closest rotating session venue.
   location?: string;
   // Attribution fields — all optional, captured client-side from URL params.
   // Never validated (accepted as-is) and never shown as form errors.
