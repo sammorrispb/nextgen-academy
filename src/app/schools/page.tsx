@@ -158,7 +158,7 @@ const faq = [
   },
   {
     q: "What ages do you work with?",
-    a: "Our specialty is ages 5–16. We also run intro clinics for high schoolers and faculty PD sessions for K–12 teachers.",
+    a: "Our specialty is ages 8–16. We also run intro clinics for high schoolers and faculty PD sessions for K–12 teachers.",
   },
   {
     q: "What's the typical group size?",

@@ -92,18 +92,20 @@ export default function MontgomeryCountyPage() {
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 sm:pt-24 pb-20 sm:pb-24">
           <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-4">
-            Montgomery County, MD &middot; Ages 5&ndash;16
+            Montgomery County, MD &middot; Ages 8&ndash;16
           </p>
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight">
             Youth pickleball in{" "}
             <span className="text-ngpa-teal">Montgomery County</span>.
           </h1>
           <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
-            Next Gen Pickleball Academy is a family-first youth pickleball academy
-            for ages 5&ndash;16, serving families across Montgomery County. We
-            reach families in Bethesda, Potomac, Chevy Chase, Kensington, Silver
-            Spring, Gaithersburg, and the broader DMV — with a clear pathway from
-            first rally to tournament play.
+            Next Gen Pickleball Academy is a youth pickleball academy for ages
+            8&ndash;16 who can rally and want real instruction, serving families
+            across Montgomery County. We reach families in Bethesda, Potomac,
+            Chevy Chase, Kensington, Silver Spring, Gaithersburg, and the broader
+            DMV &mdash; with a clear pathway to tournament play. Kids still
+            learning to rally start with private lessons until they&rsquo;re
+            ready for group sessions.
           </p>
 
           <div className="mt-9 flex flex-col sm:flex-row gap-3">
@@ -320,15 +322,15 @@ export default function MontgomeryCountyPage() {
           <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7">
             <div className="flex items-baseline gap-2 mb-2">
               <span className="font-mono font-bold text-4xl text-ngpa-teal">$40</span>
-              <span className="text-ngpa-white/65">per 1-hour slot</span>
+              <span className="text-ngpa-white/65">per 1-hour group slot</span>
             </div>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Same rate across all levels — Red, Orange, Green, Yellow.
+              Same group rate across Orange, Green &amp; Yellow Ball.
               Drop-in only. No monthly subscription. Non-refundable.
             </p>
           </div>
           <p className="text-sm text-ngpa-white/60 mt-5">
-            The 30-minute evaluation that determines placement is always free.
+            <strong className="text-ngpa-white/80">Private lessons</strong> for kids 8+ who can&rsquo;t rally yet are quoted after the evaluation — rate depends on coach, location, and package. The 30-minute evaluation that determines placement is always free.
           </p>
         </div>
       </section>

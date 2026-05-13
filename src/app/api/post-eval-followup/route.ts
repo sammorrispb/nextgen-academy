@@ -14,7 +14,7 @@ import {
 type Level = "Red" | "Orange" | "Green" | "Yellow";
 
 const LEVEL_DESCRIPTIONS: Record<Level, string> = {
-  Red: "Building the foundation — basic strokes, footwork, ready position. Pure introduction.",
+  Red: "Pre-rally — building the foundation. Best path forward is private lessons until your child can sustain a rally and join a group.",
   Orange:
     "Developing — can rally 3+ balls, learning consistent contact and court awareness.",
   Green:
@@ -37,6 +37,11 @@ async function updatePlayer(
   level: Level,
   today: string,
 ) {
+  const nextAction =
+    level === "Red"
+      ? `Post-eval email sent ${today}. **Send private-lesson quote within 24h** (use pricing guide).`
+      : `Post-eval email sent ${today}. Awaiting registration.`;
+
   await fetch(`${NOTION_API}/pages/${playerId}`, {
     method: "PATCH",
     headers: {
@@ -50,13 +55,7 @@ async function updatePlayer(
         Status: { select: { name: "Active" } },
         "Last Contact Date": { date: { start: today } },
         "Next Action": {
-          rich_text: [
-            {
-              text: {
-                content: `Post-eval email sent ${today}. Awaiting registration.`,
-              },
-            },
-          ],
+          rich_text: [{ text: { content: nextAction } }],
         },
       },
     }),
@@ -74,6 +73,26 @@ function buildEmailHtml(args: {
     ? `<p style="font-size: 15px; line-height: 1.6; margin: 16px 0;"><strong style="color: #7A88B8;">What I saw:</strong><br/>${args.observations.replace(/\n/g, "<br/>")}</p>`
     : "";
 
+  const isPrivateBridge = args.level === "Red";
+
+  const nextStepsBlock = isPrivateBridge
+    ? `
+  <p style="font-size: 15px; line-height: 1.6;"><strong style="color: #7A88B8;">Where to go from here:</strong></p>
+  <p style="font-size: 15px; line-height: 1.6;">${args.childFirstName} isn&rsquo;t quite ready for group sessions yet &mdash; group play assumes a kid can already sustain a rally. The best path forward is a short run of <strong>private lessons</strong> to build the rally, footwork, and consistency. Most kids are group-ready inside 4&ndash;6 privates.</p>
+  <p style="font-size: 15px; line-height: 1.6;">I&rsquo;ll send a tailored private-lesson plan and rate within 24 hours &mdash; based on where you&rsquo;d like to play, how often, and whether siblings or friends want to join.</p>`
+    : `
+  <p style="font-size: 15px; line-height: 1.6;"><strong style="color: #7A88B8;">Where to go from here:</strong></p>
+  <p style="font-size: 15px; line-height: 1.6;">The best fit right now is a ${args.level} Ball drop-in slot. Our current upcoming sessions:</p>
+  <ul style="font-size: 15px; line-height: 1.7; padding-left: 20px;">
+    <li>Sat May 23 &mdash; Walter Johnson HS, Bethesda (Early 4:30 + Late 5:30 PM)</li>
+    <li>Sun May 24 &mdash; Gaithersburg HS (Early 4:30 + Late 5:30 PM)</li>
+    <li>Sat May 30 &mdash; Sherwood HS, Sandy Spring (Early 10:00 + Late 11:00 AM)</li>
+  </ul>
+  <p style="font-size: 15px; line-height: 1.6;">$40 per 1-hour slot ($80 for both slots in a session).</p>
+  <p style="font-size: 15px; line-height: 1.6; margin: 16px 0;">
+    <a href="https://nextgenpbacademy.com/schedule" style="display: inline-block; background: #AADC00; color: #05132B; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">Reserve a slot</a>
+  </p>`;
+
   return `
 <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
   <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 16px;">
@@ -83,27 +102,16 @@ function buildEmailHtml(args: {
   <p style="font-size: 15px; line-height: 1.6;">Thanks for bringing ${args.childFirstName} out today. Quick recap and what I'd recommend next.</p>
 
   <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #AADC00;">
-    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">Starting level</p>
-    <p style="margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #AADC00;">${args.level} Ball</p>
+    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">${isPrivateBridge ? "Starting path" : "Starting level"}</p>
+    <p style="margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #AADC00;">${isPrivateBridge ? "Private Lessons (pre-rally bridge)" : args.level + " Ball"}</p>
     <p style="margin: 0; font-size: 14px; color: #EEF2FF; line-height: 1.5;">${args.levelDescription}</p>
   </div>
 
   ${obsBlock}
-
-  <p style="font-size: 15px; line-height: 1.6;"><strong style="color: #7A88B8;">Where to go from here:</strong></p>
-  <p style="font-size: 15px; line-height: 1.6;">The best fit right now is a ${args.level} Ball drop-in slot. Our current upcoming sessions:</p>
-  <ul style="font-size: 15px; line-height: 1.7; padding-left: 20px;">
-    <li>Sat May 23 — Walter Johnson HS, Bethesda (Early 4:30 + Late 5:30 PM)</li>
-    <li>Sun May 24 — Gaithersburg HS (Early 4:30 + Late 5:30 PM)</li>
-    <li>Sat May 30 — Sherwood HS, Sandy Spring (Early 10:00 + Late 11:00 AM)</li>
-  </ul>
-  <p style="font-size: 15px; line-height: 1.6;">$40 per 1-hour slot ($80 for both slots in a session).</p>
-  <p style="font-size: 15px; line-height: 1.6; margin: 16px 0;">
-    <a href="https://nextgenpbacademy.com/schedule" style="display: inline-block; background: #AADC00; color: #05132B; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 700;">Reserve a slot</a>
-  </p>
+  ${nextStepsBlock}
 
   <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #1A3060;">
-    <p style="font-size: 14px; line-height: 1.6;">Reply to this email or text me at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a> to talk through level or venue.</p>
+    <p style="font-size: 14px; line-height: 1.6;">Reply to this email or text me at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a>.</p>
     <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
       See you on the court!<br/>
       <strong style="color: #AADC00;">— Coach Sam</strong><br/>

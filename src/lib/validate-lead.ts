@@ -5,6 +5,10 @@ export interface LeadFormData {
   // Optional free-text — UI no longer collects it, but the API still forwards
   // it to Notion + Hub if a caller (e.g. legacy form, server) supplies one.
   location?: string;
+  // Optional "anything we should know?" textarea. Used to capture
+  // self-identified intent (private vs group, skill level, urgency) so Sam
+  // can pre-tier before responding.
+  notes?: string;
   // Attribution fields — all optional, captured client-side from URL params.
   // Never validated (accepted as-is) and never shown as form errors.
   utm_source?: string;
@@ -48,8 +52,9 @@ export function validateLeadForm(
     errors.childAge = "Child's age is required";
   } else {
     const age = Number(data.childAge);
-    if (isNaN(age) || age < 4 || age > 16) {
-      errors.childAge = "Age must be between 4 and 16";
+    // NGA core is 8–16; allow 7 and 17 for inquiry slack (siblings, edge ages).
+    if (isNaN(age) || age < 7 || age > 17) {
+      errors.childAge = "Age must be between 7 and 17";
     }
   }
 

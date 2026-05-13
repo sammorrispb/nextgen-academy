@@ -7,12 +7,12 @@ import { site } from "@/data/site";
 export const metadata: Metadata = {
   title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
   description:
-    "Book a free 30-minute evaluation for your child (ages 5–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Red/Orange/Green/Yellow Ball pathway. No cost. No commitment.",
+    "Book a free 30-minute evaluation for your child (ages 8–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Orange/Green/Yellow Ball pathway — or whether private lessons are the right starting point. No cost. No commitment.",
   alternates: { canonical: "/free-evaluation" },
   openGraph: {
     title: "Free 30-Minute Pickleball Evaluation for Kids — Montgomery County, MD",
     description:
-      "Youth pickleball coaching for ages 5–16 in Montgomery County, MD. Your first 30 minutes are on us.",
+      "Youth pickleball coaching for ages 8–16 in Montgomery County, MD. Your first 30 minutes are on us.",
     url: "https://nextgenpbacademy.com/free-evaluation",
   },
 };
@@ -62,9 +62,10 @@ export default function FreeEvaluationPage() {
               </h1>
 
               <p className="mt-6 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-                Ages 5&ndash;16. Meet a real coach on the court. We&rsquo;ll see
-                where your child is at, recommend the right group, and answer
-                every question you have.{" "}
+                Ages 8&ndash;16. Meet a real coach on the court. We&rsquo;ll see
+                where your child is at, recommend the right group &mdash; or, if
+                they&rsquo;re still learning to rally, a private-lesson plan to
+                get them there. Every question answered.{" "}
                 <strong className="text-ngpa-white font-bold">No pressure. No cost.</strong>
               </p>
 
@@ -128,11 +129,12 @@ export default function FreeEvaluationPage() {
                     We&rsquo;ll call or text within 24 hours to schedule.
                   </p>
                   <p className="text-ngpa-white/55 text-xs mt-2.5 leading-relaxed">
-                    After the eval, sessions are{" "}
+                    After the eval, group sessions are{" "}
                     <span className="text-ngpa-white/80 font-bold">
                       $40 each
                     </span>{" "}
-                    &mdash; drop in anytime. No contracts.
+                    &mdash; drop in anytime. No contracts. Private-lesson rates
+                    quoted after we see your child play.
                   </p>
                 </div>
                 <LeadForm submitLabel="Schedule my free evaluation" />

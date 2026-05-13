@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: "%s | Next Gen Pickleball Academy",
   },
   description:
-    "Youth pickleball for ages 5\u201316 in Montgomery County, MD. Structured coaching, small groups, beginner to tournament.",
+    "Youth pickleball for ages 8\u201316 in Montgomery County, MD. Real instruction for kids who can rally, on a clear pathway to tournament play. Private lessons for kids still learning to rally.",
   icons: {
     icon: "/images/og-image.png",
     apple: "/images/og-image.png",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     siteName: "Next Gen Pickleball Academy",
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball academy for ages 5\u201316 in Montgomery County, MD. Structured coaching with a clear pathway from beginner to tournament play.",
+      "Youth pickleball academy for ages 8\u201316 in Montgomery County, MD. Real coaching for kids who can rally \u2014 and private lessons for the ones still learning.",
     images: [{
       url: "/images/og-image.png",
       width: 512,
@@ -57,7 +57,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Next Gen Pickleball Academy",
-    description: "Youth pickleball lessons for ages 5\u201316 in Montgomery County, MD. Small groups, real strategy, tournament pathway.",
+    description: "Youth pickleball lessons for ages 8\u201316 in Montgomery County, MD. Small groups for rally-ready kids, privates for pre-rally.",
     images: ["/images/og-image.png"],
   },
   verification: {
@@ -79,7 +79,7 @@ export default function RootLayout({
           "@context": "https://schema.org",
           "@type": "SportsActivityLocation",
           name: "Next Gen Pickleball Academy",
-          description: "Structured youth pickleball coaching for ages 5\u201316 in Montgomery County, MD.",
+          description: "Structured youth pickleball coaching for ages 8\u201316 in Montgomery County, MD.",
           url: "https://nextgenpbacademy.com",
           telephone: "301-325-4731",
           email: "nextgenacademypb@gmail.com",

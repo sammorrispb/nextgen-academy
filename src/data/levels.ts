@@ -13,17 +13,17 @@ export interface Level {
 export const levels: Level[] = [
   {
     key: "red",
-    label: "Red Ball",
-    ages: "5+",
-    tag: "Red Ball",
-    focus: "First paddle, first rally, first love of the game.",
-    detail: "Movement, hand-eye coordination, basic rules of play.",
+    label: "Private Lessons",
+    ages: "8+",
+    tag: "Pre-Rally Bridge",
+    focus: "Can't rally yet? Start here.",
+    detail: "1:1 coaching to build the rally, footwork, and consistency a child needs before joining a group. Bridge to Orange Ball when they're ready.",
     color: "#FF4040",
   },
   {
     key: "orange",
     label: "Orange Ball",
-    ages: "7+",
+    ages: "8+",
     tag: "Orange Ball",
     focus: "From rallying to competing — the game starts to click.",
     detail: "Rules mastery, sustained rallying, full-court movement.",
@@ -32,7 +32,7 @@ export const levels: Level[] = [
   {
     key: "green",
     label: "Green Ball",
-    ages: "9+",
+    ages: "10+",
     tag: "Green Ball",
     focus: "Strategy meets competition. Partnerships form.",
     detail: "Shot selection, court positioning, doubles teamwork.",

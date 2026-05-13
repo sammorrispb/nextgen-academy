@@ -153,7 +153,7 @@ export default async function Home() {
           <SectionHeading
             eyebrow="The Pathway"
             title="We don't just teach pickleball. We develop athletes."
-            subtitle="Four color-coded levels guide your child from first paddle to tournament play — placed by skill, never age alone."
+            subtitle="A private-lesson bridge for pre-rally kids, then three color-coded group levels guiding rally-ready athletes to tournament play — placed by skill, never age alone."
           />
           <BallPathway />
           <LevelGrid />
