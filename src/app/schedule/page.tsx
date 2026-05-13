@@ -5,10 +5,8 @@ import { seasons } from "@/data/schedule";
 import SectionHeading from "@/components/SectionHeading";
 import CTABanner from "@/components/CTABanner";
 import RegistrationNotice from "@/components/RegistrationNotice";
-import ReserveButton from "@/components/ReserveButton";
-import ShareButton from "@/components/ShareButton";
+import SessionCard from "@/components/SessionCard";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
-import { sessionToSlug } from "@/lib/session-slug";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 
 const SITE_ORIGIN =
@@ -23,13 +21,6 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 const heroSeason = seasons[seasons.length - 1];
-
-const LEVEL_COLOR: Record<string, string> = {
-  Red: "bg-ngpa-skill-red text-white",
-  Orange: "bg-ngpa-skill-orange text-white",
-  Green: "bg-ngpa-skill-green text-white",
-  Yellow: "bg-ngpa-skill-yellow text-ngpa-deep",
-};
 
 function groupByDate(sessions: NgaSession[]): Map<string, NgaSession[]> {
   const map = new Map<string, NgaSession[]>();
@@ -123,7 +114,11 @@ export default async function SchedulePage() {
                   </h2>
                   <div className="space-y-3">
                     {daySessions.map((s) => (
-                      <SessionCard key={s.id} session={s} />
+                      <SessionCard
+                        key={s.id}
+                        session={s}
+                        siteOrigin={SITE_ORIGIN}
+                      />
                     ))}
                   </div>
                 </div>
@@ -144,56 +139,3 @@ export default async function SchedulePage() {
   );
 }
 
-function SessionCard({ session }: { session: NgaSession }) {
-  const levelClass =
-    (session.level && LEVEL_COLOR[session.level]) ?? "bg-ngpa-slate text-ngpa-white";
-
-  const seatsText =
-    session.status === "Cancelled"
-      ? "Cancelled"
-      : session.spotsLeft === 0
-        ? "Full"
-        : `${session.spotsLeft} / ${session.capacity} seats left`;
-
-  const seatsClass =
-    session.status === "Cancelled" || session.spotsLeft === 0
-      ? "text-red-400"
-      : session.spotsLeft <= 2
-        ? "text-ngpa-skill-orange"
-        : "text-ngpa-white/65";
-
-  return (
-    <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 transition-colors hover:border-ngpa-teal/40">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          {session.level && (
-            <span
-              className={`text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${levelClass}`}
-            >
-              {session.level} Ball
-            </span>
-          )}
-          <span className={`text-xs font-bold ${seatsClass}`}>{seatsText}</span>
-        </div>
-        <p className="text-base font-bold text-ngpa-white">
-          <time dateTime={session.date}>
-            {session.startTime}
-            {session.endTime ? `–${session.endTime}` : ""}
-          </time>
-          <span className="text-ngpa-white/65 font-normal"> · {session.location}</span>
-        </p>
-        {session.title && (
-          <p className="text-sm text-ngpa-white/65 mt-0.5">{session.title}</p>
-        )}
-      </div>
-      <div className="flex items-center gap-2 sm:flex-col sm:items-stretch">
-        <ReserveButton session={session} />
-        <ShareButton
-          url={`${SITE_ORIGIN}/schedule/${sessionToSlug(session)}`}
-          title={`${session.title} · ${session.startTime}`}
-          text={`Reserve a $40 drop-in slot at NGA — ${session.title}`}
-        />
-      </div>
-    </div>
-  );
-}

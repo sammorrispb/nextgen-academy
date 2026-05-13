@@ -8,6 +8,7 @@ import CTABanner from "@/components/CTABanner";
 import RegistrationNotice from "@/components/RegistrationNotice";
 import ReserveButton from "@/components/ReserveButton";
 import ShareButton from "@/components/ShareButton";
+import SessionInfoBlock from "@/components/SessionInfoBlock";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { findSessionBySlug } from "@/lib/session-slug";
 
@@ -234,6 +235,10 @@ function SessionDetailCard({
         </time>
       </p>
       <p className="text-sm text-ngpa-white/65 mt-1">{session.location}</p>
+
+      <div className="mt-6 pt-6 border-t border-ngpa-slate/60">
+        <SessionInfoBlock session={session} />
+      </div>
 
       <div className="mt-6 flex flex-col sm:flex-row gap-3">
         <ReserveButton session={session} />
