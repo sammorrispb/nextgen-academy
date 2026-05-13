@@ -104,7 +104,7 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
 
       {open && typeof document !== "undefined" && createPortal(
         <div
-          className="fixed inset-0 z-50 bg-ngpa-deep/90 backdrop-blur-md overflow-y-auto overscroll-contain"
+          className="fixed inset-0 z-[60] bg-ngpa-deep/90 backdrop-blur-md overflow-y-auto overscroll-contain"
           role="dialog"
           aria-modal="true"
           aria-labelledby="reserve-title"
