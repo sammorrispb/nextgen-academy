@@ -1,6 +1,7 @@
 export interface FaqItem {
   question: string;
   answer: string;
+  cta?: { label: string; href: string };
 }
 
 export const faq: FaqItem[] = [
@@ -52,7 +53,8 @@ export const faq: FaqItem[] = [
   {
     question: "What\u2019s the difference between Red, Orange, Green, and Yellow Ball?",
     answer:
-      "Red Ball (ages 5+) uses a soft, slow foam ball and a smaller court \u2014 ideal for first-time players learning movement and basic rules. Orange Ball (ages 7+) has a slightly higher bounce for sustained rallies and full-court play. Green Ball (ages 9+) introduces doubles strategy, shot selection, and positioning. Yellow Ball (ages 12+) is the standard tournament ball and our competitive-pathway track for players who want to compete. Every child is placed based on skill during a free evaluation, not age alone.",
+      "Each color follows USA Pickleball\u2019s youth progression \u2014 placement is by skill, not age. Red Ball (ages 5+) is the first paddle: movement, hand-eye coordination, and basic rules of play. Orange Ball (ages 7+) builds rules mastery, sustained rallying, and full-court movement as the game starts to click. Green Ball (ages 9+) layers in shot selection, court positioning, and doubles teamwork. Yellow Ball (ages 12+) is our coach-curated competitive track \u2014 small groups of 3\u20135 athletes with custom scheduling and focused tournament prep. Every child is placed during a free evaluation, never on age alone.",
+    cta: { label: "See the four levels in detail", href: "#levels" },
   },
   {
     question: "Do you offer private pickleball lessons for kids?",

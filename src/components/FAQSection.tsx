@@ -62,9 +62,24 @@ export default function FAQSection() {
                 }`}
               >
                 <div className="overflow-hidden">
-                  <p className="text-ngpa-white/75 leading-relaxed px-5 pt-4 pb-5">
+                  <p
+                    className={`text-ngpa-white/75 leading-relaxed px-5 pt-4 ${
+                      item.cta ? "pb-2" : "pb-5"
+                    }`}
+                  >
                     {item.answer}
                   </p>
+                  {item.cta && (
+                    <p className="px-5 pb-5">
+                      <a
+                        href={item.cta.href}
+                        className="inline-flex items-center gap-1 text-ngpa-teal font-bold text-sm hover:text-ngpa-teal-bright transition-colors"
+                      >
+                        {item.cta.label}
+                        <span aria-hidden="true">→</span>
+                      </a>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
