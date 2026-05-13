@@ -56,7 +56,7 @@ export default function SessionDetailsModal({ session, open, onClose }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-40 bg-ngpa-deep/90 backdrop-blur-md overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-[60] bg-ngpa-deep/90 backdrop-blur-md overflow-y-auto overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-labelledby="session-details-title"
