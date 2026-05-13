@@ -13,7 +13,8 @@ const steps: Step[] = [
     body: (
       <>
         30 minutes on court. Your coach watches your child play, then recommends
-        the right level &mdash; Red, Orange, Green, or Yellow.
+        the right next step &mdash; private lessons (Red or Orange Ball) or a
+        group session (Green or Yellow Ball).
       </>
     ),
   },
