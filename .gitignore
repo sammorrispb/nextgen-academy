@@ -46,3 +46,6 @@ next-env.d.ts
 # data exports & Windows metadata
 *.xlsx
 *:Zone.Identifier
+
+# Claude Code local worktrees / scratch
+/.claude/

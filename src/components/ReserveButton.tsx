@@ -15,9 +15,10 @@ const FIELD_INPUT =
 
 interface Props {
   session: NgaSession;
+  fullWidth?: boolean;
 }
 
-export default function ReserveButton({ session }: Props) {
+export default function ReserveButton({ session, fullWidth = false }: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<RsvpValidationErrors>({});
@@ -89,9 +90,13 @@ export default function ReserveButton({ session }: Props) {
         onClick={() => setOpen(true)}
         disabled={disabled}
         className={
-          disabled
-            ? "px-4 py-2.5 rounded-full text-sm font-bold bg-ngpa-slate text-ngpa-muted cursor-not-allowed min-w-[160px]"
-            : "px-4 py-2.5 rounded-full text-sm font-bold bg-ngpa-lime text-ngpa-black hover:bg-ngpa-cyan transition-colors min-w-[160px]"
+          fullWidth
+            ? disabled
+              ? "w-full px-6 py-3.5 rounded-full text-base font-bold bg-ngpa-slate text-ngpa-muted cursor-not-allowed min-h-[48px]"
+              : "w-full px-6 py-3.5 rounded-full text-base font-bold bg-ngpa-lime text-ngpa-deep hover:brightness-110 transition-all min-h-[48px] shadow-xl shadow-ngpa-lime/20"
+            : disabled
+              ? "px-4 py-2.5 rounded-full text-sm font-bold bg-ngpa-slate text-ngpa-muted cursor-not-allowed min-w-[160px]"
+              : "px-4 py-2.5 rounded-full text-sm font-bold bg-ngpa-lime text-ngpa-black hover:bg-ngpa-cyan transition-colors min-w-[160px]"
         }
       >
         {label}
