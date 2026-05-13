@@ -8,12 +8,29 @@ import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 13 }, (_, i) => i + 4); // 4-16
 
+const MOCO_AREAS = [
+  "Bethesda",
+  "Chevy Chase",
+  "Potomac",
+  "North Bethesda",
+  "Rockville",
+  "Kensington",
+  "Silver Spring",
+  "Takoma Park",
+  "Wheaton",
+  "Gaithersburg",
+  "Germantown",
+  "Olney",
+  "Other / outside MoCo",
+] as const;
+
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
 const emptyForm: LeadFormData = {
   parentName: "",
   contact: "",
   childAge: "",
+  location: "",
 };
 
 type TrackingContext = {
@@ -54,13 +71,14 @@ export default function LeadForm() {
     trackingRef.current = ctx;
   }, []);
 
-  // Only the 3 user-facing fields can be edited via the form UI or produce
-  // validation errors. Tracking fields are populated server-side from state.
-  type EditableField = "parentName" | "contact" | "childAge";
+  // Tracking fields are populated server-side from state. `location` is
+  // user-facing but not validated (optional).
+  type EditableField = "parentName" | "contact" | "childAge" | "location";
+  type ValidatedField = "parentName" | "contact" | "childAge";
 
   function updateField(field: EditableField, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
+    if (field !== "location" && errors[field]) {
       setErrors((prev) => {
         const next = { ...prev };
         delete next[field];
@@ -76,7 +94,7 @@ export default function LeadForm() {
     }
   }
 
-  function handleBlur(field: EditableField) {
+  function handleBlur(field: ValidatedField) {
     const fieldErrors = validateLeadForm(form);
     if (fieldErrors[field]) {
       setErrors((prev) => ({ ...prev, [field]: fieldErrors[field] }));
@@ -271,6 +289,30 @@ export default function LeadForm() {
           {errors.childAge && (
             <p className={errorClass}>{errors.childAge}</p>
           )}
+        </div>
+
+        {/* Part of Montgomery County */}
+        <div>
+          <label htmlFor="location" className={labelClass}>
+            Where in Montgomery County?{" "}
+            <span className="text-ngpa-white/55 font-normal">(optional)</span>
+          </label>
+          <select
+            id="location"
+            className={selectClass}
+            value={form.location ?? ""}
+            onChange={(e) => updateField("location", e.target.value)}
+          >
+            <option value="">Select your area</option>
+            {MOCO_AREAS.map((area) => (
+              <option key={area} value={area}>
+                {area}
+              </option>
+            ))}
+          </select>
+          <p className="text-ngpa-white/55 text-xs mt-1.5">
+            Helps us match you to the closest session — venues rotate seasonally.
+          </p>
         </div>
       </div>
 

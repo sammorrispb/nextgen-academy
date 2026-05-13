@@ -239,8 +239,8 @@ export async function POST(request: NextRequest) {
       <td style="padding: 10px 8px; color: #EEF2FF;">${body.childAge} years old</td>
     </tr>
     <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Preferred Location</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${body.location || "No preference"}</td>
+      <td style="padding: 10px 8px; color: #7A88B8;">Area (MoCo)</td>
+      <td style="padding: 10px 8px; color: #EEF2FF;">${body.location || "Not provided — ask in reply"}</td>
     </tr>
     <tr style="border-bottom: 1px solid #1A3060;">
       <td style="padding: 10px 8px; color: #7A88B8;">Notion CRM</td>
@@ -266,24 +266,41 @@ export async function POST(request: NextRequest) {
   // Only send parent confirmation if we have an email
   const shouldEmailParent = !!email;
 
+  const firstName = body.parentName.trim().split(/\s+/)[0] || body.parentName;
+  const hasArea = !!body.location?.trim();
+  const areaLine = hasArea
+    ? `<li style="margin-bottom: 10px;">2\u20133 times that would work for a quick evaluation over the next week or two (weekday evenings and weekends both work)</li>`
+    : `<li style="margin-bottom: 10px;">2\u20133 times that would work for a quick evaluation over the next week or two (weekday evenings and weekends both work)</li>
+      <li style="margin-bottom: 10px;"><strong>Which part of Montgomery County you\u2019re in</strong> (e.g. Bethesda, Rockville, Silver Spring, Gaithersburg) so I can match you with the closest session</li>`;
+  const areaAck = hasArea
+    ? `<p style="font-size: 15px; line-height: 1.6;">I see you\u2019re in <strong style="color: #AADC00;">${body.location}</strong> \u2014 we run sessions in that area and nearby.</p>`
+    : "";
+
   const parentHtml = `
 <div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
   <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 8px;">
-    Thanks for Reaching Out!
+    Let\u2019s Get Your Free Evaluation Scheduled
   </h1>
-  <p style="font-size: 15px; line-height: 1.6;">Hi ${body.parentName},</p>
+  <p style="font-size: 15px; line-height: 1.6;">Hi ${firstName},</p>
   <p style="font-size: 15px; line-height: 1.6;">
-    Thanks for your interest in Next Gen Pickleball Academy! We\u2019ll be in touch within 24 hours to help find the right group for your child.
+    Thanks for reaching out about Next Gen Pickleball Academy! I\u2019d love to get your ${body.childAge}-year-old on the court for a free evaluation so we can find the right Red / Orange / Green / Yellow group.
   </p>
-  <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0;">
-    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">In the meantime</p>
-    <p style="margin: 0; font-size: 15px; line-height: 1.6;">
-      Check out our <a href="https://nextgenpbacademy.com/schedule" style="color: #00D4FF; font-weight: 600;">upcoming sessions</a> to see what\u2019s available.
+  ${areaAck}
+  <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0; border-left: 4px solid #AADC00;">
+    <p style="margin: 0 0 12px; font-family: Montserrat, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #AADC00; text-transform: uppercase; letter-spacing: 1px;">Reply to this email with</p>
+    <ol style="margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.6; color: #EEF2FF;">
+      ${areaLine}
+    </ol>
+    <p style="margin: 14px 0 0; font-size: 13px; color: #7A88B8;">
+      I\u2019ll confirm a time and send venue details within 24 hours.
     </p>
   </div>
+  <p style="font-size: 15px; line-height: 1.6;">
+    In the meantime, take a look at our <a href="https://nextgenpbacademy.com/schedule" style="color: #00D4FF; font-weight: 600;">upcoming sessions</a> if you want a preview of what we run.
+  </p>
   <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #1A3060;">
     <p style="font-size: 14px; line-height: 1.6;">
-      Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a>.
+      Prefer to talk? Text or call me at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a>.
     </p>
     <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
       See you on the court!<br/>
@@ -313,7 +330,7 @@ export async function POST(request: NextRequest) {
           from: FROM_EMAIL,
           to: email,
           replyTo: site.email,
-          subject: "Thanks for Reaching Out — Next Gen Pickleball Academy",
+          subject: "Let’s schedule your free evaluation — Next Gen Pickleball Academy",
           html: parentHtml,
         }),
       );
