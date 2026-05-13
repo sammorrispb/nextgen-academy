@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **NOTE (2026-05-01):** This site was decoupled from Dill Dinkers / CourtReserve on 2026-05-01. No DD/CR references should be re-introduced.
 **2026-05-02:** Hub coupling fully removed (funnel POSTs, inbound_leads forward, the legacy Hub URL helper, and the /api/funnel-track proxy are all gone).
 
-Marketing / lead-gen website for **Next Gen Pickleball Academy** — youth pickleball (ages 5–16) in Montgomery County, MD. Drives parents to free evaluations and the Yellow Ball tournament track.
+Marketing / lead-gen website for **Next Gen Pickleball Academy** — youth pickleball (ages 8–16) in Montgomery County, MD. Drives parents to free evaluations and the Yellow Ball tournament track. Public group sessions are Green or Yellow Ball only; Red and Orange Ball are private-lessons-only.
 
 Live at https://nextgenpbacademy.com (deployed on Vercel, auto-deploy from `main`).
 

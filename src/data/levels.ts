@@ -22,11 +22,11 @@ export const levels: Level[] = [
   },
   {
     key: "orange",
-    label: "Orange Ball",
+    label: "Private Lessons",
     ages: "8+",
-    tag: "Orange Ball",
-    focus: "From rallying to competing — the game starts to click.",
-    detail: "Rules mastery, sustained rallying, full-court movement.",
+    tag: "Group Bridge",
+    focus: "Rallying but not group-ready? Private path.",
+    detail: "1:1 coaching on rules mastery, sustained rallying, and full-court movement. Bridge to Green Ball when ready for group play.",
     color: "#FF8C00",
   },
   {

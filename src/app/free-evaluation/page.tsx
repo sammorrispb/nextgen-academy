@@ -7,7 +7,7 @@ import { site } from "@/data/site";
 export const metadata: Metadata = {
   title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
   description:
-    "Book a free 30-minute evaluation for your child (ages 8–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Orange/Green/Yellow Ball pathway — or whether private lessons are the right starting point. No cost. No commitment.",
+    "Book a free 30-minute evaluation for your child (ages 8–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Green/Yellow Ball group pathway — or whether private lessons are the right starting point. No cost. No commitment.",
   alternates: { canonical: "/free-evaluation" },
   openGraph: {
     title: "Free 30-Minute Pickleball Evaluation for Kids — Montgomery County, MD",
