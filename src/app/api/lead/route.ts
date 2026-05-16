@@ -340,11 +340,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ingest to Open Brain master CRM (fire-and-forget).
+    // Ingest to Open Brain master CRM. AWAIT — Vercel drops post-response
+    // Promises before they complete; `void` here was silently losing ~half
+    // of all leads. Helper has its own 5s timeout + log-on-failure, so OB
+    // downtime cannot block the response.
     // OB accepts either email or phone as the dedup key; phone-only leads
     // now flow through instead of being dropped.
     if (email || phone) {
-      void ingestToOpenBrain({
+      await ingestToOpenBrain({
         email: email ?? undefined,
         name: body.parentName,
         phone: phone ?? undefined,
