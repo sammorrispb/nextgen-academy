@@ -198,7 +198,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    void ingestToOpenBrain({
+    // AWAIT — Vercel tears down lambdas before fire-and-forget Promises
+    // complete. Helper logs failures + has a 5s timeout, so this is safe.
+    await ingestToOpenBrain({
       email,
       name: parentName,
       phone,
