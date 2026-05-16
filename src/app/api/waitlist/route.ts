@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { site } from "@/data/site";
+import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -255,6 +256,29 @@ export async function POST(request: NextRequest) {
         { status: 500 },
       );
     }
+
+    // Open Brain ingest. Mirrors /api/lead — accepts email-bearing AND
+    // phone-only leads. AWAIT so the Vercel lambda doesn't tear down the
+    // fetch before it completes; helper has its own 5s timeout and logs +
+    // returns on failure, so this never blocks the response.
+    if (email || phone) {
+      await ingestToOpenBrain({
+        email: email ?? undefined,
+        name: required.parentName,
+        phone: phone ?? undefined,
+        business: "nga",
+        source: "nga_waitlist",
+        interest: "Waitlist",
+        metadata: {
+          preferred_area: required.preferredArea,
+          marketing_opt_in: !!required.marketingOptIn,
+          phone_only: !email && !!phone,
+          notion_status: notionStatus,
+          is_parent: true,
+        },
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("[waitlist] email send failed:", err);
