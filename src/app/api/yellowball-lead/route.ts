@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { c, s } from "@/lib/email/brand";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { site } from "@/data/site";
 
@@ -102,70 +103,70 @@ export async function POST(request: NextRequest) {
   const notes = body.notes?.trim() || "";
 
   const adminHtml = `
-<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
-  <h1 style="font-family: Montserrat, Arial, sans-serif; color: #FFC107; font-size: 22px; margin-bottom: 24px;">
+<div style="${s.wrapper}">
+  <h1 style="${s.headingYellow} margin-bottom: 24px;">
     New Yellow Ball Inquiry
   </h1>
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; width: 140px;">Parent</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${parentName}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabelWide}">Parent</td>
+      <td style="${s.tableValue}">${parentName}</td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Player</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${childName} (age ${age})</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Player</td>
+      <td style="${s.tableValue}">${childName} (age ${age})</td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Email</td>
-      <td style="padding: 10px 8px;"><a href="mailto:${email}" style="color: #00D4FF;">${email}</a></td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Email</td>
+      <td style="padding: 10px 8px;"><a href="mailto:${email}" style="${s.link}">${email}</a></td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Phone</td>
-      <td style="padding: 10px 8px;"><a href="tel:${phone}" style="color: #00D4FF;">${phone}</a></td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Phone</td>
+      <td style="padding: 10px 8px;"><a href="tel:${phone}" style="${s.link}">${phone}</a></td>
     </tr>
     ${
       notes
-        ? `<tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; vertical-align: top;">Notes</td>
-      <td style="padding: 10px 8px; color: #EEF2FF; white-space: pre-wrap;">${notes}</td>
+        ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel} vertical-align: top;">Notes</td>
+      <td style="${s.tableValue} white-space: pre-wrap;">${notes}</td>
     </tr>`
         : ""
     }
   </table>
-  <div style="margin-top: 24px; padding: 16px; background: #0C1F47; border-radius: 8px; border-left: 4px solid #FFC107;">
-    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #FFC107;">ACTION NEEDED</p>
-    <p style="margin: 8px 0 0; font-size: 13px; color: #EEF2FF;">
+  <div style="${s.actionCalloutYellow}">
+    <p style="${s.actionLabelYellow}">ACTION NEEDED</p>
+    <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
       Reach out to ${parentName} within 24 hours to set up the eval for ${childName}.
     </p>
   </div>
 </div>`;
 
   const parentHtml = `
-<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
-  <h1 style="font-family: Montserrat, Arial, sans-serif; color: #FFC107; font-size: 22px; margin-bottom: 8px;">
+<div style="${s.wrapper}">
+  <h1 style="${s.headingYellow} margin-bottom: 8px;">
     Got it, ${parentName.split(" ")[0]}.
   </h1>
   <p style="font-size: 15px; line-height: 1.6;">
     Thanks for the Yellow Ball inquiry. A coach will reach out within 24 hours
     to set up ${childName.split(" ")[0]}&rsquo;s eval.
   </p>
-  <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0;">
-    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">About Yellow Ball</p>
+  <div style="${s.card}">
+    <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">About Yellow Ball</p>
     <p style="margin: 0; font-size: 14px; line-height: 1.6;">
       Yellow Ball is our coach-curated track for players 12+ rated 3.0 or
       above. Small groups of 3&ndash;5 athletes, custom scheduling, focused
       tournament prep.
     </p>
   </div>
-  <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #1A3060;">
+  <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
-      Questions? Reply here or text Sam at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a>.
+      Questions? Reply here or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
     </p>
     <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
       See you on the court!<br/>
-      <strong style="color: #FFC107;">&mdash; Coach Sam &amp; Coach Amine</strong><br/>
-      <span style="color: #7A88B8;">Next Gen Pickleball Academy</span><br/>
-      <a href="https://nextgenpbacademy.com" style="color: #00D4FF;">nextgenpbacademy.com</a>
+      <strong style="color: ${c.accentYellow};">&mdash; Coach Sam &amp; Coach Amine</strong><br/>
+      <span style="color: ${c.muted};">Next Gen Pickleball Academy</span><br/>
+      <a href="https://nextgenpbacademy.com" style="${s.link}">nextgenpbacademy.com</a>
     </p>
   </div>
 </div>`;
