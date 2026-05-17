@@ -4,6 +4,7 @@ import { validateLeadForm } from "@/lib/validate-lead";
 import type { LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { c, s } from "@/lib/email/brand";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -223,51 +224,51 @@ export async function POST(request: NextRequest) {
 
   // ─── 2. Send Emails ──────────────────────────
   const adminHtml = `
-<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
-  <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 24px;">
+<div style="${s.wrapper}">
+  <h1 style="${s.heading} margin-bottom: 24px;">
     New Website Lead
   </h1>
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; width: 140px;">Parent Name</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${body.parentName}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabelWide}">Parent Name</td>
+      <td style="${s.tableValue}">${body.parentName}</td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Contact</td>
-      <td style="padding: 10px 8px;"><a href="${email ? `mailto:${email}` : `tel:${phone}`}" style="color: #00D4FF;">${contactDisplay}</a></td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Contact</td>
+      <td style="padding: 10px 8px;"><a href="${email ? `mailto:${email}` : `tel:${phone}`}" style="${s.link}">${contactDisplay}</a></td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Child's Age</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${body.childAge} years old</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Child's Age</td>
+      <td style="${s.tableValue}">${body.childAge} years old</td>
     </tr>
     ${
       body.notes?.trim()
-        ? `<tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; vertical-align: top;">Parent Notes</td>
-      <td style="padding: 10px 8px; color: #EEF2FF; white-space: pre-wrap;">${body.notes.trim().replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)}</td>
+        ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel} vertical-align: top;">Parent Notes</td>
+      <td style="${s.tableValue} white-space: pre-wrap;">${body.notes.trim().replace(/[<>&]/g, (ch) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[ch] || ch)}</td>
     </tr>`
         : ""
     }
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Preferred Location</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${body.location || "No preference"}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Preferred Location</td>
+      <td style="${s.tableValue}">${body.location || "No preference"}</td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Notion CRM</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${notionStatus}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Notion CRM</td>
+      <td style="${s.tableValue}">${notionStatus}</td>
     </tr>
     ${
       formatAttribution(body)
-        ? `<tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; vertical-align: top;">Attribution</td>
-      <td style="padding: 10px 8px; color: #EEF2FF; font-size: 12px; word-break: break-all;">${formatAttribution(body)}</td>
+        ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel} vertical-align: top;">Attribution</td>
+      <td style="${s.tableValue} font-size: 12px; word-break: break-all;">${formatAttribution(body)}</td>
     </tr>`
         : ""
     }
   </table>
-  <div style="margin-top: 24px; padding: 16px; background: #0C1F47; border-radius: 8px; border-left: 4px solid #AADC00;">
-    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #AADC00;">ACTION NEEDED</p>
-    <p style="margin: 8px 0 0; font-size: 13px; color: #EEF2FF;">
+  <div style="${s.actionCallout}">
+    <p style="${s.actionLabel}">ACTION NEEDED</p>
+    <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
       Reach out to ${body.parentName} within 24 hours to discuss placement for their ${body.childAge}-year-old.
     </p>
   </div>
@@ -277,29 +278,29 @@ export async function POST(request: NextRequest) {
   const shouldEmailParent = !!email;
 
   const parentHtml = `
-<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
-  <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 8px;">
+<div style="${s.wrapper}">
+  <h1 style="${s.heading} margin-bottom: 8px;">
     Thanks for Reaching Out!
   </h1>
   <p style="font-size: 15px; line-height: 1.6;">Hi ${body.parentName},</p>
   <p style="font-size: 15px; line-height: 1.6;">
     Thanks for your interest in Next Gen Pickleball Academy! We\u2019ll be in touch within 24 hours to help find the right group for your child.
   </p>
-  <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0;">
-    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">In the meantime</p>
+  <div style="${s.card}">
+    <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">In the meantime</p>
     <p style="margin: 0; font-size: 15px; line-height: 1.6;">
-      Check out our <a href="https://nextgenpbacademy.com/schedule" style="color: #00D4FF; font-weight: 600;">upcoming sessions</a> to see what\u2019s available.
+      Check out our <a href="https://nextgenpbacademy.com/schedule" style="${s.link} font-weight: 600;">upcoming sessions</a> to see what\u2019s available.
     </p>
   </div>
-  <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #1A3060;">
+  <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
-      Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a>.
+      Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
     </p>
     <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
       See you on the court!<br/>
-      <strong style="color: #AADC00;">\u2014 Coach Sam &amp; Coach Amine</strong><br/>
-      <span style="color: #7A88B8;">Next Gen Pickleball Academy</span><br/>
-      <a href="https://nextgenpbacademy.com" style="color: #00D4FF;">nextgenpbacademy.com</a>
+      <strong style="color: ${c.accentLime};">\u2014 Coach Sam &amp; Coach Amine</strong><br/>
+      <span style="color: ${c.muted};">Next Gen Pickleball Academy</span><br/>
+      <a href="https://nextgenpbacademy.com" style="${s.link}">nextgenpbacademy.com</a>
     </p>
   </div>
 </div>`;

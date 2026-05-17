@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { c, s } from "@/lib/email/brand";
 import {
   validateSchoolsLeadForm,
   ORG_TYPE_LABELS,
@@ -247,87 +248,87 @@ export async function POST(request: NextRequest) {
 
   // ─── Emails ────────────────────────────────
   const adminHtml = `
-<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
-  <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 24px;">
+<div style="${s.wrapper}">
+  <h1 style="${s.heading} margin-bottom: 24px;">
     New Schools/Camp Inquiry
   </h1>
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; width: 160px;">Organization</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;"><strong>${body.orgName}</strong></td>
+    <tr style="${s.tableRow}">
+      <td style="padding: 10px 8px; color: ${c.muted}; width: 160px;">Organization</td>
+      <td style="${s.tableValue}"><strong>${body.orgName}</strong></td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Contact</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Contact</td>
+      <td style="${s.tableValue}">
         ${body.contactName}${body.role ? ` — ${body.role}` : ""}<br/>
-        <a href="mailto:${body.email}" style="color: #00D4FF;">${body.email}</a>
-        ${body.phone ? ` · <a href="tel:${body.phone}" style="color: #00D4FF;">${body.phone}</a>` : ""}
+        <a href="mailto:${body.email}" style="${s.link}">${body.email}</a>
+        ${body.phone ? ` · <a href="tel:${body.phone}" style="${s.link}">${body.phone}</a>` : ""}
       </td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Org Type</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${orgTypeLabel}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Org Type</td>
+      <td style="${s.tableValue}">${orgTypeLabel}</td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Group Size</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${studentBucketLabel}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Group Size</td>
+      <td style="${s.tableValue}">${studentBucketLabel}</td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Ages</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${ageRangeLabel}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Ages</td>
+      <td style="${s.tableValue}">${ageRangeLabel}</td>
     </tr>
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Format</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${frequencyLabel}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Format</td>
+      <td style="${s.tableValue}">${frequencyLabel}</td>
     </tr>
     ${
       body.preferredDates
-        ? `<tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Preferred Dates</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${body.preferredDates}</td>
+        ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Preferred Dates</td>
+      <td style="${s.tableValue}">${body.preferredDates}</td>
     </tr>`
         : ""
     }
     ${
       body.location
-        ? `<tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Location</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${body.location}</td>
+        ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Location</td>
+      <td style="${s.tableValue}">${body.location}</td>
     </tr>`
         : ""
     }
     ${
       body.notes
-        ? `<tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; vertical-align: top;">Notes</td>
-      <td style="padding: 10px 8px; color: #EEF2FF; white-space: pre-wrap;">${body.notes}</td>
+        ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel} vertical-align: top;">Notes</td>
+      <td style="${s.tableValue} white-space: pre-wrap;">${body.notes}</td>
     </tr>`
         : ""
     }
-    <tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8;">Notion CRM</td>
-      <td style="padding: 10px 8px; color: #EEF2FF;">${notionStatus}</td>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Notion CRM</td>
+      <td style="${s.tableValue}">${notionStatus}</td>
     </tr>
     ${
       formatAttribution(body)
-        ? `<tr style="border-bottom: 1px solid #1A3060;">
-      <td style="padding: 10px 8px; color: #7A88B8; vertical-align: top;">Attribution</td>
-      <td style="padding: 10px 8px; color: #EEF2FF; font-size: 12px; word-break: break-all;">${formatAttribution(body)}</td>
+        ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel} vertical-align: top;">Attribution</td>
+      <td style="${s.tableValue} font-size: 12px; word-break: break-all;">${formatAttribution(body)}</td>
     </tr>`
         : ""
     }
   </table>
-  <div style="margin-top: 24px; padding: 16px; background: #0C1F47; border-radius: 8px; border-left: 4px solid #AADC00;">
-    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #AADC00;">ACTION NEEDED</p>
-    <p style="margin: 8px 0 0; font-size: 13px; color: #EEF2FF;">
+  <div style="${s.actionCallout}">
+    <p style="${s.actionLabel}">ACTION NEEDED</p>
+    <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
       Send a quote to ${body.contactName} within 1 business day.
     </p>
   </div>
 </div>`;
 
   const orgHtml = `
-<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
-  <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 8px;">
+<div style="${s.wrapper}">
+  <h1 style="${s.heading} margin-bottom: 8px;">
     Thanks — we got your inquiry!
   </h1>
   <p style="font-size: 15px; line-height: 1.6;">Hi ${body.contactName},</p>
@@ -335,22 +336,22 @@ export async function POST(request: NextRequest) {
     Thanks for reaching out about pickleball at <strong>${body.orgName}</strong>. We&rsquo;ll review the details
     and send a tailored quote within 1 business day.
   </p>
-  <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0;">
-    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">What&rsquo;s next</p>
+  <div style="${s.card}">
+    <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">What&rsquo;s next</p>
     <p style="margin: 0; font-size: 15px; line-height: 1.6;">
       You&rsquo;ll get a proposal with a quote, recommended format, and a sample
       lesson plan. We can also issue a Certificate of Insurance naming your
       organization on request.
     </p>
   </div>
-  <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #1A3060;">
+  <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
-      Need to talk sooner? Reply to this email or text Sam at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a>.
+      Need to talk sooner? Reply to this email or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
     </p>
     <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
-      <strong style="color: #AADC00;">— Coach Sam &amp; Coach Amine</strong><br/>
-      <span style="color: #7A88B8;">Next Gen Pickleball Academy</span><br/>
-      <a href="https://nextgenpbacademy.com" style="color: #00D4FF;">nextgenpbacademy.com</a>
+      <strong style="color: ${c.accentLime};">— Coach Sam &amp; Coach Amine</strong><br/>
+      <span style="color: ${c.muted};">Next Gen Pickleball Academy</span><br/>
+      <a href="https://nextgenpbacademy.com" style="${s.link}">nextgenpbacademy.com</a>
     </p>
   </div>
 </div>`;
