@@ -237,43 +237,19 @@ test.describe("Coaches / About", () => {
   });
 });
 
-// ─── Lead Form ────────────────────────────────────
+// ─── Contact Form (homepage anchor) ───────────────
+// Full Contact Form coverage lives in e2e/contact-form.spec.ts.
+// These smoke tests just confirm the homepage anchor still renders a form
+// with the canonical fields so anything linking to #contact-form keeps working.
 
-test.describe("Lead Form", () => {
-  test("has exactly 3 input fields", async ({ page }) => {
+test.describe("Contact Form (homepage anchor)", () => {
+  test("renders with name, email, and interest fields", async ({ page }) => {
     await page.goto("/");
     const form = page.locator("#contact-form form");
-
-    await expect(form.locator("#parentName")).toBeVisible();
-    await expect(form.locator("#contact")).toBeVisible();
-    await expect(form.locator("#childAge")).toBeVisible();
+    await expect(form.locator("#name")).toBeVisible();
+    await expect(form.locator("#email")).toBeVisible();
+    await expect(form.locator("#interest")).toBeVisible();
   });
-
-  test("shows validation errors on empty submit", async ({ page }) => {
-    await page.goto("/");
-    const form = page.locator("#contact-form form");
-    await form.getByRole("button", { name: "Book my free evaluation" }).click();
-
-    await expect(form.getByText("Your name is required")).toBeVisible();
-    await expect(form.getByText("Email or phone number is required")).toBeVisible();
-    await expect(form.getByText("Child's age is required")).toBeVisible();
-  });
-
-  test("shows micro-copy", async ({ page }) => {
-    await page.goto("/");
-    await expect(
-      page.locator("#contact-form").getByText(/No commitment required/)
-    ).toBeVisible();
-  });
-
-  test("age dropdown has options 4-16", async ({ page }) => {
-    await page.goto("/");
-    const select = page.locator("#contact-form #childAge");
-    const options = select.locator("option");
-    // "Select age" + ages 4-16 = 14 options
-    await expect(options).toHaveCount(14);
-  });
-
 });
 
 // ─── FAQ ──────────────────────────────────────────

@@ -9,7 +9,7 @@ import LevelGrid from "@/components/LevelGrid";
 import YellowBallCTA from "@/components/YellowBallCTA";
 import EaseValues from "@/components/EaseValues";
 import TestimonialsSection from "@/components/TestimonialsSection";
-import LeadForm from "@/components/LeadForm";
+import ContactForm from "@/components/ContactForm";
 import FAQSection from "@/components/FAQSection";
 import SectionHeading from "@/components/SectionHeading";
 import CoachCard from "@/components/CoachCard";
@@ -273,7 +273,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ─── Lead Form ───────────────────────────── */}
+      {/* ─── Contact Form ────────────────────────── */}
       <section
         id="contact-form"
         className="relative bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
@@ -284,12 +284,12 @@ export default async function Home() {
         />
         <div className="relative max-w-xl mx-auto">
           <SectionHeading
-            eyebrow="Free 30-min Evaluation"
-            title="Let's find the right fit."
-            subtitle="Tell us about your child and we'll follow up within 24 hours."
+            eyebrow="Contact Us"
+            title="Tell us how we can help."
+            subtitle="Pick what you're interested in and we'll get back to you within 1 business day."
             centered
           />
-          <LeadForm />
+          <ContactForm />
         </div>
       </section>
 
