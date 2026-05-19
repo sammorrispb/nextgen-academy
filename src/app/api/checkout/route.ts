@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
       session_title: session.title,
       session_date: session.date,
       session_start: session.startTime,
+      session_end: session.endTime,
       session_location: session.location,
       parent_name: data.parentName,
       parent_phone: data.phone,
