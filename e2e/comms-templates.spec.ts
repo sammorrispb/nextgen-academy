@@ -7,6 +7,10 @@ import {
   sessionCancelledHtml,
   sessionCancelledText,
 } from "../src/lib/email/session-cancelled";
+import {
+  postSessionHtml,
+  postSessionText,
+} from "../src/lib/email/post-session";
 import { bookingReminderSms, sessionCancelledSms } from "../src/lib/sms";
 
 const sample = {
@@ -151,5 +155,50 @@ test.describe("Comms templates — session-cancellation broadcast", () => {
     expect(sms).toContain("Full refund issued");
     expect(sms).toContain("— Coach Sam · NGA");
     expect(sms).toContain("Reply STOP to opt out.");
+  });
+});
+
+test.describe("Comms templates — post-session re-book", () => {
+  const post = {
+    parentFirst: "Alex",
+    childFirst: "Riley",
+    sessionTitle: "Green Ball Drop-in",
+    sessionDateLong: "Saturday, May 23, 2026",
+    scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+  };
+
+  test("HTML: kid-name headline, EASE-Skills framing, Coach Sam signoff, single arrowed CTA", () => {
+    const html = postSessionHtml(post);
+    // Opens with kid name doing something concrete
+    expect(html).toContain("Riley got reps in yesterday.");
+    // EASE-Skills: "consistency beats intensity," pathway language, real-progress framing
+    expect(html).toContain("Real progress is built one session at a time");
+    expect(html).toContain("consistency beats intensity");
+    expect(html).toContain("pathway moving");
+    // Coach Sam signoff + tagline
+    expect(html).toContain("Coach Sam &middot; Next Gen Pickleball Academy");
+    expect(html).toContain("Better than yesterday, together.");
+    // Single arrowed CTA = next session. No competing arrows.
+    expect(html).toContain("See the next session &rarr;");
+    // Politeness opt-out cue
+    expect(html).toContain("reply &ldquo;skip&rdquo;");
+  });
+
+  test("HTML: no gated pickleball jargon to parents (no bare 'dink', 'reset', 'third shot', etc.)", () => {
+    const html = postSessionHtml(post);
+    // Brand-rule check. "Dinking" in the rendered output without a parent
+    // gloss is a violation — bare jargon is banned for parent-facing copy.
+    expect(html.toLowerCase()).not.toMatch(/dinking|\bdink\b/);
+    expect(html.toLowerCase()).not.toMatch(/third shot|\berne\b|\batp\b/);
+  });
+
+  test("plain-text fallback: parity on headline, pathway list, signoff, skip-cue", () => {
+    const text = postSessionText(post);
+    expect(text).toContain("Riley got reps in yesterday.");
+    expect(text).toContain("consistency beats intensity");
+    expect(text).toContain("See the next session: https://www.nextgenpbacademy.com/schedule");
+    expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");
+    expect(text).toContain("Better than yesterday, together.");
+    expect(text).toContain('reply "skip"');
   });
 });

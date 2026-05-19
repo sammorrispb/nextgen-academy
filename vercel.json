@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/dropin-reminder",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/dropin-post-session",
+      "schedule": "0 13 * * *"
     }
   ]
 }
