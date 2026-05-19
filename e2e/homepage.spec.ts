@@ -120,12 +120,15 @@ test.describe("Ball Pathway", () => {
     // The desktop pathway container (hidden on mobile, flex on sm+)
     const desktopPathway = page.locator("#levels >> css=.hidden.sm\\:flex");
     await expect(desktopPathway).toBeVisible();
-    // All 4 level names within the pathway
     const pathwayText = await desktopPathway.textContent();
-    expect(pathwayText).toContain("Red Ball");
-    expect(pathwayText).toContain("Orange Ball");
+    // Post-2026-05-13 repositioning: Red & Orange are private-lessons-only.
+    // The pathway shows program labels next to each colored ball.
+    expect(pathwayText).toContain("Private Lessons"); // red + orange both use this
     expect(pathwayText).toContain("Green Ball");
     expect(pathwayText).toContain("Yellow Ball");
+    expect(pathwayText).toContain("Ages 8+");
+    expect(pathwayText).toContain("Ages 10+");
+    expect(pathwayText).toContain("Ages 12+");
   });
 
   test("mobile pathway is vertical @mobile", async ({ page }, testInfo) => {
@@ -134,10 +137,12 @@ test.describe("Ball Pathway", () => {
     const mobilePathway = page.locator("#levels >> css=.sm\\:hidden");
     await expect(mobilePathway).toBeVisible();
     const pathwayText = await mobilePathway.textContent();
-    expect(pathwayText).toContain("Red Ball");
-    expect(pathwayText).toContain("Orange Ball");
+    expect(pathwayText).toContain("Private Lessons");
     expect(pathwayText).toContain("Green Ball");
     expect(pathwayText).toContain("Yellow Ball");
+    expect(pathwayText).toContain("Ages 8+");
+    expect(pathwayText).toContain("Ages 10+");
+    expect(pathwayText).toContain("Ages 12+");
   });
 });
 
@@ -160,7 +165,11 @@ test.describe("Level Cards", () => {
     await page.goto("/");
     const cards = page.locator("#levels article");
     const firstCardText = await cards.first().textContent();
-    expect(firstCardText).toContain("Ages 5+");
+    // Post-2026-05-13 repositioning lifted the floor from 5+ to 8+.
+    expect(firstCardText).toContain("Ages 8+");
+    // Each subsequent level has a higher floor.
+    expect(await cards.nth(2).textContent()).toContain("Ages 10+");
+    expect(await cards.nth(3).textContent()).toContain("Ages 12+");
   });
 
   test("non-yellow cards have Get Started links", async ({ page }) => {
