@@ -171,6 +171,38 @@ export async function fetchUpcomingSessions(
   return sessions;
 }
 
+export async function findSessionIdByDateAndTime(
+  date: string,
+  startTime: string,
+): Promise<string | null> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_SESSIONS_DB_ID;
+  if (!notionKey || !dbId || !date) return null;
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: { property: "Date", date: { equals: date } },
+      page_size: 10,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  const match = data.results.find(
+    (p) =>
+      rosterKey(date, readPlainText(p.properties?.["Start time"])) ===
+      rosterKey(date, startTime),
+  );
+  return match?.id ?? null;
+}
+
 export async function fetchSessionById(id: string): Promise<NgaSession | null> {
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return null;
@@ -273,6 +305,53 @@ export async function incrementSessionRegistered(
   if (!res.ok) {
     console.error(
       "[notion-sessions] increment failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return null;
+  }
+  return {
+    ...session,
+    registeredCount: newCount,
+    spotsLeft: Math.max(0, session.capacity - newCount),
+    status: newStatus,
+  };
+}
+
+export async function decrementSessionRegistered(
+  id: string,
+  by: number = 1,
+): Promise<NgaSession | null> {
+  const session = await fetchSessionById(id);
+  if (!session) return null;
+
+  const newCount = Math.max(0, session.registeredCount - by);
+  // If we drop below capacity, flip Full → Open. Never touch Cancelled.
+  const newStatus: NgaSession["status"] =
+    session.status === "Full" && newCount < session.capacity
+      ? "Open"
+      : session.status;
+
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return null;
+
+  const res = await fetch(`${NOTION_API}/pages/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: {
+        "Registered count": { number: newCount },
+        Status: { select: { name: newStatus } },
+      },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] decrement failed",
       res.status,
       await res.text().catch(() => ""),
     );

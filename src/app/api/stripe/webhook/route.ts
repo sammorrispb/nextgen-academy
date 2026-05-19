@@ -3,10 +3,16 @@ import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
-import { incrementSessionRegistered } from "@/lib/notion-sessions";
+import {
+  decrementSessionRegistered,
+  findSessionIdByDateAndTime,
+  incrementSessionRegistered,
+} from "@/lib/notion-sessions";
 import {
   createDropInRegistration,
   findDropInByCheckoutId,
+  findDropInPageByCheckoutId,
+  updateDropInStatus,
   type DropInRow,
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
@@ -165,6 +171,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bad signature" }, { status: 400 });
   }
 
+  if (event.type === "charge.refunded") {
+    return handleChargeRefunded(event.data.object as Stripe.Charge);
+  }
+
   if (event.type !== "checkout.session.completed") {
     return NextResponse.json({ received: true });
   }
@@ -226,4 +236,53 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function handleChargeRefunded(charge: Stripe.Charge) {
+  const piId =
+    typeof charge.payment_intent === "string"
+      ? charge.payment_intent
+      : (charge.payment_intent?.id ?? null);
+  if (!piId) return NextResponse.json({ received: true, skipped: "no_pi" });
+
+  // Find the Checkout Session that produced this PI — that's our idempotency key.
+  const stripe = getStripe();
+  const list = await stripe.checkout.sessions.list({
+    payment_intent: piId,
+    limit: 1,
+  });
+  const checkoutSession = list.data[0];
+  if (!checkoutSession) {
+    return NextResponse.json({ received: true, skipped: "no_checkout" });
+  }
+
+  const dropIn = await findDropInPageByCheckoutId(checkoutSession.id);
+  if (!dropIn) {
+    return NextResponse.json({ received: true, skipped: "no_dropin" });
+  }
+  if (dropIn.status === "Refunded") {
+    return NextResponse.json({ received: true, idempotent: true });
+  }
+
+  const shouldDecrement = dropIn.status === "Confirmed";
+  await updateDropInStatus(dropIn.id, "Refunded");
+
+  if (shouldDecrement) {
+    const sid = await findSessionIdByDateAndTime(
+      dropIn.sessionDate,
+      dropIn.sessionStartTime,
+    );
+    if (sid) await decrementSessionRegistered(sid, 1);
+  }
+
+  revalidatePath("/schedule");
+  if (dropIn.sessionTitle && dropIn.sessionDate) {
+    const slug = sessionToSlug({
+      title: dropIn.sessionTitle,
+      date: dropIn.sessionDate,
+    });
+    if (slug) revalidatePath(`/schedule/${slug}`);
+  }
+
+  return NextResponse.json({ received: true, refunded: true });
 }
