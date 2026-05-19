@@ -110,6 +110,8 @@ export interface DropInRegistration {
   status: string;
   paidAt: string;
   displayConsent: boolean;
+  smsConsent: boolean;
+  stripeCheckoutSessionId: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -149,6 +151,8 @@ function pageToDropIn(page: any): DropInRegistration {
     status: readSelectProp(props["Status"]),
     paidAt: props["Paid At"]?.created_time ?? page.created_time ?? "",
     displayConsent: props["Display Consent"]?.checkbox === true,
+    smsConsent: props["SMS Consent"]?.checkbox === true,
+    stripeCheckoutSessionId: readTextProp(props["Stripe Checkout Session ID"]),
   };
 }
 

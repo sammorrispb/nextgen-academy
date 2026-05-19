@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 import { findSessionBySlug, sessionToSlug } from "@/lib/session-slug";
+import CancelButton from "./CancelButton";
 
 export const dynamic = "force-dynamic";
 
@@ -121,19 +122,16 @@ export default async function CoachSessionPage({ params }: PageProps) {
           <table className="w-full text-sm">
             <thead className="text-xs uppercase tracking-wider text-ngpa-white/55 bg-ngpa-deep/40">
               <tr>
-                <th className="text-left font-bold px-5 py-3">Child</th>
-                <th className="text-left font-bold px-5 py-3">Parent</th>
-                <th className="text-left font-bold px-5 py-3 hidden sm:table-cell">
-                  Contact
-                </th>
-                <th className="text-right font-bold px-5 py-3">Paid</th>
-                <th className="text-right font-bold px-5 py-3 w-12"></th>
+                <th className="text-left font-bold px-4 sm:px-5 py-3">Child</th>
+                <th className="text-left font-bold px-4 sm:px-5 py-3">Parent · Contact</th>
+                <th className="text-right font-bold px-4 sm:px-5 py-3 hidden sm:table-cell">Paid</th>
+                <th className="text-right font-bold px-4 sm:px-5 py-3 w-20"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ngpa-slate/40">
               {roster.map((r) => (
                 <tr key={r.id} className="hover:bg-ngpa-deep/30">
-                  <td className="px-5 py-4 align-top">
+                  <td className="px-4 sm:px-5 py-4 align-top">
                     <p className="font-bold text-ngpa-white">
                       {r.childFirstName || "—"}
                     </p>
@@ -142,15 +140,19 @@ export default async function CoachSessionPage({ params }: PageProps) {
                         age {ageFromBirthYear(r.childBirthYear)}
                       </p>
                     )}
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      <ConsentBadge label="SMS" on={r.smsConsent} />
+                      <ConsentBadge label="Show" on={r.displayConsent} />
+                    </div>
                   </td>
-                  <td className="px-5 py-4 align-top text-ngpa-white/85">
-                    {r.parentName || "—"}
-                  </td>
-                  <td className="px-5 py-4 align-top text-xs hidden sm:table-cell">
+                  <td className="px-4 sm:px-5 py-4 align-top text-xs">
+                    <p className="text-ngpa-white/85 font-bold text-sm">
+                      {r.parentName || "—"}
+                    </p>
                     {r.parentEmail && (
                       <a
                         href={`mailto:${r.parentEmail}`}
-                        className="block text-ngpa-teal hover:underline truncate max-w-[14rem]"
+                        className="block text-ngpa-teal hover:underline truncate max-w-[14rem] mt-0.5"
                       >
                         {r.parentEmail}
                       </a>
@@ -158,25 +160,31 @@ export default async function CoachSessionPage({ params }: PageProps) {
                     {r.parentPhone && (
                       <a
                         href={`sms:${r.parentPhone.replace(/\D/g, "")}`}
-                        className="block text-ngpa-white/60 hover:text-ngpa-teal mt-0.5"
+                        className="block text-ngpa-white/70 hover:text-ngpa-teal mt-0.5"
                       >
                         {r.parentPhone}
                       </a>
                     )}
                   </td>
-                  <td className="px-5 py-4 align-top text-right font-mono text-ngpa-white/85">
+                  <td className="px-4 sm:px-5 py-4 align-top text-right font-mono text-ngpa-white/85 hidden sm:table-cell">
                     ${r.amountPaidUsd.toFixed(0)}
                   </td>
-                  <td className="px-5 py-4 align-top text-right">
-                    <a
-                      href={r.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="Edit in Notion"
-                      className="text-ngpa-white/55 hover:text-ngpa-teal transition-colors"
-                    >
-                      ↗
-                    </a>
+                  <td className="px-4 sm:px-5 py-4 align-top text-right">
+                    <div className="flex flex-col items-end gap-1.5">
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Edit in Notion"
+                        className="text-ngpa-white/55 hover:text-ngpa-teal transition-colors text-xs"
+                      >
+                        Notion ↗
+                      </a>
+                      <CancelButton
+                        checkoutSessionId={r.stripeCheckoutSessionId}
+                        childFirstName={r.childFirstName}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -185,5 +193,24 @@ export default async function CoachSessionPage({ params }: PageProps) {
         </div>
       )}
     </>
+  );
+}
+
+function ConsentBadge({ label, on }: { label: string; on: boolean }) {
+  return (
+    <span
+      title={
+        on
+          ? `${label} consent granted at checkout`
+          : `${label} consent NOT granted at checkout`
+      }
+      className={
+        on
+          ? "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ngpa-teal/15 text-ngpa-teal border border-ngpa-teal/40"
+          : "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-ngpa-slate/30 text-ngpa-white/45 border border-ngpa-slate/40"
+      }
+    >
+      {on ? "✓" : "✗"} {label}
+    </span>
   );
 }

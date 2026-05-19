@@ -1,14 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
-import {
-  findDropInPageByCheckoutId,
-  updateDropInStatus,
-} from "@/lib/notion-dropins";
-import {
-  decrementSessionRegistered,
-  findSessionIdByDateAndTime,
-} from "@/lib/notion-sessions";
-import { sessionToSlug } from "@/lib/session-slug";
+import { cancelDropIn } from "@/lib/cancel-dropin";
 
 export const runtime = "nodejs";
 
@@ -41,54 +32,20 @@ export async function POST(req: NextRequest) {
   }
 
   const newStatus = body.status === "Refunded" ? "Refunded" : "Cancelled";
+  const result = await cancelDropIn(checkoutSessionId, newStatus);
 
-  const dropIn = await findDropInPageByCheckoutId(checkoutSessionId);
-  if (!dropIn) {
+  if (!result.ok) {
     return NextResponse.json(
-      { error: "Drop-in not found" },
-      { status: 404 },
+      { error: result.reason === "not_found" ? "Drop-in not found" : "Failed to update" },
+      { status: result.reason === "not_found" ? 404 : 500 },
     );
-  }
-
-  // Idempotent: if already in target state, nothing to do.
-  if (dropIn.status === newStatus) {
-    return NextResponse.json({ ok: true, idempotent: true });
-  }
-
-  // Refunding/cancelling something that was never Confirmed shouldn't decrement.
-  const shouldDecrement = dropIn.status === "Confirmed";
-
-  const statusOk = await updateDropInStatus(dropIn.id, newStatus);
-  if (!statusOk) {
-    return NextResponse.json(
-      { error: "Failed to update drop-in status" },
-      { status: 500 },
-    );
-  }
-
-  if (shouldDecrement) {
-    const sessionId = await findSessionIdByDateAndTime(
-      dropIn.sessionDate,
-      dropIn.sessionStartTime,
-    );
-    if (sessionId) {
-      await decrementSessionRegistered(sessionId, 1);
-    }
-  }
-
-  revalidatePath("/schedule");
-  if (dropIn.sessionTitle && dropIn.sessionDate) {
-    const slug = sessionToSlug({
-      title: dropIn.sessionTitle,
-      date: dropIn.sessionDate,
-    });
-    if (slug) revalidatePath(`/schedule/${slug}`);
   }
 
   return NextResponse.json({
     ok: true,
-    pageId: dropIn.id,
+    pageId: result.pageId,
     status: newStatus,
-    decremented: shouldDecrement,
+    decremented: result.decremented,
+    idempotent: result.idempotent ?? false,
   });
 }
