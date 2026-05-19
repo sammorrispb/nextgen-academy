@@ -91,7 +91,17 @@ Vercel crons live in `vercel.json`. Auth = `Authorization: Bearer $CRON_SECRET` 
 
 ### Drop-in comms — coach-triggered (no cron)
 
-- **`cancelSessionAction({ sessionRowId, sessionTitle, sessionDate, sessionStartTime, reason, note? })`** — Next.js server action in `src/app/coach/(authed)/[slug]/actions.ts`. Fired from the **Cancel session, notify all** button on `/coach/[slug]`. Coach-auth-gated. For each Confirmed drop-in: issues a Stripe refund (idempotent on "already refunded"), sends a Coach-voice broadcast email (BCC admin) with a `reason` variant (weather / venue / low-enrollment / other) + optional note, sends opt-in SMS where consented, and flips `Cancellation Notified` (build #4's `cancelDropIn()` integration will check this to suppress duplicate per-row cancel-confirmations). The `charge.refunded` webhook flips each drop-in row Status to `Refunded` separately. The action then flips the session row Status to `Cancelled` and revalidates `/schedule`, `/coach`, `/coach/[slug]`. If any refund fails outright, the session row stays Open so Sam can re-fire.
+- **`cancelSessionAction({ sessionRowId, sessionTitle, sessionDate, sessionStartTime, reason, note? })`** — Next.js server action in `src/app/coach/(authed)/[slug]/actions.ts`. Fired from the **Cancel session, notify all** button on `/coach/[slug]`. Coach-auth-gated. For each Confirmed drop-in: issues a Stripe refund (idempotent on "already refunded"), sends a Coach-voice broadcast email (BCC admin) with a `reason` variant (weather / venue / low-enrollment / other) + optional note, sends opt-in SMS where consented, and flips `Cancellation Notified`. The flag suppresses the per-row cancel-confirmation that `cancelDropIn()` would otherwise send when the `charge.refunded` webhook fires, so parents get exactly one cancellation comms per session-wide pull. The `charge.refunded` webhook flips each drop-in row Status to `Refunded`. The action then flips the session row Status to `Cancelled` and revalidates `/schedule`, `/coach`, `/coach/[slug]`. If any refund fails outright, the session row stays Open so Sam can re-fire.
+
+### Drop-in cancel — per-row paths + auto-comms
+
+All four per-row cancel paths run through `cancelDropIn(checkoutSessionId, status)` in `src/lib/cancel-dropin.ts`:
+1. **Stripe `charge.refunded` webhook** (`/api/stripe/webhook`) — auto-fires when a refund posts in Stripe (whether from the coach-triggered broadcast, admin curl, or a Stripe Dashboard click).
+2. **Coach one-click cancel** (PR #62) — `cancelRegistrationAction` server action on `/coach/[slug]`.
+3. **Parent self-serve** (PR #65) — signed cancel link in confirmation email → `/schedule/cancel`.
+4. **Admin curl** (PR #60) — `POST /api/cancel-registration?secret=$NGA_ADMIN_SECRET`.
+
+`cancelDropIn()` flips the Notion Status, decrements the session's Registered count (if previously Confirmed), and sends a Coach-voice **cancel-confirmation** to the parent (HTML email + opt-in SMS) with two micro-variants — "Refunded" (refund cue + $X back) vs "Cancelled" (community framing + non-refundable disclosure). Suppressed if `Cancellation Notified` is already true (means the session-wide broadcast covered them). Flag flips after a successful email send. Comms failure is logged-and-swallowed so it never blocks the cancel itself.
 
 The NGA Drop-in Registrations DB has three boolean idempotency columns the comms surfaces own: `Reminder Sent`, `Post Session Sent`, `Cancellation Notified`. Helper: `markDropInFlag(pageId, flag)` in `src/lib/notion-dropins.ts`. The NGA Sessions Schedule DB owns the `Status` column flipped by `setSessionStatus()` in `src/lib/notion-sessions.ts`.
 

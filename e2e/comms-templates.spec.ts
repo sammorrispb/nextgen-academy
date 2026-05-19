@@ -11,7 +11,15 @@ import {
   postSessionHtml,
   postSessionText,
 } from "../src/lib/email/post-session";
-import { bookingReminderSms, sessionCancelledSms } from "../src/lib/sms";
+import {
+  cancelConfirmationHtml,
+  cancelConfirmationText,
+} from "../src/lib/email/cancel-confirmation";
+import {
+  bookingReminderSms,
+  cancelConfirmationSms,
+  sessionCancelledSms,
+} from "../src/lib/sms";
 
 const sample = {
   parentFirst: "Alex",
@@ -200,5 +208,82 @@ test.describe("Comms templates — post-session re-book", () => {
     expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");
     expect(text).toContain("Better than yesterday, together.");
     expect(text).toContain('reply "skip"');
+  });
+});
+
+test.describe("Comms templates — cancellation confirmation (per-row)", () => {
+  const baseCancel = {
+    parentFirst: "Alex",
+    childFirst: "Riley",
+    sessionTitle: "Green Ball Drop-in",
+    sessionDateLong: "Saturday, May 23, 2026",
+    sessionStart: "5:30 PM",
+    amountUsd: "40.00",
+    scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+  };
+
+  test("Refunded variant: leads with refund cue, EASE-Community, single arrowed CTA, Coach Sam signoff", () => {
+    const html = cancelConfirmationHtml({ ...baseCancel, status: "Refunded" });
+    // Refund-first headline
+    expect(html).toContain("Riley&rsquo;s seat is cancelled.");
+    expect(html).toContain("your $40.00 is on the way back");
+    expect(html).toContain("Refund: $40.00");
+    // Should NOT carry the non-refundable framing
+    expect(html).not.toContain("Drop-ins are non-refundable");
+    // Coach Sam + tagline + single arrowed CTA
+    expect(html).toContain("Coach Sam &middot; Next Gen Pickleball Academy");
+    expect(html).toContain("better than yesterday, together.");
+    expect(html).toContain("See the schedule &rarr;");
+  });
+
+  test("Cancelled variant: leads with community framing, no-refund disclosure, no refund-line", () => {
+    const html = cancelConfirmationHtml({ ...baseCancel, status: "Cancelled" });
+    // Community-first headline (seat is open for next player)
+    expect(html).toContain("Riley&rsquo;s seat is open for the next player.");
+    expect(html).toContain("another family can grab the slot");
+    // No-refund disclosure — leads with the rule, ends with the "thanks for
+    // calling it early" community ack (no preachy "community version of a refund").
+    expect(html).toContain("Drop-ins are non-refundable");
+    expect(html).toContain("Thanks for calling it early");
+    expect(html).not.toContain("community version of a refund");
+    // Must NOT show the "Refund: $40.00" actionable callout
+    expect(html).not.toContain("Refund: $40.00");
+  });
+
+  test("plain-text fallback (both variants): correct framing, no HTML entities leaking", () => {
+    const refunded = cancelConfirmationText({ ...baseCancel, status: "Refunded" });
+    expect(refunded).toContain("seat is cancelled");
+    expect(refunded).toContain("$40.00 is on the way back");
+    expect(refunded).toContain("Coach Sam · Next Gen Pickleball Academy");
+    expect(refunded).not.toMatch(/&[a-z]+;/); // No raw HTML entities
+
+    const cancelled = cancelConfirmationText({ ...baseCancel, status: "Cancelled" });
+    expect(cancelled).toContain("seat is open for the next player");
+    expect(cancelled).toContain("Drop-ins are non-refundable");
+    expect(cancelled).not.toMatch(/&[a-z]+;/);
+  });
+
+  test("SMS variants: Refunded gets refund cue, Cancelled gets community cue; both 1-segment friendly with Coach Sam signoff", () => {
+    const refundSms = cancelConfirmationSms({
+      childFirst: "Riley",
+      sessionTitle: "Green Ball Drop-in",
+      sessionDateShort: "Sat May 23",
+      status: "Refunded",
+      scheduleUrl: baseCancel.scheduleUrl,
+    });
+    expect(refundSms).toContain("Full refund issued");
+    expect(refundSms).toContain("— Coach Sam · NGA");
+    expect(refundSms).toContain("Reply STOP to opt out.");
+
+    const cancelSms = cancelConfirmationSms({
+      childFirst: "Riley",
+      sessionTitle: "Green Ball Drop-in",
+      sessionDateShort: "Sat May 23",
+      status: "Cancelled",
+      scheduleUrl: baseCancel.scheduleUrl,
+    });
+    expect(cancelSms).toContain("Seat is open for the next family");
+    expect(cancelSms).not.toContain("Full refund");
+    expect(cancelSms).toContain("— Coach Sam · NGA");
   });
 });
