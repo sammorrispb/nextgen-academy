@@ -104,3 +104,22 @@ export function bookingReminderSms(args: {
     `— Coach Sam · NGA · Reply STOP to opt out.`,
   ].join("\n");
 }
+
+/**
+ * Session-cancellation broadcast SMS body. Fired from the /coach UI when
+ * Sam pulls a whole session. Consent-gated; refund context lives in the
+ * email — SMS just delivers the critical "don't show up" + "refund coming"
+ * pair under the 160-char target.
+ */
+export function sessionCancelledSms(args: {
+  childFirst: string;
+  sessionTitle: string;
+  sessionDateShort: string; // "Sat May 23"
+  scheduleUrl: string;
+}): string {
+  return [
+    `${args.childFirst}'s ${args.sessionTitle} on ${args.sessionDateShort} is cancelled. Full refund issued — back on your card in 5–10 days.`,
+    `Next: ${args.scheduleUrl}`,
+    `— Coach Sam · NGA · Reply STOP to opt out.`,
+  ].join("\n");
+}

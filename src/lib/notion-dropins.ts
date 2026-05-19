@@ -112,6 +112,7 @@ export interface DropInRegistration {
   displayConsent: boolean;
   smsConsent: boolean;
   stripeCheckoutSessionId: string;
+  stripePaymentIntentId: string;
   reminderSent: boolean;
   postSessionSent: boolean;
   cancellationNotified: boolean;
@@ -156,6 +157,7 @@ function pageToDropIn(page: any): DropInRegistration {
     displayConsent: props["Display Consent"]?.checkbox === true,
     smsConsent: props["SMS Consent"]?.checkbox === true,
     stripeCheckoutSessionId: readTextProp(props["Stripe Checkout Session ID"]),
+    stripePaymentIntentId: readTextProp(props["Stripe Payment Intent ID"]),
     reminderSent: props["Reminder Sent"]?.checkbox === true,
     postSessionSent: props["Post Session Sent"]?.checkbox === true,
     cancellationNotified: props["Cancellation Notified"]?.checkbox === true,

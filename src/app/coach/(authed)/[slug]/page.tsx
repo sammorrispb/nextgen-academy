@@ -4,6 +4,7 @@ import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 import { findSessionBySlug, sessionToSlug } from "@/lib/session-slug";
 import CancelButton from "./CancelButton";
+import CancelSessionButton from "./CancelSessionButton";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,13 @@ export default async function CoachSessionPage({ params }: PageProps) {
         >
           View public page ↗
         </a>
+        <CancelSessionButton
+          sessionRowId={session.id}
+          sessionTitle={session.title}
+          sessionDate={session.date}
+          sessionStartTime={session.startTime}
+          rosterSize={roster.length}
+        />
       </div>
 
       {roster.length === 0 ? (

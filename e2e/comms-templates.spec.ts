@@ -3,7 +3,11 @@ import {
   bookingReminderHtml,
   bookingReminderText,
 } from "../src/lib/email/booking-reminder";
-import { bookingReminderSms } from "../src/lib/sms";
+import {
+  sessionCancelledHtml,
+  sessionCancelledText,
+} from "../src/lib/email/session-cancelled";
+import { bookingReminderSms, sessionCancelledSms } from "../src/lib/sms";
 
 const sample = {
   parentFirst: "Alex",
@@ -66,6 +70,85 @@ test.describe("Comms templates — 24h reminder", () => {
     // No robot prefix
     expect(sms.startsWith("NGA:")).toBe(false);
     expect(sms.startsWith("Riley is on the court tomorrow")).toBe(true);
+    expect(sms).toContain("— Coach Sam · NGA");
+    expect(sms).toContain("Reply STOP to opt out.");
+  });
+});
+
+test.describe("Comms templates — session-cancellation broadcast", () => {
+  const cancelSample = {
+    parentFirst: "Alex",
+    childFirst: "Riley",
+    sessionTitle: "Green Ball Drop-in",
+    sessionDateLong: "Saturday, May 23, 2026",
+    sessionStart: "5:30 PM",
+    amountRefunded: "40.00",
+    scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+  };
+
+  test("weather variant: date-agnostic headline + EASE-Ethics refund framing + Coach Sam signoff", () => {
+    const html = sessionCancelledHtml({ ...cancelSample, reason: "weather" });
+    // Date-agnostic — must NOT say "Tomorrow" in the headline
+    expect(html).toContain("Weather call — this session is off.");
+    expect(html).not.toMatch(/Tomorrow's session is off/);
+    // EASE-Ethics: refund without being asked
+    expect(html).toContain("Your $40.00 is on the way back.");
+    expect(html).toContain("No action needed on your end &mdash; that&rsquo;s on us.");
+    // Coach Sam signoff + tagline twist appropriate to the moment
+    expect(html).toContain("Coach Sam &middot; Next Gen Pickleball Academy");
+    expect(html).toContain("better than yesterday, together.");
+    expect(html).toContain("Thanks for rolling with us");
+    // Single arrowed CTA
+    expect(html).toContain("Find another session &rarr;");
+  });
+
+  test("each reason has a distinct headline + body without 'Tomorrow' assumption", () => {
+    for (const reason of ["weather", "venue", "low-enrollment", "other"] as const) {
+      const html = sessionCancelledHtml({ ...cancelSample, reason });
+      expect(html).not.toMatch(/Tomorrow's session is off/);
+    }
+    // Spot-check each variant's body
+    expect(sessionCancelledHtml({ ...cancelSample, reason: "venue" })).toContain(
+      "Venue issue — this session is off.",
+    );
+    expect(
+      sessionCancelledHtml({ ...cancelSample, reason: "low-enrollment" }),
+    ).toContain("rescheduling");
+    expect(sessionCancelledHtml({ ...cancelSample, reason: "other" })).toContain(
+      "this session is cancelled",
+    );
+  });
+
+  test("optional Coach note renders when provided + omitted when blank", () => {
+    const withNote = sessionCancelledHtml({
+      ...cancelSample,
+      reason: "weather",
+      note: "Lightning in the forecast. I'll see you Saturday.",
+    });
+    expect(withNote).toContain("Lightning in the forecast");
+
+    const noNote = sessionCancelledHtml({ ...cancelSample, reason: "weather" });
+    expect(noNote).not.toContain("Lightning");
+  });
+
+  test("plain-text fallback: parity on refund framing, signoff, schedule URL", () => {
+    const text = sessionCancelledText({ ...cancelSample, reason: "weather" });
+    expect(text).toContain("Weather call");
+    expect(text).toContain("Your $40.00 is on the way back.");
+    expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");
+    expect(text).toContain("better than yesterday, together.");
+    expect(text).toContain("Find another session: https://www.nextgenpbacademy.com/schedule");
+  });
+
+  test("SMS body: kid name first, refund cue, Coach Sam, STOP language, 1-segment friendly", () => {
+    const sms = sessionCancelledSms({
+      childFirst: "Riley",
+      sessionTitle: "Green Ball Drop-in",
+      sessionDateShort: "Sat May 23",
+      scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+    });
+    expect(sms.startsWith("Riley's Green Ball Drop-in")).toBe(true);
+    expect(sms).toContain("Full refund issued");
     expect(sms).toContain("— Coach Sam · NGA");
     expect(sms).toContain("Reply STOP to opt out.");
   });
