@@ -14,6 +14,7 @@ import { cancelDropIn } from "@/lib/cancel-dropin";
 import { buildDropInIcs } from "@/lib/email/ics";
 import { bookingConfirmationHtml } from "@/lib/email/booking-confirmation";
 import { sendSms, bookingConfirmationSms } from "@/lib/sms";
+import { signCancelToken } from "@/lib/cancel-token";
 
 export const runtime = "nodejs";
 
@@ -109,6 +110,14 @@ async function emailParent(session: Stripe.Checkout.Session) {
   const detailUrl = slug ? `${SITE_ORIGIN}/schedule/${slug}` : `${SITE_ORIGIN}/schedule`;
   const sessionDateLong = formatLongDate(sessionDate);
 
+  // Self-serve cancel URL — token signed with NGA_ADMIN_SECRET. If the secret
+  // isn't set, the link is suppressed and the email falls back to the "reply
+  // or text Sam" copy.
+  const cancelToken = signCancelToken(session.id);
+  const cancelUrl = cancelToken
+    ? `${SITE_ORIGIN}/schedule/cancel?token=${encodeURIComponent(cancelToken)}`
+    : undefined;
+
   const subject = `You're registered — ${sessionTitle || sessionDateLong}`;
 
   // Plain-text fallback for clients that hide HTML.
@@ -125,7 +134,9 @@ async function emailParent(session: Stripe.Checkout.Session) {
     "",
     `What to bring: water bottle, court shoes (no flat-soled sneakers), a paddle if you have one (we have loaners).`,
     "",
-    `Drop-ins are non-refundable. If plans change, reply to this email or text 301-325-4731.`,
+    cancelUrl
+      ? `Drop-ins are non-refundable. If you can't make it, cancel your reservation here so we can open the seat: ${cancelUrl}`
+      : `Drop-ins are non-refundable. If plans change, reply to this email or text 301-325-4731.`,
     "",
     `Session link: ${detailUrl}`,
     "",
@@ -143,6 +154,7 @@ async function emailParent(session: Stripe.Checkout.Session) {
     sessionLocation,
     amountPaid: amount,
     detailUrl,
+    cancelUrl,
   });
 
   // Attach a one-shot .ics calendar invite. End time may be missing in

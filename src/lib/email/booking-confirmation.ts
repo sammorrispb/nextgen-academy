@@ -10,6 +10,8 @@ interface ConfirmationInput {
   sessionLocation: string;
   amountPaid: string; // "40.00"
   detailUrl: string;
+  /** Signed self-serve cancel URL. Optional — feature is off if secret missing. */
+  cancelUrl?: string;
 }
 
 export function bookingConfirmationHtml(input: ConfirmationInput): string {
@@ -23,6 +25,7 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     sessionLocation,
     amountPaid,
     detailUrl,
+    cancelUrl,
   } = input;
 
   const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sessionLocation)}`;
@@ -61,7 +64,11 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     <div style="${s.actionCallout}">
       <p style="${s.actionLabel}">Plans change?</p>
       <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
-        Drop-ins are non-refundable, but if something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a>.
+        Drop-ins are non-refundable. ${
+          cancelUrl
+            ? `If you can&rsquo;t make it, <a href="${cancelUrl}" style="${s.link}font-weight:700;">cancel your reservation</a> so we can open the seat for another player.`
+            : `If something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a>.`
+        }
       </p>
     </div>
 
