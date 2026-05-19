@@ -215,6 +215,12 @@ export async function POST(req: NextRequest) {
   // Bust the /schedule ISR cache so the seat count reflects the new
   // registration on the next request, not after the 5-min revalidate window.
   revalidatePath("/schedule");
+  const sessionTitle = metaString(m, "session_title");
+  const sessionDate = metaString(m, "session_date");
+  if (sessionTitle && sessionDate) {
+    const slug = sessionToSlug({ title: sessionTitle, date: sessionDate });
+    if (slug) revalidatePath(`/schedule/${slug}`);
+  }
 
   return NextResponse.json({ received: true });
 }

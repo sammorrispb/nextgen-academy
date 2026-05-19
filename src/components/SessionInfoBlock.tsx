@@ -36,6 +36,9 @@ export default function SessionInfoBlock({ session }: Props) {
         </p>
       </div>
 
+      <RosterBlock session={session} />
+
+
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal mb-2">
           How the hour runs
@@ -121,6 +124,45 @@ export default function SessionInfoBlock({ session }: Props) {
           <span aria-hidden="true">→</span>
         </a>
       </div>
+    </div>
+  );
+}
+
+function RosterBlock({ session }: { session: NgaSession }) {
+  const roster = session.roster ?? [];
+  const registered = roster.length;
+  const cancelled = session.status === "Cancelled";
+
+  return (
+    <div>
+      <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal mb-2">
+        Registered players
+      </p>
+      {cancelled ? (
+        <p className="text-sm text-ngpa-white/65">
+          This session has been cancelled.
+        </p>
+      ) : registered === 0 ? (
+        <p className="text-sm text-ngpa-white/65">
+          No one&rsquo;s reserved yet — be the first.
+        </p>
+      ) : (
+        <>
+          <p className="text-xs text-ngpa-white/55 mb-2">
+            {registered} of {session.capacity} registered · first names only
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {roster.map((name, i) => (
+              <li
+                key={`${name}-${i}`}
+                className="text-xs font-bold text-ngpa-white bg-ngpa-slate/60 border border-ngpa-slate rounded-full px-2.5 py-1"
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
