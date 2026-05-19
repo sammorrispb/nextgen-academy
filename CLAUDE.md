@@ -87,6 +87,7 @@ The pre-2026-05-05 monthly subscription / blocks-cron model has been retired. Do
 Vercel crons live in `vercel.json`. Auth = `Authorization: Bearer $CRON_SECRET` (Vercel auto-injects when invoking the scheduled job; manual `curl` needs the same header). All cron endpoints live under `/api/cron/*`. Per-template copy rules live in `BRAND_GUIDELINES.md` → `COMMS TEMPLATES`.
 
 - **`GET /api/cron/dropin-reminder`** — schedule `0 17 * * *` UTC (= 1pm ET in EDT / noon ET in EST; ~one-hour drift across the DST changeover is accepted). Queries the NGA Drop-in Registrations DB for rows where `Session Date = tomorrow (America/New_York)` and `Status = Confirmed` and `Reminder Sent = false`. Sends a Coach-voice email to each parent (BCC `nextgenacademypb@gmail.com`) and an opt-in SMS where `SMS Consent = true`. Flips `Reminder Sent` to true after a successful email send.
+- **`GET /api/cron/dropin-post-session`** — schedule `0 13 * * *` UTC (= 9am EDT / 8am EST). Email-only (no SMS — borderline-promotional, would need a separate marketing opt-in). Queries for rows where `Session Date = yesterday (America/New_York)` and `Status = Confirmed` and `Post Session Sent = false`. Sends a Coach-voice "thanks for showing up + book the next slot" recap (EASE = Skills, single arrowed CTA → `/schedule`). Footer carries a "reply 'skip' to stop" politeness cue for the borderline-promotional concern. Flips `Post Session Sent` to true after send.
 
 ### Drop-in comms — coach-triggered (no cron)
 
