@@ -5,6 +5,8 @@ export interface RsvpFormData {
   childFirstName: string;
   childBirthYear: string;
   sessionId: string;
+  /** Opt-in: show child's first name on the public schedule. Default false. */
+  displayConsent: boolean;
 }
 
 export type RsvpValidationErrors = Partial<

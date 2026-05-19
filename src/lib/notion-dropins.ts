@@ -15,6 +15,7 @@ export interface DropInRow {
   amountPaidUsd: number;
   stripeCheckoutSessionId: string;
   stripePaymentIntentId: string | null;
+  displayConsent: boolean;
 }
 
 export async function createDropInRegistration(row: DropInRow): Promise<void> {
@@ -49,6 +50,7 @@ export async function createDropInRegistration(row: DropInRow): Promise<void> {
       rich_text: [{ text: { content: row.stripeCheckoutSessionId } }],
     },
     Status: { select: { name: "Confirmed" } },
+    "Display Consent": { checkbox: row.displayConsent },
   };
   if (row.sessionDate) {
     properties["Session Date"] = { date: { start: row.sessionDate } };
@@ -98,6 +100,7 @@ export interface DropInRegistration {
   amountPaidUsd: number;
   status: string;
   paidAt: string;
+  displayConsent: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,6 +139,7 @@ function pageToDropIn(page: any): DropInRegistration {
     amountPaidUsd: readNumberProp(props["Amount Paid"]),
     status: readSelectProp(props["Status"]),
     paidAt: props["Paid At"]?.created_time ?? page.created_time ?? "",
+    displayConsent: props["Display Consent"]?.checkbox === true,
   };
 }
 
@@ -146,6 +150,7 @@ function pageToDropIn(page: any): DropInRegistration {
 export async function fetchUpcomingDropIns(
   fromIso: string,
   toIso: string,
+  options: { revalidate?: number } = {},
 ): Promise<DropInRegistration[]> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DROPINS_DB_ID;
@@ -169,7 +174,9 @@ export async function fetchUpcomingDropIns(
       sorts: [{ property: "Session Date", direction: "ascending" }],
       page_size: 100,
     }),
-    cache: "no-store",
+    ...(typeof options.revalidate === "number"
+      ? { next: { revalidate: options.revalidate } }
+      : { cache: "no-store" as const }),
   });
   if (!res.ok) {
     console.error(

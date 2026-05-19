@@ -202,6 +202,7 @@ export async function POST(req: NextRequest) {
     amountPaidUsd: (session.amount_total ?? 0) / 100,
     stripeCheckoutSessionId: session.id,
     stripePaymentIntentId: piId,
+    displayConsent: metaString(m, "display_consent") === "true",
   };
 
   // Run side effects concurrently. Failures in one shouldn't block the others.

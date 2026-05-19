@@ -130,8 +130,8 @@ export default function SessionInfoBlock({ session }: Props) {
 
 function RosterBlock({ session }: { session: NgaSession }) {
   const roster = session.roster ?? [];
-  const registered = roster.length;
   const cancelled = session.status === "Cancelled";
+  const registered = session.registeredCount;
 
   return (
     <div>
@@ -146,10 +146,16 @@ function RosterBlock({ session }: { session: NgaSession }) {
         <p className="text-sm text-ngpa-white/65">
           No one&rsquo;s reserved yet — be the first.
         </p>
+      ) : roster.length === 0 ? (
+        <p className="text-sm text-ngpa-white/65">
+          {registered} {registered === 1 ? "player" : "players"} registered ·
+          names hidden by request.
+        </p>
       ) : (
         <>
           <p className="text-xs text-ngpa-white/55 mb-2">
-            {registered} of {session.capacity} registered · first names only
+            {roster.length} of {registered} registered shown · first names only,
+            opt-in
           </p>
           <ul className="flex flex-wrap gap-1.5">
             {roster.map((name, i) => (
