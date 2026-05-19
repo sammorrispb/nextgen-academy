@@ -233,7 +233,7 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                   )}
                 </div>
 
-                <div className="sticky bottom-0 px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel sm:rounded-b-2xl space-y-3">
+                <div className="px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel sm:rounded-b-2xl space-y-3">
                   <p className="text-xs text-ngpa-white/60 leading-relaxed">
                     You&rsquo;ll be redirected to Stripe to pay $40 for this
                     1-hour slot. Drop-in payments are non-refundable.
