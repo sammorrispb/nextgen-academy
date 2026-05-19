@@ -6,6 +6,7 @@ import { sessionToSlug } from "@/lib/session-slug";
 import ReserveButton from "./ReserveButton";
 import ShareButton from "./ShareButton";
 import SessionDetailsModal from "./SessionDetailsModal";
+import { socialProofLine } from "./SessionInfoBlock";
 
 const LEVEL_COLOR: Record<string, string> = {
   Red: "bg-ngpa-skill-red text-white",
@@ -41,6 +42,7 @@ export default function SessionCard({ session, siteOrigin }: Props) {
         : "text-ngpa-white/65";
 
   const shareUrl = `${siteOrigin}/schedule/${sessionToSlug(session)}`;
+  const proof = socialProofLine(session);
 
   return (
     <>
@@ -62,6 +64,11 @@ export default function SessionCard({ session, siteOrigin }: Props) {
             <span className={`text-xs font-bold ${seatsClass}`}>
               {seatsText}
             </span>
+            {proof && (
+              <span className="text-xs font-bold text-ngpa-teal">
+                · {proof}
+              </span>
+            )}
           </div>
           <p className="text-base font-bold text-ngpa-white">
             <time dateTime={session.date}>

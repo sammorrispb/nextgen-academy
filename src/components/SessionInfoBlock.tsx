@@ -1,5 +1,17 @@
 import type { NgaSession } from "@/lib/notion-sessions";
 
+export function socialProofLine(session: NgaSession): string | null {
+  const s = session.ageStats;
+  if (!s || s.count === 0) return null;
+  const noun = s.count === 1 ? "going" : "going";
+  const ageBit =
+    s.minAge === s.maxAge
+      ? `age ${s.minAge}`
+      : `ages ${s.minAge}–${s.maxAge}`;
+  return `${s.count} ${noun} · ${ageBit}`;
+}
+
+
 interface Props {
   session: NgaSession;
 }
@@ -132,6 +144,7 @@ function RosterBlock({ session }: { session: NgaSession }) {
   const roster = session.roster ?? [];
   const cancelled = session.status === "Cancelled";
   const registered = session.registeredCount;
+  const proof = socialProofLine(session);
 
   return (
     <div>
@@ -146,27 +159,32 @@ function RosterBlock({ session }: { session: NgaSession }) {
         <p className="text-sm text-ngpa-white/65">
           No one&rsquo;s reserved yet — be the first.
         </p>
-      ) : roster.length === 0 ? (
-        <p className="text-sm text-ngpa-white/65">
-          {registered} {registered === 1 ? "player" : "players"} registered ·
-          names hidden by request.
-        </p>
       ) : (
         <>
-          <p className="text-xs text-ngpa-white/55 mb-2">
-            {roster.length} of {registered} registered shown · first names only,
-            opt-in
+          <p className="text-sm font-bold text-ngpa-white">
+            {proof ?? `${registered} ${registered === 1 ? "player" : "players"} registered`}
           </p>
-          <ul className="flex flex-wrap gap-1.5">
-            {roster.map((name, i) => (
-              <li
-                key={`${name}-${i}`}
-                className="text-xs font-bold text-ngpa-white bg-ngpa-slate/60 border border-ngpa-slate rounded-full px-2.5 py-1"
-              >
-                {name}
-              </li>
-            ))}
-          </ul>
+          {roster.length === 0 ? (
+            <p className="text-xs text-ngpa-white/55 mt-1">
+              First names hidden by request.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-ngpa-white/55 mt-1 mb-2">
+                {roster.length} of {registered} shown · first names only, opt-in
+              </p>
+              <ul className="flex flex-wrap gap-1.5">
+                {roster.map((name, i) => (
+                  <li
+                    key={`${name}-${i}`}
+                    className="text-xs font-bold text-ngpa-white bg-ngpa-slate/60 border border-ngpa-slate rounded-full px-2.5 py-1"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
       )}
     </div>
