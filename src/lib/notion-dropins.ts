@@ -203,9 +203,16 @@ export async function fetchUpcomingDropIns(
 export async function findDropInByCheckoutId(
   checkoutSessionId: string,
 ): Promise<boolean> {
+  const found = await findDropInPageByCheckoutId(checkoutSessionId);
+  return found !== null;
+}
+
+export async function findDropInPageByCheckoutId(
+  checkoutSessionId: string,
+): Promise<DropInRegistration | null> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DROPINS_DB_ID;
-  if (!notionKey || !dbId) return false;
+  if (!notionKey || !dbId) return null;
 
   const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
     method: "POST",
@@ -223,7 +230,38 @@ export async function findDropInByCheckoutId(
     }),
     cache: "no-store",
   });
-  if (!res.ok) return false;
-  const data = (await res.json()) as { results: unknown[] };
-  return data.results.length > 0;
+  if (!res.ok) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  if (data.results.length === 0) return null;
+  return pageToDropIn(data.results[0]);
+}
+
+export async function updateDropInStatus(
+  pageId: string,
+  status: "Confirmed" | "Cancelled" | "Refunded",
+): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: { Status: { select: { name: status } } },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-dropins] updateDropInStatus failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
 }
