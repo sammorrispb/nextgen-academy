@@ -83,7 +83,12 @@ export default function RootLayout({
           url: "https://nextgenpbacademy.com",
           telephone: "301-325-4731",
           email: "nextgenacademypb@gmail.com",
-          sameAs: ["https://www.instagram.com/nextgenpickleballacademy"],
+          sameAs: [
+            "https://www.instagram.com/nextgenpickleballacademy",
+            "https://www.mocopb.com",
+            "https://www.sammorrispb.com",
+            "https://www.linkanddink.com",
+          ],
           areaServed: {
             "@type": "AdministrativeArea",
             name: "Montgomery County, MD",
