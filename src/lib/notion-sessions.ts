@@ -1,4 +1,5 @@
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
+import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 
 export type SessionLevel = "Red" | "Orange" | "Green" | "Yellow";
 
@@ -15,6 +16,12 @@ export interface NgaSession {
   registeredCount: number;
   spotsLeft: number;
   status: "Open" | "Full" | "Cancelled";
+  /** Child first names of confirmed registrants, in registration order. */
+  roster: string[];
+}
+
+function rosterKey(date: string, startTime: string): string {
+  return `${date}|${(startTime ?? "").trim().toLowerCase()}`;
 }
 
 const NOTION_API = "https://api.notion.com/v1";
@@ -95,7 +102,7 @@ export async function fetchUpcomingSessions(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = (await res.json()) as { results: any[] };
 
-  return data.results.map((page) => {
+  const sessions = data.results.map((page) => {
     const props = page.properties;
     const courtCount = readNumber(props["Court count"]) || 1;
     const capacity = readFormulaNumber(props["Capacity"]) || courtCount * 4;
@@ -116,8 +123,31 @@ export async function fetchUpcomingSessions(
       registeredCount,
       spotsLeft: Math.max(0, capacity - registeredCount),
       status,
+      roster: [] as string[],
     };
   });
+
+  // Roster batch: one query for all drop-ins in the same date window, then
+  // group by (date, start time) and attach to sessions. Failures here just
+  // leave roster empty — never block the schedule render.
+  try {
+    const drops = await fetchUpcomingDropIns(today, endIso);
+    const byKey = new Map<string, string[]>();
+    for (const d of drops) {
+      if (!d.childFirstName) continue;
+      const k = rosterKey(d.sessionDate, d.sessionStartTime);
+      const arr = byKey.get(k) ?? [];
+      arr.push(d.childFirstName);
+      byKey.set(k, arr);
+    }
+    for (const s of sessions) {
+      s.roster = byKey.get(rosterKey(s.date, s.startTime)) ?? [];
+    }
+  } catch (err) {
+    console.error("[notion-sessions] roster batch failed", err);
+  }
+
+  return sessions;
 }
 
 export async function fetchSessionById(id: string): Promise<NgaSession | null> {
@@ -141,12 +171,27 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
   const registeredCount = readNumber(props["Registered count"]);
   const status =
     (readSelect(props["Status"]) as NgaSession["status"]) ?? "Open";
+  const date = props["Date"]?.date?.start ?? "";
+  const startTime = readPlainText(props["Start time"]);
+
+  let roster: string[] = [];
+  if (date) {
+    try {
+      const drops = await fetchUpcomingDropIns(date, date);
+      roster = drops
+        .filter((d) => rosterKey(d.sessionDate, d.sessionStartTime) === rosterKey(date, startTime))
+        .map((d) => d.childFirstName)
+        .filter(Boolean);
+    } catch (err) {
+      console.error("[notion-sessions] single-session roster failed", err);
+    }
+  }
 
   return {
     id: page.id,
     title: readPlainText(props["Session"]),
-    date: props["Date"]?.date?.start ?? "",
-    startTime: readPlainText(props["Start time"]),
+    date,
+    startTime,
     endTime: readPlainText(props["End time"]),
     level: readSelect(props["Level"]) as SessionLevel | null,
     location: readPlainText(props["Location"]),
@@ -155,6 +200,7 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
     registeredCount,
     spotsLeft: Math.max(0, capacity - registeredCount),
     status,
+    roster,
   };
 }
 
@@ -194,5 +240,10 @@ export async function incrementSessionRegistered(
     );
     return null;
   }
-  return { ...session, registeredCount: newCount, status: newStatus };
+  return {
+    ...session,
+    registeredCount: newCount,
+    spotsLeft: Math.max(0, session.capacity - newCount),
+    status: newStatus,
+  };
 }
