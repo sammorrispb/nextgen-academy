@@ -120,6 +120,8 @@ async function emailParent(session: Stripe.Checkout.Session) {
 
   const subject = `You're registered — ${sessionTitle || sessionDateLong}`;
 
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sessionLocation)}`;
+
   // Plain-text fallback for clients that hide HTML.
   const text = [
     `Hi ${parentFirst},`,
@@ -129,19 +131,23 @@ async function emailParent(session: Stripe.Checkout.Session) {
     `${sessionTitle}`,
     `${sessionDateLong} · ${sessionStart}${sessionEnd ? `–${sessionEnd}` : ""}`,
     `${sessionLocation}`,
+    `Directions: ${mapsUrl}`,
     "",
     `Paid: $${amount}. We attached an .ics calendar invite — tap it to add the session to your calendar.`,
     "",
-    `What to bring: water bottle, court shoes (no flat-soled sneakers), a paddle if you have one (we have loaners).`,
+    `What to bring:`,
+    `- Water bottle`,
+    `- Court shoes (no flat-soled sneakers)`,
+    `- A paddle if you have one. We have loaners.`,
     "",
     cancelUrl
-      ? `Drop-ins are non-refundable. If you can't make it, cancel your reservation here so we can open the seat: ${cancelUrl}`
-      : `Drop-ins are non-refundable. If plans change, reply to this email or text 301-325-4731.`,
+      ? `If something comes up, cancel your reservation so the next player can grab the seat: ${cancelUrl}\nDrop-ins are non-refundable, but the swap helps the whole community.`
+      : `If something comes up, reply to this email or text 301-325-4731 so we can open the seat. Drop-ins are non-refundable, but the swap helps the whole community.`,
     "",
     `Session link: ${detailUrl}`,
     "",
-    `See you on the court,`,
-    `Sam · Next Gen Pickleball Academy`,
+    `See you on the court — better than yesterday, together.`,
+    `Coach Sam · Next Gen Pickleball Academy`,
   ].join("\n");
 
   const html = bookingConfirmationHtml({
@@ -186,6 +192,7 @@ async function emailParent(session: Stripe.Checkout.Session) {
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
+    bcc: ADMIN_EMAIL,
     replyTo: REPLY_TO,
     subject,
     html,
