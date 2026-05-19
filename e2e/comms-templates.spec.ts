@@ -16,6 +16,7 @@ import {
   cancelConfirmationText,
 } from "../src/lib/email/cancel-confirmation";
 import {
+  bookingConfirmationSms,
   bookingReminderSms,
   cancelConfirmationSms,
   sessionCancelledSms,
@@ -82,8 +83,10 @@ test.describe("Comms templates — 24h reminder", () => {
     // No robot prefix
     expect(sms.startsWith("NGA:")).toBe(false);
     expect(sms.startsWith("Riley is on the court tomorrow")).toBe(true);
-    expect(sms).toContain("— Coach Sam · NGA");
+    expect(sms).toContain("- Coach Sam, NGA");
     expect(sms).toContain("Reply STOP to opt out.");
+    // GSM-7 cost discipline: no em-dash, no middot, no en-dash.
+    expect(sms).not.toMatch(/[—·–]/);
   });
 });
 
@@ -161,8 +164,9 @@ test.describe("Comms templates — session-cancellation broadcast", () => {
     });
     expect(sms.startsWith("Riley's Green Ball Drop-in")).toBe(true);
     expect(sms).toContain("Full refund issued");
-    expect(sms).toContain("— Coach Sam · NGA");
+    expect(sms).toContain("- Coach Sam, NGA");
     expect(sms).toContain("Reply STOP to opt out.");
+    expect(sms).not.toMatch(/[—·–]/);
   });
 });
 
@@ -272,8 +276,9 @@ test.describe("Comms templates — cancellation confirmation (per-row)", () => {
       scheduleUrl: baseCancel.scheduleUrl,
     });
     expect(refundSms).toContain("Full refund issued");
-    expect(refundSms).toContain("— Coach Sam · NGA");
+    expect(refundSms).toContain("- Coach Sam, NGA");
     expect(refundSms).toContain("Reply STOP to opt out.");
+    expect(refundSms).not.toMatch(/[—·–]/);
 
     const cancelSms = cancelConfirmationSms({
       childFirst: "Riley",
@@ -284,6 +289,53 @@ test.describe("Comms templates — cancellation confirmation (per-row)", () => {
     });
     expect(cancelSms).toContain("Seat is open for the next family");
     expect(cancelSms).not.toContain("Full refund");
-    expect(cancelSms).toContain("— Coach Sam · NGA");
+    expect(cancelSms).toContain("- Coach Sam, NGA");
+    expect(cancelSms).not.toMatch(/[—·–]/);
+  });
+});
+
+test.describe("Comms SMS — GSM-7 segment-cost regression guard", () => {
+  // Any non-GSM-7 char in an SMS body flips the entire message to UCS-2
+  // encoding (70 chars/segment vs GSM-7's 160). That's a 3-4× per-send
+  // cost hit. The sms.ts helpers throw in non-prod if a body slips —
+  // this suite is the production-time guard.
+  const GSM7_BASIC_RE =
+    /^[A-Za-z0-9 \r\n@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&'()*+,\-./:;<=>?¡ÄÖÑÜ§¿äöñüà]*$/;
+
+  test("all 5 SMS bodies are GSM-7 clean (no em-dash, middot, en-dash, curly quotes, ellipsis)", () => {
+    const samples = {
+      childFirst: "Riley",
+      sessionTitle: "Green Ball Drop-in",
+      sessionStart: "5:30 PM",
+      sessionDateShort: "Sat May 23",
+      detailUrl: "https://www.nextgenpbacademy.com/schedule/green-ball-drop-in-2026-05-23",
+      scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+    };
+
+    const bodies: Array<[string, string]> = [
+      ["booking-confirmation", bookingConfirmationSms(samples)],
+      ["booking-reminder", bookingReminderSms(samples)],
+      ["session-cancelled", sessionCancelledSms(samples)],
+      [
+        "cancel-confirmation:Refunded",
+        cancelConfirmationSms({ ...samples, status: "Refunded" }),
+      ],
+      [
+        "cancel-confirmation:Cancelled",
+        cancelConfirmationSms({ ...samples, status: "Cancelled" }),
+      ],
+    ];
+
+    for (const [name, body] of bodies) {
+      // Surface the offending char in the failure message so the fix is obvious.
+      const offending = Array.from(body)
+        .filter((ch) => !GSM7_BASIC_RE.test(ch))
+        .filter((ch, i, a) => a.indexOf(ch) === i)
+        .join("");
+      expect(
+        offending,
+        `${name} SMS body contains non-GSM-7 chars: "${offending}"`,
+      ).toBe("");
+    }
   });
 });

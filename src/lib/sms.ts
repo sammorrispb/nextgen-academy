@@ -68,8 +68,37 @@ export async function sendSms(input: SendSmsInput): Promise<SendSmsResult> {
 }
 
 /**
+ * GSM-7 basic charset. Twilio (and every A2P SMS gateway) picks GSM-7 when
+ * the whole body fits this set — 160 chars per segment. ANY char outside
+ * this set forces UCS-2 encoding for the WHOLE message — 70 chars per
+ * segment, i.e. 3-4× cost per send. That includes brand-friendly chars:
+ *   — em-dash, – en-dash, · middle dot, ' ' " " curly quotes, … ellipsis.
+ *
+ * Keep SMS bodies inside `GSM7_BASIC_RE` so every send stays cheap. Brand
+ * voice via word choice, not punctuation. Email bodies have no such limit
+ * and can use whatever typography.
+ */
+const GSM7_BASIC_RE =
+  /^[A-Za-z0-9 \r\n@£$¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ!"#¤%&'()*+,\-./:;<=>?¡ÄÖÑÜ§¿äöñüà]*$/;
+
+/** Dev-time assert: throw if a body contains chars that would force UCS-2. */
+function assertGsm7Safe(body: string, tag: string): void {
+  if (process.env.NODE_ENV !== "production" && !GSM7_BASIC_RE.test(body)) {
+    const offending = Array.from(body)
+      .filter((ch) => !GSM7_BASIC_RE.test(ch))
+      .filter((ch, i, a) => a.indexOf(ch) === i)
+      .join("");
+    throw new Error(
+      `[sms/${tag}] body contains non-GSM-7 chars (forces UCS-2): "${offending}". Use ASCII equivalents — see GSM7_BASIC_RE in src/lib/sms.ts.`,
+    );
+  }
+}
+
+/**
  * The booking-confirmation SMS body. Concise — most parents will get the
  * email with the .ics; this is the redundant fast-path on the phone.
+ *
+ * GSM-7 only (see GSM7_BASIC_RE above). No em-dash, no middle dot.
  */
 export function bookingConfirmationSms(args: {
   childFirst: string;
@@ -78,11 +107,13 @@ export function bookingConfirmationSms(args: {
   sessionDateShort: string; // "Sat May 23"
   detailUrl: string;
 }): string {
-  return [
+  const body = [
     `${args.childFirst} is locked in for ${args.sessionTitle}, ${args.sessionDateShort} at ${args.sessionStart}.`,
     `Details: ${args.detailUrl}`,
-    `— Coach Sam · NGA · Reply STOP to opt out.`,
+    `- Coach Sam, NGA. Reply STOP to opt out.`,
   ].join("\n");
+  assertGsm7Safe(body, "booking-confirmation");
+  return body;
 }
 
 /**
@@ -98,11 +129,13 @@ export function bookingReminderSms(args: {
   sessionDateShort: string; // "Sat May 23"
   detailUrl: string;
 }): string {
-  return [
-    `${args.childFirst} is on the court tomorrow — ${args.sessionTitle}, ${args.sessionDateShort} at ${args.sessionStart}.`,
+  const body = [
+    `${args.childFirst} is on the court tomorrow - ${args.sessionTitle}, ${args.sessionDateShort} at ${args.sessionStart}.`,
     `Water + court shoes. Details: ${args.detailUrl}`,
-    `— Coach Sam · NGA · Reply STOP to opt out.`,
+    `- Coach Sam, NGA. Reply STOP to opt out.`,
   ].join("\n");
+  assertGsm7Safe(body, "booking-reminder");
+  return body;
 }
 
 /**
@@ -117,11 +150,13 @@ export function sessionCancelledSms(args: {
   sessionDateShort: string; // "Sat May 23"
   scheduleUrl: string;
 }): string {
-  return [
-    `${args.childFirst}'s ${args.sessionTitle} on ${args.sessionDateShort} is cancelled. Full refund issued — back on your card in 5–10 days.`,
+  const body = [
+    `${args.childFirst}'s ${args.sessionTitle} on ${args.sessionDateShort} is cancelled. Full refund issued, back on your card in 5-10 days.`,
     `Next: ${args.scheduleUrl}`,
-    `— Coach Sam · NGA · Reply STOP to opt out.`,
+    `- Coach Sam, NGA. Reply STOP to opt out.`,
   ].join("\n");
+  assertGsm7Safe(body, "session-cancelled");
+  return body;
 }
 
 /**
@@ -142,11 +177,13 @@ export function cancelConfirmationSms(args: {
 }): string {
   const refundLine =
     args.status === "Refunded"
-      ? `Full refund issued — back on your card in 5–10 days.`
+      ? `Full refund issued, back on your card in 5-10 days.`
       : `Seat is open for the next family. Drop-ins are non-refundable, but thanks for calling it early.`;
-  return [
+  const body = [
     `${args.childFirst}'s ${args.sessionTitle} (${args.sessionDateShort}) is cancelled. ${refundLine}`,
     `Next: ${args.scheduleUrl}`,
-    `— Coach Sam · NGA · Reply STOP to opt out.`,
+    `- Coach Sam, NGA. Reply STOP to opt out.`,
   ].join("\n");
+  assertGsm7Safe(body, "cancel-confirmation");
+  return body;
 }
