@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { NgaSession } from "@/lib/notion-sessions";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
+import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import {
   validateRsvpForm,
   type RsvpFormData,
@@ -59,6 +60,7 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
       childBirthYear: String(fd.get("childBirthYear") ?? ""),
       sessionId: session.id,
       displayConsent: fd.get("displayConsent") === "on",
+      smsConsent: fd.get("smsConsent") === "on",
     };
     const ve = validateRsvpForm(data);
     setErrors(ve);
@@ -210,6 +212,17 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                         (optional). First name only — no last name, no photo.
                         Off by default.
                       </span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      name="smsConsent"
+                      type="checkbox"
+                      className="mt-1 w-5 h-5 rounded border-ngpa-slate/60 bg-ngpa-deep/80 accent-ngpa-lime shrink-0"
+                    />
+                    <span className="text-xs text-ngpa-white/65 leading-snug">
+                      {SMS_CONSENT_TEXT}
                     </span>
                   </label>
 

@@ -203,6 +203,8 @@ export async function POST(req: NextRequest) {
     stripeCheckoutSessionId: session.id,
     stripePaymentIntentId: piId,
     displayConsent: metaString(m, "display_consent") === "true",
+    smsConsent: metaString(m, "sms_consent") === "true",
+    smsConsentText: metaString(m, "sms_consent_text"),
   };
 
   // Run side effects concurrently. Failures in one shouldn't block the others.

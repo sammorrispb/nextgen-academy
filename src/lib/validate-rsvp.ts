@@ -7,6 +7,8 @@ export interface RsvpFormData {
   sessionId: string;
   /** Opt-in: show child's first name on the public schedule. Default false. */
   displayConsent: boolean;
+  /** TCPA opt-in for SMS notifications. Default false. */
+  smsConsent: boolean;
 }
 
 export type RsvpValidationErrors = Partial<
