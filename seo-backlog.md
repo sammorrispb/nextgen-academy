@@ -38,7 +38,7 @@ moves the item to the **Done log** below.
 Cities approved for Phase 1: rockville, bethesda, north-bethesda, potomac, gaithersburg, silver-spring, germantown, olney.
 
 - [ ] (page, M) Create `src/lib/cities.ts` if missing. Hand-written youth-pickleball POV per city (where NGA runs sessions, what the local context is). Sam's voice + NGA brand voice. Not generated.
-- [ ] (page, M) Add `/youth-pickleball-rockville`. Mirror `/montgomery-county-youth-pickleball` template (already exists — has FAQPage + BreadcrumbList + Service). Reuse `LevelCard.tsx`/`LevelGrid.tsx`. Per-city 4-Q FAQ (where do you run sessions, what age, does my child need experience, how does Yellow Ball work). Service + LocalBusiness + Course schema. Cross-link to mocopb `/play/rockville` and sammorrispb `/lessons/rockville`. Register in sitemap.
+- [ ] (page, M) Add `/youth-pickleball-rockville`. Mirror `/montgomery-county-youth-pickleball` template (already exists — has FAQPage + BreadcrumbList + Service). Reuse `LevelCard.tsx`/`LevelGrid.tsx`. Per-city 4-Q FAQ (where do you run sessions, what age, does my child need experience, how does Yellow Ball work). Service + LocalBusiness + Course schema. Cross-link to sammorrispb `/lessons/rockville`. Register in sitemap.
 - [ ] (page, M) Add `/youth-pickleball-bethesda`. Same template.
 - [ ] (page, M) Add `/youth-pickleball-north-bethesda`. Same template.
 - [ ] (page, M) Add `/youth-pickleball-potomac`. Same template.
@@ -53,7 +53,7 @@ Cities approved for Phase 1: rockville, bethesda, north-bethesda, potomac, gaith
 - [ ] (page, M) Add `/how-to-register` — `HowTo` schema, 5-step (find session → click register → checkout → confirmation email → arrive at court). Embed the same HowTo block on `/schedule` for double exposure.
 - [ ] (schema, S) Add `DefinedTerm` schema on home for "what is youth pickleball?". Definition + age range + tier system reference.
 - [ ] (content, M) Expand FAQ coverage on `/`. Add 4-6 more Qs covering long-tail intent: "how is NGA different from rec league pickleball", "what do I bring to my first session", "how does the tier system progression work", "what age can my child start", "do you offer summer camps", "do you run school programs (link to /schools)".
-- [ ] (internal-link, S) Cross-site `sameAs` audit: every `Organization`/`SportsActivityLocation` JSON-LD on this site references sammorrispb.com + mocopb.com in `sameAs`.
+- [ ] (internal-link, S) Cross-site `sameAs` audit: every `Organization`/`SportsActivityLocation` JSON-LD on this site references sammorrispb.com + linkanddink.com in `sameAs`.
 
 ---
 

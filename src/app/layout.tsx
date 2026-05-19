@@ -85,7 +85,6 @@ export default function RootLayout({
           email: "nextgenacademypb@gmail.com",
           sameAs: [
             "https://www.instagram.com/nextgenpickleballacademy",
-            "https://www.mocopb.com",
             "https://www.sammorrispb.com",
             "https://www.linkanddink.com",
           ],
