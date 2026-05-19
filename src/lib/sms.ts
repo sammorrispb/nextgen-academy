@@ -123,3 +123,30 @@ export function sessionCancelledSms(args: {
     `— Coach Sam · NGA · Reply STOP to opt out.`,
   ].join("\n");
 }
+
+/**
+ * Per-row cancellation confirmation SMS body. Fired by cancelDropIn() for
+ * any of the four cancel paths (parent self-serve, coach one-click, admin
+ * curl, Stripe refund webhook). Consent-gated. Suppressed if Cancellation
+ * Notified is already true (means PR #68's session-broadcast already
+ * covered the parent).
+ *
+ * Two variants — refund vs. no-refund — surfaced via the status arg.
+ */
+export function cancelConfirmationSms(args: {
+  childFirst: string;
+  sessionTitle: string;
+  sessionDateShort: string; // "Sat May 23"
+  status: "Cancelled" | "Refunded";
+  scheduleUrl: string;
+}): string {
+  const refundLine =
+    args.status === "Refunded"
+      ? `Full refund issued — back on your card in 5–10 days.`
+      : `Seat is open for the next family. Drop-ins are non-refundable, but thanks for calling it early.`;
+  return [
+    `${args.childFirst}'s ${args.sessionTitle} (${args.sessionDateShort}) is cancelled. ${refundLine}`,
+    `Next: ${args.scheduleUrl}`,
+    `— Coach Sam · NGA · Reply STOP to opt out.`,
+  ].join("\n");
+}
