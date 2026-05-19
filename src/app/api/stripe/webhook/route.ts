@@ -11,6 +11,9 @@ import {
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
 import { cancelDropIn } from "@/lib/cancel-dropin";
+import { buildDropInIcs } from "@/lib/email/ics";
+import { bookingConfirmationHtml } from "@/lib/email/booking-confirmation";
+import { sendSms, bookingConfirmationSms } from "@/lib/sms";
 
 export const runtime = "nodejs";
 
@@ -96,6 +99,7 @@ async function emailParent(session: Stripe.Checkout.Session) {
   const sessionTitle = metaString(m, "session_title");
   const sessionDate = metaString(m, "session_date");
   const sessionStart = metaString(m, "session_start");
+  const sessionEnd = metaString(m, "session_end");
   const sessionLocation = metaString(m, "session_location");
 
   const slug =
@@ -103,38 +107,78 @@ async function emailParent(session: Stripe.Checkout.Session) {
       ? sessionToSlug({ title: sessionTitle, date: sessionDate })
       : "";
   const detailUrl = slug ? `${SITE_ORIGIN}/schedule/${slug}` : `${SITE_ORIGIN}/schedule`;
+  const sessionDateLong = formatLongDate(sessionDate);
 
-  const subject = `You're registered — ${sessionTitle || formatLongDate(sessionDate)}`;
-  const lines = [
+  const subject = `You're registered — ${sessionTitle || sessionDateLong}`;
+
+  // Plain-text fallback for clients that hide HTML.
+  const text = [
     `Hi ${parentFirst},`,
     "",
-    `You're confirmed for an NGA drop-in:`,
+    `${childFirst} is confirmed for an NGA drop-in:`,
     "",
     `${sessionTitle}`,
-    `${formatLongDate(sessionDate)} · ${sessionStart}`,
+    `${sessionDateLong} · ${sessionStart}${sessionEnd ? `–${sessionEnd}` : ""}`,
     `${sessionLocation}`,
     "",
-    `${childFirst} is registered for the 1-hour slot. Paid: $${amount}.`,
+    `Paid: $${amount}. We attached an .ics calendar invite — tap it to add the session to your calendar.`,
     "",
-    `What to bring:`,
-    `· Water bottle`,
-    `· Court shoes (no flat-soled sneakers)`,
-    `· A paddle if you have one — we have loaners if not`,
+    `What to bring: water bottle, court shoes (no flat-soled sneakers), a paddle if you have one (we have loaners).`,
     "",
-    `Drop-in payments are non-refundable, but if something comes up, reply to this email or text 301-325-4731 and we'll work it out.`,
+    `Drop-ins are non-refundable. If plans change, reply to this email or text 301-325-4731.`,
     "",
-    `Session link (re-share or check details): ${detailUrl}`,
+    `Session link: ${detailUrl}`,
     "",
     `See you on the court,`,
     `Sam · Next Gen Pickleball Academy`,
-  ];
+  ].join("\n");
+
+  const html = bookingConfirmationHtml({
+    parentFirst,
+    childFirst,
+    sessionTitle,
+    sessionDateLong,
+    sessionStart,
+    sessionEnd: sessionEnd || "",
+    sessionLocation,
+    amountPaid: amount,
+    detailUrl,
+  });
+
+  // Attach a one-shot .ics calendar invite. End time may be missing in
+  // metadata for older sessions — skip the attachment in that case rather
+  // than guessing a duration.
+  const ics =
+    sessionStart && sessionEnd && sessionDate
+      ? buildDropInIcs({
+          uid: `${session.id}@nextgenpbacademy.com`,
+          date: sessionDate,
+          startTime: sessionStart,
+          endTime: sessionEnd,
+          title: `NGA Drop-in · ${sessionTitle}`,
+          location: sessionLocation,
+          description: `${childFirst}'s NGA drop-in. Bring water + court shoes. Loaners available. Questions? Text Sam 301-325-4731.`,
+        })
+      : null;
+
+  const attachments = ics
+    ? [
+        {
+          filename: "nga-session.ics",
+          content: Buffer.from(ics, "utf-8").toString("base64"),
+          contentType: "text/calendar; charset=utf-8; method=PUBLISH",
+        },
+      ]
+    : undefined;
 
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to,
     replyTo: REPLY_TO,
     subject,
-    text: lines.join("\n"),
+    html,
+    text,
+    attachments,
   });
   if (error) {
     console.error("[stripe-webhook] Resend rejected parent email", error);
@@ -216,6 +260,7 @@ export async function POST(req: NextRequest) {
   await Promise.allSettled([
     emailAdmin(session),
     emailParent(session),
+    sendConfirmationSms(session, row),
     sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
     createDropInRegistration(row),
   ]);
@@ -231,6 +276,44 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function sendConfirmationSms(
+  session: Stripe.Checkout.Session,
+  row: DropInRow,
+): Promise<void> {
+  if (!row.smsConsent || !row.parentPhone) return;
+  const sessionTitle = row.sessionTitle;
+  const sessionDate = row.sessionDate;
+  const sessionStart = row.sessionStartTime;
+  const slug =
+    sessionTitle && sessionDate
+      ? sessionToSlug({ title: sessionTitle, date: sessionDate })
+      : "";
+  const detailUrl = slug ? `${SITE_ORIGIN}/schedule/${slug}` : `${SITE_ORIGIN}/schedule`;
+
+  const dateShort = sessionDate
+    ? new Date(`${sessionDate}T12:00:00Z`).toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : "";
+
+  const body = bookingConfirmationSms({
+    childFirst: row.childFirstName || "your player",
+    sessionTitle: sessionTitle || "drop-in",
+    sessionStart,
+    sessionDateShort: dateShort,
+    detailUrl,
+  });
+
+  await sendSms({
+    to: row.parentPhone,
+    body,
+    consent: row.smsConsent,
+    tag: `booking-confirm:${session.id}`,
+  });
 }
 
 async function handleChargeRefunded(charge: Stripe.Charge) {
