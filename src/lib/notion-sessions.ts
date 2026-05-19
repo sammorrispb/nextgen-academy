@@ -274,6 +274,42 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
   };
 }
 
+/**
+ * Flip a session row's Status to "Cancelled". Used by the session-cancellation
+ * broadcast from /coach when Sam pulls a whole session (weather, venue,
+ * low-enrollment). Does NOT touch the drop-in row Statuses — those are
+ * flipped via the per-row charge.refunded webhook after the broadcast
+ * issues Stripe refunds.
+ */
+export async function setSessionStatus(
+  id: string,
+  status: NgaSession["status"],
+): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: { Status: { select: { name: status } } },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] setSessionStatus failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
+}
+
 export async function incrementSessionRegistered(
   id: string,
   by: number = 1,

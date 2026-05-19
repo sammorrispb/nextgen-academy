@@ -106,21 +106,20 @@ export function bookingReminderSms(args: {
 }
 
 /**
- * The 24h-out reminder SMS body. Fires once per Confirmed drop-in row where
- * Session Date = tomorrow (America/New_York) AND smsConsent === true AND
- * Reminder Sent === false. Idempotency is the cron's job (flips the
- * "Reminder Sent" flag after a successful send).
+ * Session-cancellation broadcast SMS body. Fired from the /coach UI when
+ * Sam pulls a whole session. Consent-gated; refund context lives in the
+ * email — SMS just delivers the critical "don't show up" + "refund coming"
+ * pair under the 160-char target.
  */
-export function bookingReminderSms(args: {
+export function sessionCancelledSms(args: {
   childFirst: string;
   sessionTitle: string;
-  sessionStart: string;
   sessionDateShort: string; // "Sat May 23"
-  detailUrl: string;
+  scheduleUrl: string;
 }): string {
   return [
-    `${args.childFirst} is on the court tomorrow — ${args.sessionTitle}, ${args.sessionDateShort} at ${args.sessionStart}.`,
-    `Water + court shoes. Details: ${args.detailUrl}`,
+    `${args.childFirst}'s ${args.sessionTitle} on ${args.sessionDateShort} is cancelled. Full refund issued — back on your card in 5–10 days.`,
+    `Next: ${args.scheduleUrl}`,
     `— Coach Sam · NGA · Reply STOP to opt out.`,
   ].join("\n");
 }
