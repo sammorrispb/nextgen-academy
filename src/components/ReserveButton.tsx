@@ -58,6 +58,7 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
       childFirstName: String(fd.get("childFirstName") ?? ""),
       childBirthYear: String(fd.get("childBirthYear") ?? ""),
       sessionId: session.id,
+      displayConsent: fd.get("displayConsent") === "on",
     };
     const ve = validateRsvpForm(data);
     setErrors(ve);
@@ -194,6 +195,23 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                       className={FIELD_INPUT}
                     />
                   </Field>
+
+                  <label className="flex items-start gap-3 cursor-pointer pt-1">
+                    <input
+                      name="displayConsent"
+                      type="checkbox"
+                      className="mt-1 w-5 h-5 rounded border-ngpa-slate/60 bg-ngpa-deep/80 accent-ngpa-lime shrink-0"
+                    />
+                    <span className="text-sm text-ngpa-white/80 leading-snug">
+                      <span className="font-bold text-ngpa-white">
+                        Show my child&rsquo;s first name on the public schedule
+                      </span>{" "}
+                      <span className="text-ngpa-white/60">
+                        (optional). First name only — no last name, no photo.
+                        Off by default.
+                      </span>
+                    </span>
+                  </label>
 
                   {serverError && (
                     <p className="text-sm text-red-400" role="alert">

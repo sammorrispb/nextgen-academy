@@ -131,10 +131,11 @@ export async function fetchUpcomingSessions(
   // group by (date, start time) and attach to sessions. Failures here just
   // leave roster empty — never block the schedule render.
   try {
-    const drops = await fetchUpcomingDropIns(today, endIso);
+    const drops = await fetchUpcomingDropIns(today, endIso, { revalidate: 300 });
     const byKey = new Map<string, string[]>();
     for (const d of drops) {
       if (!d.childFirstName) continue;
+      if (!d.displayConsent) continue;
       const k = rosterKey(d.sessionDate, d.sessionStartTime);
       const arr = byKey.get(k) ?? [];
       arr.push(d.childFirstName);
@@ -177,8 +178,9 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
   let roster: string[] = [];
   if (date) {
     try {
-      const drops = await fetchUpcomingDropIns(date, date);
+      const drops = await fetchUpcomingDropIns(date, date, { revalidate: 300 });
       roster = drops
+        .filter((d) => d.displayConsent)
         .filter((d) => rosterKey(d.sessionDate, d.sessionStartTime) === rosterKey(date, startTime))
         .map((d) => d.childFirstName)
         .filter(Boolean);
