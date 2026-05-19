@@ -84,3 +84,23 @@ export function bookingConfirmationSms(args: {
     `Reply STOP to opt out.`,
   ].join("\n");
 }
+
+/**
+ * The 24h-out reminder SMS body. Fires once per Confirmed drop-in row where
+ * Session Date = tomorrow (America/New_York) AND smsConsent === true AND
+ * Reminder Sent === false. Idempotency is the cron's job (flips the
+ * "Reminder Sent" flag after a successful send).
+ */
+export function bookingReminderSms(args: {
+  childFirst: string;
+  sessionTitle: string;
+  sessionStart: string;
+  sessionDateShort: string; // "Sat May 23"
+  detailUrl: string;
+}): string {
+  return [
+    `${args.childFirst} is on the court tomorrow — ${args.sessionTitle}, ${args.sessionDateShort} at ${args.sessionStart}.`,
+    `Water + court shoes. Details: ${args.detailUrl}`,
+    `— Coach Sam · NGA · Reply STOP to opt out.`,
+  ].join("\n");
+}

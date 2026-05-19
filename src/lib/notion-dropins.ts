@@ -112,6 +112,9 @@ export interface DropInRegistration {
   displayConsent: boolean;
   smsConsent: boolean;
   stripeCheckoutSessionId: string;
+  reminderSent: boolean;
+  postSessionSent: boolean;
+  cancellationNotified: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,6 +156,9 @@ function pageToDropIn(page: any): DropInRegistration {
     displayConsent: props["Display Consent"]?.checkbox === true,
     smsConsent: props["SMS Consent"]?.checkbox === true,
     stripeCheckoutSessionId: readTextProp(props["Stripe Checkout Session ID"]),
+    reminderSent: props["Reminder Sent"]?.checkbox === true,
+    postSessionSent: props["Post Session Sent"]?.checkbox === true,
+    cancellationNotified: props["Cancellation Notified"]?.checkbox === true,
   };
 }
 
@@ -262,6 +268,50 @@ export async function updateDropInStatus(
   if (!res.ok) {
     console.error(
       "[notion-dropins] updateDropInStatus failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Flip a boolean idempotency flag on a drop-in row to true. Used by comms
+ * crons + cancel-confirmation to prevent re-sending the same notification.
+ *
+ * Column names match the Notion schema exactly:
+ *   "Reminder Sent"          — 24h-out reminder cron
+ *   "Post Session Sent"      — post-session re-book cron
+ *   "Cancellation Notified"  — cancel-confirmation send (any cancel path)
+ */
+export type DropInFlag =
+  | "Reminder Sent"
+  | "Post Session Sent"
+  | "Cancellation Notified";
+
+export async function markDropInFlag(
+  pageId: string,
+  flag: DropInFlag,
+): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: { [flag]: { checkbox: true } },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-dropins] markDropInFlag failed",
+      flag,
       res.status,
       await res.text().catch(() => ""),
     );
