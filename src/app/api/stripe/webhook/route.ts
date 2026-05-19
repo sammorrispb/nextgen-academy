@@ -3,19 +3,14 @@ import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
-import {
-  decrementSessionRegistered,
-  findSessionIdByDateAndTime,
-  incrementSessionRegistered,
-} from "@/lib/notion-sessions";
+import { incrementSessionRegistered } from "@/lib/notion-sessions";
 import {
   createDropInRegistration,
   findDropInByCheckoutId,
-  findDropInPageByCheckoutId,
-  updateDropInStatus,
   type DropInRow,
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
+import { cancelDropIn } from "@/lib/cancel-dropin";
 
 export const runtime = "nodejs";
 
@@ -256,33 +251,9 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     return NextResponse.json({ received: true, skipped: "no_checkout" });
   }
 
-  const dropIn = await findDropInPageByCheckoutId(checkoutSession.id);
-  if (!dropIn) {
-    return NextResponse.json({ received: true, skipped: "no_dropin" });
+  const result = await cancelDropIn(checkoutSession.id, "Refunded");
+  if (!result.ok) {
+    return NextResponse.json({ received: true, skipped: result.reason });
   }
-  if (dropIn.status === "Refunded") {
-    return NextResponse.json({ received: true, idempotent: true });
-  }
-
-  const shouldDecrement = dropIn.status === "Confirmed";
-  await updateDropInStatus(dropIn.id, "Refunded");
-
-  if (shouldDecrement) {
-    const sid = await findSessionIdByDateAndTime(
-      dropIn.sessionDate,
-      dropIn.sessionStartTime,
-    );
-    if (sid) await decrementSessionRegistered(sid, 1);
-  }
-
-  revalidatePath("/schedule");
-  if (dropIn.sessionTitle && dropIn.sessionDate) {
-    const slug = sessionToSlug({
-      title: dropIn.sessionTitle,
-      date: dropIn.sessionDate,
-    });
-    if (slug) revalidatePath(`/schedule/${slug}`);
-  }
-
-  return NextResponse.json({ received: true, refunded: true });
+  return NextResponse.json({ received: true, refunded: true, ...result });
 }
