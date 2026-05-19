@@ -16,8 +16,15 @@ export interface NgaSession {
   registeredCount: number;
   spotsLeft: number;
   status: "Open" | "Full" | "Cancelled";
-  /** Child first names of confirmed registrants, in registration order. */
+  /** Child first names of confirmed registrants who opted in to public display. */
   roster: string[];
+  /** Non-PII social-proof aggregate over all confirmed registrants. */
+  ageStats: { count: number; minAge: number; maxAge: number } | null;
+}
+
+function ageFromBirthYear(year: number, today: Date = new Date()): number | null {
+  if (!Number.isFinite(year) || year <= 0) return null;
+  return today.getFullYear() - year;
 }
 
 function rosterKey(date: string, startTime: string): string {
@@ -124,6 +131,7 @@ export async function fetchUpcomingSessions(
       spotsLeft: Math.max(0, capacity - registeredCount),
       status,
       roster: [] as string[],
+      ageStats: null as NgaSession["ageStats"],
     };
   });
 
@@ -132,17 +140,29 @@ export async function fetchUpcomingSessions(
   // leave roster empty — never block the schedule render.
   try {
     const drops = await fetchUpcomingDropIns(today, endIso, { revalidate: 300 });
-    const byKey = new Map<string, string[]>();
+    const namesByKey = new Map<string, string[]>();
+    const agesByKey = new Map<string, number[]>();
     for (const d of drops) {
-      if (!d.childFirstName) continue;
-      if (!d.displayConsent) continue;
       const k = rosterKey(d.sessionDate, d.sessionStartTime);
-      const arr = byKey.get(k) ?? [];
-      arr.push(d.childFirstName);
-      byKey.set(k, arr);
+      if (d.childFirstName && d.displayConsent) {
+        const arr = namesByKey.get(k) ?? [];
+        arr.push(d.childFirstName);
+        namesByKey.set(k, arr);
+      }
+      const age = ageFromBirthYear(d.childBirthYear, now);
+      if (age !== null) {
+        const arr = agesByKey.get(k) ?? [];
+        arr.push(age);
+        agesByKey.set(k, arr);
+      }
     }
     for (const s of sessions) {
-      s.roster = byKey.get(rosterKey(s.date, s.startTime)) ?? [];
+      const k = rosterKey(s.date, s.startTime);
+      s.roster = namesByKey.get(k) ?? [];
+      const ages = agesByKey.get(k) ?? [];
+      s.ageStats = ages.length
+        ? { count: ages.length, minAge: Math.min(...ages), maxAge: Math.max(...ages) }
+        : null;
     }
   } catch (err) {
     console.error("[notion-sessions] roster batch failed", err);
@@ -176,14 +196,29 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
   const startTime = readPlainText(props["Start time"]);
 
   let roster: string[] = [];
+  let ageStats: NgaSession["ageStats"] = null;
   if (date) {
     try {
       const drops = await fetchUpcomingDropIns(date, date, { revalidate: 300 });
-      roster = drops
+      const matching = drops.filter(
+        (d) =>
+          rosterKey(d.sessionDate, d.sessionStartTime) ===
+          rosterKey(date, startTime),
+      );
+      roster = matching
         .filter((d) => d.displayConsent)
-        .filter((d) => rosterKey(d.sessionDate, d.sessionStartTime) === rosterKey(date, startTime))
         .map((d) => d.childFirstName)
         .filter(Boolean);
+      const ages = matching
+        .map((d) => ageFromBirthYear(d.childBirthYear))
+        .filter((a): a is number => a !== null);
+      if (ages.length) {
+        ageStats = {
+          count: ages.length,
+          minAge: Math.min(...ages),
+          maxAge: Math.max(...ages),
+        };
+      }
     } catch (err) {
       console.error("[notion-sessions] single-session roster failed", err);
     }
@@ -203,6 +238,7 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
     spotsLeft: Math.max(0, capacity - registeredCount),
     status,
     roster,
+    ageStats,
   };
 }
 
