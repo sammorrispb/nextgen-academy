@@ -16,6 +16,9 @@ export interface DropInRow {
   stripeCheckoutSessionId: string;
   stripePaymentIntentId: string | null;
   displayConsent: boolean;
+  smsConsent: boolean;
+  /** Verbatim disclosure shown at opt-in. Empty if smsConsent === false. */
+  smsConsentText: string;
 }
 
 export async function createDropInRegistration(row: DropInRow): Promise<void> {
@@ -51,6 +54,12 @@ export async function createDropInRegistration(row: DropInRow): Promise<void> {
     },
     Status: { select: { name: "Confirmed" } },
     "Display Consent": { checkbox: row.displayConsent },
+    "SMS Consent": { checkbox: row.smsConsent },
+    "SMS Consent Text": {
+      rich_text: row.smsConsentText
+        ? [{ text: { content: row.smsConsentText } }]
+        : [],
+    },
   };
   if (row.sessionDate) {
     properties["Session Date"] = { date: { start: row.sessionDate } };

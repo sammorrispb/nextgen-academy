@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchSessionById } from "@/lib/notion-sessions";
 import { getStripe } from "@/lib/stripe";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
+import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import {
   validateRsvpForm,
   type RsvpFormData,
@@ -94,6 +95,10 @@ export async function POST(req: NextRequest) {
       child_first_name: data.childFirstName,
       child_birth_year: data.childBirthYear,
       display_consent: data.displayConsent ? "true" : "false",
+      sms_consent: data.smsConsent ? "true" : "false",
+      // Snapshot the exact disclosure shown at opt-in for TCPA audit trail.
+      // Only stored when the user actually opted in.
+      sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
     },
     success_url: `${origin}/schedule/success?cs={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/schedule`,
