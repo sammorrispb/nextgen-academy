@@ -79,8 +79,8 @@ export function bookingConfirmationSms(args: {
   detailUrl: string;
 }): string {
   return [
-    `NGA: ${args.childFirst} is confirmed for ${args.sessionTitle} on ${args.sessionDateShort} at ${args.sessionStart}.`,
+    `${args.childFirst} is locked in for ${args.sessionTitle}, ${args.sessionDateShort} at ${args.sessionStart}.`,
     `Details: ${args.detailUrl}`,
-    `Reply STOP to opt out.`,
+    `— Coach Sam · NGA · Reply STOP to opt out.`,
   ].join("\n");
 }

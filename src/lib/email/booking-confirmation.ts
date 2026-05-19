@@ -64,23 +64,23 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     <div style="${s.actionCallout}">
       <p style="${s.actionLabel}">Plans change?</p>
       <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
-        Drop-ins are non-refundable. ${
+        ${
           cancelUrl
-            ? `If you can&rsquo;t make it, <a href="${cancelUrl}" style="${s.link}font-weight:700;">cancel your reservation</a> so we can open the seat for another player.`
-            : `If something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a>.`
+            ? `If something comes up, <a href="${cancelUrl}" style="${s.link}font-weight:700;">cancel your reservation</a> so the next player can grab the seat. Drop-ins are non-refundable, but the swap helps the whole community.`
+            : `If something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a> so we can open the seat. Drop-ins are non-refundable, but the swap helps the whole community.`
         }
       </p>
     </div>
 
     <p style="margin:24px 0 0 0;color:${c.muted};font-size:13px;">
       Paid: $${escape(amountPaid)} &middot;
-      <a href="${detailUrl}" style="${s.link}">View session details &rarr;</a>
+      <a href="${detailUrl}" style="${s.link}">View session details</a>
     </p>
 
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
-        See you on the court,<br>
-        <strong style="color:${c.text};">Sam &middot; Next Gen Pickleball Academy</strong>
+        See you on the court &mdash; better than yesterday, together.<br>
+        <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
     </div>
   </div>

@@ -357,6 +357,81 @@ Secondary CTAs: View Schedule · See the Pathway · Meet the Coaches
 
 ---
 
+## COMMS TEMPLATES (Email + SMS)
+
+Single source of truth for every transactional message NGA sends — booking
+confirmation, 24h reminder, session-cancel broadcast, post-session "book the
+next one," cancellation confirmation. Every body string passes
+`/brand-review-nga` before merge.
+
+### Signature standard
+- Email signoff: `Coach Sam · Next Gen Pickleball Academy` (or `Coach Amine`
+  when sent from Amine). Never plain "Sam" or "Sam Morris—Head Coach."
+- One line above the signature carries the tagline or an EASE nod, e.g.
+  `See you on the court — better than yesterday, together.`
+- SMS signoff: `— Coach Sam · NGA · Reply STOP to opt out.` (TCPA STOP
+  language is non-negotiable; the human signature comes first.)
+
+### EASE laddering per template type
+Each email carries one EASE value. Pick the value that matches the moment:
+- Booking confirmation → **Excellence** (preparedness — .ics, what to bring)
+- 24h reminder → **Attitude** (showing up ready, growth mindset)
+- Session-cancel broadcast → **Ethics** (fair play, integrity in the swap)
+- Post-session re-book → **Skills** (purposeful progress, what they worked on)
+- Cancellation confirmation → **Community** ("seat is open for another player")
+
+### Voice rules
+- Lead with the helpful action. Hide the no-refund / restriction clause
+  behind it ("If something comes up, cancel your reservation so the next
+  player can grab the seat. Drop-ins are non-refundable, but the swap helps
+  the whole community.").
+- Parent-facing register: reassuring, transparent, progress-oriented.
+- SMS opens with the kid's name, not "NGA:" or any system prefix.
+
+### CTA hierarchy
+- One primary CTA per email. Maps gets the arrow `→`. Everything else
+  (cancel link, "View session details," support tel:) is utility — no arrow,
+  no chip styling.
+- Self-serve cancel is utility, not a CTA. Phrase as inline action
+  ("cancel your reservation"), not a button.
+
+### Plain-text fallback parity
+Every HTML email ships with a plain-text body. The fallback MUST include:
+- Maps URL (mirror the HTML's directions link)
+- Cancel URL if `cancelUrl` is set
+- The same Coach Sam signoff + tagline line
+- A scannable "What to bring" list, not a comma-joined sentence
+
+### Delivery / headers
+- `from`: `Next Gen PB Academy <noreply@nextgenpbacademy.com>`
+- `replyTo`: `nextgenacademypb@gmail.com`
+- Parent-facing transactional sends: **BCC** `nextgenacademypb@gmail.com`
+  (privacy — never CC, never expose other parents' emails).
+- Lead-form auto-replies follow LD-style CC rules — that's a different rule
+  set; see `/api/lead`.
+
+### SMS — when and what
+- SMS only fires when `smsConsent === true` on the row. `sendSms()` refuses
+  to send without consent (TCPA).
+- Three approved transactional SMS types: booking confirmation, 24h
+  reminder, session-cancellation broadcast. The post-session re-book email
+  has **no** SMS counterpart — that would be promotional and requires a
+  separate marketing opt-in.
+- Body budget: 1 segment when possible (≤ 160 GSM-7 chars). The Coach Sam
+  signoff line is part of the budget, not optional.
+
+### Idempotency on Notion drop-in rows
+Crons write a boolean to the drop-in row after a successful send:
+- `Reminder Sent` — 24h reminder cron
+- `Post Session Sent` — post-session re-book cron
+- `Cancellation Notified` — cancellation-confirmation send
+
+Crons skip rows where the corresponding flag is already true. Add new
+columns via `mcp__claude_ai_Notion__update-data-source` BEFORE the code that
+writes to them lands.
+
+---
+
 *Single source of truth. All Tailwind configs, component libraries, Claude Code
 prompts, and Canva templates reference this file first.*
 *Update trigger: logo source HEX confirmed, or palette change approved by Sam & Amine.*
