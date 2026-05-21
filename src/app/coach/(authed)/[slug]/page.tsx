@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 import { findSessionBySlug, sessionToSlug } from "@/lib/session-slug";
+import { encodeParentKey } from "@/lib/player-profiles";
 import CancelButton from "./CancelButton";
 import CancelSessionButton from "./CancelSessionButton";
 import AttendanceToggle from "./AttendanceToggle";
@@ -151,9 +152,18 @@ export default async function CoachSessionPage({ params }: PageProps) {
               {roster.map((r) => (
                 <tr key={r.id} className="hover:bg-ngpa-deep/30">
                   <td className="px-4 sm:px-5 py-4 align-top">
-                    <p className="font-bold text-ngpa-white">
-                      {r.childFirstName || "—"}
-                    </p>
+                    {encodeParentKey(r.parentEmail, r.parentPhone) ? (
+                      <Link
+                        href={`/coach/players/${encodeParentKey(r.parentEmail, r.parentPhone)}`}
+                        className="font-bold text-ngpa-white hover:text-ngpa-teal transition-colors"
+                      >
+                        {r.childFirstName || "—"}
+                      </Link>
+                    ) : (
+                      <p className="font-bold text-ngpa-white">
+                        {r.childFirstName || "—"}
+                      </p>
+                    )}
                     {r.childBirthYear > 0 && (
                       <p className="text-xs text-ngpa-white/55 mt-0.5">
                         age {ageFromBirthYear(r.childBirthYear)}

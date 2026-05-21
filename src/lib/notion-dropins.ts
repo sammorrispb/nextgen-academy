@@ -217,6 +217,97 @@ export async function fetchUpcomingDropIns(
   return data.results.map(pageToDropIn);
 }
 
+/**
+ * Every drop-in row for one family, keyed on parent email and/or phone, across
+ * all dates and all statuses. Powers the player/family profile. Sorted newest
+ * session first.
+ */
+export async function fetchDropInsByParent(
+  parentEmail: string,
+  parentPhone: string,
+): Promise<DropInRegistration[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_DROPINS_DB_ID;
+  if (!notionKey || !dbId) return [];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const or: any[] = [];
+  if (parentEmail) or.push({ property: "Parent Email", email: { equals: parentEmail } });
+  if (parentPhone) or.push({ property: "Parent Phone", phone_number: { equals: parentPhone } });
+  if (or.length === 0) return [];
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: or.length === 1 ? or[0] : { or },
+      sorts: [{ property: "Session Date", direction: "descending" }],
+      page_size: 100,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-dropins] fetchDropInsByParent failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  return data.results.map(pageToDropIn);
+}
+
+/**
+ * All drop-in rows in a date window regardless of status. Powers the family
+ * directory index (which needs Cancelled/Refunded rows too, unlike the
+ * roster-facing fetchUpcomingDropIns).
+ */
+export async function fetchAllDropInsInRange(
+  fromIso: string,
+  toIso: string,
+): Promise<DropInRegistration[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_DROPINS_DB_ID;
+  if (!notionKey || !dbId) return [];
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: {
+        and: [
+          { property: "Session Date", date: { on_or_after: fromIso } },
+          { property: "Session Date", date: { on_or_before: toIso } },
+        ],
+      },
+      sorts: [{ property: "Session Date", direction: "descending" }],
+      page_size: 100,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-dropins] fetchAllDropInsInRange failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  return data.results.map(pageToDropIn);
+}
+
 export async function findDropInByCheckoutId(
   checkoutSessionId: string,
 ): Promise<boolean> {
