@@ -20,6 +20,8 @@ export interface NgaSession {
   roster: string[];
   /** Non-PII social-proof aggregate over all confirmed registrants. */
   ageStats: { count: number; minAge: number; maxAge: number } | null;
+  /** True once the coach 24h pre-event briefing email has fired (cron dedup). */
+  coachReminderSent: boolean;
 }
 
 function ageFromBirthYear(year: number, today: Date = new Date()): number | null {
@@ -132,6 +134,7 @@ export async function fetchUpcomingSessions(
       status,
       roster: [] as string[],
       ageStats: null as NgaSession["ageStats"],
+      coachReminderSent: props["Coach Reminder Sent"]?.checkbox === true,
     };
   });
 
@@ -271,6 +274,7 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
     status,
     roster,
     ageStats,
+    coachReminderSent: props["Coach Reminder Sent"]?.checkbox === true,
   };
 }
 
@@ -302,6 +306,33 @@ export async function setSessionStatus(
   if (!res.ok) {
     console.error(
       "[notion-sessions] setSessionStatus failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
+}
+
+/** Flip the session row's "Coach Reminder Sent" checkbox (pre-event cron dedup). */
+export async function markSessionCoachReminderSent(id: string): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: { "Coach Reminder Sent": { checkbox: true } },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] markSessionCoachReminderSent failed",
       res.status,
       await res.text().catch(() => ""),
     );

@@ -6,6 +6,16 @@
  * registrant's parent name, email, phone, and child info.
  */
 
+/** All allow-listed coach emails — recipients for coach-facing notifications. */
+export function getCoachEmails(): string[] {
+  const raw = process.env.COACH_ALLOWED_EMAILS;
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+}
+
 export function isAllowedCoachEmail(email: string): boolean {
   const raw = process.env.COACH_ALLOWED_EMAILS;
   if (!raw) return false;

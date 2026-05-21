@@ -2,10 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  cancelSessionAction,
-  type SessionCancelActionResult,
-} from "./actions";
+import { cancelSessionAction } from "./actions";
+import type { SessionCancelResult } from "@/lib/session-cancel";
 
 type CancelReason = "weather" | "venue" | "low-enrollment" | "other";
 
@@ -30,7 +28,7 @@ export default function CancelSessionButton(props: Props) {
   const [reason, setReason] = useState<CancelReason>("weather");
   const [note, setNote] = useState("");
   const [pending, startTransition] = useTransition();
-  const [result, setResult] = useState<SessionCancelActionResult | null>(null);
+  const [result, setResult] = useState<SessionCancelResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function submit() {
