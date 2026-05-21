@@ -12,7 +12,8 @@ export const seasons: Season[] = [
 /**
  * NGA group pricing is uniform $40 per 1-hour slot, drop-in only, across
  * Green / Yellow Ball group sessions. Sessions split into Early and Late
- * slots — pick one or both ($80 for both). No subscription, no refunds.
+ * slots — pick one or both ($80 for both). No subscription; non-refundable
+ * unless NGA cancels the session (weather/venue/low-enrollment → auto refund).
  * Each pickleball court is capped at 4 players. Red Ball and Orange Ball =
  * private lessons (no published rate, quoted post-evaluation).
  */

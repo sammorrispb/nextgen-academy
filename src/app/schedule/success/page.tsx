@@ -91,7 +91,8 @@ export default async function ScheduleSuccessPage({ searchParams }: PageProps) {
 
         <div className="mt-6 text-sm text-ngpa-muted leading-relaxed max-w-md mx-auto">
           <p>
-            A confirmation email is on its way. Drop-in payments are
+            A confirmation email is on its way. If we cancel for weather, you
+            get an automatic full refund; otherwise drop-in payments are
             non-refundable. Bring water, court shoes, and a paddle if you
             have one — we have loaners if you don&rsquo;t.
           </p>

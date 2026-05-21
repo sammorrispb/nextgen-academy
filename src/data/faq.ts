@@ -43,12 +43,12 @@ export const faq: FaqItem[] = [
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
     answer:
-      "Group classes are $40 per 1-hour slot ($80 for both slots in a session), drop-in. Sessions split into Early and Late slots — pick one or both. No subscription and no commitment — you pay for each slot you attend. Each pickleball court is capped at 4 players so quality stays high. Payments are non-refundable. The 30-minute evaluation is always free. Private lesson rates are quoted after the evaluation based on what your child needs.",
+      "Group classes are $40 per 1-hour slot ($80 for both slots in a session), drop-in. Sessions split into Early and Late slots — pick one or both. No subscription and no commitment — you pay for each slot you attend. Each pickleball court is capped at 4 players so quality stays high. Registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund. The 30-minute evaluation is always free. Private lesson rates are quoted after the evaluation based on what your child needs.",
   },
   {
     question: "What’s your refund policy?",
     answer:
-      "All session registrations are non-refundable. There is no 7-day refund window. Please register only when you’re confident your child can attend — we can’t offer credits or transfers for missed sessions. The free 30-minute evaluation is always free and never charged.",
+      "If we cancel a session — for weather, a venue issue, or low enrollment — you get an automatic full refund to your original payment method, no action needed. Our sessions are outdoors, so we watch the forecast for every date and call off any session that isn’t safe to play. Outside of an NGA cancellation, registrations are non-refundable: please register only when you’re confident your child can attend, since we can’t offer credits or transfers for missed sessions. The free 30-minute evaluation is always free and never charged.",
   },
   {
     question: "Is pickleball safe for kids?",

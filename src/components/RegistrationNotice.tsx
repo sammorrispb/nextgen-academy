@@ -12,7 +12,8 @@ export default function RegistrationNotice() {
         </strong>{" "}
         Drop-in only — no subscription, no commitment. Sessions split into
         Early and Late slots — pick one or both below. Spots are capped at 4
-        players per pickleball court, so reserve early. Payments are
+        players per pickleball court, so reserve early. If we cancel a session
+        for weather, you get an automatic full refund — otherwise payments are
         non-refundable. Questions? Email{" "}
         <a
           href={`mailto:${site.email}`}

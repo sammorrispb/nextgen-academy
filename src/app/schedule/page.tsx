@@ -8,6 +8,8 @@ import RegistrationNotice from "@/components/RegistrationNotice";
 import SessionCard from "@/components/SessionCard";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
+import WeatherBar from "@/components/WeatherBar";
+import { fetchWeatherByDate } from "@/lib/weather";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
@@ -44,6 +46,8 @@ function formatDayHeading(date: string): string {
 export default async function SchedulePage() {
   const sessions = await fetchUpcomingSessions();
   const grouped = groupByDate(sessions);
+  const sessionDates = Array.from(grouped.keys());
+  const weather = await fetchWeatherByDate(sessionDates);
 
   return (
     <>
@@ -77,8 +81,9 @@ export default async function SchedulePage() {
             at 4 players.
           </p>
           <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
-            All sessions are non-refundable. No 7-day window &mdash; please
-            register only when you&rsquo;re confident you can attend.
+            Sessions are outdoors &mdash; if we cancel for weather, you get an
+            automatic full refund. Otherwise registrations are non-refundable,
+            so please register only when you&rsquo;re confident you can attend.
           </p>
 
           <div className="mt-7 inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-teal/30">
@@ -106,6 +111,10 @@ export default async function SchedulePage() {
           {sessions.length === 0 ? (
             <EmptyStateWaitlist source="schedule_empty" />
           ) : (
+            <WeatherBar dates={sessionDates} weather={weather} />
+          )}
+
+          {sessions.length > 0 && (
             <div className="space-y-7">
               {Array.from(grouped.entries()).map(([date, daySessions]) => (
                 <div key={date}>

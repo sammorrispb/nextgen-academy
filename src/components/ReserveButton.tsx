@@ -236,7 +236,8 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                 <div className="px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel sm:rounded-b-2xl space-y-3">
                   <p className="text-xs text-ngpa-white/60 leading-relaxed">
                     You&rsquo;ll be redirected to Stripe to pay $40 for this
-                    1-hour slot. Drop-in payments are non-refundable.
+                    1-hour slot. Non-refundable unless we cancel — if we call
+                    off a session for weather, you get an automatic full refund.
                   </p>
                   <button
                     type="submit"
