@@ -63,6 +63,7 @@ function formatShortDate(isoDate: string): string {
 async function sendCancelConfirmation(
   dropIn: DropInRegistration,
   newStatus: CancelStatus,
+  refundedAmountUsd?: number,
 ): Promise<void> {
   if (dropIn.cancellationNotified) return;
 
@@ -72,7 +73,9 @@ async function sendCancelConfirmation(
   const scheduleUrl = `${SITE_ORIGIN}/schedule`;
   const sessionDateLong = formatLongDate(dropIn.sessionDate);
   const sessionDateShort = formatShortDate(dropIn.sessionDate);
-  const amountUsd = dropIn.amountPaidUsd.toFixed(2);
+  // For a partial refund the coach passes the actual amount returned; default
+  // to the full amount paid (full refund / webhook path).
+  const amountUsd = (refundedAmountUsd ?? dropIn.amountPaidUsd).toFixed(2);
 
   let emailSent = false;
 
@@ -164,6 +167,7 @@ async function sendCancelConfirmation(
 export async function cancelDropIn(
   checkoutSessionId: string,
   newStatus: CancelStatus,
+  refundedAmountUsd?: number,
 ): Promise<CancelResult> {
   const dropIn = await findDropInPageByCheckoutId(checkoutSessionId);
   if (!dropIn) return { ok: false, reason: "not_found" };
@@ -187,7 +191,7 @@ export async function cancelDropIn(
 
   // Comms — send Coach-voice confirmation if we haven't already. Wrapped
   // so a comms failure doesn't roll back the cancel.
-  await sendCancelConfirmation(dropIn, newStatus);
+  await sendCancelConfirmation(dropIn, newStatus, refundedAmountUsd);
 
   revalidatePath("/schedule");
   if (dropIn.sessionTitle && dropIn.sessionDate) {

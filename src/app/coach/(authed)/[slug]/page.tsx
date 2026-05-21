@@ -5,6 +5,7 @@ import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 import { findSessionBySlug, sessionToSlug } from "@/lib/session-slug";
 import CancelButton from "./CancelButton";
 import CancelSessionButton from "./CancelSessionButton";
+import AttendanceToggle from "./AttendanceToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +73,9 @@ export default async function CoachSessionPage({ params }: PageProps) {
 
   const publicShareUrl = `${SITE_ORIGIN}/schedule/${sessionToSlug(session)}`;
 
+  const presentCount = roster.filter((r) => r.attendance === "Present").length;
+  const recordedCount = roster.filter((r) => r.attendance !== "").length;
+
   return (
     <>
       <Link
@@ -96,6 +100,13 @@ export default async function CoachSessionPage({ params }: PageProps) {
           <span className="text-ngpa-white/60"> / {session.capacity}</span>{" "}
           reserved
         </span>
+        {recordedCount > 0 && (
+          <span className="px-4 py-2 rounded-full bg-ngpa-panel border border-ngpa-slate/60 text-sm font-bold">
+            <span className="text-emerald-300">{presentCount}</span>
+            <span className="text-ngpa-white/60"> / {roster.length}</span>{" "}
+            checked in
+          </span>
+        )}
         {groupMailto && (
           <a
             href={groupMailto}
@@ -152,6 +163,12 @@ export default async function CoachSessionPage({ params }: PageProps) {
                       <ConsentBadge label="SMS" on={r.smsConsent} />
                       <ConsentBadge label="Show" on={r.displayConsent} />
                     </div>
+                    <div className="mt-2">
+                      <AttendanceToggle
+                        checkoutSessionId={r.stripeCheckoutSessionId}
+                        attendance={r.attendance}
+                      />
+                    </div>
                   </td>
                   <td className="px-4 sm:px-5 py-4 align-top text-xs">
                     <p className="text-ngpa-white/85 font-bold text-sm">
@@ -191,6 +208,7 @@ export default async function CoachSessionPage({ params }: PageProps) {
                       <CancelButton
                         checkoutSessionId={r.stripeCheckoutSessionId}
                         childFirstName={r.childFirstName}
+                        amountPaidUsd={r.amountPaidUsd}
                       />
                     </div>
                   </td>

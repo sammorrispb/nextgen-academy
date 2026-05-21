@@ -116,7 +116,11 @@ export interface DropInRegistration {
   reminderSent: boolean;
   postSessionSent: boolean;
   cancellationNotified: boolean;
+  /** "Present" | "No-show" | "" (not yet recorded). */
+  attendance: AttendanceValue | "";
 }
+
+export type AttendanceValue = "Present" | "No-show";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function readTextProp(prop: any): string {
@@ -161,6 +165,7 @@ function pageToDropIn(page: any): DropInRegistration {
     reminderSent: props["Reminder Sent"]?.checkbox === true,
     postSessionSent: props["Post Session Sent"]?.checkbox === true,
     cancellationNotified: props["Cancellation Notified"]?.checkbox === true,
+    attendance: (readSelectProp(props["Attendance"]) as AttendanceValue | "") || "",
   };
 }
 
@@ -314,6 +319,40 @@ export async function markDropInFlag(
     console.error(
       "[notion-dropins] markDropInFlag failed",
       flag,
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Record day-of attendance on a drop-in row. Passing null clears it back to
+ * "not yet recorded" (lets a coach undo a mis-tap). The select option names
+ * must match the Notion schema exactly ("Present" / "No-show").
+ */
+export async function setDropInAttendance(
+  pageId: string,
+  value: AttendanceValue | null,
+): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: { Attendance: { select: value ? { name: value } : null } },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-dropins] setDropInAttendance failed",
       res.status,
       await res.text().catch(() => ""),
     );
