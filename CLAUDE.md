@@ -66,6 +66,19 @@ A single lead submission fans out to multiple destinations. Order in `src/app/ap
 
 If any optional integration's env var is missing, that step logs a warning and is skipped — the response still succeeds as long as Resend works.
 
+### Newsletter signup (`/newsletter` + `/api/newsletter`)
+Free, top-of-funnel offer: a cold parent says yes to the free thing first; price and referral come later (in the welcome email). Surfaces: a dedicated `/newsletter` landing page (`src/app/newsletter/page.tsx`) and an embedded `#newsletter` section on the home page (between `#contact-form` and `#faq`). Both render `src/components/NewsletterForm.tsx` (parent name + email + child age; validated by `src/lib/validate-newsletter.ts`). "Newsletter" links live in the navbar (`links` array) and the footer "Explore" list.
+
+`POST /api/newsletter` (`src/app/api/newsletter/route.ts`) mirrors `/api/waitlist`:
+1. Validate (parentName/email/childAge) → 400 `{ error, errors }`.
+2. Rate-limit by IP (5/hr, in-memory) → 429.
+3. Guard `RESEND_API_KEY` (500 if missing — the welcome email is the core value).
+4. **Notion dedup-and-create** into the NGA Newsletter Subscribers DB (`NOTION_NEWSLETTER_DB_ID`): query by Email; if found, skip create; else create with Parent Name (title), Email, Child Age (number), Status=Active, Marketing Opt-In=true, Welcome Sent=false. Skipped gracefully if env vars missing.
+5. **Resend**: welcome email to the subscriber (template `src/lib/email/newsletter-welcome.ts`, bcc admin, replyTo `nextgenacademypb@gmail.com`) + a short admin notification. Flips `Welcome Sent`=true after a successful send; suppresses the welcome only if dedup found an already-welcomed row.
+6. **Open Brain** ingest (`source: "nga_newsletter_signup"`), awaited.
+
+**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/$40/monthly). The only live price is the single $40 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references "crew pricing and bring-a-friend perks" qualitatively + a CTA to `/schedule`, so a parent never reads a number that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
+
 ### Drop-in registration flow (`/schedule` + Stripe)
 Pricing is **$40 per 1-hour slot, drop-in only — no subscription, no refunds** ($80 for both slots in a session). Sessions split into Early and Late slots. Each session opens for registration **30 days ahead** and caps at 4 players per pickleball court.
 
