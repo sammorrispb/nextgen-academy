@@ -42,6 +42,14 @@ export type AnalyticsEventMap = {
     marketingOptIn: boolean;
     source: string;
   };
+  newsletter_signup_started: {
+    interest?: string;
+    page?: string;
+  };
+  newsletter_signup_submitted: {
+    interest?: string;
+    page?: string;
+  };
   external_link: {
     label: string;
     url: string;

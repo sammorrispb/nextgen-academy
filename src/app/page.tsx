@@ -14,6 +14,7 @@ import FAQSection from "@/components/FAQSection";
 import SectionHeading from "@/components/SectionHeading";
 import CoachCard from "@/components/CoachCard";
 import JsonLd from "@/components/JsonLd";
+import NewsletterForm from "@/components/NewsletterForm";
 import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
 import { faq } from "@/data/faq";
@@ -290,6 +291,26 @@ export default async function Home() {
             centered
           />
           <ContactForm />
+        </div>
+      </section>
+
+      {/* ─── Newsletter ──────────────────────────── */}
+      <section
+        id="newsletter"
+        className="relative bg-ngpa-deep py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[36rem] h-[36rem] rounded-full bg-ngpa-teal/10 blur-3xl"
+        />
+        <div className="relative max-w-xl mx-auto">
+          <SectionHeading
+            eyebrow="Free Newsletter"
+            title="Get your kid in the crew."
+            subtitle="One free email: where to play this week, when monthly training spots open, and how your kid gets better. No spam, unsubscribe anytime."
+            centered
+          />
+          <NewsletterForm />
         </div>
       </section>
 

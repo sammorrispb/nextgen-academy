@@ -9,6 +9,7 @@ import { trackEvent } from "@/lib/funnelClient";
 const links = [
   { href: "#levels", label: "Programs" },
   { href: "/schedule", label: "Schedule" },
+  { href: "/newsletter", label: "Newsletter" },
   { href: "#about", label: "About" },
   { href: "#faq", label: "FAQ" },
 ];
