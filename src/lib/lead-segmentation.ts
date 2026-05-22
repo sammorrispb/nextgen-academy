@@ -53,6 +53,21 @@ export function isMailable(email: string): boolean {
   return EMAIL_RE.test((email ?? "").trim());
 }
 
+// Internal / fake / Sam's-own addresses that must never receive outreach,
+// plus obvious QA rows. Filtered before DD classification.
+const INTERNAL_EMAILS = new Set(["nextgenacademypb@gmail.com"]);
+
+export function isTestOrInternal(name: string, email: string): boolean {
+  const n = (name ?? "").toLowerCase();
+  const e = (email ?? "").trim().toLowerCase();
+  if (/\b(test|smoke)\b/.test(n)) return true;
+  if (INTERNAL_EMAILS.has(e)) return true;
+  if (e.startsWith("sam.morris2131")) return true; // Sam's own + plus-aliases
+  if (e.endsWith("@example.com")) return true;
+  if (/(\+[^@]*(test|smoke|nga-test)|\btest\.)/.test(e)) return true;
+  return false;
+}
+
 export function classifyLead(row: LeadRow): LeadClassification {
   // DD-derived — off-limits for any outreach.
   if (DD_SOURCES.has(row.source)) {
