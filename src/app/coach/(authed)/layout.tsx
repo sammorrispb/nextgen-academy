@@ -7,6 +7,7 @@ import {
   verifySessionCookieValue,
 } from "@/lib/coach-auth";
 import { isAllowedCoachEmail } from "@/lib/coach-allowlist";
+import PageSwitcher from "./PageSwitcher";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -40,6 +41,7 @@ export default async function CoachAuthedLayout({
             NGA Coach
           </Link>
           <div className="flex items-center gap-3 text-xs text-ngpa-white/65">
+            <PageSwitcher />
             <span className="hidden sm:inline truncate max-w-[16rem]">
               {email}
             </span>
