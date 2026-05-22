@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { classifyLead, isMailable, type LeadRow } from "../src/lib/lead-segmentation";
+import {
+  classifyLead,
+  isMailable,
+  isTestOrInternal,
+  type LeadRow,
+} from "../src/lib/lead-segmentation";
 
 const clean: LeadRow = {
   parentEmail: "parent@example.com",
@@ -49,6 +54,20 @@ test.describe("classifyLead — DD provenance", () => {
     expect(
       classifyLead({ ...clean, source: "Website", crEventsAttended: 2 }).bucket,
     ).toBe("off_limits");
+  });
+});
+
+test.describe("isTestOrInternal", () => {
+  test("excludes QA / internal / Sam's-own rows", () => {
+    expect(isTestOrInternal("Test Tester", "sam.mo88@yahoo.com")).toBe(true);
+    expect(isTestOrInternal("Test Lead Wiring", "sam.morris2131+nga-test-2026-04-16@gmail.com")).toBe(true);
+    expect(isTestOrInternal("Test OB NGA Parent", "test.ob.nga@example.com")).toBe(true);
+    expect(isTestOrInternal("Test Parent", "nextgenacademypb@gmail.com")).toBe(true);
+    expect(isTestOrInternal("Sam Morris", "sam.morris2131@gmail.com")).toBe(true);
+  });
+  test("passes real parents through", () => {
+    expect(isTestOrInternal("Jen Holmes", "jenholmes80@yahoo.com")).toBe(false);
+    expect(isTestOrInternal("Vivian Lee", "viviankimlee@yahoo.com")).toBe(false);
   });
 });
 

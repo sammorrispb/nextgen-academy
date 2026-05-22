@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { classifyLead, isMailable, type LeadRow } from "@/lib/lead-segmentation";
+import {
+  classifyLead,
+  isMailable,
+  isTestOrInternal,
+  type LeadRow,
+} from "@/lib/lead-segmentation";
 import {
   evalReengagementHtml,
   evalReengagementText,
@@ -47,6 +52,7 @@ async function fetchEligibleRecipients(): Promise<{
   eligible: number;
   offLimits: number;
   ambiguous: number;
+  test: number;
 }> {
   const notionKey = process.env.NOTION_API_KEY;
   const db = LEAD_DB_ID;
@@ -59,6 +65,7 @@ async function fetchEligibleRecipients(): Promise<{
   let eligible = 0;
   let offLimits = 0;
   let ambiguous = 0;
+  let test = 0;
   let cursor: string | undefined;
 
   do {
@@ -80,6 +87,15 @@ async function fetchEligibleRecipients(): Promise<{
       scanned++;
       const p = page.properties ?? {};
       const email = (p["Parent Email"]?.email ?? "").trim();
+      const name = readText(p["Parent Name"]);
+      if (!isMailable(email)) continue;
+
+      // Strip QA / internal / Sam's-own rows before anything else.
+      if (isTestOrInternal(name, email)) {
+        test++;
+        continue;
+      }
+
       const row: LeadRow = {
         parentEmail: email,
         source: readSelect(p["Source"]),
@@ -89,7 +105,6 @@ async function fetchEligibleRecipients(): Promise<{
         season: readSelect(p["Season"]),
         notes: readText(p["Notes"]),
       };
-      if (!isMailable(email)) continue;
 
       const { bucket } = classifyLead(row);
       if (bucket === "off_limits") offLimits++;
@@ -98,7 +113,6 @@ async function fetchEligibleRecipients(): Promise<{
         eligible++;
         const key = email.toLowerCase();
         if (!byEmail.has(key)) {
-          const name = readText(p["Parent Name"]);
           byEmail.set(key, {
             email,
             name,
@@ -116,6 +130,7 @@ async function fetchEligibleRecipients(): Promise<{
     eligible,
     offLimits,
     ambiguous,
+    test,
   };
 }
 
@@ -155,6 +170,7 @@ export async function POST(req: NextRequest) {
       eligible_rows: seg.eligible,
       off_limits: seg.offLimits,
       ambiguous: seg.ambiguous,
+      test_excluded: seg.test,
       subject,
       recipients: seg.recipients.map((r) => ({ name: r.name, email: r.email })),
     });
