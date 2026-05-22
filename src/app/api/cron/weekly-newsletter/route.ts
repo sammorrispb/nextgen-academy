@@ -148,7 +148,10 @@ export async function GET(req: NextRequest) {
 
   let sent = 0;
   let failed = 0;
-  for (const sub of subscribers) {
+  // Throttle to stay under Resend's 5 req/sec limit (~3.3/sec).
+  for (let i = 0; i < subscribers.length; i++) {
+    const sub = subscribers[i];
+    if (i > 0) await new Promise((res) => setTimeout(res, 300));
     const parentFirst = (sub.parentName || "").split(/\s+/)[0] || "there";
     const token = signUnsubscribeToken(sub.email);
     const unsubscribeUrl = token
