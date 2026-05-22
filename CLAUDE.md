@@ -79,6 +79,9 @@ Free, top-of-funnel offer: a cold parent says yes to the free thing first; price
 
 **Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/$40/monthly). The only live price is the single $40 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references "crew pricing and bring-a-friend perks" qualitatively + a CTA to `/schedule`, so a parent never reads a number that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
 
+### Eval-lead re-engagement (`POST /api/eval-reengagement`)
+One-time (re-runnable) outreach inviting existing eval leads to opt into the newsletter. `?secret=$NGA_ADMIN_SECRET`-gated. Queries the lead CRM (`NOTION_DB_ID`), classifies every row with `src/lib/lead-segmentation.ts` (`classifyLead`), and sends the brand-reviewed `eval-reengagement` template (`src/lib/email/*`) only to the **ELIGIBLE** bucket — deduped by email, per-recipient via Resend (BCC admin). **The DD-derived rule lives in code here:** OFF-LIMITS = Source CourtReserve/Google Sheet, any CR-event history, DD-era season (Fall 2025 / Winter 2026), or DD/CR in notes; ELIGIBLE = clean own-marketing sources (Website / Lead Form / Facebook Ad / etc.); everything else (empty/Evaluation/Referral source) is AMBIGUOUS and **never mailed**. Always `{"dryRun": true}` first to verify the eligible count + recipient list before a live send. Pricing teased, not quoted; the email is an opt-in invite (no unsubscribe token — recipients join via `/newsletter`).
+
 ### Drop-in registration flow (`/schedule` + Stripe)
 Pricing is **$40 per 1-hour slot, drop-in only — no subscription, no refunds** ($80 for both slots in a session). Sessions split into Early and Late slots. Each session opens for registration **30 days ahead** and caps at 4 players per pickleball court.
 
