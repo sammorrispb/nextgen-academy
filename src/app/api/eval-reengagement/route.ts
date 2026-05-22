@@ -13,6 +13,11 @@ export const dynamic = "force-dynamic";
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
+// Lead CRM database id — a non-secret constant, mirroring /api/lead (which
+// hardcodes the same id rather than reading an env var). Env override allowed.
+const LEAD_DB_ID =
+  process.env.NOTION_DB_ID || "1e5e34c258384c6cb5f3e846543ecfc7";
+
 const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
@@ -44,9 +49,9 @@ async function fetchEligibleRecipients(): Promise<{
   ambiguous: number;
 }> {
   const notionKey = process.env.NOTION_API_KEY;
-  const db = process.env.NOTION_DB_ID;
-  if (!notionKey || !db) {
-    throw new Error("NOTION_API_KEY or NOTION_DB_ID not configured");
+  const db = LEAD_DB_ID;
+  if (!notionKey) {
+    throw new Error("NOTION_API_KEY not configured");
   }
 
   const byEmail = new Map<string, Recipient>();
