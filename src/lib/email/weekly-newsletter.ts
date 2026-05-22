@@ -1,11 +1,20 @@
 import { c, s } from "./brand";
 import type { CoachTip } from "@/lib/newsletter-tips";
 
-/** A date+location group with one or more time slots open that week. */
+/** One open time slot within a date+location group. */
+export interface NewsletterSessionSlot {
+  label: string; // "4:30–5:30 PM"
+  spotsLeft: number;
+  capacity: number;
+}
+
+/** A date+location group with one or more open slots that week. */
 export interface NewsletterSessionGroup {
   dateLong: string; // "Saturday, May 23"
   location: string; // "Walter Johnson HS, Bethesda"
-  times: string[]; // ["4:30–5:30 PM", "5:30–6:30 PM"]
+  slots: NewsletterSessionSlot[];
+  /** Short, pre-rendered weather note for the date (county-level). Empty if unavailable. */
+  weatherNote?: string;
 }
 
 export interface WeeklyNewsletterInput {
@@ -14,6 +23,13 @@ export interface WeeklyNewsletterInput {
   tip: CoachTip;
   scheduleUrl: string;
   unsubscribeUrl: string;
+}
+
+/** Honest, scannable spots phrasing. Low counts get urgency; never faked. */
+export function spotsLabel(spotsLeft: number, capacity: number): string {
+  if (spotsLeft <= 0) return "Full";
+  if (spotsLeft <= 3) return `only ${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left`;
+  return `${spotsLeft} of ${capacity} spots left`;
 }
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
@@ -28,8 +44,14 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       .map(
         (g) => `<div style="${s.card}">
       <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(g.dateLong)}</p>
-      <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;">${escape(g.location)}</p>
-      <p style="margin:0;color:${c.text};font-size:14px;">${g.times.map(escape).join(" &nbsp;·&nbsp; ")}</p>
+      <p style="margin:0 0 ${g.weatherNote ? "2px" : "8px"} 0;color:${c.muted};font-size:13px;">${escape(g.location)}</p>
+      ${g.weatherNote ? `<p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;">Forecast: ${escape(g.weatherNote)}</p>` : ""}
+      ${g.slots
+        .map(
+          (slot) =>
+            `<p style="margin:0 0 2px 0;color:${c.text};font-size:14px;">${escape(slot.label)} &mdash; <span style="color:${c.accentLime};font-weight:700;">${escape(spotsLabel(slot.spotsLeft, slot.capacity))}</span></p>`,
+        )
+        .join("")}
     </div>`,
       )
       .join("")}
@@ -67,6 +89,10 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">Monthly training spots open up soon, and the crew gets first dibs. Keep an eye on this inbox.</p>
     </div>
 
+    <div style="${s.cardAccent}">
+      <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">Know a kid who'd love this? Forward this email — bring a friend and you both play for crew price.</p>
+    </div>
+
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         See you on the court — better than yesterday, together.<br>
@@ -98,7 +124,12 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
       "",
     );
     for (const g of sessions) {
-      lines.push(`${g.dateLong} — ${g.location}`, `  ${g.times.join("  ·  ")}`, "");
+      lines.push(`${g.dateLong} — ${g.location}`);
+      if (g.weatherNote) lines.push(`  Forecast: ${g.weatherNote}`);
+      for (const slot of g.slots) {
+        lines.push(`  ${slot.label} — ${spotsLabel(slot.spotsLeft, slot.capacity)}`);
+      }
+      lines.push("");
     }
     lines.push(`Book a spot: ${scheduleUrl}`, "");
   } else {
@@ -114,6 +145,8 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     tip.body,
     "",
     `Monthly training spots open up soon, and the crew gets first dibs. Keep an eye on this inbox.`,
+    "",
+    `Know a kid who'd love this? Forward this email — bring a friend and you both play for crew price.`,
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,

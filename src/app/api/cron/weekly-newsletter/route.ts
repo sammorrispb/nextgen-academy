@@ -4,6 +4,7 @@ import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { fetchActiveSubscribers } from "@/lib/notion-newsletter";
 import { pickWeeklyTip } from "@/lib/newsletter-tips";
 import { signUnsubscribeToken } from "@/lib/newsletter-token";
+import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -47,8 +48,11 @@ function formatLongDate(isoDate: string): string {
   });
 }
 
+/** A session group plus the raw ISO date, used to join the weather forecast. */
+type DatedGroup = NewsletterSessionGroup & { date: string };
+
 /** Group Open sessions in the window by date+location, joining time slots. */
-function groupSessions(sessions: NgaSession[]): NewsletterSessionGroup[] {
+function groupSessions(sessions: NgaSession[]): DatedGroup[] {
   const todayIso = isoEtPlusDays(0);
   const endIso = isoEtPlusDays(WINDOW_DAYS);
 
@@ -66,25 +70,39 @@ function groupSessions(sessions: NgaSession[]): NewsletterSessionGroup[] {
         : a.date.localeCompare(b.date),
     );
 
-  const groups = new Map<string, NewsletterSessionGroup>();
+  const groups = new Map<string, DatedGroup>();
   for (const s of open) {
     const key = `${s.date}|${s.location}`;
-    const time =
+    const label =
       s.startTime && s.endTime
         ? `${s.startTime}–${s.endTime}`
         : s.startTime || "";
+    const slot = { label, spotsLeft: s.spotsLeft, capacity: s.capacity };
     const existing = groups.get(key);
     if (existing) {
-      if (time) existing.times.push(time);
+      if (label) existing.slots.push(slot);
     } else {
       groups.set(key, {
+        date: s.date,
         dateLong: formatLongDate(s.date),
         location: s.location,
-        times: time ? [time] : [],
+        slots: label ? [slot] : [],
       });
     }
   }
   return [...groups.values()];
+}
+
+/** Render a short, parent-readable weather note from a county-level forecast. */
+function weatherNote(dw: DayWeather): string {
+  const temp = dw.tempHigh != null ? `, ${dw.tempHigh}°` : "";
+  if (dw.risk === "cancel") {
+    return `${dw.maxRain}% chance of rain — watch for a cancellation note`;
+  }
+  if (dw.risk === "watch") {
+    return `${dw.summary} — ${dw.maxRain}% chance of rain${temp}`;
+  }
+  return `${dw.summary}${temp}`;
 }
 
 export async function GET(req: NextRequest) {
@@ -102,6 +120,15 @@ export async function GET(req: NextRequest) {
 
   const tip = pickWeeklyTip();
   const sessions = groupSessions(await fetchUpcomingSessions());
+  // County-level forecast per session date. Fails soft — a miss (NWS down or
+  // date beyond the ~7-day horizon) just leaves the group without a note.
+  const weather = await fetchWeatherByDate([
+    ...new Set(sessions.map((g) => g.date)),
+  ]);
+  for (const g of sessions) {
+    const dw = weather.get(g.date);
+    if (dw) g.weatherNote = weatherNote(dw);
+  }
   const subscribers = await fetchActiveSubscribers();
   const scheduleUrl = `${SITE_ORIGIN}/schedule`;
 
