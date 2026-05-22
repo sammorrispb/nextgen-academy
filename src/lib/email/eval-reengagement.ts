@@ -50,7 +50,7 @@ export function evalReengagementHtml(input: EvalReengagementInput): string {
     </div>
 
     <p style="margin:20px 0 0 0;color:${c.text};line-height:1.55;">
-      Still want that free evaluation we talked about? Just reply to this email and we'll find a time.
+      Still want that free evaluation you asked about? Just reply to this email and we'll find a time.
     </p>
 
     <div style="${s.footer}">
@@ -82,7 +82,7 @@ export function evalReengagementText(input: EvalReengagementInput): string {
     "",
     `Join the free newsletter: ${input.newsletterUrl}`,
     "",
-    `Still want that free evaluation we talked about? Just reply to this email and we'll find a time.`,
+    `Still want that free evaluation you asked about? Just reply to this email and we'll find a time.`,
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
