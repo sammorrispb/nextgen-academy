@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { subject?: string; dryRun?: boolean } = {};
+  let body: { subject?: string; dryRun?: boolean; only?: string[] } = {};
   try {
     body = await req.json();
   } catch {
@@ -151,6 +151,12 @@ export async function POST(req: NextRequest) {
   const dryRun =
     req.nextUrl.searchParams.get("dryRun") === "1" || body.dryRun === true;
   const subject = body.subject?.trim() || EVAL_REENGAGEMENT_SUBJECT;
+  // Optional allow-list: restrict the send to these emails (e.g. retrying only
+  // the addresses that failed a prior run, so already-sent rows aren't redone).
+  const only =
+    Array.isArray(body.only) && body.only.length
+      ? new Set(body.only.map((e) => e.trim().toLowerCase()))
+      : null;
 
   let seg;
   try {
@@ -163,18 +169,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Apply the optional allow-list (used to retry only previously-failed sends).
+  const recipients = only
+    ? seg.recipients.filter((r) => only.has(r.email.toLowerCase()))
+    : seg.recipients;
+
   if (dryRun) {
     return NextResponse.json({
       ok: true,
       dryRun: true,
       scanned: seg.scanned,
       eligible_unique: seg.recipients.length,
+      to_send: recipients.length,
       eligible_rows: seg.eligible,
       off_limits: seg.offLimits,
       ambiguous: seg.ambiguous,
       test_excluded: seg.test,
       subject,
-      recipients: seg.recipients.map((r) => ({ name: r.name, email: r.email })),
+      recipients: recipients.map((r) => ({ name: r.name, email: r.email })),
     });
   }
 
@@ -186,7 +198,12 @@ export async function POST(req: NextRequest) {
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
-  for (const r of seg.recipients) {
+  const sentEmails: string[] = [];
+  const failedEmails: string[] = [];
+  // Throttle to stay under Resend's 5 req/sec limit (~3.3/sec here).
+  for (let i = 0; i < recipients.length; i++) {
+    const r = recipients[i];
+    if (i > 0) await new Promise((res) => setTimeout(res, 300));
     const input = { parentFirst: r.parentFirst, newsletterUrl: NEWSLETTER_URL };
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -199,22 +216,29 @@ export async function POST(req: NextRequest) {
     });
     if (error) {
       failed++;
+      failedEmails.push(r.email);
       errors.push(`${r.email}: ${error.message ?? String(error)}`);
     } else {
       sent++;
+      sentEmails.push(r.email);
     }
   }
 
   const summary = {
     ok: true,
-    eligible_unique: seg.recipients.length,
+    to_send: recipients.length,
     sent,
     failed,
     off_limits_excluded: seg.offLimits,
     ambiguous_excluded: seg.ambiguous,
     subject,
-    ...(errors.length ? { errors: errors.slice(0, 10) } : {}),
+    sent_emails: sentEmails,
+    failed_emails: failedEmails,
   };
-  console.log("[eval-reengagement]", JSON.stringify({ ...summary, errors: undefined }));
+  console.log(
+    "[eval-reengagement]",
+    JSON.stringify({ to_send: recipients.length, sent, failed }),
+    errors.length ? `errors: ${errors.slice(0, 5).join("; ")}` : "",
+  );
   return NextResponse.json(summary);
 }
