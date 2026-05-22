@@ -23,9 +23,6 @@ const NOTION_VERSION = "2022-06-28";
 const LEAD_DB_ID =
   process.env.NOTION_DB_ID || "1e5e34c258384c6cb5f3e846543ecfc7";
 
-const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
-// Both addresses get a blind copy of every send (proof-of-delivery trail).
-const BCC_LIST = [ADMIN_EMAIL, "sam.morris2131@gmail.com"];
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 const NEWSLETTER_URL = "https://nextgenpbacademy.com/newsletter";
@@ -208,7 +205,6 @@ export async function POST(req: NextRequest) {
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: r.email,
-      bcc: BCC_LIST,
       replyTo: REPLY_TO,
       subject,
       html: evalReengagementHtml(input),
