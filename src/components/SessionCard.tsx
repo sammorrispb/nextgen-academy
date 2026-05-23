@@ -18,9 +18,14 @@ const LEVEL_COLOR: Record<string, string> = {
 interface Props {
   session: NgaSession;
   siteOrigin: string;
+  highlighted?: boolean;
 }
 
-export default function SessionCard({ session, siteOrigin }: Props) {
+export default function SessionCard({
+  session,
+  siteOrigin,
+  highlighted = false,
+}: Props) {
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const levelClass =
@@ -44,9 +49,24 @@ export default function SessionCard({ session, siteOrigin }: Props) {
   const shareUrl = `${siteOrigin}/schedule/${sessionToSlug(session)}`;
   const proof = socialProofLine(session);
 
+  const cardClass = highlighted
+    ? "relative bg-ngpa-panel rounded-2xl border-2 border-ngpa-teal p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 shadow-[0_0_40px_-12px_rgba(0,180,216,0.55)] ring-1 ring-ngpa-teal/40 transition-colors"
+    : "bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 transition-colors hover:border-ngpa-teal/40";
+
   return (
     <>
-      <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 transition-colors hover:border-ngpa-teal/40">
+      {highlighted && (
+        <div className="flex items-center gap-2 mb-2 ml-1">
+          <span className="inline-flex items-center gap-1.5 bg-ngpa-teal text-ngpa-deep text-[10px] font-black uppercase tracking-[0.18em] px-2.5 py-1 rounded-full shadow-md">
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-ngpa-deep animate-pulse"
+              aria-hidden="true"
+            />
+            Next Up
+          </span>
+        </div>
+      )}
+      <div className={cardClass} data-highlighted={highlighted || undefined}>
         <button
           type="button"
           onClick={() => setDetailsOpen(true)}
