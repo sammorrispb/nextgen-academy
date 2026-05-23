@@ -59,7 +59,8 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
         ) : (
           <>
             <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-              {upcoming.map((session) => {
+              {upcoming.map((session, idx) => {
+                const isNext = idx === 0;
                 const city = inferCity(session.location);
                 const levelClass =
                   (session.level && LEVEL_COLOR[session.level]) ??
@@ -77,13 +78,26 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
                           cls: "text-ngpa-white/60",
                         };
 
+                const linkClass = isNext
+                  ? "block h-full rounded-2xl bg-ngpa-panel border-2 border-ngpa-teal p-5 ring-1 ring-ngpa-teal/40 shadow-[0_0_32px_-12px_rgba(0,180,216,0.55)] hover:bg-ngpa-panel transition-all min-h-[48px]"
+                  : "block h-full rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-slate/60 p-5 hover:border-ngpa-teal/50 hover:bg-ngpa-panel transition-all min-h-[48px]";
+
                 return (
                   <li key={session.id}>
                     <Link
                       href={`/schedule/${sessionToSlug(session)}`}
-                      className="block h-full rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-slate/60 p-5 hover:border-ngpa-teal/50 hover:bg-ngpa-panel transition-all min-h-[48px]"
+                      className={linkClass}
                     >
                       <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        {isNext && (
+                          <span className="inline-flex items-center gap-1 bg-ngpa-teal text-ngpa-deep text-[10px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-full">
+                            <span
+                              className="w-1.5 h-1.5 rounded-full bg-ngpa-deep animate-pulse"
+                              aria-hidden="true"
+                            />
+                            Next Up
+                          </span>
+                        )}
                         {session.level && (
                           <span
                             className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${levelClass}`}

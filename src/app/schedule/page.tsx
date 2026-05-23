@@ -116,17 +116,18 @@ export default async function SchedulePage() {
 
           {sessions.length > 0 && (
             <div className="space-y-7">
-              {Array.from(grouped.entries()).map(([date, daySessions]) => (
+              {Array.from(grouped.entries()).map(([date, daySessions], dayIdx) => (
                 <div key={date}>
                   <h2 className="font-heading text-sm font-bold text-ngpa-teal uppercase tracking-[0.2em] mb-3">
                     {formatDayHeading(date)}
                   </h2>
                   <div className="space-y-3">
-                    {daySessions.map((s) => (
+                    {daySessions.map((s, sessionIdx) => (
                       <SessionCard
                         key={s.id}
                         session={s}
                         siteOrigin={SITE_ORIGIN}
+                        highlighted={dayIdx === 0 && sessionIdx === 0}
                       />
                     ))}
                   </div>
