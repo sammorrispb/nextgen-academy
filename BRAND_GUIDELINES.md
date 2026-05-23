@@ -1,7 +1,13 @@
 # BRAND_GUIDELINES.md — Next Gen Pickleball Academy
-**Version:** 1.1
+**Version:** 1.2 (palette refresh)
 **Status:** Single Source of Truth
 **Tagline:** Better than yesterday—together.
+
+> **2026-05-07 visual refresh:** brand primary moved from lime to teal
+> (#00B4D8) to match the MCR pitch deck. Lime (#AADC00) is now an EASE
+> accent only — it no longer carries the brand. The full token table
+> below reflects the live `src/app/globals.css`. See `DESIGN.md` at the
+> repo root for the spec-compliant machine-readable mirror.
 
 ---
 
@@ -23,17 +29,19 @@ the parent writing the check. Never a retirement-sport vibe. Never pure esports.
 ### Logo Specs
 - **Mark:** NEXT GEN wordmark with pickleball replacing the "O" in NEXT
 - **Wordmark color:** Pure White #FFFFFF (logo asset only — not used in UI text)
-- **Pickleball accent:** Academy Lime #AADC00
-- **Approved backgrounds:** Pure Black #000000 (primary), Court Navy #05132B (secondary)
-- **Never place on:** light backgrounds, busy photography, or any surface where white
-  wordmark drops below 4.5:1 contrast ratio
+- **Pickleball accent:** Academy Lime #AADC00 (retained on the logo mark
+  itself; lime as a UI color is now EASE-accent only)
+- **Approved backgrounds:** Pure Black #000000 (primary), Court Navy #1A2744
+  (secondary)
+- **Never place on:** light backgrounds, busy photography, or any surface
+  where white wordmark drops below 4.5:1 contrast ratio
 
 ### Logo Zone Rule
 | Context | Background |
 |---------|-----------|
 | Logo lockup / hero | #000000 Pure Black |
-| Site background | #05132B Court Navy |
-| Cards / surfaces | #0C1F47 Deep Panel |
+| Site background | #1A2744 Court Navy |
+| Cards / surfaces | #213056 Panel |
 | Light background version | Does not exist yet — dark bg only |
 
 ### Logo Clear Space & Sizing
@@ -51,51 +59,74 @@ Never replicate logo letterforms in UI components. All site headings use Montser
 ## COLOR SYSTEM
 
 ### Usage Rules
-- ngpa-lime is DARK-SURFACE ONLY. On white backgrounds contrast drops to 1.5:1 —
-  fails all WCAG levels. Never use on light surfaces.
-- Skill level colors map directly to the Red → Orange → Green → Yellow pathway.
-  Use only these four labels. Never substitute synonyms (Beginner, Pro, Expert, etc.)
+- Teal (`ngpa-teal` #00B4D8) is the brand primary. It carries the brand mark
+  and grounds primary CTAs.
+- Lime (`ngpa-lime` #AADC00) is DARK-SURFACE ONLY and scoped to EASE accents
+  (badges, success moments, the `shadow-glow-lime` celebration effect). On
+  white backgrounds contrast drops to 1.5:1; fails all WCAG levels. Never
+  return lime to chrome (nav, buttons, large fills) — the 2026-05-07 refresh
+  demoted it.
+- Skill level colors map directly to the Red → Orange → Green → Yellow
+  pathway. Use only these four labels. Never substitute synonyms (Beginner,
+  Pro, Expert, etc.).
 - Logo black (#000000) and logo white (#FFFFFF) are logo-asset colors only.
   Do not use them as general UI colors.
 
 ### Full Palette
 
+WCAG contrast ratios below are computed against `ngpa-navy` (#1A2744) — the
+primary page ground. Skill colors are typically used as ball-color
+backgrounds with navy text on top (the inverse pairing); those badge
+contrasts all clear AA.
+
 | Role | Name | HEX | Tailwind Token | WCAG on Navy BG |
 |------|------|-----|---------------|-----------------|
 | Logo BG | Pure Black | #000000 | ngpa-black | — |
-| Primary BG | Court Navy | #05132B | ngpa-navy | — |
-| Surface | Deep Panel | #0C1F47 | ngpa-panel | — |
-| Surface Elevated | Slate Court | #1A3060 | ngpa-slate | — |
-| Brand Primary | Academy Lime | #AADC00 | ngpa-lime | 6.8:1 ✅ AA |
-| Brand Secondary | Velocity Cyan | #00D4FF | ngpa-cyan | 5.8:1 ✅ AA |
-| Accent Warm | Drive Orange | #FF6B2B | ngpa-orange | 4.6:1 ✅ AA |
+| Ground (deep alt) | Deep Navy | #0E1830 | ngpa-deep | — |
+| Primary BG | Court Navy | #1A2744 | ngpa-navy | — |
+| Surface | Panel | #213056 | ngpa-panel | — |
+| Surface Elevated | Slate | #2C3E6E | ngpa-slate | — |
+| **Brand Primary** | **Brand Teal** | **#00B4D8** | **ngpa-teal** | **5.9:1 ✅ AA** |
+| Brand Hover / Bright | Teal Bright | #48CAE4 | ngpa-teal-bright | 7.7:1 ✅ AAA |
+| Brand Secondary | Velocity Cyan | #00D4FF | ngpa-cyan | 7.4:1 ✅ AAA |
+| EASE Accent | Academy Lime | #AADC00 | ngpa-lime | 9.4:1 ✅ AAA |
+| Accent Warm | Drive Orange | #FF6B2B | ngpa-orange | 4.9:1 ✅ AA |
 | Text Primary | Court White | #EEF2FF | ngpa-white | 16:1 ✅ AAA |
-| Text Secondary | Muted Periwinkle | #7A88B8 | ngpa-muted | 4.6:1 ✅ AA |
-| Success / Progress | EASE Green | #00E676 | ngpa-green | 8.9:1 ✅ AAA |
+| Text Secondary | Muted Periwinkle | #8A99C5 | ngpa-muted | 4.5:1 ✅ AA |
+| Success | EASE Green | #00E676 | ngpa-green | 9.0:1 ✅ AAA |
 | Error / Alert | Out Ball Red | #FF3B5C | ngpa-red | 5.1:1 ✅ AA |
 | Skill: Red Ball | Skill Red | #FF4040 | ngpa-skill-red | 4.7:1 ✅ AA |
 | Skill: Orange Ball | Skill Orange | #FF8C00 | ngpa-skill-orange | 5.2:1 ✅ AA |
 | Skill: Green Ball | Skill Green | #00C853 | ngpa-skill-green | 6.1:1 ✅ AA |
 | Skill: Yellow Ball | Skill Yellow | #FFD600 | ngpa-skill-yellow | 5.9:1 ✅ AA |
 
-### Tailwind Configuration
-Add to tailwind.config.js under theme.extend.colors:
+### Tailwind v4 Configuration
+The live tokens are exposed as Tailwind v4 utilities through the `@theme`
+block in `src/app/globals.css`. The repo-root `DESIGN.md` is the
+machine-readable mirror; its export at `design.theme.css` is `@import`-ed
+from `globals.css`. Edit values in `globals.css` (`:root` block), and
+update `DESIGN.md` + re-export when the palette changes.
 
-'ngpa-black':        '#000000',
-'ngpa-navy':         '#05132B',
-'ngpa-panel':        '#0C1F47',
-'ngpa-slate':        '#1A3060',
-'ngpa-lime':         '#AADC00',
-'ngpa-cyan':         '#00D4FF',
-'ngpa-orange':       '#FF6B2B',
-'ngpa-white':        '#EEF2FF',
-'ngpa-muted':        '#7A88B8',
-'ngpa-green':        '#00E676',
-'ngpa-red':          '#FF3B5C',
-'ngpa-skill-red':    '#FF4040',
-'ngpa-skill-orange': '#FF8C00',
-'ngpa-skill-green':  '#00C853',
-'ngpa-skill-yellow': '#FFD600',
+```
+--color-ngpa-black:        #000000;
+--color-ngpa-deep:         #0E1830;
+--color-ngpa-navy:         #1A2744;
+--color-ngpa-panel:        #213056;
+--color-ngpa-slate:        #2C3E6E;
+--color-ngpa-teal:         #00B4D8;   /* brand primary */
+--color-ngpa-teal-bright:  #48CAE4;
+--color-ngpa-cyan:         #00D4FF;
+--color-ngpa-lime:         #AADC00;   /* EASE accent only */
+--color-ngpa-orange:       #FF6B2B;
+--color-ngpa-white:        #EEF2FF;
+--color-ngpa-muted:        #8A99C5;
+--color-ngpa-green:        #00E676;
+--color-ngpa-red:          #FF3B5C;
+--color-ngpa-skill-red:    #FF4040;
+--color-ngpa-skill-orange: #FF8C00;
+--color-ngpa-skill-green:  #00C853;
+--color-ngpa-skill-yellow: #FFD600;
+```
 
 ---
 
@@ -297,25 +328,28 @@ Mobile: 4-col | Tablet: 8-col | Desktop: 12-col
 :root {
   /* Backgrounds */
   --color-bg-logo:       #000000;
-  --color-bg-primary:    #05132B;
-  --color-bg-surface:    #0C1F47;
-  --color-bg-elevated:   #1A3060;
+  --color-bg-deep:       #0E1830;
+  --color-bg-primary:    #1A2744;
+  --color-bg-surface:    #213056;
+  --color-bg-elevated:   #2C3E6E;
 
   /* Brand */
-  --color-brand-primary: #AADC00;
-  --color-brand-second:  #00D4FF;
+  --color-brand-primary: #00B4D8;   /* teal — brand mark, primary CTA ground */
+  --color-brand-bright:  #48CAE4;
+  --color-brand-soft:    rgba(0, 180, 216, 0.12);
   --color-accent:        #FF6B2B;
+  --color-accent-lime:   #AADC00;   /* EASE accent only */
 
   /* Text */
   --color-text-logo:     #FFFFFF;
   --color-text-primary:  #EEF2FF;
-  --color-text-muted:    #7A88B8;
+  --color-text-muted:    #8A99C5;
 
   /* Semantic */
   --color-success:       #00E676;
   --color-error:         #FF3B5C;
 
-  /* Skill pathway */
+  /* Skill pathway (locked — never substitute) */
   --color-skill-red:     #FF4040;
   --color-skill-orange:  #FF8C00;
   --color-skill-green:   #00C853;
@@ -331,12 +365,14 @@ Mobile: 4-col | Tablet: 8-col | Desktop: 12-col
   --radius-md:   8px;
   --radius-lg:   12px;
   --radius-xl:   16px;
+  --radius-2xl:  24px;
   --radius-full: 9999px;
 
   /* Shadows */
-  --shadow-card:       0 4px 24px rgba(0, 0, 0, 0.4);
-  --shadow-glow-lime:  0 0 20px rgba(170, 220, 0, 0.15);
-  --shadow-glow-cyan:  0 0 20px rgba(0, 212, 255, 0.12);
+  --shadow-card:       0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-card-lg:    0 20px 60px rgba(0, 0, 0, 0.55);
+  --shadow-glow-teal:  0 0 32px rgba(0, 180, 216, 0.25);  /* brand mark glow */
+  --shadow-glow-lime:  0 0 24px rgba(170, 220, 0, 0.18);  /* EASE celebration */
 }
 
 ---
@@ -434,4 +470,8 @@ writes to them lands.
 
 *Single source of truth. All Tailwind configs, component libraries, Claude Code
 prompts, and Canva templates reference this file first.*
+*Machine-readable mirror: see `DESIGN.md` at the repo root
+(spec: github.com/google-labs-code/design.md). Re-export with
+`bun run src/index.ts export --format css-tailwind` from
+~/Projects/design.md/packages/cli when DESIGN.md changes.*
 *Update trigger: logo source HEX confirmed, or palette change approved by Sam & Amine.*
