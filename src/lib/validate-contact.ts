@@ -1,3 +1,11 @@
+import {
+  MAX_KIDS_PER_SUBMISSION,
+  normalizeKids,
+  type Kid,
+} from "@/lib/validate-lead";
+
+export type { Kid };
+
 export type ContactInterest =
   | "free-evaluation"
   | "drop-in"
@@ -38,6 +46,10 @@ export interface ContactFormData {
   email: string;
   phone?: string;
   interest: ContactInterest | "";
+  // Preferred shape for program-interest submissions: one entry per kid.
+  // Legacy `childAge` is still accepted (treated as one nameless kid) so any
+  // existing API consumer keeps working.
+  kids?: Kid[];
   childAge?: string;
   message?: string;
   // Attribution — captured client-side, never validated.
@@ -51,9 +63,9 @@ export interface ContactFormData {
   visitor_id?: string | null;
 }
 
-export type ContactValidationErrors = Partial<
-  Record<"name" | "email" | "phone" | "interest" | "childAge" | "message", string>
->;
+// Per-kid keys are `kids.<index>.<field>`; `childAge` is still emitted for
+// legacy-payload callers and the existing spec assertions.
+export type ContactValidationErrors = Partial<Record<string, string>>;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_INTERESTS = new Set<string>(
@@ -61,6 +73,7 @@ const VALID_INTERESTS = new Set<string>(
 );
 
 const MESSAGE_MAX = 1000;
+const NAME_MAX = 40;
 
 export function validateContactForm(
   data: Partial<ContactFormData>,
@@ -89,13 +102,30 @@ export function validateContactForm(
   } else if (!VALID_INTERESTS.has(data.interest)) {
     errors.interest = "Please choose a valid option";
   } else if (interestRequiresChildAge(data.interest)) {
-    if (!data.childAge) {
+    const usedLegacyPayload =
+      !Array.isArray(data.kids) || data.kids.length === 0;
+    const kids = normalizeKids({
+      kids: data.kids,
+      childAge: data.childAge,
+    });
+
+    if (kids.length === 0) {
       errors.childAge = "Child's age is required for this option";
+    } else if (kids.length > MAX_KIDS_PER_SUBMISSION) {
+      errors.kids = `Please add up to ${MAX_KIDS_PER_SUBMISSION} kids at a time`;
     } else {
-      const age = Number(data.childAge);
-      if (isNaN(age) || age < 7 || age > 17) {
-        errors.childAge = "Age must be between 7 and 17";
-      }
+      kids.forEach((kid, i) => {
+        if (!usedLegacyPayload && !kid.name.trim()) {
+          errors[`kids.${i}.name`] = "Child's first name is required";
+        } else if (kid.name.length > NAME_MAX) {
+          errors[`kids.${i}.name`] =
+            `Name must be under ${NAME_MAX} characters`;
+        }
+        if (isNaN(kid.age) || kid.age < 7 || kid.age > 17) {
+          const key = usedLegacyPayload ? "childAge" : `kids.${i}.age`;
+          errors[key] = "Age must be between 7 and 17";
+        }
+      });
     }
   }
 

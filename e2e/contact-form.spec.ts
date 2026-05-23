@@ -136,6 +136,53 @@ test.describe("Contact Form — homepage #contact-form", () => {
         .getByText(/reply within 1 business day/i),
     ).toBeVisible();
   });
+
+  test("first-kid name + age fields render side-by-side for program interest", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const form = page.locator("#contact-form form");
+    // Default interest is free-evaluation → first kid block visible.
+    await expect(form.locator("#kid0name")).toBeVisible();
+    await expect(form.locator("#childAge")).toBeVisible(); // legacy alias = first kid's age
+    // The label switches from "About your child" (1 kid) → "Child 1" (N>=2).
+    await expect(form.getByText("About your child")).toBeVisible();
+  });
+
+  test("'+ Add another child' reveals a second kid row + remove button", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const form = page.locator("#contact-form form");
+    await expect(form.locator("#kid1name")).toHaveCount(0);
+
+    await form.getByRole("button", { name: /Add another child/ }).click();
+
+    await expect(form.locator("#kid1name")).toBeVisible();
+    await expect(form.locator("#kid1age")).toBeVisible();
+    await expect(form.getByText("Child 1")).toBeVisible();
+    await expect(form.getByText("Child 2")).toBeVisible();
+    await expect(form.getByRole("button", { name: "Remove" })).toBeVisible();
+
+    // Removing collapses back to a single "About your child" block.
+    await form.getByRole("button", { name: "Remove" }).click();
+    await expect(form.locator("#kid1name")).toHaveCount(0);
+    await expect(form.getByText("About your child")).toBeVisible();
+  });
+
+  test("kids inputs disappear when a non-program interest is selected", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const form = page.locator("#contact-form form");
+    await form.locator("#interest").selectOption("partnership");
+    await expect(form.locator("#kid0name")).toHaveCount(0);
+    await expect(form.locator("#childAge")).toHaveCount(0);
+
+    await form.locator("#interest").selectOption("free-evaluation");
+    await expect(form.locator("#kid0name")).toBeVisible();
+    await expect(form.locator("#childAge")).toBeVisible();
+  });
 });
 
 // API tests run desktop-only — the route has no viewport-dependent behavior
@@ -171,6 +218,45 @@ test.describe("Contact API — /api/contact", () => {
     expect(res.status()).toBe(400);
     const json = await res.json();
     expect(json.errors.interest).toBeTruthy();
+  });
+
+  test("rejects a kids[] entry missing a first name", async ({
+    request,
+  }, testInfo) => {
+    if (testInfo.project.name !== "desktop") test.skip();
+    const res = await request.post("/api/contact", {
+      data: {
+        name: "Test Parent",
+        email: "test+missingname@example.com",
+        interest: "free-evaluation",
+        kids: [{ name: "", age: 9 }],
+      },
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status()).toBe(400);
+    const json = await res.json();
+    expect(json.errors["kids.0.name"]).toBeTruthy();
+  });
+
+  test("rejects a kids[] entry with an out-of-range age", async ({
+    request,
+  }, testInfo) => {
+    if (testInfo.project.name !== "desktop") test.skip();
+    const res = await request.post("/api/contact", {
+      data: {
+        name: "Test Parent",
+        email: "test+badage@example.com",
+        interest: "drop-in",
+        kids: [
+          { name: "Riley", age: 9 },
+          { name: "Sam", age: 5 },
+        ],
+      },
+      headers: { "Content-Type": "application/json" },
+    });
+    expect(res.status()).toBe(400);
+    const json = await res.json();
+    expect(json.errors["kids.1.age"]).toBeTruthy();
   });
 
   test("requires child age when interest is a program option", async ({
