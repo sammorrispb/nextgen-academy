@@ -106,7 +106,7 @@ test.describe("Coach Strip", () => {
     await expect(strip.getByText("Sam Morris")).toBeVisible();
     await expect(strip.getByText("Amine Lahlou")).toBeVisible();
     await expect(strip.getByText(/Former PE teacher/)).toBeVisible();
-    await expect(strip.getByText(/Former pro tennis/)).toBeVisible();
+    await expect(strip.getByText(/Tennis coach/)).toBeVisible();
     await expect(strip.getByText("Built by parents, for parents.")).toBeVisible();
   });
 });
