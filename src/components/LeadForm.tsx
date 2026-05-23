@@ -2,8 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import type { LeadFormData, LeadValidationErrors } from "@/lib/validate-lead";
-import { validateLeadForm } from "@/lib/validate-lead";
+import type {
+  LeadFormData,
+  LeadValidationErrors,
+} from "@/lib/validate-lead";
+import { MAX_KIDS_PER_SUBMISSION, validateLeadForm } from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
@@ -11,12 +14,9 @@ const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 7); // 7-17 (NGA 8-
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
-const emptyForm: LeadFormData = {
-  parentName: "",
-  contact: "",
-  childAge: "",
-  notes: "",
-};
+type KidDraft = { name: string; age: string };
+
+const emptyKid = (): KidDraft => ({ name: "", age: "" });
 
 type TrackingContext = {
   utm_source?: string;
@@ -32,22 +32,24 @@ interface LeadFormProps {
   submitLabel?: string;
 }
 
-export default function LeadForm({ submitLabel = "Book my free evaluation" }: LeadFormProps = {}) {
-  const [form, setForm] = useState<LeadFormData>(emptyForm);
+export default function LeadForm({
+  submitLabel = "Book my free evaluation",
+}: LeadFormProps = {}) {
+  const [parentName, setParentName] = useState("");
+  const [contact, setContact] = useState("");
+  const [kids, setKids] = useState<KidDraft[]>([emptyKid()]);
+  const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<LeadValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
   const trackingRef = useRef<TrackingContext>({});
   const startedFiredRef = useRef(false);
 
-  // Capture attribution context once on mount — URL params + referrer.
-  // Falls back to the sessionStorage stash (populated by UtmCapture on the
-  // landing page) so a user who lands with UTM and then navigates can still
-  // submit the form with full attribution.
+  // Capture attribution context once on mount.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const stashed = getUtm();
-    const ctx: TrackingContext = {
+    trackingRef.current = {
       utm_source: params.get("utm_source") ?? stashed.utm_source ?? undefined,
       utm_medium: params.get("utm_medium") ?? stashed.utm_medium ?? undefined,
       utm_campaign:
@@ -57,23 +59,19 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
       referrer: document.referrer || undefined,
       landing_page: window.location.href,
     };
-    trackingRef.current = ctx;
   }, []);
 
-  // User-facing fields. childAge + notes are the only ones a parent edits;
-  // notes is optional and never produces validation errors.
-  type EditableField = "parentName" | "contact" | "childAge" | "notes";
+  function buildDraft(): Partial<LeadFormData> {
+    return {
+      parentName,
+      contact,
+      kids: kids.map((k) => ({ name: k.name, age: Number(k.age) })),
+      notes,
+    };
+  }
 
-  function updateField(field: EditableField, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
-    if (field !== "notes" && errors[field]) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-    if (!startedFiredRef.current && value) {
+  function markStarted() {
+    if (!startedFiredRef.current) {
       startedFiredRef.current = true;
       trackEvent("lead_form_started", {
         interest: "free_evaluation",
@@ -82,32 +80,68 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
     }
   }
 
-  function handleBlur(field: EditableField) {
-    if (field === "notes") return;
-    const fieldErrors = validateLeadForm(form);
-    if (fieldErrors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: fieldErrors[field] }));
-    }
+  function clearError(key: string) {
+    if (!errors[key]) return;
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function updateKid(index: number, field: keyof KidDraft, value: string) {
+    setKids((prev) => prev.map((k, i) => (i === index ? { ...k, [field]: value } : k)));
+    clearError(`kids.${index}.${field}`);
+    if (index === 0 && field === "age") clearError("childAge"); // legacy alias
+    if (value) markStarted();
+  }
+
+  function addKid() {
+    if (kids.length >= MAX_KIDS_PER_SUBMISSION) return;
+    setKids((prev) => [...prev, emptyKid()]);
+  }
+
+  function removeKid(index: number) {
+    if (kids.length <= 1) return;
+    setKids((prev) => prev.filter((_, i) => i !== index));
+    setErrors((prev) => {
+      const next: LeadValidationErrors = {};
+      for (const [key, val] of Object.entries(prev)) {
+        if (key === `kids.${index}.name` || key === `kids.${index}.age`) continue;
+        next[key] = val;
+      }
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setServerError("");
 
-    const allErrors = validateLeadForm(form);
+    const draft = buildDraft();
+    const allErrors = validateLeadForm(draft);
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
-      const firstErrorField = Object.keys(allErrors)[0];
-      document.getElementById(firstErrorField)?.focus();
+      // Focus the first invalid field — translate kids.<i>.<f> back to DOM id.
+      const firstKey = Object.keys(allErrors)[0];
+      const focusId = firstKey.startsWith("kids.")
+        ? firstKey
+            .replace(/^kids\.(\d+)\.(name|age)$/, (_m, i, f) => `kid${i}${f}`)
+        : firstKey === "childAge"
+          ? "childAge"
+          : firstKey;
+      document.getElementById(focusId)?.focus();
       return;
     }
 
     setStatus("submitting");
 
-    const tracking: TrackingContext = { ...trackingRef.current };
     const payload = {
-      ...form,
-      ...tracking,
+      parentName,
+      contact,
+      kids: kids.map((k) => ({ name: k.name.trim(), age: Number(k.age) })),
+      notes: notes || undefined,
+      ...trackingRef.current,
       visitor_id: getVisitorIdForForm() || null,
     };
 
@@ -143,9 +177,7 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
         page: window.location.pathname,
       });
     } catch (err) {
-      setServerError(
-        err instanceof Error ? err.message : "Something went wrong",
-      );
+      setServerError(err instanceof Error ? err.message : "Something went wrong");
       setStatus("error");
     }
   }
@@ -170,7 +202,7 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
           </svg>
         </div>
         <h3 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white mb-3 tracking-tight">
-          Thanks, {form.parentName.split(" ")[0]}!
+          Thanks, {parentName.split(" ")[0]}!
         </h3>
         <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
           We&rsquo;ll reach out within 24 hours to schedule a free evaluation
@@ -230,9 +262,12 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
             autoComplete="name"
             className={inputClass}
             placeholder="First and last name"
-            value={form.parentName}
-            onChange={(e) => updateField("parentName", e.target.value)}
-            onBlur={() => handleBlur("parentName")}
+            value={parentName}
+            onChange={(e) => {
+              setParentName(e.target.value);
+              clearError("parentName");
+              if (e.target.value) markStarted();
+            }}
           />
           {errors.parentName && (
             <p className={errorClass}>{errors.parentName}</p>
@@ -250,35 +285,91 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
             autoComplete="email"
             className={inputClass}
             placeholder="you@email.com or (301) 555-1234"
-            value={form.contact}
-            onChange={(e) => updateField("contact", e.target.value)}
-            onBlur={() => handleBlur("contact")}
+            value={contact}
+            onChange={(e) => {
+              setContact(e.target.value);
+              clearError("contact");
+              if (e.target.value) markStarted();
+            }}
           />
           {errors.contact && <p className={errorClass}>{errors.contact}</p>}
         </div>
 
-        {/* Child's Age */}
-        <div>
-          <label htmlFor="childAge" className={labelClass}>
-            Child&rsquo;s Age
-          </label>
-          <select
-            id="childAge"
-            className={selectClass}
-            value={form.childAge}
-            onChange={(e) => updateField("childAge", e.target.value)}
-            onBlur={() => handleBlur("childAge")}
-          >
-            <option value="">Select age</option>
-            {AGE_OPTIONS.map((age) => (
-              <option key={age} value={String(age)}>
-                {age} years old
-              </option>
-            ))}
-          </select>
-          {errors.childAge && (
-            <p className={errorClass}>{errors.childAge}</p>
+        {/* Kids */}
+        <div className="space-y-3">
+          {kids.map((kid, i) => (
+            <div
+              key={i}
+              className={
+                i === 0
+                  ? ""
+                  : "border-t border-ngpa-slate/40 pt-3"
+              }
+            >
+              <div className="flex items-baseline justify-between mb-1.5">
+                <label htmlFor={`kid${i}name`} className={labelClass.replace("mb-1.5", "mb-0")}>
+                  {kids.length === 1 ? "About your child" : `Child ${i + 1}`}
+                </label>
+                {i > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => removeKid(i)}
+                    className="text-ngpa-white/55 hover:text-ngpa-red text-xs font-bold uppercase tracking-wide transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <input
+                    id={`kid${i}name`}
+                    type="text"
+                    autoComplete="off"
+                    className={inputClass}
+                    placeholder="First name"
+                    value={kid.name}
+                    onChange={(e) => updateKid(i, "name", e.target.value)}
+                  />
+                  {errors[`kids.${i}.name`] && (
+                    <p className={errorClass}>{errors[`kids.${i}.name`]}</p>
+                  )}
+                </div>
+                <div>
+                  <select
+                    id={i === 0 ? "childAge" : `kid${i}age`}
+                    className={selectClass}
+                    value={kid.age}
+                    onChange={(e) => updateKid(i, "age", e.target.value)}
+                  >
+                    <option value="">Select age</option>
+                    {AGE_OPTIONS.map((age) => (
+                      <option key={age} value={String(age)}>
+                        {age} years old
+                      </option>
+                    ))}
+                  </select>
+                  {(errors[`kids.${i}.age`] ||
+                    (i === 0 && errors.childAge)) && (
+                    <p className={errorClass}>
+                      {errors[`kids.${i}.age`] || errors.childAge}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {kids.length < MAX_KIDS_PER_SUBMISSION && (
+            <button
+              type="button"
+              onClick={addKid}
+              className="text-ngpa-teal hover:text-ngpa-teal-bright text-sm font-bold transition-colors"
+            >
+              + Add another child
+            </button>
           )}
+          {errors.kids && <p className={errorClass}>{errors.kids}</p>}
         </div>
 
         {/* Notes — optional self-identified intent */}
@@ -292,8 +383,8 @@ export default function LeadForm({ submitLabel = "Book my free evaluation" }: Le
             rows={3}
             className={inputClass}
             placeholder="Can your child rally yet? Looking for group or private? Anything else…"
-            value={form.notes ?? ""}
-            onChange={(e) => updateField("notes", e.target.value)}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
             maxLength={500}
           />
         </div>

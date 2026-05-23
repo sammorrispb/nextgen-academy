@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { validateLeadForm } from "@/lib/validate-lead";
-import type { LeadFormData } from "@/lib/validate-lead";
+import { normalizeKids, validateLeadForm } from "@/lib/validate-lead";
+import type { Kid, LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { c, s } from "@/lib/email/brand";
@@ -109,8 +109,10 @@ function currentSeasonLabel(now: Date = new Date()): string {
   return `Fall ${y}`;
 }
 
-async function createNotionPlayer(
+async function createNotionPlayerRow(
   body: LeadFormData,
+  kid: Kid,
+  siblings: Kid[],
 ): Promise<{ id?: string; error?: string }> {
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return { error: "NOTION_API_KEY not configured" };
@@ -118,7 +120,16 @@ async function createNotionPlayer(
   const { email, phone } = parseContact(body.contact);
   const attribution = formatAttribution(body);
   const parentNote = body.notes?.trim();
-  const parts = [`Lead form submission. Child age: ${body.childAge}`];
+  const trimmedName = kid.name.trim();
+  const titleText = trimmedName || `Child of ${body.parentName}`;
+  const parts = [`Lead form submission. Child age: ${kid.age}`];
+  if (siblings.length > 0) {
+    parts.push(
+      `Siblings on same submission: ${siblings
+        .map((s) => `${s.name.trim() || "unnamed"} (${s.age})`)
+        .join(", ")}`,
+    );
+  }
   if (parentNote) parts.push(`Parent says: "${parentNote}"`);
   if (attribution) parts.push(`Attribution: ${attribution}`);
   const notesContent = parts.join(". ");
@@ -126,9 +137,9 @@ async function createNotionPlayer(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const properties: Record<string, any> = {
     "Player Name": {
-      title: [{ text: { content: `Child of ${body.parentName}` } }],
+      title: [{ text: { content: titleText } }],
     },
-    Age: { number: Number(body.childAge) },
+    Age: { number: kid.age },
     "Parent Name": {
       rich_text: [{ text: { content: body.parentName } }],
     },
@@ -136,7 +147,7 @@ async function createNotionPlayer(
     Status: { select: { name: "Lead" } },
     Source: { select: { name: attributedSource(body) } },
     Season: { select: { name: currentSeasonLabel() } },
-    Audience: { select: { name: Number(body.childAge) >= 17 ? "Adult" : "Youth" } },
+    Audience: { select: { name: kid.age >= 17 ? "Adult" : "Youth" } },
     Notes: {
       rich_text: [{ text: { content: notesContent } }],
     },
@@ -201,7 +212,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Validation failed", errors }, { status: 400 });
   }
 
-  // ─── 1. Create Notion Player (dedup) ─────────
+  const kids = normalizeKids(body);
+
+  // ─── 1. Create Notion Player rows (one per kid; parent-level dedup) ───
+  // Dedup intentionally stays at the parent-email/phone level: if a parent
+  // already has a row in the CRM, we don't auto-create N more — that risks
+  // duplicating an existing family if the form is re-submitted. Coach can
+  // add siblings manually until a richer per-kid dedup ships.
   let notionStatus = "skipped";
   if (process.env.NOTION_API_KEY) {
     try {
@@ -209,9 +226,24 @@ export async function POST(request: NextRequest) {
       if (existingId) {
         notionStatus = "already exists";
       } else {
-        const result = await createNotionPlayer(body);
-        notionStatus = result.id ? "created" : `failed: ${result.error}`;
-        if (result.error) console.error("Notion create failed:", result.error);
+        const results = await Promise.all(
+          kids.map((kid, i) =>
+            createNotionPlayerRow(
+              body,
+              kid,
+              kids.filter((_, j) => j !== i),
+            ),
+          ),
+        );
+        const created = results.filter((r) => r.id).length;
+        const failed = results.filter((r) => r.error);
+        if (failed.length > 0) {
+          notionStatus = `created ${created}/${kids.length} (failed: ${failed[0].error})`;
+          console.error("Notion create failed:", failed[0].error);
+        } else {
+          notionStatus =
+            kids.length === 1 ? "created" : `created ${created} rows`;
+        }
       }
     } catch (err) {
       notionStatus = "error";
@@ -238,8 +270,16 @@ export async function POST(request: NextRequest) {
       <td style="padding: 10px 8px;"><a href="${email ? `mailto:${email}` : `tel:${phone}`}" style="${s.link}">${contactDisplay}</a></td>
     </tr>
     <tr style="${s.tableRow}">
-      <td style="${s.tableLabel}">Child's Age</td>
-      <td style="${s.tableValue}">${body.childAge} years old</td>
+      <td style="${s.tableLabel} vertical-align: top;">${kids.length === 1 ? "Child" : `Kids (${kids.length})`}</td>
+      <td style="${s.tableValue}">${kids
+        .map((kid) => {
+          const trimmed = kid.name.trim();
+          const safeName = trimmed
+            ? trimmed.replace(/[<>&]/g, (ch) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[ch] || ch)
+            : "(name not provided)";
+          return `${safeName} — ${kid.age} years old`;
+        })
+        .join("<br/>")}</td>
     </tr>
     ${
       body.notes?.trim()
@@ -269,7 +309,7 @@ export async function POST(request: NextRequest) {
   <div style="${s.actionCallout}">
     <p style="${s.actionLabel}">ACTION NEEDED</p>
     <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
-      Reach out to ${body.parentName} within 24 hours to discuss placement for their ${body.childAge}-year-old.
+      Reach out to ${body.parentName} within 24 hours to discuss placement for ${kids.length === 1 ? `their ${kids[0].age}-year-old` : `${kids.length} kids`}.
     </p>
   </div>
 </div>`;
@@ -308,12 +348,16 @@ export async function POST(request: NextRequest) {
   try {
     const resend = getResend();
 
+    const kidsSubjectTail =
+      kids.length === 1
+        ? `(child age ${kids[0].age})`
+        : `(${kids.length} kids: ${kids.map((k) => k.age).join(", ")})`;
     const emailPromises = [
       resend.emails.send({
         from: FROM_EMAIL,
         to: ADMIN_EMAIL,
         cc: CC_EMAIL,
-        subject: `New Lead — ${body.parentName} (child age ${body.childAge})`,
+        subject: `New Lead — ${body.parentName} ${kidsSubjectTail}`,
         html: adminHtml,
       }),
     ];
@@ -348,20 +392,26 @@ export async function POST(request: NextRequest) {
     // OB accepts either email or phone as the dedup key; phone-only leads
     // now flow through instead of being dropped.
     if (email || phone) {
+      const firstKidAge = kids[0]?.age;
       await ingestToOpenBrain({
         email: email ?? undefined,
         name: body.parentName,
         phone: phone ?? undefined,
         business: "nga",
         source: "nga_lead_form",
-        interest: `Age ${body.childAge}`,
+        interest:
+          kids.length === 1
+            ? `Age ${firstKidAge}`
+            : `${kids.length} kids (ages ${kids.map((k) => k.age).join(", ")})`,
         utm: {
           source: body.utm_source,
           medium: body.utm_medium,
           campaign: body.utm_campaign,
         },
         metadata: {
-          child_age: Number(body.childAge),
+          child_age: firstKidAge ?? null,
+          kid_count: kids.length,
+          kids: kids.map((k) => ({ name: k.name.trim() || null, age: k.age })),
           location: body.location || null,
           parent_notes: body.notes?.trim() || null,
           notion_status: notionStatus,

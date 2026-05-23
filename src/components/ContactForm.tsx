@@ -12,6 +12,7 @@ import type {
   ContactInterest,
   ContactValidationErrors,
 } from "@/lib/validate-contact";
+import { MAX_KIDS_PER_SUBMISSION } from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
@@ -19,7 +20,9 @@ const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 7); // 7-17
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
-type EditableField = "name" | "email" | "phone" | "interest" | "childAge" | "message";
+type KidDraft = { name: string; age: string };
+
+const emptyKid = (): KidDraft => ({ name: "", age: "" });
 
 type TrackingContext = {
   utm_source?: string;
@@ -31,19 +34,17 @@ type TrackingContext = {
   landing_page?: string;
 };
 
-const emptyForm: ContactFormData = {
-  name: "",
-  email: "",
-  phone: "",
-  // Default to free evaluation so visitors arriving from the hero "Book a free
-  // 30-min evaluation" CTA see the form pre-tuned to their intent.
-  interest: "free-evaluation",
-  childAge: "",
-  message: "",
-};
-
 export default function ContactForm() {
-  const [form, setForm] = useState<ContactFormData>(emptyForm);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  // Default to free evaluation so visitors arriving from the hero "Book a
+  // free 30-min evaluation" CTA see the form pre-tuned to their intent.
+  const [interest, setInterest] = useState<ContactInterest | "">(
+    "free-evaluation",
+  );
+  const [kids, setKids] = useState<KidDraft[]>([emptyKid()]);
+  const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<ContactValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
@@ -65,24 +66,10 @@ export default function ContactForm() {
     };
   }, []);
 
-  function updateField(field: EditableField, value: string) {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value };
-      // Wipe child age if the new interest no longer requires it, so a stale
-      // selection doesn't ride along in the payload.
-      if (field === "interest" && !interestRequiresChildAge(value)) {
-        next.childAge = "";
-      }
-      return next;
-    });
-    if (errors[field]) {
-      setErrors((prev) => {
-        const out = { ...prev };
-        delete out[field];
-        return out;
-      });
-    }
-    if (!startedFiredRef.current && value) {
+  const showChildAge = interestRequiresChildAge(interest);
+
+  function markStarted() {
+    if (!startedFiredRef.current) {
       startedFiredRef.current = true;
       trackEvent("lead_form_started", {
         interest: "contact_form",
@@ -91,35 +78,93 @@ export default function ContactForm() {
     }
   }
 
-  function handleBlur(field: EditableField) {
-    if (field === "message") return;
-    const fieldErrors = validateContactForm(form);
-    if (fieldErrors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: fieldErrors[field] }));
+  function clearError(key: string) {
+    if (!errors[key]) return;
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function updateKid(index: number, field: keyof KidDraft, value: string) {
+    setKids((prev) =>
+      prev.map((k, i) => (i === index ? { ...k, [field]: value } : k)),
+    );
+    clearError(`kids.${index}.${field}`);
+    if (index === 0 && field === "age") clearError("childAge"); // legacy alias
+    if (value) markStarted();
+  }
+
+  function addKid() {
+    if (kids.length >= MAX_KIDS_PER_SUBMISSION) return;
+    setKids((prev) => [...prev, emptyKid()]);
+  }
+
+  function removeKid(index: number) {
+    if (kids.length <= 1) return;
+    setKids((prev) => prev.filter((_, i) => i !== index));
+    setErrors((prev) => {
+      const next: ContactValidationErrors = {};
+      for (const [key, val] of Object.entries(prev)) {
+        if (key === `kids.${index}.name` || key === `kids.${index}.age`) continue;
+        next[key] = val;
+      }
+      return next;
+    });
+  }
+
+  function buildDraft(): Partial<ContactFormData> {
+    const draft: Partial<ContactFormData> = {
+      name,
+      email,
+      phone: phone || undefined,
+      interest,
+      message: message || undefined,
+    };
+    if (interestRequiresChildAge(interest)) {
+      draft.kids = kids.map((k) => ({ name: k.name, age: Number(k.age) }));
     }
+    return draft;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setServerError("");
 
-    const allErrors = validateContactForm(form);
+    const draft = buildDraft();
+    const allErrors = validateContactForm(draft);
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
-      const first = Object.keys(allErrors)[0];
-      document.getElementById(first)?.focus();
+      const firstKey = Object.keys(allErrors)[0];
+      const focusId = firstKey.startsWith("kids.")
+        ? firstKey.replace(
+            /^kids\.(\d+)\.(name|age)$/,
+            (_m, i, f) => `kid${i}${f}`,
+          )
+        : firstKey === "childAge"
+          ? "childAge"
+          : firstKey;
+      document.getElementById(focusId)?.focus();
       return;
     }
 
     setStatus("submitting");
 
-    const payload: ContactFormData = {
-      ...form,
+    const payload: Partial<ContactFormData> & TrackingContext = {
+      name,
+      email,
+      phone: phone || undefined,
+      interest,
+      message: message || undefined,
       ...trackingRef.current,
       visitor_id: getVisitorIdForForm() || null,
     };
-    if (!interestRequiresChildAge(form.interest)) {
-      payload.childAge = "";
+    if (interestRequiresChildAge(interest)) {
+      payload.kids = kids.map((k) => ({
+        name: k.name.trim(),
+        age: Number(k.age),
+      }));
     }
 
     try {
@@ -141,7 +186,7 @@ export default function ContactForm() {
 
       setStatus("success");
       trackEvent("lead_form_submitted", {
-        interest: form.interest || "contact_form",
+        interest: interest || "contact_form",
         page: window.location.pathname,
       });
     } catch (err) {
@@ -171,7 +216,7 @@ export default function ContactForm() {
           </svg>
         </div>
         <h3 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white mb-3 tracking-tight">
-          Thanks, {form.name.split(" ")[0]}!
+          Thanks, {name.split(" ")[0]}!
         </h3>
         <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
           We&rsquo;ll get back to you within 1 business day. If it&rsquo;s
@@ -215,8 +260,6 @@ export default function ContactForm() {
     "block font-heading text-sm font-bold text-ngpa-white mb-1.5";
   const errorClass = "text-ngpa-red text-sm mt-1.5";
 
-  const showChildAge = interestRequiresChildAge(form.interest);
-
   return (
     <form
       onSubmit={handleSubmit}
@@ -240,9 +283,12 @@ export default function ContactForm() {
             autoComplete="name"
             className={inputClass}
             placeholder="First and last name"
-            value={form.name}
-            onChange={(e) => updateField("name", e.target.value)}
-            onBlur={() => handleBlur("name")}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              clearError("name");
+              if (e.target.value) markStarted();
+            }}
           />
           {errors.name && <p className={errorClass}>{errors.name}</p>}
         </div>
@@ -257,9 +303,12 @@ export default function ContactForm() {
             autoComplete="email"
             className={inputClass}
             placeholder="you@email.com"
-            value={form.email}
-            onChange={(e) => updateField("email", e.target.value)}
-            onBlur={() => handleBlur("email")}
+            value={email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearError("email");
+              if (e.target.value) markStarted();
+            }}
           />
           {errors.email && <p className={errorClass}>{errors.email}</p>}
         </div>
@@ -275,9 +324,11 @@ export default function ContactForm() {
             autoComplete="tel"
             className={inputClass}
             placeholder="(301) 555-1234"
-            value={form.phone ?? ""}
-            onChange={(e) => updateField("phone", e.target.value)}
-            onBlur={() => handleBlur("phone")}
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              clearError("phone");
+            }}
           />
           {errors.phone && <p className={errorClass}>{errors.phone}</p>}
         </div>
@@ -289,11 +340,23 @@ export default function ContactForm() {
           <select
             id="interest"
             className={selectClass}
-            value={form.interest}
-            onChange={(e) =>
-              updateField("interest", e.target.value as ContactInterest | "")
-            }
-            onBlur={() => handleBlur("interest")}
+            value={interest}
+            onChange={(e) => {
+              const next = e.target.value as ContactInterest | "";
+              setInterest(next);
+              clearError("interest");
+              // Wipe child errors if the new interest no longer requires age.
+              if (!interestRequiresChildAge(next)) {
+                setErrors((prev) => {
+                  const out: ContactValidationErrors = {};
+                  for (const [k, v] of Object.entries(prev)) {
+                    if (k === "childAge" || k.startsWith("kids.")) continue;
+                    out[k] = v;
+                  }
+                  return out;
+                });
+              }
+            }}
           >
             <option value="">Select an option</option>
             {CONTACT_INTEREST_OPTIONS.map((opt) => (
@@ -306,27 +369,79 @@ export default function ContactForm() {
         </div>
 
         {showChildAge && (
-          <div>
-            <label htmlFor="childAge" className={labelClass}>
-              Child&rsquo;s Age
-            </label>
-            <select
-              id="childAge"
-              className={selectClass}
-              value={form.childAge ?? ""}
-              onChange={(e) => updateField("childAge", e.target.value)}
-              onBlur={() => handleBlur("childAge")}
-            >
-              <option value="">Select age</option>
-              {AGE_OPTIONS.map((age) => (
-                <option key={age} value={String(age)}>
-                  {age} years old
-                </option>
-              ))}
-            </select>
-            {errors.childAge && (
-              <p className={errorClass}>{errors.childAge}</p>
+          <div className="space-y-3">
+            {kids.map((kid, i) => (
+              <div
+                key={i}
+                className={i === 0 ? "" : "border-t border-ngpa-slate/40 pt-3"}
+              >
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <label
+                    htmlFor={`kid${i}name`}
+                    className={labelClass.replace("mb-1.5", "mb-0")}
+                  >
+                    {kids.length === 1 ? "About your child" : `Child ${i + 1}`}
+                  </label>
+                  {i > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => removeKid(i)}
+                      className="text-ngpa-white/55 hover:text-ngpa-red text-xs font-bold uppercase tracking-wide transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <input
+                      id={`kid${i}name`}
+                      type="text"
+                      autoComplete="off"
+                      className={inputClass}
+                      placeholder="First name"
+                      value={kid.name}
+                      onChange={(e) => updateKid(i, "name", e.target.value)}
+                    />
+                    {errors[`kids.${i}.name`] && (
+                      <p className={errorClass}>{errors[`kids.${i}.name`]}</p>
+                    )}
+                  </div>
+                  <div>
+                    <select
+                      id={i === 0 ? "childAge" : `kid${i}age`}
+                      className={selectClass}
+                      value={kid.age}
+                      onChange={(e) => updateKid(i, "age", e.target.value)}
+                    >
+                      <option value="">Select age</option>
+                      {AGE_OPTIONS.map((age) => (
+                        <option key={age} value={String(age)}>
+                          {age} years old
+                        </option>
+                      ))}
+                    </select>
+                    {(errors[`kids.${i}.age`] ||
+                      (i === 0 && errors.childAge)) && (
+                      <p className={errorClass}>
+                        {errors[`kids.${i}.age`] || errors.childAge}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {kids.length < MAX_KIDS_PER_SUBMISSION && (
+              <button
+                type="button"
+                onClick={addKid}
+                className="text-ngpa-teal hover:text-ngpa-teal-bright text-sm font-bold transition-colors"
+              >
+                + Add another child
+              </button>
             )}
+            {errors.kids && <p className={errorClass}>{errors.kids}</p>}
           </div>
         )}
 
@@ -340,8 +455,8 @@ export default function ContactForm() {
             rows={4}
             className={inputClass}
             placeholder="Anything else you'd like us to know — current skill, schedule, questions…"
-            value={form.message ?? ""}
-            onChange={(e) => updateField("message", e.target.value)}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             maxLength={1000}
           />
           {errors.message && <p className={errorClass}>{errors.message}</p>}

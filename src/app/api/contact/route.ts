@@ -6,6 +6,8 @@ import {
   validateContactForm,
 } from "@/lib/validate-contact";
 import type { ContactFormData, ContactInterest } from "@/lib/validate-contact";
+import { normalizeKids } from "@/lib/validate-lead";
+import type { Kid } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { c, s } from "@/lib/email/brand";
@@ -116,24 +118,33 @@ async function findNotionPlayer(email: string): Promise<string | null> {
 
 async function createNotionRow(
   body: ContactFormData,
+  kid: Kid | null,
+  siblings: Kid[],
 ): Promise<{ id?: string; error?: string }> {
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return { error: "NOTION_API_KEY not configured" };
 
   const interest = body.interest as ContactInterest;
   const isProgramInterest = PROGRAM_INTERESTS.has(interest);
-  const hasChildAge = !!body.childAge;
   const attribution = formatAttribution(body);
   const message = body.message?.trim();
+  const trimmedKidName = kid?.name.trim() ?? "";
 
   const noteParts = [`Interest: ${INTEREST_LABEL[interest] ?? interest}`];
-  if (hasChildAge) noteParts.push(`Child age: ${body.childAge}`);
+  if (kid) noteParts.push(`Child age: ${kid.age}`);
+  if (siblings.length > 0) {
+    noteParts.push(
+      `Siblings on same submission: ${siblings
+        .map((s) => `${s.name.trim() || "unnamed"} (${s.age})`)
+        .join(", ")}`,
+    );
+  }
   if (message) noteParts.push(`Message: "${message}"`);
   if (attribution) noteParts.push(`Attribution: ${attribution}`);
   const notesContent = noteParts.join(". ");
 
   const titleText = isProgramInterest
-    ? `Child of ${body.name}`
+    ? trimmedKidName || `Child of ${body.name}`
     : `${body.name} (${INTEREST_LABEL[interest] ?? interest})`;
 
   const notionStatus = isProgramInterest ? "Lead" : "Contact Inquiry";
@@ -164,10 +175,9 @@ async function createNotionRow(
     "Parent Email": { email: body.email },
   };
 
-  if (hasChildAge) {
-    const age = Number(body.childAge);
-    properties.Age = { number: age };
-    properties.Audience = { select: { name: age >= 17 ? "Adult" : "Youth" } };
+  if (kid) {
+    properties.Age = { number: kid.age };
+    properties.Audience = { select: { name: kid.age >= 17 ? "Adult" : "Youth" } };
   }
 
   if (body.phone && body.phone.trim()) {
@@ -231,10 +241,15 @@ export async function POST(request: NextRequest) {
   // against a client that left a stale value in the payload after toggling.
   if (!interestRequiresChildAge(body.interest)) {
     body.childAge = "";
+    body.kids = [];
   }
 
   const interest = body.interest as ContactInterest;
   const interestLabel = INTEREST_LABEL[interest] ?? interest;
+  const isProgramInterest = PROGRAM_INTERESTS.has(interest);
+  // Only program interests carry kids; partnership / general inquiries write
+  // a single inquiry row with no Age and Player Name = "<parent> (<interest>)".
+  const kids = isProgramInterest ? normalizeKids(body) : [];
 
   let notionStatus = "skipped";
   if (process.env.NOTION_API_KEY) {
@@ -242,10 +257,31 @@ export async function POST(request: NextRequest) {
       const existingId = await findNotionPlayer(body.email);
       if (existingId) {
         notionStatus = "already exists";
-      } else {
-        const result = await createNotionRow(body);
+      } else if (kids.length === 0) {
+        // Non-program interest (or program interest without a kid — shouldn't
+        // happen post-validation, but defensive): one inquiry row, no Age.
+        const result = await createNotionRow(body, null, []);
         notionStatus = result.id ? "created" : `failed: ${result.error}`;
         if (result.error) console.error("Notion create failed:", result.error);
+      } else {
+        const results = await Promise.all(
+          kids.map((kid, i) =>
+            createNotionRow(
+              body,
+              kid,
+              kids.filter((_, j) => j !== i),
+            ),
+          ),
+        );
+        const created = results.filter((r) => r.id).length;
+        const failed = results.filter((r) => r.error);
+        if (failed.length > 0) {
+          notionStatus = `created ${created}/${kids.length} (failed: ${failed[0].error})`;
+          console.error("Notion create failed:", failed[0].error);
+        } else {
+          notionStatus =
+            kids.length === 1 ? "created" : `created ${created} rows`;
+        }
       }
     } catch (err) {
       notionStatus = "error";
@@ -253,12 +289,21 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const childAgeRow = body.childAge
-    ? `<tr style="${s.tableRow}">
-      <td style="${s.tableLabel}">Child's Age</td>
-      <td style="${s.tableValue}">${escapeHtml(body.childAge)} years old</td>
+  const childAgeRow =
+    kids.length > 0
+      ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel} vertical-align: top;">${kids.length === 1 ? "Child" : `Kids (${kids.length})`}</td>
+      <td style="${s.tableValue}">${kids
+        .map((kid) => {
+          const trimmed = kid.name.trim();
+          const safeName = trimmed
+            ? escapeHtml(trimmed)
+            : "(name not provided)";
+          return `${safeName} — ${kid.age} years old`;
+        })
+        .join("<br/>")}</td>
     </tr>`
-    : "";
+      : "";
 
   const phoneRow = body.phone?.trim()
     ? `<tr style="${s.tableRow}">
@@ -347,9 +392,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const resend = getResend();
-    const subjectTail = body.childAge
-      ? ` (${interestLabel}, child age ${body.childAge})`
-      : ` (${interestLabel})`;
+    const subjectTail =
+      kids.length === 1
+        ? ` (${interestLabel}, child age ${kids[0].age})`
+        : kids.length > 1
+          ? ` (${interestLabel}, ${kids.length} kids: ${kids.map((k) => k.age).join(", ")})`
+          : ` (${interestLabel})`;
 
     const results = await Promise.all([
       resend.emails.send({
@@ -392,7 +440,12 @@ export async function POST(request: NextRequest) {
       },
       metadata: {
         interest_label: interestLabel,
-        child_age: body.childAge ? Number(body.childAge) : null,
+        child_age: kids[0]?.age ?? null,
+        kid_count: kids.length,
+        kids:
+          kids.length > 0
+            ? kids.map((k) => ({ name: k.name.trim() || null, age: k.age }))
+            : null,
         inquiry_message: body.message?.trim() || null,
         notion_status: notionStatus,
         is_parent: PROGRAM_INTERESTS.has(interest),
