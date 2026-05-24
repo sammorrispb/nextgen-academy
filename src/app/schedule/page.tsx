@@ -4,6 +4,7 @@ import { seo } from "@/data/seo";
 import { seasons } from "@/data/schedule";
 import SectionHeading from "@/components/SectionHeading";
 import CTABanner from "@/components/CTABanner";
+import CrewPathway from "@/components/CrewPathway";
 import RegistrationNotice from "@/components/RegistrationNotice";
 import SessionCard from "@/components/SessionCard";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
@@ -135,6 +136,21 @@ export default async function SchedulePage() {
               ))}
             </div>
           )}
+        </div>
+      </section>
+
+      {/* ─── Crew Pathway pitch ─────────────────── */}
+      <section
+        id="crew"
+        className="bg-ngpa-deep py-20 sm:py-24 px-4 sm:px-6 lg:px-10 scroll-mt-20"
+      >
+        <div className="max-w-5xl mx-auto">
+          <SectionHeading
+            eyebrow="The Crew Pathway"
+            title="From drop-in to your own 4-week crew."
+            subtitle="Most parents start with one drop-in. After that we find your kid a crew of 3 others at the same level — same court, same time, every week."
+          />
+          <CrewPathway />
         </div>
       </section>
 

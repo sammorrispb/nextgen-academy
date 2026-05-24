@@ -8,6 +8,7 @@ import BallPathway from "@/components/BallPathway";
 import LevelGrid from "@/components/LevelGrid";
 import YellowBallCTA from "@/components/YellowBallCTA";
 import EaseValues from "@/components/EaseValues";
+import CrewPathway from "@/components/CrewPathway";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import ContactForm from "@/components/ContactForm";
 import FAQSection from "@/components/FAQSection";
@@ -196,6 +197,25 @@ export default async function Home() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ─── Crew Pathway ────────────────────────── */}
+      <section
+        id="crew"
+        className="relative bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
+      >
+        <div
+          aria-hidden="true"
+          className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-ngpa-teal/10 blur-3xl"
+        />
+        <div className="relative max-w-7xl mx-auto">
+          <SectionHeading
+            eyebrow="The Crew Pathway"
+            title="From one drop-in to a 4-week crew."
+            subtitle="Try a single session. If it clicks, we build your kid a crew of 3 others at the same level — same court, same time, every week."
+          />
+          <CrewPathway />
         </div>
       </section>
 
