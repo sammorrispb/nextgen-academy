@@ -73,11 +73,45 @@ Free, top-of-funnel offer: a cold parent says yes to the free thing first; price
 1. Validate (parentName/email/childAge) → 400 `{ error, errors }`.
 2. Rate-limit by IP (5/hr, in-memory) → 429.
 3. Guard `RESEND_API_KEY` (500 if missing — the welcome email is the core value).
-4. **Notion dedup-and-create** into the NGA Newsletter Subscribers DB (`NOTION_NEWSLETTER_DB_ID`): query by Email; if found, skip create; else create with Parent Name (title), Email, Child Age (number), Status=Active, Marketing Opt-In=true, Welcome Sent=false. Skipped gracefully if env vars missing.
-5. **Resend**: welcome email to the subscriber (template `src/lib/email/newsletter-welcome.ts`, bcc admin, replyTo `nextgenacademypb@gmail.com`) + a short admin notification. Flips `Welcome Sent`=true after a successful send; suppresses the welcome only if dedup found an already-welcomed row.
-6. **Open Brain** ingest (`source: "nga_newsletter_signup"`), awaited.
+4. **Decode referral**: if the form payload carries `ref` (captured from `/newsletter?ref=<token>`), `verifyReferralToken()` decodes the referrer's email. Self-referrals are silently dropped. A fresh `Referral Token` is signed over the new subscriber's email and stamped on the row.
+5. **Notion dedup-and-create** into the NGA Newsletter Subscribers DB (`NOTION_NEWSLETTER_DB_ID`): query by Email; if found, skip create; else create with Parent Name (title), Email, Child Age (number), Status=Active, Marketing Opt-In=true, Welcome Sent=false, `Referral Token`, `Referred By`, `Referral Rewarded`=false, `Coupons Issued`=0. Skipped gracefully if env vars missing.
+6. **Resend**: welcome email to the subscriber (template `src/lib/email/newsletter-welcome.ts`, bcc admin, replyTo `nextgenacademypb@gmail.com`) carrying the personalized forward link + `/crew` CTA + a short admin notification. Flips `Welcome Sent`=true after a successful send; suppresses the welcome only if dedup found an already-welcomed row.
+7. **Open Brain** ingest (`source: "nga_newsletter_signup"`, includes `referred_by` in metadata), awaited.
 
-**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/$40/monthly). The only live price is the single $40 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references "crew pricing and bring-a-friend perks" qualitatively + a CTA to `/schedule`, so a parent never reads a number that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
+**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/$40/monthly). The only live price is the single $40 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references the referral perk ("you both get 50% off your next drop-in") as a percentage rather than a dollar amount, so a parent never reads a base price that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
+
+### Crew Interest (`/crew` + `/api/crew-interest`)
+**The no-active-poll fallback.** If a parent's preferred slot doesn't match any Crew Poll Sam is currently running, they fill out the Crew Interest form instead. Sam reviews the Notion DB and decides whether to spin up a new poll for the day/level mix coming through. Surfaces: a dedicated `/crew` landing page (`src/app/crew/page.tsx`) rendering `src/components/CrewInterestForm.tsx`, plus a "None of these fit? / Want a regular crew?" callout in every weekly newsletter.
+
+Fields: parent name, email, optional phone, child first name + age + level (Red/Orange/Green/Yellow), preferred days (multi-select Mon–Sun), preferred time (free-form), optional location + friends-wanted + notes. Validated by `src/lib/validate-crew-interest.ts`.
+
+`POST /api/crew-interest`:
+1. Validate → 400; rate-limit by IP (5/hr) → 429.
+2. **Notion write** into NGA Crew Interest DB (`NOTION_CREW_INTEREST_DB_ID`) with Status=New. Fails soft (logs + continues so the welcome email still sends).
+3. **Resend**: admin notification (`sam.morris2131@gmail.com`, CC `nextgenacademypb@gmail.com`) + parent confirmation (`src/lib/email/crew-interest-welcome.ts`, BCC admin).
+4. **Open Brain** ingest (`source: "nga_crew_interest"`).
+
+Never publishes anything publicly — Sam owns whether the submission becomes a Crew Poll.
+
+### Newsletter referral payout (Stripe webhook branch)
+Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src/lib/referral-token.ts`, signing key `REFERRAL_TOKEN_SECRET` → falls back to `NGA_ADMIN_SECRET`). Both the weekly newsletter and the welcome email surface it as a personalized `?ref=<token>` link on `/newsletter`. When a friend signs up via that link, their row gets `Referred By` set to the referrer's email.
+
+**Reward fires on the friend's first paid drop-in** (not at signup). In `src/app/api/stripe/webhook/route.ts`, the `checkout.session.completed` fan-out includes `processReferralReward(session)` (`src/lib/referral-rewards.ts`), which:
+1. Looks up the friend's subscriber row by `customer_email`.
+2. No-ops if there's no `Referred By` or `Referral Rewarded` is already true (idempotent on webhook retries).
+3. Looks up the referrer row by the `Referred By` email. If the referrer isn't (or no longer is) a subscriber, flips `Referral Rewarded`=true on the friend's row and skips the payout (prevents retry storms on lapsed referrers).
+4. Mints two Stripe coupons (50% off, `duration: "once"`, `max_redemptions: 1`) and matching auto-generated promotion codes — one per recipient.
+5. Emails both parents (`src/lib/email/referral-friend-reward.ts`, `src/lib/email/referral-referrer-reward.ts`, BCC admin).
+6. Flips `Referral Rewarded`=true on the friend's row and increments `Coupons Issued` on both rows.
+
+Promo codes work at checkout because `/api/checkout/route.ts` already passes `allow_promotion_codes: true` to Stripe Checkout. No `STRIPE_REFERRAL_PRICE_ID` env var is needed — the coupon mints inline. Failure of any step is logged + swallowed so a Notion blip never blocks the user's success page or triggers a Stripe webhook retry storm.
+
+### Weekly newsletter blocks (per issue)
+On top of the open sessions, the Thursday cron (`/api/cron/weekly-newsletter`) now renders four new blocks (`src/lib/email/weekly-newsletter.ts`):
+- **Forming crews now** — up to 5 Open polls from `fetchOpenPolls()`, each with day/time/location/level + Yes-vote progress label, linking to `/poll/<slug>`. Hidden when none.
+- **Crew interest CTA** — always renders; copy adapts to whether polls are present ("None of these fit?" vs "Want a regular crew?").
+- **Private lessons card** — routes to `/#contact-form` for parents whose kid isn't ready for group play (Red/Orange Ball are private-lesson-only).
+- **Bring the crew (referral)** — personalized `/newsletter?ref=<token>` link with the 50% off framing. Falls back to a generic forward ask if `REFERRAL_TOKEN_SECRET`/`NGA_ADMIN_SECRET` aren't configured.
 
 ### Eval-lead re-engagement (`POST /api/eval-reengagement`)
 One-time (re-runnable) outreach inviting existing eval leads to opt into the newsletter. `?secret=$NGA_ADMIN_SECRET`-gated. Queries the lead CRM (`NOTION_DB_ID`), classifies every row with `src/lib/lead-segmentation.ts` (`classifyLead`), and sends the brand-reviewed `eval-reengagement` template (`src/lib/email/*`) only to the **ELIGIBLE** bucket — deduped by email, per-recipient via Resend (BCC admin). **The DD-derived rule lives in code here:** OFF-LIMITS = Source CourtReserve/Google Sheet, any CR-event history, DD-era season (Fall 2025 / Winter 2026), or DD/CR in notes; ELIGIBLE = clean own-marketing sources (Website / Lead Form / Facebook Ad / etc.); everything else (empty/Evaluation/Referral source) is AMBIGUOUS and **never mailed**. Always `{"dryRun": true}` first to verify the eligible count + recipient list before a live send. Pricing teased, not quoted; the email is an opt-in invite (no unsubscribe token — recipients join via `/newsletter`).
@@ -152,6 +186,8 @@ See `.env.example`. Categories:
 - `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1TU4iSBpXOfTC961`.
 - `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret.
 - `STRIPE_DROPIN_PRICE_ID` — price ID for the single $40 NGA Drop-in slot product.
+- `NOTION_CREW_INTEREST_DB_ID` — NGA Crew Interest DB (the no-active-poll fallback form). Optional — endpoint logs + continues if unset.
+- `REFERRAL_TOKEN_SECRET` — HMAC signing key for `/newsletter?ref=<token>` links. Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` so a leaked unsub token can't be replayed as a referral and vice versa.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
 
 ## Testing Standards

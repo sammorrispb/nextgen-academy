@@ -4,11 +4,44 @@ interface NewsletterWelcomeInput {
   parentFirst: string;
   childFirst?: string;
   scheduleUrl: string;
+  /** /crew route — surfaced as the "I want a regular crew" next step. */
+  crewInterestUrl?: string;
+  /** Personalized /newsletter?ref=<token> link for the referral perk card. */
+  referralUrl?: string | null;
 }
 
 export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
-  const { parentFirst, childFirst, scheduleUrl } = input;
+  const { parentFirst, childFirst, scheduleUrl, crewInterestUrl, referralUrl } =
+    input;
   const kid = childFirst?.trim() ? escape(childFirst) : "your kid";
+
+  const referralBlock = referralUrl
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring the crew</p>
+      <p style="margin:0 0 8px 0;color:${c.text};font-size:14px;line-height:1.55;">
+        Forward this email to one parent whose kid would love this. When they sign up through your link and play their first session, you both get <strong>50% off</strong> your next drop-in.
+      </p>
+      <p style="margin:0;color:${c.muted};font-size:12px;line-height:1.5;">Your forward link: <a href="${referralUrl}" style="${s.link}text-decoration:underline;">${escape(referralUrl)}</a></p>
+    </div>`
+    : `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring the crew</p>
+      <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">
+        Know another kid who&rsquo;d love this? Forward this email &mdash; every Thursday issue carries your personal link, and when a friend signs up and plays you both get 50% off your next session.
+      </p>
+    </div>`;
+
+  const crewBlock = crewInterestUrl
+    ? `
+    <div style="${s.card}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.muted};font-weight:700;">Want a regular crew?</p>
+      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">
+        If you&rsquo;d rather play with the same four kids every week than drop in, tell us your level and the days that work &mdash; Sam looks for 3 more kids who match.
+      </p>
+      <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s crew &rarr;</a></p>
+    </div>`
+    : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -28,16 +61,9 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">What to expect</h2>
     <ul style="margin:0;padding-left:18px;color:${c.text};line-height:1.7;">
       <li>This week&rsquo;s drop-in session times, before they fill</li>
-      <li>First dibs on monthly training spots when new cohorts open</li>
+      <li>The crews forming now &mdash; vote in the slots that work for your kid</li>
       <li>Coach tips and the occasional &ldquo;how your kid gets better&rdquo; note</li>
     </ul>
-
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Crew perks</p>
-      <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">
-        Being in the crew comes with crew pricing and bring-a-friend perks. Know another kid who&rsquo;d love this? Bring them along &mdash; crew perks apply to both of you. We&rsquo;ll always show the current numbers right on the schedule when you book.
-      </p>
-    </div>
 
     <div style="${s.actionCallout}">
       <p style="${s.actionLabel}">Start playing</p>
@@ -48,6 +74,10 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
         <a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">See this week&rsquo;s sessions &rarr;</a>
       </p>
     </div>
+
+    ${crewBlock}
+
+    ${referralBlock}
 
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
@@ -65,26 +95,49 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
 
 export function newsletterWelcomeText(input: NewsletterWelcomeInput): string {
   const kid = input.childFirst?.trim() ? input.childFirst : "your kid";
-  return [
+  const lines: string[] = [
     `You're in the crew, ${input.parentFirst}.`,
     "",
     `Montgomery County's youth pickleball crew is growing, and ${kid} just got a spot in the loop. Here's what lands in your inbox from here on out.`,
     "",
     `What to expect:`,
     `- This week's drop-in session times, before they fill`,
-    `- First dibs on monthly training spots when new cohorts open`,
+    `- The crews forming now — vote in the slots that work for your kid`,
     `- Coach tips and the occasional "how your kid gets better" note`,
-    "",
-    `Crew perks: being in the crew comes with crew pricing and bring-a-friend perks. Know another kid who'd love this? Bring them along — crew perks apply to both of you. We'll always show the current numbers right on the schedule when you book.`,
     "",
     `Start playing — sessions cap at 4 players per court and the good times fill fast.`,
     `See this week's sessions: ${input.scheduleUrl}`,
     "",
+  ];
+
+  if (input.crewInterestUrl) {
+    lines.push(
+      `Want a regular crew? If you'd rather play with the same four kids every week, tell us your level and the days that work — Sam looks for 3 more kids who match.`,
+      `Find your kid's crew: ${input.crewInterestUrl}`,
+      "",
+    );
+  }
+
+  if (input.referralUrl) {
+    lines.push(
+      `Bring the crew: forward this email to one parent whose kid would love this. When they sign up through your link and play their first session, you both get 50% off your next drop-in.`,
+      `Your forward link: ${input.referralUrl}`,
+      "",
+    );
+  } else {
+    lines.push(
+      `Bring the crew: know another kid who'd love this? Forward this email — every Thursday issue carries your personal link, and when a friend signs up and plays you both get 50% off your next session.`,
+      "",
+    );
+  }
+
+  lines.push(
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
     "",
     `We'll only send you where to play and how your kid gets better. If you'd rather we stop, just reply "skip" and we'll take you off the list.`,
-  ].join("\n");
+  );
+  return lines.join("\n");
 }
 
 function escape(s: string): string {

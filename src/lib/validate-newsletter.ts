@@ -11,6 +11,8 @@ export interface NewsletterFormData {
   utm_term?: string;
   referrer?: string;
   landing_page?: string;
+  /** Signed referral token from ?ref=<token> — links the new subscriber to the referrer's email. */
+  ref?: string;
 }
 
 // Only the three user-facing fields can produce validation errors.
