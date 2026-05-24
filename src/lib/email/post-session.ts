@@ -6,10 +6,17 @@ interface PostSessionInput {
   sessionTitle: string;
   sessionDateLong: string; // "Saturday, May 23, 2026"
   scheduleUrl: string;
+  /**
+   * Optional signed `/commit/<token>` URL. When present, the email renders a
+   * second CTA inviting the parent to lock in the next 4 weeks of the same
+   * crew. Omitted when we can't build a valid crew-id from the row (e.g.
+   * level missing) so we don't link parents into a broken page.
+   */
+  commitUrl?: string;
 }
 
 export function postSessionHtml(input: PostSessionInput): string {
-  const { parentFirst, childFirst, sessionTitle, sessionDateLong, scheduleUrl } =
+  const { parentFirst, childFirst, sessionTitle, sessionDateLong, scheduleUrl, commitUrl } =
     input;
 
   return `<!DOCTYPE html>
@@ -48,6 +55,20 @@ export function postSessionHtml(input: PostSessionInput): string {
         <a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">See the next session &rarr;</a>
       </p>
     </div>
+${
+  commitUrl
+    ? `
+    <div style="${s.actionCallout}">
+      <p style="${s.actionLabel}">Or lock in 4 weeks at once</p>
+      <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
+        Same time, same court, same crew &mdash; we&rsquo;ll auto-reserve ${escape(childFirst)}&rsquo;s spot for the next 4 weeks and charge $40 only on weeks they actually play. Skip a week any time.
+      </p>
+      <p style="margin:14px 0 0 0;">
+        <a href="${commitUrl}" style="${s.link}font-weight:700;text-decoration:none;">Lock in 4 weeks &rarr;</a>
+      </p>
+    </div>`
+    : ""
+}
 
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
@@ -64,7 +85,7 @@ export function postSessionHtml(input: PostSessionInput): string {
 }
 
 export function postSessionText(input: PostSessionInput): string {
-  return [
+  const lines = [
     `Hi ${input.parentFirst},`,
     "",
     `${input.childFirst} got reps in yesterday.`,
@@ -81,12 +102,22 @@ export function postSessionText(input: PostSessionInput): string {
     "",
     `Book the next slot — sessions cap at 4 players per court and the good times fill 7–14 days out.`,
     `See the next session: ${input.scheduleUrl}`,
+  ];
+  if (input.commitUrl) {
+    lines.push(
+      "",
+      `Or lock in 4 weeks at once — same time, same court, same crew. We'll auto-reserve ${input.childFirst}'s spot and charge $40 only on weeks they play. Skip any week.`,
+      `Lock in 4 weeks: ${input.commitUrl}`,
+    );
+  }
+  lines.push(
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
     "",
     `We send this one note after each session. If you'd rather we skip the recap, just reply "skip" and we'll stop.`,
-  ].join("\n");
+  );
+  return lines.join("\n");
 }
 
 function escape(s: string): string {

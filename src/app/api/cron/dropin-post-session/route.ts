@@ -6,9 +6,14 @@ import {
   type DropInRegistration,
 } from "@/lib/notion-dropins";
 import {
+  fetchSessionById,
+  findSessionIdByDateAndTime,
+} from "@/lib/notion-sessions";
+import {
   postSessionHtml,
   postSessionText,
 } from "@/lib/email/post-session";
+import { buildCrewId, signCommitToken } from "@/lib/commit-token";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,6 +63,32 @@ interface SendOutcome {
   error?: string;
 }
 
+async function buildCommitUrl(
+  row: DropInRegistration,
+): Promise<string | undefined> {
+  if (!row.parentEmail || !row.childFirstName) return undefined;
+  const sessionId = await findSessionIdByDateAndTime(
+    row.sessionDate,
+    row.sessionStartTime,
+  );
+  if (!sessionId) return undefined;
+  const session = await fetchSessionById(sessionId);
+  if (!session || !session.level) return undefined;
+  const crewId = buildCrewId({
+    level: session.level,
+    date: row.sessionDate,
+    startTime: row.sessionStartTime,
+    location: row.location,
+  });
+  const token = signCommitToken({
+    parentEmail: row.parentEmail,
+    childFirstName: row.childFirstName,
+    crewId,
+  });
+  if (!token) return undefined;
+  return `${SITE_ORIGIN}/commit/${token}`;
+}
+
 async function sendOne(
   resend: Resend | null,
   row: DropInRegistration,
@@ -66,6 +97,7 @@ async function sendOne(
   const parentFirst = (row.parentName || "").split(/\s+/)[0] || "there";
   const sessionDateLong = formatLongDate(row.sessionDate);
   const scheduleUrl = `${SITE_ORIGIN}/schedule`;
+  const commitUrl = await buildCommitUrl(row);
 
   const outcome: SendOutcome = {
     pageId: row.id,
@@ -91,6 +123,7 @@ async function sendOne(
     sessionTitle: row.sessionTitle,
     sessionDateLong,
     scheduleUrl,
+    commitUrl,
   });
   const text = postSessionText({
     parentFirst,
@@ -98,6 +131,7 @@ async function sendOne(
     sessionTitle: row.sessionTitle,
     sessionDateLong,
     scheduleUrl,
+    commitUrl,
   });
 
   const { error } = await resend.emails.send({

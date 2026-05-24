@@ -67,12 +67,20 @@ export default async function CoachDashboard() {
         30 days · {drops.length} paid registration
         {drops.length === 1 ? "" : "s"} total.
       </p>
-      <Link
-        href="/coach/players"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors mb-8"
-      >
-        View families &amp; profiles →
-      </Link>
+      <div className="flex flex-wrap gap-3 mb-8">
+        <Link
+          href="/coach/players"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
+        >
+          View families &amp; profiles →
+        </Link>
+        <Link
+          href="/coach/polls"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
+        >
+          Crew polls →
+        </Link>
+      </div>
 
       {sessions.length === 0 ? (
         <div className="px-5 py-6 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/60 text-ngpa-white/70">
