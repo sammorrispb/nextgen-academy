@@ -1,47 +1,29 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { Metadata } from "next";
-import { seo } from "@/data/seo";
 import { site } from "@/data/site";
-import { levels } from "@/data/levels";
-import { coaches } from "@/data/coaches";
 import { faq } from "@/data/faq";
+import { levels } from "@/data/levels";
 import { testimonials } from "@/data/testimonials";
 import JsonLd from "@/components/JsonLd";
 import LeadForm from "@/components/LeadForm";
 import TrackedCTA from "@/components/TrackedCTA";
-import { NGA_POSTAL_ADDRESS, areaServedJsonLd } from "@/lib/seo";
+import {
+  breadcrumbJsonLd,
+  localBusinessJsonLd,
+  SITE_URL,
+  type ServiceCity,
+} from "@/lib/seo";
 
-export const metadata: Metadata = {
-  // Absolute title so the rendered <title> stays inside Google's ~60-char
-  // truncation budget (template would add "%s | Next Gen Pickleball Academy").
-  title: { absolute: seo.montgomeryCounty.title },
-  description: seo.montgomeryCounty.description,
-  alternates: { canonical: "/montgomery-county-youth-pickleball" },
-  openGraph: {
-    title: seo.montgomeryCounty.title,
-    description: seo.montgomeryCounty.description,
-    url: "https://nextgenpbacademy.com/montgomery-county-youth-pickleball",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: seo.montgomeryCounty.title,
-    description: seo.montgomeryCounty.description,
-  },
-};
-
-const SERVED_TOWNS = [
-  "Rockville",
-  "North Bethesda",
-  "Bethesda",
-  "Potomac",
-  "Chevy Chase",
-  "Kensington",
-  "Silver Spring",
-  "Gaithersburg",
-  "Derwood",
-  "Aspen Hill",
-];
+interface CityLandingProps {
+  /** Canonical city — must match an entry in SERVICE_AREAS. */
+  city: ServiceCity;
+  /** Route slug, e.g. "youth-pickleball-bethesda" — no leading slash. */
+  slug: string;
+  /** Localized blurb under the H1 — keep it generic-to-MoCo (no fabricated venue specifics). */
+  intro: string;
+  /** Shorter 1-paragraph "Where we play near {city}" — generic-to-MoCo. */
+  whereWePlay: string;
+}
 
 const LOCAL_FAQ_QUESTIONS = new Set([
   "What ages do you accept?",
@@ -50,25 +32,45 @@ const LOCAL_FAQ_QUESTIONS = new Set([
   "Which Montgomery County towns do you serve?",
 ]);
 
+// Reused across all 4 city pages. Same FAQ set as
+// /montgomery-county-youth-pickleball — keeps answers in one place.
 const localFaq = faq.filter((item) => LOCAL_FAQ_QUESTIONS.has(item.question));
 
-export default function MontgomeryCountyPage() {
+/**
+ * Shared frame for the per-city landing pages. Each page passes its own
+ * city + slug + 1-2 paras of localized copy. We do NOT fabricate venue or
+ * day-of-week specifics — claims stay generic-to-MoCo (per the brand-guide
+ * "invent nothing, cite everything" + no-venue-specifics-in-lead-replies
+ * rules). Lead with the free evaluation.
+ */
+export default function CityLanding({
+  city,
+  slug,
+  intro,
+  whereWePlay,
+}: CityLandingProps) {
+  const url = `${SITE_URL}/${slug}`;
+  const description = `Youth pickleball coaching for kids ages 5–16 in ${city}, MD — and across Montgomery County. Free evaluations, small-group sessions, and private lessons with Next Gen Pickleball Academy.`;
+
   return (
     <>
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "BreadcrumbList",
-          itemListElement: [
-            { "@type": "ListItem", position: 1, name: "Home", item: "https://nextgenpbacademy.com/" },
-            {
-              "@type": "ListItem",
-              position: 2,
-              name: "Youth Pickleball in Montgomery County",
-              item: "https://nextgenpbacademy.com/montgomery-county-youth-pickleball",
-            },
-          ],
-        }}
+        data={breadcrumbJsonLd([
+          { name: "Home", url: `${SITE_URL}/` },
+          {
+            name: "Youth Pickleball in Montgomery County",
+            url: `${SITE_URL}/montgomery-county-youth-pickleball`,
+          },
+          { name: `Youth Pickleball in ${city}`, url },
+        ])}
+      />
+
+      <JsonLd
+        data={localBusinessJsonLd({
+          city,
+          url,
+          description,
+        })}
       />
 
       <JsonLd
@@ -80,25 +82,6 @@ export default function MontgomeryCountyPage() {
             name: item.question,
             acceptedAnswer: { "@type": "Answer", text: item.answer },
           })),
-        }}
-      />
-
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": ["LocalBusiness", "SportsActivityLocation"],
-          name: "Next Gen Pickleball Academy — Montgomery County",
-          description: seo.montgomeryCounty.description,
-          url: "https://nextgenpbacademy.com/montgomery-county-youth-pickleball",
-          telephone: "301-325-4731",
-          email: "nextgenacademypb@gmail.com",
-          address: NGA_POSTAL_ADDRESS,
-          areaServed: areaServedJsonLd(),
-          parentOrganization: {
-            "@type": "SportsOrganization",
-            name: "Next Gen Pickleball Academy",
-            url: "https://nextgenpbacademy.com",
-          },
         }}
       />
 
@@ -119,39 +102,44 @@ export default function MontgomeryCountyPage() {
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 sm:pt-24 pb-20 sm:pb-24">
           <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-4">
-            Montgomery County, MD &middot; Ages 5&ndash;16
+            {city}, MD &middot; Ages 5&ndash;16
           </p>
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight">
             Youth pickleball in{" "}
-            <span className="text-ngpa-teal">Montgomery County</span>.
+            <span className="text-ngpa-teal">{city}, MD</span> &mdash; Next Gen
+            Academy.
           </h1>
           <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
-            Next Gen Pickleball Academy is a youth pickleball academy for kids
-            ages 5&ndash;16, serving families across Montgomery County. Group
-            sessions for kids 8+ who can rally, and private lessons for ages
-            5&ndash;7 (and any 8+ still learning the rally). We reach families
-            in Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring,
-            Gaithersburg, and the broader DMV &mdash; with a clear pathway to
-            tournament play.
+            {intro}
           </p>
 
           <div className="mt-9 flex flex-col sm:flex-row gap-3">
             <TrackedCTA
               href="#contact-form"
-              label="moco_hero_book_eval"
-              section="moco_hero"
+              label={`city_${slug}_hero_book_eval`}
+              section={`city_${slug}_hero`}
               asNextLink
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-xl shadow-ngpa-teal/20"
             >
               Book Free 30-Minute Evaluation
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 5l7 7-7 7"
+                />
               </svg>
             </TrackedCTA>
             <TrackedCTA
               href="/schedule"
-              label="moco_hero_view_schedule"
-              section="moco_hero"
+              label={`city_${slug}_hero_view_schedule`}
+              section={`city_${slug}_hero`}
               asNextLink
               className="inline-flex items-center justify-center px-7 py-3.5 bg-white/10 ring-1 ring-white/30 text-ngpa-white font-bold rounded-full hover:bg-white/15 hover:ring-white/50 transition-all min-h-[48px]"
             >
@@ -161,44 +149,30 @@ export default function MontgomeryCountyPage() {
         </div>
       </section>
 
-      {/* ─── Where we serve ───────────────────── */}
+      {/* ─── Where we play near {city} ────────── */}
       <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-5xl mx-auto">
           <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-            Service Area
+            Where We Play
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Where Montgomery County families play with us.
+            For families in {city} and across MoCo.
           </h2>
-          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            We coach across Montgomery County Public Schools. Sessions rotate by
-            demand &mdash; closer to more zip codes than a single fixed venue.
+          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8 max-w-2xl">
+            {whereWePlay}
           </p>
-
-          <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 mb-10">
-            <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              MCPS courts across Montgomery County.
-            </h3>
-            <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions rotate weekly based on court availability. Check the
-              schedule for this week&rsquo;s location, or book a free evaluation
-              and we&rsquo;ll confirm the venue when we schedule.
-            </p>
-          </div>
-
-          <h3 className="font-heading text-base font-bold text-ngpa-white uppercase tracking-[0.15em] mb-4">
-            Families regularly drive in from
-          </h3>
-          <ul className="flex flex-wrap gap-2">
-            {SERVED_TOWNS.map((town) => (
-              <li
-                key={town}
-                className="px-4 py-2 bg-ngpa-panel/80 border border-ngpa-slate/60 rounded-full text-sm font-medium text-ngpa-white/85"
-              >
-                {town}
-              </li>
-            ))}
-          </ul>
+          <p className="text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
+            Sessions rotate weekly based on court availability across Montgomery
+            County Public Schools. Check the{" "}
+            <Link
+              href="/schedule"
+              className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
+            >
+              schedule
+            </Link>{" "}
+            for the current week, or book a free evaluation and we&rsquo;ll
+            confirm the venue when we schedule.
+          </p>
         </div>
       </section>
 
@@ -215,10 +189,18 @@ export default function MontgomeryCountyPage() {
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
             The Red &rarr; Yellow Ball pathway.
           </h2>
-          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            We follow USA Pickleball&rsquo;s official youth progression — a proven
-            system of color-coded balls with reduced bounce and compression. Every
-            child is placed based on skill during a free evaluation, not age alone.
+          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-4 max-w-2xl">
+            We follow USA Pickleball&rsquo;s official youth progression &mdash;
+            a proven system of color-coded balls with reduced bounce and
+            compression. Every child is placed by skill during a free
+            evaluation, not age alone.
+          </p>
+          <p className="text-sm text-ngpa-white/65 leading-relaxed mb-10 max-w-2xl">
+            <strong className="text-ngpa-white/85">
+              Private lessons are the on-ramp for kids ages 5&ndash;7
+            </strong>{" "}
+            (and any 8+ still learning the rally). Group sessions start at Green
+            Ball.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -255,46 +237,11 @@ export default function MontgomeryCountyPage() {
         </div>
       </section>
 
-      {/* ─── Coaches ──────────────────────────── */}
+      {/* ─── Testimonials ─────────────────────── */}
       <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-5xl mx-auto">
-          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-            The Team
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Built by Montgomery County parents, for Montgomery County parents.
-          </h2>
-          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            Next Gen was started by two dads who coach the program they wished
-            existed for their own kids.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {coaches.map((coach) => (
-              <div
-                key={coach.name}
-                className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl p-6 border border-ngpa-slate/60"
-              >
-                <h3 className="font-heading text-xl font-black text-ngpa-white tracking-tight">
-                  {coach.name}
-                </h3>
-                <p className="text-sm text-ngpa-teal font-bold uppercase tracking-wider mt-1 mb-3">
-                  {coach.role}
-                </p>
-                <p className="text-sm text-ngpa-white/75 leading-relaxed">
-                  {coach.bio}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Testimonials ─────────────────────── */}
-      <section className="bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
-        <div className="max-w-5xl mx-auto">
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-10 tracking-tight">
-            What Montgomery County parents are saying.
+            What MoCo parents are saying.
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {testimonials.slice(0, 2).map((t) => (
@@ -322,46 +269,6 @@ export default function MontgomeryCountyPage() {
         </div>
       </section>
 
-      {/* ─── Pricing snapshot ─────────────────── */}
-      <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-            Pricing
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Transparent, drop-in pricing.
-          </h2>
-          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8">
-            All group classes are{" "}
-            <strong className="text-ngpa-white font-bold">$40 per 1-hour slot</strong>{" "}
-            ($80 for both slots in a session), drop-in only — no subscription,
-            no commitment. Sessions split into Early and Late slots. Each
-            pickleball court is capped at 4 players. Payments are
-            non-refundable.{" "}
-            <Link
-              href="/schedule"
-              className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
-            >
-              View the current schedule
-            </Link>
-            .
-          </p>
-          <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7">
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="font-mono font-bold text-4xl text-ngpa-teal">$40</span>
-              <span className="text-ngpa-white/65">per 1-hour group slot</span>
-            </div>
-            <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Same group rate across Orange, Green &amp; Yellow Ball.
-              Drop-in only. No monthly subscription. Non-refundable.
-            </p>
-          </div>
-          <p className="text-sm text-ngpa-white/60 mt-5">
-            <strong className="text-ngpa-white/80">Private lessons</strong> for kids ages 5&ndash;7 (and any 8+ still learning the rally) are quoted after the evaluation — rate depends on coach, location, and package. The 30-minute evaluation that determines placement is always free.
-          </p>
-        </div>
-      </section>
-
       {/* ─── FAQ ──────────────────────────────── */}
       <section className="bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-3xl mx-auto">
@@ -369,7 +276,7 @@ export default function MontgomeryCountyPage() {
             Parent FAQ
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-10 tracking-tight">
-            Montgomery County parent FAQ.
+            {city} parent FAQ.
           </h2>
           <div className="space-y-7">
             {localFaq.map((item) => (

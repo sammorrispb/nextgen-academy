@@ -4,16 +4,25 @@ import NewsletterForm from "@/components/NewsletterForm";
 import JsonLd from "@/components/JsonLd";
 import { site } from "@/data/site";
 
+const NEWSLETTER_TITLE = "Free Youth Pickleball Newsletter — Montgomery County, MD";
+const NEWSLETTER_DESCRIPTION =
+  "Free email for parents of kids ages 5–16 in Montgomery County, MD: this week's pickleball sessions, monthly training spots, and coach tips. No spam.";
+const NEWSLETTER_SHARE_DESCRIPTION =
+  "Montgomery County's youth pickleball crew is growing. Get your kid in — session times, training spots, and coach tips, free.";
+
 export const metadata: Metadata = {
-  title: "Free Youth Pickleball Newsletter — Next Gen, Montgomery County, MD",
-  description:
-    "Join Montgomery County's growing youth pickleball crew. Get this week's drop-in session times, first dibs on monthly training spots, and coach tips — free. For parents of kids ages 8–16.",
+  title: { absolute: NEWSLETTER_TITLE },
+  description: NEWSLETTER_DESCRIPTION,
   alternates: { canonical: "/newsletter" },
   openGraph: {
-    title: "Free Youth Pickleball Newsletter — Next Gen, Montgomery County, MD",
-    description:
-      "Montgomery County's youth pickleball crew is growing. Get your kid in — session times, training spots, and coach tips, free.",
+    title: NEWSLETTER_TITLE,
+    description: NEWSLETTER_SHARE_DESCRIPTION,
     url: "https://nextgenpbacademy.com/newsletter",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: NEWSLETTER_TITLE,
+    description: NEWSLETTER_SHARE_DESCRIPTION,
   },
 };
 
@@ -77,7 +86,7 @@ export default function NewsletterPage() {
                 One free email keeps you in the loop &mdash; where to play this
                 week, when monthly training spots open, and the small things
                 that move your kid&rsquo;s game forward. For parents of kids
-                ages 8&ndash;16 across MoCo.
+                ages 5&ndash;16 across MoCo.
               </p>
 
               <ul className="mt-8 space-y-3.5">

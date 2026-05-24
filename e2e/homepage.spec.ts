@@ -365,7 +365,9 @@ test.describe("Nav links", () => {
   test("/schedule page loads", async ({ page }) => {
     await page.goto("/schedule");
     await expect(
-      page.getByRole("heading", { name: "Class Schedule & Registration" })
+      page.getByRole("heading", {
+        name: /Youth Pickleball Schedule.*Montgomery County, MD/,
+      })
     ).toBeVisible();
   });
 

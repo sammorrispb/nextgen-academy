@@ -8,7 +8,7 @@ export const faq: FaqItem[] = [
   {
     question: "What ages do you accept?",
     answer:
-      "Our group sessions are built for kids ages 8–16 at Green Ball (10+) or Yellow Ball (12+, tournament track). Kids 8+ who aren't yet at Green-Ball level — Red Ball (pre-rally) and Orange Ball (rallying but not group-ready) — start with private lessons until they're group-ready.",
+      "We coach kids ages 5–16. Group sessions are for kids 8+ at Green Ball (10+) or Yellow Ball (12+, tournament track). Ages 5–7, and any 8+ not yet at Green-Ball level — Red Ball (pre-rally) and Orange Ball (rallying but not group-ready) — start with private lessons until they're group-ready.",
   },
   {
     question: "My child can't rally yet — can they still join?",
@@ -58,13 +58,13 @@ export const faq: FaqItem[] = [
   {
     question: "What’s the difference between Red, Orange, Green, and Yellow Ball?",
     answer:
-      "Each color follows USA Pickleball’s youth progression — placement is by skill, not age. Red Ball (8+ pre-rally) and Orange Ball (rallying but not yet group-ready) are both delivered 1:1 as private lessons — Red builds paddle control, footwork, and sustained back-and-forth; Orange layers in rules mastery and full-court movement. Green Ball (10+) is our first group level — shot selection, court positioning, and doubles teamwork. Yellow Ball (12+) is our coach-curated competitive track — small groups of 3–5 athletes with custom scheduling and focused tournament prep. Every child is placed during a free evaluation, never on age alone.",
+      "Each color follows USA Pickleball’s youth progression — placement is by skill, not age. Red Ball (ages 5+ pre-rally) and Orange Ball (rallying but not yet group-ready) are both delivered 1:1 as private lessons — Red builds paddle control, footwork, and sustained back-and-forth; Orange layers in rules mastery and full-court movement. Green Ball (10+) is our first group level — shot selection, court positioning, and doubles teamwork. Yellow Ball (12+) is our coach-curated competitive track — small groups of 3–5 athletes with custom scheduling and focused tournament prep. Every child is placed during a free evaluation, never on age alone.",
     cta: { label: "See the four levels in detail", href: "#levels" },
   },
   {
     question: "Do you offer private pickleball lessons for kids?",
     answer:
-      "Yes — and they’re the right starting point for any child 8+ who can’t rally yet. 1:1 coaching builds the rally, footwork, and consistency a child needs before joining a group. Head Coach Sam Morris is a former physical education teacher and Co-Founder of Next Gen Academy; Co-Founder Amine Lahlou is a former professional tennis player. Email nextgenacademypb@gmail.com or call 301-325-4731 to schedule.",
+      "Yes — and they’re the right starting point for any child ages 5–7, or any 8+ who can’t rally yet. 1:1 coaching builds the rally, footwork, and consistency a child needs before joining a group. Head Coach Sam Morris is a former physical education teacher and Co-Founder of Next Gen Academy; Co-Founder Amine Lahlou is a former professional tennis player. Email nextgenacademypb@gmail.com or call 301-325-4731 to schedule.",
   },
   {
     question: "Can my child join mid-season?",
@@ -79,6 +79,6 @@ export const faq: FaqItem[] = [
   {
     question: "Do you offer lessons for adults?",
     answer:
-      "Next Gen is youth-only (ages 8–16). For adults, Head Coach Sam Morris offers private lessons separately at sammorrispb.com — start with a free 30-minute skill evaluation, no commitment. Many of our NGA parents pick up the paddle alongside their kids.",
+      "Next Gen is youth-only (ages 5–16). For adults, Head Coach Sam Morris offers private lessons separately at sammorrispb.com — start with a free 30-minute skill evaluation, no commitment. Many of our NGA parents pick up the paddle alongside their kids.",
   },
 ];

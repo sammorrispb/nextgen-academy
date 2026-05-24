@@ -19,12 +19,20 @@ import NewsletterForm from "@/components/NewsletterForm";
 import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
 import { faq } from "@/data/faq";
+import { seo } from "@/data/seo";
 import { familySiteUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import { inferCity } from "@/lib/venue-lookup";
+import { SITE_URL } from "@/lib/seo";
 
 export const metadata = {
   alternates: { canonical: "/" },
+  description: seo.home.description,
+  openGraph: {
+    title: "Next Gen Pickleball Academy",
+    description: seo.home.description,
+    url: SITE_URL,
+  },
 };
 
 export const revalidate = 300;
@@ -34,6 +42,25 @@ export default async function Home() {
   const upcomingForSchema = sessions.slice(0, 4);
   return (
     <>
+      {/* Organization schema — sameAs lists known canonical profiles. */}
+      {/* TODO: add Facebook page URL to sameAs once the NGA FB page is live. */}
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "SportsOrganization",
+          name: "Next Gen Pickleball Academy",
+          url: SITE_URL,
+          logo: `${SITE_URL}/images/og-image.png`,
+          email: "nextgenacademypb@gmail.com",
+          telephone: "301-325-4731",
+          sameAs: [
+            "https://www.instagram.com/nextgenpickleballacademy",
+            "https://www.sammorrispb.com",
+            "https://www.linkanddink.com",
+          ],
+        }}
+      />
+
       {/* FAQ Schema */}
       <JsonLd
         data={{

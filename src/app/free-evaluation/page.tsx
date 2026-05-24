@@ -1,19 +1,30 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import LeadForm from "@/components/LeadForm";
+import JsonLd from "@/components/JsonLd";
 import { testimonials } from "@/data/testimonials";
 import { site } from "@/data/site";
+import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+
+const PAGE_TITLE = "Free Youth Pickleball Evaluation — Montgomery County, MD";
+const PAGE_DESCRIPTION =
+  "Book a free 30-min pickleball evaluation for your child (ages 5–16) in Montgomery County, MD. Meet a coach, get a placement. No cost, no commitment.";
+const SHARE_DESCRIPTION =
+  "Youth pickleball coaching for kids ages 5–16 in Montgomery County, MD. Your first 30 minutes are on us.";
 
 export const metadata: Metadata = {
-  title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
-  description:
-    "Book a free 30-minute evaluation for your child (ages 8–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Green/Yellow Ball group pathway — or whether private lessons are the right starting point. No cost. No commitment.",
+  title: { absolute: PAGE_TITLE },
+  description: PAGE_DESCRIPTION,
   alternates: { canonical: "/free-evaluation" },
   openGraph: {
-    title: "Free 30-Minute Pickleball Evaluation for Kids — Montgomery County, MD",
-    description:
-      "Youth pickleball coaching for ages 8–16 in Montgomery County, MD. Your first 30 minutes are on us.",
+    title: PAGE_TITLE,
+    description: SHARE_DESCRIPTION,
     url: "https://nextgenpbacademy.com/free-evaluation",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: SHARE_DESCRIPTION,
   },
 };
 
@@ -29,6 +40,16 @@ const VALUE_BULLETS = [
 export default function FreeEvaluationPage() {
   return (
     <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", url: `${SITE_URL}/` },
+          {
+            name: "Free Evaluation",
+            url: `${SITE_URL}/free-evaluation`,
+          },
+        ])}
+      />
+
       {/* ─── Hero + Form ─────────────── */}
       <section className="relative isolate overflow-hidden bg-ngpa-deep">
         {/* Photo backdrop */}
@@ -62,10 +83,10 @@ export default function FreeEvaluationPage() {
               </h1>
 
               <p className="mt-6 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-                Ages 8&ndash;16. Meet a real coach on the court. We&rsquo;ll see
+                Ages 5&ndash;16. Meet a real coach on the court. We&rsquo;ll see
                 where your child is at, recommend the right group &mdash; or, if
-                they&rsquo;re still learning to rally, a private-lesson plan to
-                get them there. Every question answered.{" "}
+                they&rsquo;re ages 5&ndash;7 or still learning to rally, a
+                private-lesson plan to get them there. Every question answered.{" "}
                 <strong className="text-ngpa-white font-bold">No pressure. No cost.</strong>
               </p>
 
