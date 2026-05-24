@@ -31,11 +31,14 @@ const robotoMono = Roboto_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://nextgenpbacademy.com"),
   title: {
-    default: "Next Gen PB Academy | Youth Pickleball in Montgomery County, MD",
+    // ≤60 chars so Google doesn't truncate. Per-page `title` overrides this
+    // via the template — those pages use `{ absolute }` when their copy
+    // would exceed the budget.
+    default: "Next Gen PB Academy — Youth Pickleball in MoCo, MD",
     template: "%s | Next Gen Pickleball Academy",
   },
   description:
-    "Youth pickleball for ages 8\u201316 in Montgomery County, MD. Real instruction for kids who can rally, on a clear pathway to tournament play. Private lessons for kids still learning to rally.",
+    "Youth pickleball coaching for kids ages 5\u201316 in Montgomery County, MD. Free evaluations, group sessions, and private lessons with a clear pathway.",
   icons: {
     icon: "/images/og-image.png",
     apple: "/images/og-image.png",
@@ -46,7 +49,8 @@ export const metadata: Metadata = {
     siteName: "Next Gen Pickleball Academy",
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball academy for ages 8\u201316 in Montgomery County, MD. Real coaching for kids who can rally \u2014 and private lessons for the ones still learning.",
+      "Youth pickleball academy for kids ages 5\u201316 in Montgomery County, MD. Real coaching for kids who can rally \u2014 and private lessons for ages 5\u20137 (and any 8+ still learning).",
+    url: "https://nextgenpbacademy.com",
     images: [{
       url: "/images/og-image.png",
       width: 512,
@@ -57,7 +61,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Next Gen Pickleball Academy",
-    description: "Youth pickleball lessons for ages 8\u201316 in Montgomery County, MD. Small groups for rally-ready kids, privates for pre-rally.",
+    description:
+      "Youth pickleball lessons for kids ages 5\u201316 in Montgomery County, MD. Small groups for rally-ready kids; privates for ages 5\u20137 and pre-rally.",
     images: ["/images/og-image.png"],
   },
   verification: {
@@ -79,19 +84,31 @@ export default function RootLayout({
           "@context": "https://schema.org",
           "@type": "SportsActivityLocation",
           name: "Next Gen Pickleball Academy",
-          description: "Structured youth pickleball coaching for ages 8\u201316 in Montgomery County, MD.",
+          description: "Structured youth pickleball coaching for kids ages 5\u201316 in Montgomery County, MD.",
           url: "https://nextgenpbacademy.com",
           telephone: "301-325-4731",
           email: "nextgenacademypb@gmail.com",
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Montgomery County",
+            addressRegion: "MD",
+            addressCountry: "US",
+          },
           sameAs: [
             "https://www.instagram.com/nextgenpickleballacademy",
             "https://www.sammorrispb.com",
             "https://www.linkanddink.com",
           ],
-          areaServed: {
-            "@type": "AdministrativeArea",
-            name: "Montgomery County, MD",
-          },
+          areaServed: [
+            { "@type": "AdministrativeArea", name: "Montgomery County, MD" },
+            { "@type": "City", name: "Bethesda" },
+            { "@type": "City", name: "Rockville" },
+            { "@type": "City", name: "Potomac" },
+            { "@type": "City", name: "Gaithersburg" },
+            { "@type": "City", name: "Chevy Chase" },
+            { "@type": "City", name: "Olney" },
+            { "@type": "City", name: "Silver Spring" },
+          ],
           founder: [
             { "@type": "Person", name: "Sam Morris" },
             { "@type": "Person", name: "Amine Belkadi" },

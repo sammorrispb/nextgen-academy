@@ -4,21 +4,72 @@ import Link from "next/link";
 import SchoolsLeadForm from "@/components/SchoolsLeadForm";
 import JsonLd from "@/components/JsonLd";
 import { site } from "@/data/site";
+import {
+  areaServedJsonLd,
+  breadcrumbJsonLd,
+  courseJsonLd,
+  NGA_POSTAL_ADDRESS,
+  SITE_URL,
+} from "@/lib/seo";
+
+const PAGE_TITLE = "Pickleball for Schools & Camps — Montgomery County, MD";
+const PAGE_DESCRIPTION =
+  "Certified youth pickleball coaches for your school, rec center, or summer camp in Montgomery County, MD. Clinics, residencies, camp weeks — quote in 1 day.";
+const SHARE_DESCRIPTION =
+  "We bring the courts, paddles, and coaches to you. Schools, rec centers, summer camps in Montgomery County, MD.";
 
 export const metadata: Metadata = {
-  title:
-    "Pickleball for Schools, Rec Centers & Summer Camps — Montgomery County, MD",
-  description:
-    "Bring certified youth pickleball coaches to your school, rec center, or summer camp in Montgomery County, MD. One-off clinics, weekly residencies, and full camp weeks. All equipment provided. Insured, background-checked coaches. Request a quote.",
+  title: { absolute: PAGE_TITLE },
+  description: PAGE_DESCRIPTION,
   alternates: { canonical: "/schools" },
   openGraph: {
-    title:
-      "Pickleball for Schools, Rec Centers & Summer Camps — Next Gen Academy",
-    description:
-      "We bring the courts, paddles, and coaches to you. Schools, rec centers, summer camps in Montgomery County, MD.",
+    title: PAGE_TITLE,
+    description: SHARE_DESCRIPTION,
     url: "https://nextgenpbacademy.com/schools",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: SHARE_DESCRIPTION,
+  },
 };
+
+// Per-tier program offerings — surfaced as schema.org/Course so AI assistants
+// can answer "what tiers does NGA teach" with audience + age data.
+const COURSE_TIERS = [
+  {
+    name: "NGA Red Ball — Private Pickleball Lessons (Pre-Rally)",
+    description:
+      "1:1 private pickleball lessons for kids ages 5–7 (or any 8+ still learning the rally). Builds paddle control, footwork, and sustained back-and-forth.",
+    educationalLevel: "Beginner / Rookie",
+    minAge: 5,
+    ballColor: "Red" as const,
+  },
+  {
+    name: "NGA Orange Ball — Private Pickleball Lessons (Group Bridge)",
+    description:
+      "1:1 private pickleball lessons that layer in rules mastery and full-court movement so a child rallying — but not yet group-ready — can bridge into a Green Ball group.",
+    educationalLevel: "Pro",
+    minAge: 8,
+    ballColor: "Orange" as const,
+  },
+  {
+    name: "NGA Green Ball — Youth Pickleball Group Lessons",
+    description:
+      "Small-group pickleball sessions for kids 10+ — shot selection, court positioning, and doubles teamwork.",
+    educationalLevel: "Vet",
+    minAge: 10,
+    ballColor: "Green" as const,
+  },
+  {
+    name: "NGA Yellow Ball — Tournament-Track Youth Pickleball",
+    description:
+      "Coach-curated competitive track for kids 12+ — small groups of 3–5 athletes with custom scheduling and focused tournament prep. Invite-only.",
+    educationalLevel: "Boss",
+    minAge: 12,
+    ballColor: "Yellow" as const,
+  },
+];
 
 const audiences = [
   {
@@ -158,7 +209,7 @@ const faq = [
   },
   {
     q: "What ages do you work with?",
-    a: "Our specialty is ages 8–16. We also run intro clinics for high schoolers and faculty PD sessions for K–12 teachers.",
+    a: "We coach kids ages 5–16. Group sessions are for kids 8+ who can rally; ages 5–7 (and any 8+ still learning the rally) start with private lessons. We also run intro clinics for high schoolers and faculty PD sessions for K–12 teachers.",
   },
   {
     q: "What's the typical group size?",
@@ -178,6 +229,13 @@ export default function SchoolsPage() {
   return (
     <>
       <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", url: `${SITE_URL}/` },
+          { name: "Schools, Rec Centers & Camps", url: `${SITE_URL}/schools` },
+        ])}
+      />
+
+      <JsonLd
         data={{
           "@context": "https://schema.org",
           "@type": "Service",
@@ -188,23 +246,22 @@ export default function SchoolsPage() {
             url: site.website,
             telephone: site.phone,
             email: site.email,
-            areaServed: {
-              "@type": "AdministrativeArea",
-              name: "Montgomery County, MD",
-            },
+            address: NGA_POSTAL_ADDRESS,
+            areaServed: areaServedJsonLd(),
           },
           audience: [
             { "@type": "EducationalAudience", educationalRole: "K-12 school" },
             { "@type": "Audience", audienceType: "Recreation center" },
             { "@type": "Audience", audienceType: "Summer camp" },
           ],
-          areaServed: {
-            "@type": "AdministrativeArea",
-            name: "Montgomery County, MD",
-          },
+          areaServed: areaServedJsonLd(),
           url: "https://nextgenpbacademy.com/schools",
         }}
       />
+
+      {COURSE_TIERS.map((tier) => (
+        <JsonLd key={`course-${tier.ballColor}`} data={courseJsonLd(tier)} />
+      ))}
 
       {/* ─── Hero ───────────────────────────────────── */}
       <section className="relative overflow-hidden bg-ngpa-black">

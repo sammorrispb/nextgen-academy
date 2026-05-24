@@ -7,16 +7,20 @@ import CTABanner from "@/components/CTABanner";
 import CrewPathway from "@/components/CrewPathway";
 import RegistrationNotice from "@/components/RegistrationNotice";
 import SessionCard from "@/components/SessionCard";
+import JsonLd from "@/components/JsonLd";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 import WeatherBar from "@/components/WeatherBar";
 import { fetchWeatherByDate } from "@/lib/weather";
+import { breadcrumbJsonLd, courseJsonLd, SITE_URL } from "@/lib/seo";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
 
 export const metadata: Metadata = {
-  title: seo.schedule.title,
+  // Absolute title (skips "%s | Next Gen Pickleball Academy") to stay
+  // inside Google's ~60-char title truncation budget.
+  title: { absolute: seo.schedule.title },
   description: seo.schedule.description,
   alternates: { canonical: "/schedule" },
 };
@@ -24,6 +28,43 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 const heroSeason = seasons[seasons.length - 1];
+
+// Schedule page Course tiers — same canonical list as /schools; surfaced
+// here too so the schedule page can answer "what's the tier ladder" for AI.
+const SCHEDULE_COURSE_TIERS = [
+  {
+    name: "NGA Red Ball — Private Pickleball Lessons (Pre-Rally)",
+    description:
+      "1:1 private pickleball lessons for kids ages 5–7 (or any 8+ still learning the rally). Builds paddle control, footwork, and sustained back-and-forth.",
+    educationalLevel: "Beginner / Rookie",
+    minAge: 5,
+    ballColor: "Red" as const,
+  },
+  {
+    name: "NGA Orange Ball — Private Pickleball Lessons (Group Bridge)",
+    description:
+      "1:1 private pickleball lessons that layer in rules mastery and full-court movement so a child rallying — but not yet group-ready — can bridge into a Green Ball group.",
+    educationalLevel: "Pro",
+    minAge: 8,
+    ballColor: "Orange" as const,
+  },
+  {
+    name: "NGA Green Ball — Youth Pickleball Group Lessons",
+    description:
+      "Small-group pickleball sessions for kids 10+ — shot selection, court positioning, and doubles teamwork.",
+    educationalLevel: "Vet",
+    minAge: 10,
+    ballColor: "Green" as const,
+  },
+  {
+    name: "NGA Yellow Ball — Tournament-Track Youth Pickleball",
+    description:
+      "Coach-curated competitive track for kids 12+ — small groups of 3–5 athletes with custom scheduling and focused tournament prep. Invite-only.",
+    educationalLevel: "Boss",
+    minAge: 12,
+    ballColor: "Yellow" as const,
+  },
+];
 
 function groupByDate(sessions: NgaSession[]): Map<string, NgaSession[]> {
   const map = new Map<string, NgaSession[]>();
@@ -52,7 +93,20 @@ export default async function SchedulePage() {
 
   return (
     <>
-      <h1 className="sr-only">Class Schedule &amp; Registration</h1>
+      <h1 className="sr-only">
+        Youth Pickleball Schedule &mdash; Montgomery County, MD
+      </h1>
+
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", url: `${SITE_URL}/` },
+          { name: "Schedule", url: `${SITE_URL}/schedule` },
+        ])}
+      />
+
+      {SCHEDULE_COURSE_TIERS.map((tier) => (
+        <JsonLd key={`schedule-course-${tier.ballColor}`} data={courseJsonLd(tier)} />
+      ))}
 
       {/* ─── Hero ─────────────────────────────── */}
       <section className="relative isolate overflow-hidden bg-ngpa-deep">
