@@ -9,7 +9,7 @@ import type {
 import { validateNewsletterForm } from "@/lib/validate-newsletter";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 
-const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 7); // 7-17 (NGA 8-16 + 1yr slack)
+const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 

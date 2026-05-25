@@ -10,7 +10,7 @@ import { MAX_KIDS_PER_SUBMISSION, validateLeadForm } from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
-const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 7); // 7-17 (NGA 8-16 + 1yr slack)
+const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 

@@ -264,6 +264,49 @@ test.describe("SEO foundations — site-wide", () => {
   });
 });
 
+// Regression — Sam decided 2026-05-24 that NGA is ages 6–16, strict, no
+// exceptions and no under-6 on-ramp. The prior 2026-05-24 SEO sweep
+// (#93) had shipped "5–16" everywhere with "private lessons for ages
+// 5–7" callouts. This guard prevents future drift back to the wider
+// range by asserting that no public page renders 5-anchored age copy
+// on the rendered DOM OR in the per-page metadata.
+//
+// /schools is intentionally exempt: that page's partner intake form
+// surfaces school grade bands (K-2 = ages 5-7 etc.) which are factually
+// correct grade-level vocabulary aimed at a different audience (school
+// partners, not NGA parents) — not a statement of who NGA coaches.
+test.describe("Age range — no 5-anchored copy anywhere", () => {
+  const FORBIDDEN: { label: string; pattern: RegExp }[] = [
+    { label: "5-16 (hyphen)", pattern: /\b5-16\b/ },
+    { label: "5–16 (en-dash)", pattern: /\b5–16\b/ },
+    { label: "5-7 (hyphen)", pattern: /\b5-7\b/ },
+    { label: "5–7 (en-dash)", pattern: /\b5–7\b/ },
+    { label: "ages 5", pattern: /\bages?\s+5\b/i },
+  ];
+
+  const GUARDED_ROUTES = ROUTES.filter((r) => r.path !== "/schools");
+
+  for (const route of GUARDED_ROUTES) {
+    test(`${route.path} renders no 5-anchored age copy`, async ({ page }) => {
+      await page.goto(route.path);
+      // Use innerText so we test the user-visible string, not the raw
+      // HTML (which would catch JSON-LD numeric properties too).
+      const text = await page.locator("body").innerText();
+      const desc = await page
+        .locator('meta[name="description"]')
+        .getAttribute("content");
+      const title = await page.title();
+      const haystack = `${title}\n${desc ?? ""}\n${text}`;
+      for (const { label, pattern } of FORBIDDEN) {
+        expect(
+          pattern.test(haystack),
+          `${route.path} unexpectedly contains forbidden age copy: ${label}`,
+        ).toBe(false);
+      }
+    });
+  }
+});
+
 test.describe("City pages — visible H1 + clickable Free Evaluation CTA", () => {
   for (const route of ROUTES.filter((r) => r.cityInAreaServed)) {
     test(`${route.path} renders H1 with city + has visible Free Evaluation CTA`, async ({

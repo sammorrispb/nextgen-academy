@@ -14,7 +14,7 @@ export const levels: Level[] = [
   {
     key: "red",
     label: "Private Lessons",
-    ages: "8+",
+    ages: "6+",
     tag: "Pre-Rally Bridge",
     focus: "Can't rally yet? Start here.",
     detail: "1:1 coaching to build the rally, footwork, and consistency a child needs before joining a group. Bridge to Orange Ball when they're ready.",
@@ -23,7 +23,7 @@ export const levels: Level[] = [
   {
     key: "orange",
     label: "Private Lessons",
-    ages: "8+",
+    ages: "6+",
     tag: "Group Bridge",
     focus: "Rallying but not group-ready? Private path.",
     detail: "1:1 coaching on rules mastery, sustained rallying, and full-court movement. Bridge to Green Ball when ready for group play.",

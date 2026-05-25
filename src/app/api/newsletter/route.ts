@@ -65,8 +65,8 @@ function validate(body: NewsletterBody): Record<string, string> {
     errors.childAge = "Child's age is required";
   } else {
     const age = Number(body.childAge);
-    if (isNaN(age) || age < 7 || age > 17) {
-      errors.childAge = "Age must be between 7 and 17";
+    if (isNaN(age) || age < 6 || age > 16) {
+      errors.childAge = "Age must be between 6 and 16";
     }
   }
   return errors;

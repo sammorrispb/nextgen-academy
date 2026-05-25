@@ -33,11 +33,11 @@ test.describe("validatePollVote", () => {
     ).toHaveProperty("childFirstName");
   });
 
-  test("flags age outside 7-17 range", () => {
-    expect(validatePollVote({ ...goodInput, childAge: "6" })).toHaveProperty(
+  test("flags age outside 6-16 range", () => {
+    expect(validatePollVote({ ...goodInput, childAge: "5" })).toHaveProperty(
       "childAge",
     );
-    expect(validatePollVote({ ...goodInput, childAge: "18" })).toHaveProperty(
+    expect(validatePollVote({ ...goodInput, childAge: "17" })).toHaveProperty(
       "childAge",
     );
     expect(validatePollVote({ ...goodInput, childAge: "12" }).childAge).toBeUndefined();

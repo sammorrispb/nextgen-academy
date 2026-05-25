@@ -6,7 +6,7 @@ import { site } from "@/data/site";
 
 const NEWSLETTER_TITLE = "Free Youth Pickleball Newsletter — Montgomery County, MD";
 const NEWSLETTER_DESCRIPTION =
-  "Free email for parents of kids ages 5–16 in Montgomery County, MD: this week's pickleball sessions, monthly training spots, and coach tips. No spam.";
+  "Free email for parents of kids ages 6–16 in Montgomery County, MD: this week's pickleball sessions, monthly training spots, and coach tips. No spam.";
 const NEWSLETTER_SHARE_DESCRIPTION =
   "Montgomery County's youth pickleball crew is growing. Get your kid in — session times, training spots, and coach tips, free.";
 
@@ -86,7 +86,7 @@ export default function NewsletterPage() {
                 One free email keeps you in the loop &mdash; where to play this
                 week, when monthly training spots open, and the small things
                 that move your kid&rsquo;s game forward. For parents of kids
-                ages 5&ndash;16 across MoCo.
+                ages 6&ndash;16 across MoCo.
               </p>
 
               <ul className="mt-8 space-y-3.5">

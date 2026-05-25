@@ -50,7 +50,7 @@ export default function CityLanding({
   whereWePlay,
 }: CityLandingProps) {
   const url = `${SITE_URL}/${slug}`;
-  const description = `Youth pickleball coaching for kids ages 5–16 in ${city}, MD — and across Montgomery County. Free evaluations, small-group sessions, and private lessons with Next Gen Pickleball Academy.`;
+  const description = `Youth pickleball coaching for kids ages 6–16 in ${city}, MD — and across Montgomery County. Free evaluations, small-group sessions, and private lessons with Next Gen Pickleball Academy.`;
 
   return (
     <>
@@ -102,7 +102,7 @@ export default function CityLanding({
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 sm:pt-24 pb-20 sm:pb-24">
           <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-4">
-            {city}, MD &middot; Ages 5&ndash;16
+            {city}, MD &middot; Ages 6&ndash;16
           </p>
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight">
             Youth pickleball in{" "}
@@ -189,18 +189,12 @@ export default function CityLanding({
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
             The Red &rarr; Yellow Ball pathway.
           </h2>
-          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-4 max-w-2xl">
+          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
             We follow USA Pickleball&rsquo;s official youth progression &mdash;
             a proven system of color-coded balls with reduced bounce and
             compression. Every child is placed by skill during a free
-            evaluation, not age alone.
-          </p>
-          <p className="text-sm text-ngpa-white/65 leading-relaxed mb-10 max-w-2xl">
-            <strong className="text-ngpa-white/85">
-              Private lessons are the on-ramp for kids ages 5&ndash;7
-            </strong>{" "}
-            (and any 8+ still learning the rally). Group sessions start at Green
-            Ball.
+            evaluation, not age alone. Group sessions start at Green Ball;
+            private lessons cover Red and Orange.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

@@ -1,6 +1,6 @@
 ---
 name: Next Gen Pickleball Academy
-description: Youth pickleball (ages 8-16) in Montgomery County, MD. Dark-surface only. Navy + teal palette (2026-05-07 visual refresh, matches MCR pitch deck). Energetic for a 10-year-old, trustworthy for the parent writing the check.
+description: Youth pickleball (ages 6-16, strict) in Montgomery County, MD. Dark-surface only. Navy + teal palette (2026-05-07 visual refresh, matches MCR pitch deck). Energetic for a 10-year-old, trustworthy for the parent writing the check.
 version: alpha
 colors:
   background: "#1A2744"
@@ -165,10 +165,11 @@ components:
 
 ## Overview
 
-Next Gen Pickleball Academy serves youth athletes ages 8–16 and their
-families. The brand is **The Coach + The Guide**: energetic enough for a
-10-year-old, trustworthy enough for the parent writing the check. Never a
-retirement-sport vibe. Never pure esports.
+Next Gen Pickleball Academy serves youth athletes ages 6–16 (strict — no
+exceptions, no under-6 on-ramp) and their families. The brand is **The
+Coach + The Guide**: energetic enough for a 10-year-old, trustworthy
+enough for the parent writing the check. Never a retirement-sport vibe.
+Never pure esports.
 
 The product is mobile-first (96% of registration traffic comes from a
 parent's phone) and dark-surface only — there's no light-mode counterpart.

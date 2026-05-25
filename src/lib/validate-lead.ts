@@ -93,9 +93,9 @@ export function validateLeadForm(
       } else if (kid.name.length > NAME_MAX) {
         errors[`kids.${i}.name`] = `Name must be under ${NAME_MAX} characters`;
       }
-      if (isNaN(kid.age) || kid.age < 7 || kid.age > 17) {
+      if (isNaN(kid.age) || kid.age < 6 || kid.age > 16) {
         const key = usedLegacyPayload ? "childAge" : `kids.${i}.age`;
-        errors[key] = "Age must be between 7 and 17";
+        errors[key] = "Age must be between 6 and 16";
       }
     });
   }

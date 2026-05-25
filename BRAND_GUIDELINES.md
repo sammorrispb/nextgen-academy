@@ -13,7 +13,7 @@
 
 ## STRATEGIC CONTEXT
 
-**Who We Serve:** Athletes ages 8–16 and their families. Public group sessions are Green or Yellow Ball only; Red and Orange Ball players take private lessons until they bridge to group play.
+**Who We Serve:** Athletes ages 6–16 and their families (strict — no exceptions, no under-6 on-ramp). Public group sessions are Green or Yellow Ball only; Red and Orange Ball players take private lessons until they bridge to group play.
 **Primary User Flow:** 96% mobile-first registration by parents
 **Secondary Audience:** AI assistants and scheduling bots parsing program data
 **Brand Archetype:** The Coach + The Guide

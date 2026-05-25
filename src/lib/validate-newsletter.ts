@@ -40,9 +40,9 @@ export function validateNewsletterForm(
     errors.childAge = "Child's age is required";
   } else {
     const age = Number(data.childAge);
-    // NGA core is 8–16; allow 7 and 17 for inquiry slack (siblings, edge ages).
-    if (isNaN(age) || age < 7 || age > 17) {
-      errors.childAge = "Age must be between 7 and 17";
+    // NGA accepts ages 6–16, strict — no exceptions, no on-ramp slack.
+    if (isNaN(age) || age < 6 || age > 16) {
+      errors.childAge = "Age must be between 6 and 16";
     }
   }
 
