@@ -23,6 +23,7 @@ const baseInput: WeeklyNewsletterInput = {
     },
   ],
   openPolls: [],
+  news: [],
   tip,
   scheduleUrl: `${ORIGIN}/schedule`,
   crewInterestUrl: `${ORIGIN}/crew`,
@@ -140,6 +141,38 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(html).toContain("No open sessions this week");
     expect(html).toContain("Soft hands win");
   });
+
+  test("news block renders Approved items with title link + source + summary", () => {
+    const html = weeklyNewsletterHtml({
+      ...baseInput,
+      news: [
+        {
+          title: "Bethesda middle school launches pickleball PE unit",
+          url: "https://example.com/article",
+          source: "Bethesda Beat",
+          summary: "Three schools added paddle sports this spring.",
+        },
+        {
+          title: "Junior tournament returns to MoCo",
+          url: "https://example.com/jr",
+          source: "USA Pickleball",
+          summary: "",
+        },
+      ],
+    });
+    expect(html).toContain("In the news: youth pickleball");
+    expect(html).toContain("Bethesda middle school launches pickleball PE unit");
+    expect(html).toContain("https://example.com/article");
+    expect(html).toContain("Bethesda Beat");
+    expect(html).toContain("Three schools added paddle sports this spring.");
+    expect(html).toContain("Junior tournament returns to MoCo");
+    expect(html).toContain("Read the story");
+  });
+
+  test("news block is hidden entirely when no approved items", () => {
+    const html = weeklyNewsletterHtml(baseInput);
+    expect(html).not.toContain("In the news");
+  });
 });
 
 test.describe("weeklyNewsletterText", () => {
@@ -152,6 +185,24 @@ test.describe("weeklyNewsletterText", () => {
     expect(text).toContain(
       "Unsubscribe: https://nextgenpbacademy.com/api/newsletter/unsubscribe",
     );
+  });
+
+  test("mirrors the news block in plain text when approved items exist", () => {
+    const text = weeklyNewsletterText({
+      ...baseInput,
+      news: [
+        {
+          title: "Bethesda middle school launches pickleball PE unit",
+          url: "https://example.com/article",
+          source: "Bethesda Beat",
+          summary: "Three schools added paddle sports this spring.",
+        },
+      ],
+    });
+    expect(text).toContain("In the news: youth pickleball");
+    expect(text).toContain("Bethesda middle school launches pickleball PE unit");
+    expect(text).toContain("(Bethesda Beat)");
+    expect(text).toContain("https://example.com/article");
   });
 
   test("mirrors the polls block in plain text", () => {
