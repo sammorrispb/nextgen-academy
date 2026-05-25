@@ -15,7 +15,7 @@ import { fetchWeatherByDate } from "@/lib/weather";
 import { breadcrumbJsonLd, courseJsonLd, SITE_URL } from "@/lib/seo";
 
 const SITE_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 export const metadata: Metadata = {
   // Absolute title (skips "%s | Next Gen Pickleball Academy") to stay

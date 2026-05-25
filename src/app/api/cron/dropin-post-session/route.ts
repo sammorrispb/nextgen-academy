@@ -22,7 +22,7 @@ const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 const SITE_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 /**
  * Yesterday's ISO date (YYYY-MM-DD) in America/New_York. Same shape as the
