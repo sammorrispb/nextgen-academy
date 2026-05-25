@@ -36,6 +36,28 @@ export function parseStartTime(startTime: string): { h: number; m: number } | nu
   return { h, m: min };
 }
 
+/**
+ * Format a session's ET wall-clock (date + "h:mm AM/PM") as a Schema.org-valid
+ * ISO 8601 datetime with explicit ET offset, e.g. "2026-05-30T10:00:00-04:00".
+ * The naive `${date}T${startTime}` concatenation produces "2026-05-30T10:00 AM"
+ * which Google's Rich Results validator rejects as invalid for SportsEvent.
+ */
+export function formatSessionDateTimeIso(
+  dateIso: string,
+  startTime: string,
+): string | null {
+  const t = parseStartTime(startTime);
+  if (!t || !/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return null;
+  const offsetMin = etOffsetMinutes(dateIso);
+  const sign = offsetMin >= 0 ? "+" : "-";
+  const abs = Math.abs(offsetMin);
+  const offH = String(Math.floor(abs / 60)).padStart(2, "0");
+  const offM = String(abs % 60).padStart(2, "0");
+  const h = String(t.h).padStart(2, "0");
+  const m = String(t.m).padStart(2, "0");
+  return `${dateIso}T${h}:${m}:00${sign}${offH}:${offM}`;
+}
+
 /** UTC epoch ms for a session's ET start, or null if the start time is unparseable. */
 export function sessionStartUtcMs(dateIso: string, startTime: string): number | null {
   const t = parseStartTime(startTime);
