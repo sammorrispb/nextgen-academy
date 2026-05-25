@@ -24,6 +24,7 @@ import { familySiteUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import { inferCity } from "@/lib/venue-lookup";
 import { SITE_URL } from "@/lib/seo";
+import { formatSessionDateTimeIso } from "@/lib/session-time";
 
 export const metadata = {
   alternates: { canonical: "/" },
@@ -112,10 +113,15 @@ export default async function Home() {
               "@type": "SportsEvent",
               name: session.title || `NGA Drop-in${session.level ? ` (${session.level} Ball)` : ""}`,
               startDate: session.startTime
-                ? `${session.date}T${session.startTime}`
+                ? formatSessionDateTimeIso(session.date, session.startTime) ??
+                  session.date
                 : session.date,
               ...(session.endTime
-                ? { endDate: `${session.date}T${session.endTime}` }
+                ? {
+                    endDate:
+                      formatSessionDateTimeIso(session.date, session.endTime) ??
+                      session.date,
+                  }
                 : {}),
               eventStatus:
                 session.status === "Cancelled"
