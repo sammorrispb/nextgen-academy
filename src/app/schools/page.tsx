@@ -26,6 +26,7 @@ export const metadata: Metadata = {
     title: PAGE_TITLE,
     description: SHARE_DESCRIPTION,
     url: "https://nextgenpbacademy.com/schools",
+    images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",

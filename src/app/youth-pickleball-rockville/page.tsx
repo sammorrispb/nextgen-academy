@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     url: "https://nextgenpbacademy.com/youth-pickleball-rockville",
+    images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",

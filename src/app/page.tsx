@@ -32,6 +32,7 @@ export const metadata = {
     title: "Next Gen Pickleball Academy",
     description: seo.home.description,
     url: SITE_URL,
+    images: ["/opengraph-image"],
   },
 };
 
