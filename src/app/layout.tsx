@@ -52,9 +52,9 @@ export const metadata: Metadata = {
       "Youth pickleball academy for kids ages 6\u201316 in Montgomery County, MD. Real coaching for kids who can rally \u2014 and private lessons for any 6+ still learning.",
     url: "https://nextgenpbacademy.com",
     images: [{
-      url: "/images/og-image.png",
-      width: 512,
-      height: 512,
+      url: "/opengraph-image",
+      width: 1200,
+      height: 630,
       alt: "Next Gen Pickleball Academy",
     }],
   },
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     title: "Next Gen Pickleball Academy",
     description:
       "Youth pickleball lessons for kids ages 6\u201316 in Montgomery County, MD. Small groups for rally-ready kids; privates for pre-rally players.",
-    images: ["/images/og-image.png"],
+    images: ["/opengraph-image"],
   },
   verification: {
     google: "Ty8UVMg8N631eo1CfPQKrtauyqq8HCFzC6GvOBZnCcI",
