@@ -286,12 +286,46 @@ test.describe("Age range — no 5-anchored copy anywhere", () => {
 
   const GUARDED_ROUTES = ROUTES.filter((r) => r.path !== "/schools");
 
+  // Exempt quoted / testimonial / biographical-history content. The guard's
+  // job is to catch *copy drift* on NGA's own age-range claims, not to strip
+  // factual quoted history (e.g. Coach Sam's bio noting his son started
+  // playing at age 5 — a real biographical fact, not an NGA service claim).
+  // Mark legitimate exemptions with one of the matched selectors or an
+  // explicit `data-age-guard="exempt"` attribute.
+  const EXEMPT_SELECTORS = [
+    "blockquote",
+    "q",
+    '[role="quote"]',
+    '[class*="testimonial" i]',
+    '[class*="quote" i]',
+    '[data-age-guard="exempt"]',
+  ].join(", ");
+
   for (const route of GUARDED_ROUTES) {
     test(`${route.path} renders no 5-anchored age copy`, async ({ page }) => {
       await page.goto(route.path);
       // Use innerText so we test the user-visible string, not the raw
-      // HTML (which would catch JSON-LD numeric properties too).
-      const text = await page.locator("body").innerText();
+      // HTML (which would catch JSON-LD numeric properties too). Strip
+      // exempted quoted/testimonial/biographical-history text from the
+      // visible body text before scanning.
+      //
+      // `innerText` depends on layout — a cloned/detached body returns "".
+      // So we mutate the live DOM (hide exempted nodes), read innerText,
+      // then restore. Safe because this is a one-shot Playwright page.
+      const text = await page.evaluate((selector) => {
+        const exempted = Array.from(
+          document.body.querySelectorAll<HTMLElement>(selector),
+        );
+        const prior = exempted.map((el) => el.style.display);
+        exempted.forEach((el) => {
+          el.style.display = "none";
+        });
+        const out = document.body.innerText;
+        exempted.forEach((el, i) => {
+          el.style.display = prior[i];
+        });
+        return out;
+      }, EXEMPT_SELECTORS);
       const desc = await page
         .locator('meta[name="description"]')
         .getAttribute("content");

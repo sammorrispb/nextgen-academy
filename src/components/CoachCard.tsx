@@ -42,7 +42,14 @@ export default function CoachCard({ coach }: CoachCardProps) {
           {coach.role}
         </p>
 
-        <p className="text-sm text-ngpa-white/75 leading-relaxed mb-5">
+        {/* `data-age-guard="exempt"` opts this biographical text out of the
+            seo.spec.ts "no 5-anchored age copy" regression — Sam's bio cites
+            his son starting pickleball at age 5 as a real historical fact,
+            not an NGA service-age claim. */}
+        <p
+          className="text-sm text-ngpa-white/75 leading-relaxed mb-5"
+          data-age-guard="exempt"
+        >
           {coach.bio}
         </p>
 
