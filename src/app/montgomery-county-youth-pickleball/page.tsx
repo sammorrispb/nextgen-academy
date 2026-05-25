@@ -22,6 +22,7 @@ export const metadata: Metadata = {
     title: seo.montgomeryCounty.title,
     description: seo.montgomeryCounty.description,
     url: "https://nextgenpbacademy.com/montgomery-county-youth-pickleball",
+    images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",

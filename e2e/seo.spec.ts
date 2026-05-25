@@ -186,6 +186,20 @@ test.describe("SEO foundations — per-route", () => {
         expect(og, `og:url for ${route.path}`).toBeTruthy();
       });
 
+      test("og:image is present (dynamic OG card)", async ({ page }) => {
+        // Regression: prod verification 2026-05-24 found `og:image: 0` on
+        // every page → no preview cards in Slack/iMessage/FB. The
+        // convention file at `src/app/opengraph-image.tsx` makes Next.js
+        // auto-inject this on every page. The twitter card falls back to
+        // og:image automatically when `twitter.card = summary_large_image`.
+        await page.goto(route.path);
+        const ogImage = await page
+          .locator('meta[property="og:image"]')
+          .first()
+          .getAttribute("content");
+        expect(ogImage, `og:image for ${route.path}`).toBeTruthy();
+      });
+
       test("twitter:title + twitter:description match the page metadata", async ({
         page,
       }) => {
