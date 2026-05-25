@@ -57,36 +57,36 @@ test.describe("validateNewsletterForm", () => {
     expect(errors.childAge).toBeTruthy();
   });
 
-  test("rejects ages below 7 and above 17 (boundaries)", () => {
+  test("rejects ages below 6 and above 16 (boundaries)", () => {
+    expect(
+      validateNewsletterForm({
+        parentName: "Alex Parent",
+        email: "alex@example.com",
+        childAge: "5",
+      }).childAge,
+    ).toBeTruthy();
+    expect(
+      validateNewsletterForm({
+        parentName: "Alex Parent",
+        email: "alex@example.com",
+        childAge: "17",
+      }).childAge,
+    ).toBeTruthy();
+  });
+
+  test("accepts the inclusive 6 and 16 bounds", () => {
     expect(
       validateNewsletterForm({
         parentName: "Alex Parent",
         email: "alex@example.com",
         childAge: "6",
-      }).childAge,
-    ).toBeTruthy();
-    expect(
-      validateNewsletterForm({
-        parentName: "Alex Parent",
-        email: "alex@example.com",
-        childAge: "18",
-      }).childAge,
-    ).toBeTruthy();
-  });
-
-  test("accepts the inclusive 7 and 17 bounds", () => {
-    expect(
-      validateNewsletterForm({
-        parentName: "Alex Parent",
-        email: "alex@example.com",
-        childAge: "7",
       }),
     ).toEqual({});
     expect(
       validateNewsletterForm({
         parentName: "Alex Parent",
         email: "alex@example.com",
-        childAge: "17",
+        childAge: "16",
       }),
     ).toEqual({});
   });
