@@ -17,6 +17,14 @@ export interface NewsletterSessionGroup {
   weatherNote?: string;
 }
 
+/** A youth-pickleball news item surfaced inside the newsletter. */
+export interface NewsletterNewsItem {
+  title: string;
+  url: string;
+  source: string;
+  summary: string;
+}
+
 /** An Open Crew Poll surfaced inside the newsletter. */
 export interface NewsletterOpenPoll {
   title: string;
@@ -34,6 +42,8 @@ export interface WeeklyNewsletterInput {
   parentFirst: string;
   sessions: NewsletterSessionGroup[];
   openPolls: NewsletterOpenPoll[];
+  /** Approved youth-pickleball news items from the scraper queue. Empty hides the block. */
+  news: NewsletterNewsItem[];
   tip: CoachTip;
   scheduleUrl: string;
   crewInterestUrl: string;
@@ -67,6 +77,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     parentFirst,
     sessions,
     openPolls,
+    news,
     tip,
     scheduleUrl,
     crewInterestUrl,
@@ -76,6 +87,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   } = input;
   const hasSessions = sessions.length > 0;
   const hasPolls = openPolls.length > 0;
+  const hasNews = news.length > 0;
 
   const sessionBlock = hasSessions
     ? `
@@ -133,6 +145,24 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s crew &rarr;</a></p>
     </div>`;
 
+  // News block — only renders items Sam has Approved in the news Notion DB.
+  // Each title links to the original source so parents can read in context.
+  const newsBlock = hasNews
+    ? `
+    <h2 style="margin:32px 0 6px 0;font-family:Montserrat,Arial,sans-serif;font-size:18px;color:${c.text};">In the news: youth pickleball</h2>
+    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">A few stories Sam thought you&rsquo;d want to see.</p>
+    ${news
+      .map(
+        (n) => `<div style="${s.card}">
+      <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:15px;font-weight:900;color:${c.text};"><a href="${n.url}" style="color:${c.text};text-decoration:none;">${escape(n.title)}</a></p>
+      <p style="margin:0 0 8px 0;color:${c.muted};font-size:12px;letter-spacing:0.05em;text-transform:uppercase;font-weight:700;">${escape(n.source)}</p>
+      ${n.summary ? `<p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(n.summary)}</p>` : ""}
+      <p style="margin:0;"><a href="${n.url}" style="${s.link}font-weight:700;text-decoration:none;">Read the story &rarr;</a></p>
+    </div>`,
+      )
+      .join("")}`
+    : "";
+
   // Private lessons card — Red and Orange Ball are private-lesson-only per
   // CLAUDE.md. Routes to the lead form on the home page (#contact-form).
   const privateBlock = `
@@ -180,6 +210,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">Coach tip: ${escape(tip.title)}</h2>
     <p style="margin:0;color:${c.text};line-height:1.7;">${escape(tip.body)}</p>
 
+    ${newsBlock}
+
     ${privateBlock}
 
     ${forwardBlock}
@@ -204,6 +236,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     parentFirst,
     sessions,
     openPolls,
+    news,
     tip,
     scheduleUrl,
     crewInterestUrl,
@@ -266,6 +299,19 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     `Coach tip: ${tip.title}`,
     tip.body,
     "",
+  );
+
+  if (news.length > 0) {
+    lines.push("In the news: youth pickleball", "A few stories Sam thought you'd want to see.", "");
+    for (const n of news) {
+      lines.push(`- ${n.title} (${n.source})`);
+      if (n.summary) lines.push(`  ${n.summary}`);
+      lines.push(`  ${n.url}`);
+      lines.push("");
+    }
+  }
+
+  lines.push(
     `Brand new to a court? A private one-on-one with Coach Sam gets your kid rallying before they join a crew.`,
     `Book a free evaluation: ${origin}/#contact-form`,
     "",

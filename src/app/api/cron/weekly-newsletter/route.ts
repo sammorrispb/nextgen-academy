@@ -6,6 +6,7 @@ import { pickWeeklyTip } from "@/lib/newsletter-tips";
 import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { signReferralToken } from "@/lib/referral-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
+import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
 import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
 import {
   weeklyNewsletterHtml,
@@ -178,6 +179,18 @@ export async function GET(req: NextRequest) {
   // weekly send.
   const openPolls = await loadOpenPolls();
 
+  // Approved news items from the scraper queue (max 4 per issue so the
+  // email stays scannable). Fails soft — no news just hides the block.
+  // Keep the original rows so we can flip them to Used after a successful
+  // send (avoids a race with anything Sam approves mid-broadcast).
+  const newsRows = await fetchApprovedNews(4);
+  const news = newsRows.map((n) => ({
+    title: n.title,
+    url: n.url,
+    source: n.source,
+    summary: n.summary,
+  }));
+
   const subscribers = await fetchActiveSubscribers();
   const scheduleUrl = `${SITE_ORIGIN}/schedule`;
   const crewInterestUrl = `${SITE_ORIGIN}/crew`;
@@ -222,6 +235,7 @@ export async function GET(req: NextRequest) {
       parentFirst,
       sessions,
       openPolls,
+      news,
       tip,
       scheduleUrl,
       crewInterestUrl,
@@ -253,6 +267,7 @@ export async function GET(req: NextRequest) {
       parentFirst: "Coach",
       sessions,
       openPolls,
+      news,
       tip,
       scheduleUrl,
       crewInterestUrl,
@@ -274,11 +289,24 @@ export async function GET(req: NextRequest) {
     console.error("[cron/weekly-newsletter] admin copy failed:", err);
   }
 
+  // Flip the rows we actually included to Used so they don't reappear in
+  // next week's issue. Only fire on a successful send — failed broadcasts
+  // leave the queue intact so the next run can retry the same items.
+  let newsMarkedUsed = 0;
+  if (sent > 0) {
+    for (const row of newsRows) {
+      const ok = await setNewsStatus(row.pageId, "Used");
+      if (ok) newsMarkedUsed++;
+    }
+  }
+
   const summary = {
     ok: true,
     has_sessions: sessions.length > 0,
     session_groups: sessions.length,
     open_polls: openPolls.length,
+    news_items: news.length,
+    news_marked_used: newsMarkedUsed,
     subscribers: subscribers.length,
     sent,
     failed,
