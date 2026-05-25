@@ -29,10 +29,10 @@ const sample = {
   sessionDateLong: "Saturday, May 23, 2026",
   sessionStart: "5:30 PM",
   sessionLocation: "Cabin John RP, Bethesda MD",
-  detailUrl: "https://www.nextgenpbacademy.com/schedule/green-ball-drop-in-2026-05-23",
+  detailUrl: "https://nextgenpbacademy.com/schedule/green-ball-drop-in-2026-05-23",
 };
 const cancelUrl =
-  "https://www.nextgenpbacademy.com/schedule/cancel?token=signed.token.here";
+  "https://nextgenpbacademy.com/schedule/cancel?token=signed.token.here";
 
 test.describe("Comms templates — 24h reminder", () => {
   // These are pure-function checks. No page navigation, no dev server. Run
@@ -98,7 +98,7 @@ test.describe("Comms templates — session-cancellation broadcast", () => {
     sessionDateLong: "Saturday, May 23, 2026",
     sessionStart: "5:30 PM",
     amountRefunded: "40.00",
-    scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+    scheduleUrl: "https://nextgenpbacademy.com/schedule",
   };
 
   test("weather variant: date-agnostic headline + EASE-Ethics refund framing + Coach Sam signoff", () => {
@@ -152,7 +152,7 @@ test.describe("Comms templates — session-cancellation broadcast", () => {
     expect(text).toContain("Your $40.00 is on the way back.");
     expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");
     expect(text).toContain("better than yesterday, together.");
-    expect(text).toContain("Find another session: https://www.nextgenpbacademy.com/schedule");
+    expect(text).toContain("Find another session: https://nextgenpbacademy.com/schedule");
   });
 
   test("SMS body: kid name first, refund cue, Coach Sam, STOP language, 1-segment friendly", () => {
@@ -160,7 +160,7 @@ test.describe("Comms templates — session-cancellation broadcast", () => {
       childFirst: "Riley",
       sessionTitle: "Green Ball Drop-in",
       sessionDateShort: "Sat May 23",
-      scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+      scheduleUrl: "https://nextgenpbacademy.com/schedule",
     });
     expect(sms.startsWith("Riley's Green Ball Drop-in")).toBe(true);
     expect(sms).toContain("Full refund issued");
@@ -176,7 +176,7 @@ test.describe("Comms templates — post-session re-book", () => {
     childFirst: "Riley",
     sessionTitle: "Green Ball Drop-in",
     sessionDateLong: "Saturday, May 23, 2026",
-    scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+    scheduleUrl: "https://nextgenpbacademy.com/schedule",
   };
 
   test("HTML: kid-name headline, EASE-Skills framing, Coach Sam signoff, single arrowed CTA", () => {
@@ -208,7 +208,7 @@ test.describe("Comms templates — post-session re-book", () => {
     const text = postSessionText(post);
     expect(text).toContain("Riley got reps in yesterday.");
     expect(text).toContain("consistency beats intensity");
-    expect(text).toContain("See the next session: https://www.nextgenpbacademy.com/schedule");
+    expect(text).toContain("See the next session: https://nextgenpbacademy.com/schedule");
     expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");
     expect(text).toContain("Better than yesterday, together.");
     expect(text).toContain('reply "skip"');
@@ -223,7 +223,7 @@ test.describe("Comms templates — cancellation confirmation (per-row)", () => {
     sessionDateLong: "Saturday, May 23, 2026",
     sessionStart: "5:30 PM",
     amountUsd: "40.00",
-    scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+    scheduleUrl: "https://nextgenpbacademy.com/schedule",
   };
 
   test("Refunded variant: leads with refund cue, EASE-Community, single arrowed CTA, Coach Sam signoff", () => {
@@ -308,8 +308,8 @@ test.describe("Comms SMS — GSM-7 segment-cost regression guard", () => {
       sessionTitle: "Green Ball Drop-in",
       sessionStart: "5:30 PM",
       sessionDateShort: "Sat May 23",
-      detailUrl: "https://www.nextgenpbacademy.com/schedule/green-ball-drop-in-2026-05-23",
-      scheduleUrl: "https://www.nextgenpbacademy.com/schedule",
+      detailUrl: "https://nextgenpbacademy.com/schedule/green-ball-drop-in-2026-05-23",
+      scheduleUrl: "https://nextgenpbacademy.com/schedule",
     };
 
     const bodies: Array<[string, string]> = [

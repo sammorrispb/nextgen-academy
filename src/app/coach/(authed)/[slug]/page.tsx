@@ -11,7 +11,7 @@ import AttendanceToggle from "./AttendanceToggle";
 export const dynamic = "force-dynamic";
 
 const SITE_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 function formatLongDate(date: string): string {
   if (!date) return "";

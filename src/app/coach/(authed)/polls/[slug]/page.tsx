@@ -6,7 +6,7 @@ import ConfirmCrewForm from "./ConfirmCrewForm";
 export const dynamic = "force-dynamic";
 
 const SITE_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 interface PageProps {
   params: Promise<{ slug: string }>;

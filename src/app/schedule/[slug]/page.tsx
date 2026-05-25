@@ -15,7 +15,7 @@ import { findSessionBySlug } from "@/lib/session-slug";
 export const revalidate = 300;
 
 const SITE_ORIGIN =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 const heroSeason = seasons[seasons.length - 1];
 

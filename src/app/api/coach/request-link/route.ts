@@ -11,7 +11,7 @@ function siteOrigin(req: NextRequest): string {
   return (
     req.headers.get("origin") ??
     process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://www.nextgenpbacademy.com"
+    "https://nextgenpbacademy.com"
   );
 }
 

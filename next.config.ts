@@ -6,6 +6,20 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // ── www → apex (canonical-host 301) ──────────────────────────
+      // Production verification 2026-05-25 showed both
+      // https://www.nextgenpbacademy.com/ and https://nextgenpbacademy.com/
+      // returning 200 with identical content (same etag) — duplicate-content
+      // SEO problem. Apex has 2× the historical click volume (65 vs 31)
+      // and the brand uses no-www everywhere, so consolidate to apex.
+      // Requires Vercel to have www.nextgenpbacademy.com attached to the
+      // project; the rule no-ops at the edge if the host never reaches us.
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.nextgenpbacademy.com" }],
+        destination: "https://nextgenpbacademy.com/:path*",
+        permanent: true,
+      },
       { source: "/programs", destination: "/#levels", permanent: true },
       { source: "/about", destination: "/#about", permanent: true },
       { source: "/contact", destination: "/#contact", permanent: true },

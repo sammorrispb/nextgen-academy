@@ -145,7 +145,7 @@ const coupon = await stripePost("coupons", {
 console.error(`Coupon created: ${coupon.id} (${discountPct}% off, 1 redemption)`);
 
 const origin =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.nextgenpbacademy.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 const checkout = await stripePost("checkout/sessions", {
   mode: "payment",
