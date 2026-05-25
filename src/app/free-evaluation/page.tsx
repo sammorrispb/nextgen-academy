@@ -8,9 +8,9 @@ import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 
 const PAGE_TITLE = "Free Youth Pickleball Evaluation — Montgomery County, MD";
 const PAGE_DESCRIPTION =
-  "Book a free 30-min pickleball evaluation for your child (ages 5–16) in Montgomery County, MD. Meet a coach, get a placement. No cost, no commitment.";
+  "Book a free 30-min pickleball evaluation for your child (ages 6–16) in Montgomery County, MD. Meet a coach, get a placement. No cost, no commitment.";
 const SHARE_DESCRIPTION =
-  "Youth pickleball coaching for kids ages 5–16 in Montgomery County, MD. Your first 30 minutes are on us.";
+  "Youth pickleball coaching for kids ages 6–16 in Montgomery County, MD. Your first 30 minutes are on us.";
 
 export const metadata: Metadata = {
   title: { absolute: PAGE_TITLE },
@@ -83,10 +83,10 @@ export default function FreeEvaluationPage() {
               </h1>
 
               <p className="mt-6 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-                Ages 5&ndash;16. Meet a real coach on the court. We&rsquo;ll see
+                Ages 6&ndash;16. Meet a real coach on the court. We&rsquo;ll see
                 where your child is at, recommend the right group &mdash; or, if
-                they&rsquo;re ages 5&ndash;7 or still learning to rally, a
-                private-lesson plan to get them there. Every question answered.{" "}
+                they&rsquo;re still learning to rally, a private-lesson plan to
+                get them there. Every question answered.{" "}
                 <strong className="text-ngpa-white font-bold">No pressure. No cost.</strong>
               </p>
 

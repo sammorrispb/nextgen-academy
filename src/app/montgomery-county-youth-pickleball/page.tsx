@@ -119,7 +119,7 @@ export default function MontgomeryCountyPage() {
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 sm:pt-24 pb-20 sm:pb-24">
           <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-4">
-            Montgomery County, MD &middot; Ages 5&ndash;16
+            Montgomery County, MD &middot; Ages 6&ndash;16
           </p>
           <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight">
             Youth pickleball in{" "}
@@ -127,12 +127,11 @@ export default function MontgomeryCountyPage() {
           </h1>
           <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Next Gen Pickleball Academy is a youth pickleball academy for kids
-            ages 5&ndash;16, serving families across Montgomery County. Group
-            sessions for kids 8+ who can rally, and private lessons for ages
-            5&ndash;7 (and any 8+ still learning the rally). We reach families
-            in Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring,
-            Gaithersburg, and the broader DMV &mdash; with a clear pathway to
-            tournament play.
+            ages 6&ndash;16, serving families across Montgomery County.
+            Small-group sessions for kids who can rally, and private lessons
+            for anyone still learning. We reach families in Bethesda, Potomac,
+            Chevy Chase, Kensington, Silver Spring, Gaithersburg, and the
+            broader DMV &mdash; with a clear pathway to tournament play.
           </p>
 
           <div className="mt-9 flex flex-col sm:flex-row gap-3">
@@ -357,7 +356,7 @@ export default function MontgomeryCountyPage() {
             </p>
           </div>
           <p className="text-sm text-ngpa-white/60 mt-5">
-            <strong className="text-ngpa-white/80">Private lessons</strong> for kids ages 5&ndash;7 (and any 8+ still learning the rally) are quoted after the evaluation — rate depends on coach, location, and package. The 30-minute evaluation that determines placement is always free.
+            <strong className="text-ngpa-white/80">Private lessons</strong> for any child still learning the rally are quoted after the evaluation — rate depends on coach, location, and package. The 30-minute evaluation that determines placement is always free.
           </p>
         </div>
       </section>

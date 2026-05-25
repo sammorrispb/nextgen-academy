@@ -35,9 +35,9 @@ const SCHEDULE_COURSE_TIERS = [
   {
     name: "NGA Red Ball — Private Pickleball Lessons (Pre-Rally)",
     description:
-      "1:1 private pickleball lessons for kids ages 5–7 (or any 8+ still learning the rally). Builds paddle control, footwork, and sustained back-and-forth.",
+      "1:1 private pickleball lessons for kids ages 6–16 still learning the rally. Builds paddle control, footwork, and sustained back-and-forth.",
     educationalLevel: "Beginner / Rookie",
-    minAge: 5,
+    minAge: 6,
     ballColor: "Red" as const,
   },
   {

@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     template: "%s | Next Gen Pickleball Academy",
   },
   description:
-    "Youth pickleball coaching for kids ages 5\u201316 in Montgomery County, MD. Free evaluations, group sessions, and private lessons with a clear pathway.",
+    "Youth pickleball coaching for kids ages 6\u201316 in Montgomery County, MD. Free evaluations, group sessions, and private lessons with a clear pathway.",
   icons: {
     icon: "/images/og-image.png",
     apple: "/images/og-image.png",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     siteName: "Next Gen Pickleball Academy",
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball academy for kids ages 5\u201316 in Montgomery County, MD. Real coaching for kids who can rally \u2014 and private lessons for ages 5\u20137 (and any 8+ still learning).",
+      "Youth pickleball academy for kids ages 6\u201316 in Montgomery County, MD. Real coaching for kids who can rally \u2014 and private lessons for any 6+ still learning.",
     url: "https://nextgenpbacademy.com",
     images: [{
       url: "/images/og-image.png",
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball lessons for kids ages 5\u201316 in Montgomery County, MD. Small groups for rally-ready kids; privates for ages 5\u20137 and pre-rally.",
+      "Youth pickleball lessons for kids ages 6\u201316 in Montgomery County, MD. Small groups for rally-ready kids; privates for pre-rally players.",
     images: ["/images/og-image.png"],
   },
   verification: {
@@ -84,7 +84,7 @@ export default function RootLayout({
           "@context": "https://schema.org",
           "@type": "SportsActivityLocation",
           name: "Next Gen Pickleball Academy",
-          description: "Structured youth pickleball coaching for kids ages 5\u201316 in Montgomery County, MD.",
+          description: "Structured youth pickleball coaching for kids ages 6\u201316 in Montgomery County, MD.",
           url: "https://nextgenpbacademy.com",
           telephone: "301-325-4731",
           email: "nextgenacademypb@gmail.com",
