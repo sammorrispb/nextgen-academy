@@ -12,8 +12,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/newsletter`, lastModified, changeFrequency: "weekly", priority: 0.75 },
     // City landing pages — local SEO.
     { url: `${base}/youth-pickleball-bethesda`, lastModified, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/youth-pickleball-north-bethesda`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/youth-pickleball-rockville`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/youth-pickleball-potomac`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/youth-pickleball-gaithersburg`, lastModified, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/youth-pickleball-germantown`, lastModified, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/youth-pickleball-silver-spring`, lastModified, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/youth-pickleball-olney`, lastModified, changeFrequency: "monthly", priority: 0.7 },
   ];
 }

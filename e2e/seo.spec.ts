@@ -80,6 +80,30 @@ const ROUTES: RouteSpec[] = [
     h1Contains: /Gaithersburg.*pickleball|pickleball.*Gaithersburg/i,
     cityInAreaServed: "Gaithersburg",
   },
+  {
+    path: "/youth-pickleball-north-bethesda",
+    titleContains: /North Bethesda/,
+    h1Contains: /North Bethesda.*pickleball|pickleball.*North Bethesda/i,
+    cityInAreaServed: "North Bethesda",
+  },
+  {
+    path: "/youth-pickleball-silver-spring",
+    titleContains: /Silver Spring/,
+    h1Contains: /Silver Spring.*pickleball|pickleball.*Silver Spring/i,
+    cityInAreaServed: "Silver Spring",
+  },
+  {
+    path: "/youth-pickleball-germantown",
+    titleContains: /Germantown/,
+    h1Contains: /Germantown.*pickleball|pickleball.*Germantown/i,
+    cityInAreaServed: "Germantown",
+  },
+  {
+    path: "/youth-pickleball-olney",
+    titleContains: /Olney/,
+    h1Contains: /Olney.*pickleball|pickleball.*Olney/i,
+    cityInAreaServed: "Olney",
+  },
 ];
 
 /**

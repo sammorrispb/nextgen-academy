@@ -10,9 +10,11 @@ export const SITE_URL = "https://nextgenpbacademy.com" as const;
  */
 export const SERVICE_AREAS = [
   "Bethesda",
+  "North Bethesda",
   "Rockville",
   "Potomac",
   "Gaithersburg",
+  "Germantown",
   "Chevy Chase",
   "Olney",
   "Silver Spring",
