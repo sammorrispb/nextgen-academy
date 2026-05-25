@@ -15,6 +15,7 @@ import { buildDropInIcs } from "@/lib/email/ics";
 import { bookingConfirmationHtml } from "@/lib/email/booking-confirmation";
 import { sendSms, bookingConfirmationSms } from "@/lib/sms";
 import { signCancelToken } from "@/lib/cancel-token";
+import { processReferralReward } from "@/lib/referral-rewards";
 
 export const runtime = "nodejs";
 
@@ -282,6 +283,12 @@ export async function POST(req: NextRequest) {
     sendConfirmationSms(session, row),
     sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
     createDropInRegistration(row),
+    // Referral payout: if this parent signed up to the newsletter via someone
+    // else's forward link and this is their first paid drop-in, mint two
+    // single-use 50%-off promo codes (friend + referrer) and email both.
+    // No-op when the friend isn't a subscriber, has no Referred By, or has
+    // already been rewarded.
+    processReferralReward(session),
   ]);
 
   // Bust the /schedule ISR cache so the seat count reflects the new

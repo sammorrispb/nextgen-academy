@@ -6,6 +6,10 @@ import {
   newsletterWelcomeHtml,
   newsletterWelcomeText,
 } from "@/lib/email/newsletter-welcome";
+import {
+  signReferralToken,
+  verifyReferralToken,
+} from "@/lib/referral-token";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -17,7 +21,9 @@ const NOTION_VERSION = "2022-06-28";
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
-const SCHEDULE_URL = "https://nextgenpbacademy.com/schedule";
+const SITE_ORIGIN = "https://nextgenpbacademy.com";
+const SCHEDULE_URL = `${SITE_ORIGIN}/schedule`;
+const CREW_INTEREST_URL = `${SITE_ORIGIN}/crew`;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -51,6 +57,8 @@ interface NewsletterBody {
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
+  /** Signed referral token captured from the ?ref=<token> query string. */
+  ref?: string;
 }
 
 function validate(body: NewsletterBody): Record<string, string> {
@@ -116,11 +124,33 @@ async function createSubscriber(
   parentName: string,
   email: string,
   childAge: number,
+  referralToken: string | null,
+  referredBy: string | null,
 ): Promise<{ pageId?: string; error?: string }> {
   const notionKey = process.env.NOTION_API_KEY;
   const db = process.env.NOTION_NEWSLETTER_DB_ID;
   if (!notionKey || !db) {
     return { error: "Notion newsletter DB not configured" };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const properties: Record<string, any> = {
+    "Parent Name": { title: [{ text: { content: parentName } }] },
+    Email: { email },
+    "Child Age": { number: childAge },
+    Status: { select: { name: "Active" } },
+    "Marketing Opt-In": { checkbox: true },
+    "Welcome Sent": { checkbox: false },
+    "Referral Rewarded": { checkbox: false },
+    "Coupons Issued": { number: 0 },
+  };
+  if (referralToken) {
+    properties["Referral Token"] = {
+      rich_text: [{ text: { content: referralToken } }],
+    };
+  }
+  if (referredBy) {
+    properties["Referred By"] = { email: referredBy };
   }
 
   const res = await fetch(`${NOTION_API}/pages`, {
@@ -132,14 +162,7 @@ async function createSubscriber(
     },
     body: JSON.stringify({
       parent: { database_id: db },
-      properties: {
-        "Parent Name": { title: [{ text: { content: parentName } }] },
-        Email: { email },
-        "Child Age": { number: childAge },
-        Status: { select: { name: "Active" } },
-        "Marketing Opt-In": { checkbox: true },
-        "Welcome Sent": { checkbox: false },
-      },
+      properties,
     }),
   });
 
@@ -204,9 +227,21 @@ export async function POST(request: NextRequest) {
   }
 
   const parentName = body.parentName!.trim();
-  const email = body.email!.trim();
+  const email = body.email!.trim().toLowerCase();
   const childAge = Number(body.childAge);
   const parentFirst = parentName.split(" ")[0] || parentName;
+
+  // Decode the ref token if present. Self-referrals (someone clicking their
+  // own forward link) are silently dropped — we just create the row without
+  // a Referred By value.
+  let referredBy: string | null = null;
+  if (body.ref) {
+    const referrer = verifyReferralToken(body.ref);
+    if (referrer && referrer !== email) {
+      referredBy = referrer;
+    }
+  }
+  const referralToken = signReferralToken(email);
 
   // Notion dedup-and-create. Skipped gracefully if env vars missing.
   let notionStatus = "skipped";
@@ -220,7 +255,13 @@ export async function POST(request: NextRequest) {
         alreadyWelcomed = !!existing.alreadyWelcomed;
         notionStatus = "duplicate";
       } else {
-        const result = await createSubscriber(parentName, email, childAge);
+        const result = await createSubscriber(
+          parentName,
+          email,
+          childAge,
+          referralToken,
+          referredBy,
+        );
         pageId = result.pageId;
         notionStatus = result.pageId ? "created" : `failed: ${result.error}`;
         if (result.error) console.error("[newsletter]", result.error);
@@ -261,6 +302,15 @@ export async function POST(request: NextRequest) {
       }),
     ];
     if (shouldSendWelcome) {
+      const referralUrl = referralToken
+        ? `${SITE_ORIGIN}/newsletter?ref=${encodeURIComponent(referralToken)}`
+        : null;
+      const welcomeInput = {
+        parentFirst,
+        scheduleUrl: SCHEDULE_URL,
+        crewInterestUrl: CREW_INTEREST_URL,
+        referralUrl,
+      };
       emailPromises.push(
         resend.emails.send({
           from: FROM_EMAIL,
@@ -268,8 +318,8 @@ export async function POST(request: NextRequest) {
           bcc: ADMIN_EMAIL,
           replyTo: site.email,
           subject: "You're in the Next Gen crew",
-          html: newsletterWelcomeHtml({ parentFirst, scheduleUrl: SCHEDULE_URL }),
-          text: newsletterWelcomeText({ parentFirst, scheduleUrl: SCHEDULE_URL }),
+          html: newsletterWelcomeHtml(welcomeInput),
+          text: newsletterWelcomeText(welcomeInput),
         }),
       );
     }
@@ -309,6 +359,7 @@ export async function POST(request: NextRequest) {
         marketing_opt_in: true,
         notion_status: notionStatus,
         is_parent: true,
+        referred_by: referredBy ?? null,
       },
     });
 

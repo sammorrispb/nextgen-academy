@@ -27,6 +27,8 @@ type TrackingContext = {
   utm_term?: string;
   referrer?: string;
   landing_page?: string;
+  /** Signed token from /newsletter?ref=<...> — attributes the signup to a referrer. */
+  ref?: string;
 };
 
 interface NewsletterFormProps {
@@ -57,6 +59,7 @@ export default function NewsletterForm({
       utm_term: params.get("utm_term") ?? undefined,
       referrer: document.referrer || undefined,
       landing_page: window.location.href,
+      ref: params.get("ref") ?? undefined,
     };
     trackingRef.current = ctx;
   }, []);

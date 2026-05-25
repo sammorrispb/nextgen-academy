@@ -4,10 +4,13 @@ import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { fetchActiveSubscribers } from "@/lib/notion-newsletter";
 import { pickWeeklyTip } from "@/lib/newsletter-tips";
 import { signUnsubscribeToken } from "@/lib/newsletter-token";
+import { signReferralToken } from "@/lib/referral-token";
+import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
+  type NewsletterOpenPoll,
   type NewsletterSessionGroup,
 } from "@/lib/email/weekly-newsletter";
 
@@ -93,6 +96,46 @@ function groupSessions(sessions: NgaSession[]): DatedGroup[] {
   return [...groups.values()];
 }
 
+/**
+ * Pull Open polls + their Yes-vote counts for the newsletter polls block.
+ * Capped at 5 polls (any more would crowd the email). Each poll incurs one
+ * extra Notion query for the response count — fine at typical fan-out, and
+ * the cron is the only caller.
+ */
+async function loadOpenPolls(): Promise<NewsletterOpenPoll[]> {
+  try {
+    const polls = (await fetchOpenPolls()).slice(0, 5);
+    const out: NewsletterOpenPoll[] = [];
+    for (const p of polls) {
+      let yesCount = 0;
+      try {
+        const responses = await fetchPollResponses(p.id);
+        yesCount = responses.filter((r) => r.vote === "Yes").length;
+      } catch (err) {
+        console.warn(
+          `[cron/weekly-newsletter] poll responses fetch failed for ${p.slug}:`,
+          err,
+        );
+      }
+      out.push({
+        title: p.title,
+        slug: p.slug,
+        day: p.day,
+        startTime: p.startTime,
+        endTime: p.endTime,
+        location: p.location,
+        level: p.level || "Any",
+        minPartySize: p.minPartySize,
+        yesCount,
+      });
+    }
+    return out;
+  } catch (err) {
+    console.warn("[cron/weekly-newsletter] open polls fetch failed:", err);
+    return [];
+  }
+}
+
 /** Render a short, parent-readable weather note from a county-level forecast. */
 function weatherNote(dw: DayWeather): string {
   const temp = dw.tempHigh != null ? `, ${dw.tempHigh}°` : "";
@@ -129,8 +172,15 @@ export async function GET(req: NextRequest) {
     const dw = weather.get(g.date);
     if (dw) g.weatherNote = weatherNote(dw);
   }
+
+  // Open crew polls + Yes-vote counts. Fails soft — if Notion is down we
+  // ship the email without the polls block instead of failing the whole
+  // weekly send.
+  const openPolls = await loadOpenPolls();
+
   const subscribers = await fetchActiveSubscribers();
   const scheduleUrl = `${SITE_ORIGIN}/schedule`;
+  const crewInterestUrl = `${SITE_ORIGIN}/crew`;
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -144,7 +194,9 @@ export async function GET(req: NextRequest) {
 
   const subject = sessions.length
     ? "Open courts this week — Next Gen"
-    : `Coach tip of the week — ${tip.title}`;
+    : openPolls.length
+      ? "Crews forming this week — Next Gen"
+      : `Coach tip of the week — ${tip.title}`;
 
   let sent = 0;
   let failed = 0;
@@ -158,7 +210,25 @@ export async function GET(req: NextRequest) {
       ? `${SITE_ORIGIN}/api/newsletter/unsubscribe?token=${encodeURIComponent(token)}`
       : `${SITE_ORIGIN}/newsletter`;
 
-    const input = { parentFirst, sessions, tip, scheduleUrl, unsubscribeUrl };
+    // Prefer the stamped Referral Token (issued at signup) so the same link
+    // appears in every issue; fall back to signing on the fly if older rows
+    // never got one.
+    const refToken = sub.referralToken || signReferralToken(sub.email);
+    const referralUrl = refToken
+      ? `${SITE_ORIGIN}/newsletter?ref=${encodeURIComponent(refToken)}`
+      : null;
+
+    const input = {
+      parentFirst,
+      sessions,
+      openPolls,
+      tip,
+      scheduleUrl,
+      crewInterestUrl,
+      unsubscribeUrl,
+      referralUrl,
+      origin: SITE_ORIGIN,
+    };
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: sub.email,
@@ -176,14 +246,21 @@ export async function GET(req: NextRequest) {
   }
 
   // QA / archive copy to the admin inbox so Sam sees exactly what went out.
-  // Uses a no-op unsubscribe link (admin isn't a subscriber row).
+  // Uses a no-op unsubscribe link (admin isn't a subscriber row) and a
+  // sample referral URL so the forward block renders.
   try {
     const adminInput = {
       parentFirst: "Coach",
       sessions,
+      openPolls,
       tip,
       scheduleUrl,
+      crewInterestUrl,
       unsubscribeUrl: `${SITE_ORIGIN}/newsletter`,
+      referralUrl: signReferralToken("sample@example.com")
+        ? `${SITE_ORIGIN}/newsletter?ref=${encodeURIComponent(signReferralToken("sample@example.com") ?? "")}`
+        : null,
+      origin: SITE_ORIGIN,
     };
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -201,6 +278,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     has_sessions: sessions.length > 0,
     session_groups: sessions.length,
+    open_polls: openPolls.length,
     subscribers: subscribers.length,
     sent,
     failed,

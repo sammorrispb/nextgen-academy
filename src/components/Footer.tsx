@@ -69,6 +69,7 @@ export default function Footer() {
               <li><a href="#levels" className="hover:text-ngpa-teal transition-colors">Programs</a></li>
               <li><Link href="/schedule" className="hover:text-ngpa-teal transition-colors">Schedule &amp; Register</Link></li>
               <li><Link href="/newsletter" className="hover:text-ngpa-teal transition-colors">Newsletter</Link></li>
+              <li><Link href="/crew" className="hover:text-ngpa-teal transition-colors">Find Your Kid&rsquo;s Crew</Link></li>
               <li><a href="#contact-form" className="hover:text-ngpa-teal transition-colors">Get Started</a></li>
               <li><a href="#about" className="hover:text-ngpa-teal transition-colors">About Us</a></li>
               <li><a href="#faq" className="hover:text-ngpa-teal transition-colors">FAQ</a></li>
