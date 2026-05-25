@@ -9,7 +9,7 @@ import {
   type Vote,
 } from "@/lib/validate-poll-vote";
 
-const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 7); // 7-17
+const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
 const VOTES: Vote[] = ["Yes", "Maybe", "No"];
 const LEVELS: Level[] = ["Red", "Orange", "Green", "Yellow"];
 

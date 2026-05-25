@@ -21,8 +21,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // range stays anchored to the current year (no stale baked-in window).
 function birthYearRange(): { min: number; max: number } {
   const thisYear = new Date().getFullYear();
-  // ages 7..18 — covers NGA (8–16) plus a year of slack on each end.
-  return { min: thisYear - 18, max: thisYear - 7 };
+  // NGA accepts ages 6..16, strict — no exceptions, no headroom.
+  return { min: thisYear - 16, max: thisYear - 6 };
 }
 
 export function validateRsvpForm(
