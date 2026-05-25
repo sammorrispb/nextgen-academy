@@ -126,7 +126,8 @@ test.describe("Ball Pathway", () => {
     expect(pathwayText).toContain("Private Lessons"); // red + orange both use this
     expect(pathwayText).toContain("Green Ball");
     expect(pathwayText).toContain("Yellow Ball");
-    expect(pathwayText).toContain("Ages 8+");
+    // PR #94 (2026-05-24) realigned the floor from 8+ back to 6+.
+    expect(pathwayText).toContain("Ages 6+");
     expect(pathwayText).toContain("Ages 10+");
     expect(pathwayText).toContain("Ages 12+");
   });
@@ -140,7 +141,8 @@ test.describe("Ball Pathway", () => {
     expect(pathwayText).toContain("Private Lessons");
     expect(pathwayText).toContain("Green Ball");
     expect(pathwayText).toContain("Yellow Ball");
-    expect(pathwayText).toContain("Ages 8+");
+    // PR #94 (2026-05-24) realigned the floor from 8+ back to 6+.
+    expect(pathwayText).toContain("Ages 6+");
     expect(pathwayText).toContain("Ages 10+");
     expect(pathwayText).toContain("Ages 12+");
   });
@@ -165,8 +167,9 @@ test.describe("Level Cards", () => {
     await page.goto("/");
     const cards = page.locator("#levels article");
     const firstCardText = await cards.first().textContent();
-    // Post-2026-05-13 repositioning lifted the floor from 5+ to 8+.
-    expect(firstCardText).toContain("Ages 8+");
+    // 2026-05-13 lifted the floor from 5+ to 8+; PR #94 (2026-05-24)
+    // realigned to 6+ as the canonical academy floor.
+    expect(firstCardText).toContain("Ages 6+");
     // Each subsequent level has a higher floor.
     expect(await cards.nth(2).textContent()).toContain("Ages 10+");
     expect(await cards.nth(3).textContent()).toContain("Ages 12+");
