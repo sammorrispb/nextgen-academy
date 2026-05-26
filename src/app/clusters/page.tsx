@@ -8,13 +8,21 @@ const PAGE_TITLE = "NGA Color Clusters — Fall 2026 Interest List";
 const PAGE_DESCRIPTION =
   "Regional youth pickleball teams across Montgomery County. Four clusters by color, year-round training, age-division play. Join the Fall 2026 interest list for your region.";
 
-// Pre-launch: don't index until brand-review-nga clears the copy and the
-// coach + venue gates close. Keeps stale "Coming Fall 2026" copy out of Google.
 export const metadata: Metadata = {
   title: { absolute: PAGE_TITLE },
   description: PAGE_DESCRIPTION,
   alternates: { canonical: "/clusters" },
-  robots: { index: false, follow: false },
+  openGraph: {
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+    url: "https://nextgenpbacademy.com/clusters",
+    images: ["/opengraph-image"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+  },
 };
 
 // Static Tailwind class mappings — never compute class names from data (Tailwind

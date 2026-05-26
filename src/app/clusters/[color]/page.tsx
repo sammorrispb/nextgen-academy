@@ -28,14 +28,23 @@ export async function generateMetadata({
 
   const title = `${cluster.name} — NGA Youth Pickleball, ${cluster.region} MoCo`;
   const description = `${cluster.blurb} Join the Fall 2026 interest list.`;
+  const url = `https://nextgenpbacademy.com/clusters/${cluster.slug}`;
 
   return {
     title: { absolute: title },
     description,
     alternates: { canonical: `/clusters/${cluster.slug}` },
-    // Pre-launch: don't index until brand-review-nga clears the copy and the
-    // coach + venue gates close.
-    robots: { index: false, follow: false },
+    openGraph: {
+      title,
+      description,
+      url,
+      images: ["/opengraph-image"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 

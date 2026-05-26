@@ -40,11 +40,34 @@ test.describe("/clusters index", () => {
     await expect(page.getByText(/MCPS varsity/i).first()).toBeVisible();
   });
 
-  test("emits noindex,nofollow while pre-launch", async ({ page }) => {
+  test("is indexable (no noindex,nofollow now that it's live)", async ({ page }) => {
     await page.goto("/clusters");
-    const robots = await page.locator('meta[name="robots"]').getAttribute("content");
-    expect(robots?.toLowerCase()).toContain("noindex");
-    expect(robots?.toLowerCase()).toContain("nofollow");
+    const robotsTag = page.locator('meta[name="robots"]');
+    // Either the tag is absent, or it doesn't carry a noindex directive.
+    if ((await robotsTag.count()) > 0) {
+      const content = (await robotsTag.getAttribute("content"))?.toLowerCase() ?? "";
+      expect(content).not.toContain("noindex");
+      expect(content).not.toContain("nofollow");
+    }
+  });
+
+  test("appears in the sitemap", async ({ page }) => {
+    const resp = await page.goto("/sitemap.xml");
+    expect(resp?.status()).toBe(200);
+    const body = await page.content();
+    expect(body).toContain("https://nextgenpbacademy.com/clusters</loc>");
+  });
+
+  test("is linked from the global Navbar (desktop direct, mobile via hamburger)", async ({
+    page,
+  }, testInfo) => {
+    await page.goto("/");
+    if (testInfo.project.name === "mobile") {
+      await page.getByRole("button", { name: /toggle menu/i }).click();
+    }
+    const navLink = page.locator("nav").getByRole("link", { name: "Clusters" });
+    await expect(navLink.first()).toBeVisible();
+    await expect(navLink.first()).toHaveAttribute("href", "/clusters");
   });
 });
 
@@ -150,12 +173,25 @@ test.describe("/clusters/[color] sub-pages", () => {
       expect(foundBreadcrumb).toBe(true);
     });
 
-    test(`${cluster.slug}: emits noindex,nofollow while pre-launch`, async ({
+    test(`${cluster.slug}: is indexable (no noindex,nofollow now that it's live)`, async ({
       page,
     }) => {
       await page.goto(`/clusters/${cluster.slug}`);
-      const robots = await page.locator('meta[name="robots"]').getAttribute("content");
-      expect(robots?.toLowerCase()).toContain("noindex");
+      const robotsTag = page.locator('meta[name="robots"]');
+      if ((await robotsTag.count()) > 0) {
+        const content = (await robotsTag.getAttribute("content"))?.toLowerCase() ?? "";
+        expect(content).not.toContain("noindex");
+        expect(content).not.toContain("nofollow");
+      }
+    });
+
+    test(`${cluster.slug}: appears in the sitemap`, async ({ page }) => {
+      const resp = await page.goto("/sitemap.xml");
+      expect(resp?.status()).toBe(200);
+      const body = await page.content();
+      expect(body).toContain(
+        `https://nextgenpbacademy.com/clusters/${cluster.slug}</loc>`,
+      );
     });
   }
 
