@@ -456,6 +456,31 @@ Every HTML email ships with a plain-text body. The fallback MUST include:
 - Body budget: 1 segment when possible (≤ 160 GSM-7 chars). The Coach Sam
   signoff line is part of the budget, not optional.
 
+### Community-channel invites (WhatsApp, SMS broadcast, Geneva, etc.)
+These are utility, not CTAs. The host email already owns one primary CTA
+(arrow + chip) — a community invite must not compete with it.
+
+- **Discoverability:** never publish the invite URL on the public website
+  (no footer, no landing page, no `/contact`). Invites travel only inside
+  parent-facing transactional or first-touch emails.
+- **Gating:** first-touch only. Send once per parent across all NGA email
+  surfaces. Re-prompting returning families erodes the "earned, not
+  scraped" signal. The `isFirstTimeParent(contact)` helper in
+  `src/lib/notion-player-lookup.ts` is the canonical gate.
+- **Visual weight:** render as a quiet utility block (`s.card`, muted
+  label), not an action callout (`s.actionCallout` / `s.cardAccent` are
+  reserved for the host email's primary CTA).
+- **CTA hierarchy:** the invite link is inline, no `→` arrow, no chip
+  styling. The arrow rule (Maps gets the arrow, everything else is
+  utility) applies edge-to-edge — a second arrow in the same email is a
+  hierarchy break.
+- **Privacy:** invite links create cross-parent exposure once joined.
+  Mention it plainly in the copy ("other Next Gen parents") so the
+  recipient knows the room is shared. Never list other parents by name.
+- **Copy register:** anchor "you," prefer "Next Gen parents" over "NGA
+  parents" in cold sends (the abbreviation isn't yet earned), and echo
+  the "together" half of the tagline when it lands naturally.
+
 ### Idempotency on Notion drop-in rows
 Crons write a boolean to the drop-in row after a successful send:
 - `Reminder Sent` — 24h reminder cron

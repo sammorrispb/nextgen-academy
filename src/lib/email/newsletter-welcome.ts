@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
 
 interface NewsletterWelcomeInput {
   parentFirst: string;
@@ -79,6 +80,8 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
 
     ${referralBlock}
 
+    ${whatsappInviteHtml()}
+
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         Better than yesterday, together.<br>
@@ -132,6 +135,8 @@ export function newsletterWelcomeText(input: NewsletterWelcomeInput): string {
   }
 
   lines.push(
+    whatsappInviteText(),
+    "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
     "",

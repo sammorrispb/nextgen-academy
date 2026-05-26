@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { whatsappInviteHtml } from "./whatsapp-invite";
 
 interface ConfirmationInput {
   parentFirst: string;
@@ -12,6 +13,8 @@ interface ConfirmationInput {
   detailUrl: string;
   /** Signed self-serve cancel URL. Optional — feature is off if secret missing. */
   cancelUrl?: string;
+  /** Append the WhatsApp parent-group invite. True only on the parent's first NGA touch. */
+  includeWhatsappInvite?: boolean;
 }
 
 export function bookingConfirmationHtml(input: ConfirmationInput): string {
@@ -26,6 +29,7 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     amountPaid,
     detailUrl,
     cancelUrl,
+    includeWhatsappInvite,
   } = input;
 
   const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sessionLocation)}`;
@@ -76,6 +80,8 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
       Paid: $${escape(amountPaid)} &middot;
       <a href="${detailUrl}" style="${s.link}">View session details</a>
     </p>
+
+    ${includeWhatsappInvite ? whatsappInviteHtml() : ""}
 
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
