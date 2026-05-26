@@ -6,6 +6,7 @@ import {
   type Cluster,
   type ClusterSlug,
 } from "@/data/clusters";
+import { SERVICE_AREAS, type ServiceCity } from "@/lib/seo";
 
 export function getAllClusters(): readonly Cluster[] {
   return CLUSTERS;
@@ -49,4 +50,31 @@ export function assertSlugsUniqueAndLower(): void {
 /** Cluster handoff to the existing /crew waitlist — pre-fills the cluster name. */
 export function buildCrewWaitlistHref(slug: ClusterSlug): string {
   return `/crew?cluster=${encodeURIComponent(slug)}`;
+}
+
+/** True when a string is a known cluster slug — used in form validation. */
+export function isClusterSlug(value: unknown): value is ClusterSlug {
+  return typeof value === "string" && CLUSTERS.some((c) => c.slug === value);
+}
+
+/**
+ * Maps every SERVICE_AREAS city to the cluster whose `neighborhoods` list
+ * contains it. Returns undefined for any service city not covered by a
+ * cluster (none today — all 8 cities map cleanly, but the helper stays
+ * safe in case SERVICE_AREAS grows ahead of CLUSTERS).
+ */
+export function getClusterForCity(city: ServiceCity): Cluster | undefined {
+  return CLUSTERS.find((c) =>
+    (c.neighborhoods as readonly string[]).includes(city),
+  );
+}
+
+/** Exhaustiveness guard: every SERVICE_AREAS city must map to a cluster. */
+export function assertEveryServiceCityHasCluster(): void {
+  const orphans = SERVICE_AREAS.filter((city) => !getClusterForCity(city));
+  if (orphans.length > 0) {
+    throw new Error(
+      `Service cities without a cluster: ${orphans.join(", ")} — add to a CLUSTERS.neighborhoods list`,
+    );
+  }
 }

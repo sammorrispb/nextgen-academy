@@ -8,14 +8,18 @@ import {
 } from "../src/data/clusters";
 import { CLUSTER_FAQ } from "../src/data/cluster-faq";
 import {
+  assertEveryServiceCityHasCluster,
   assertNoSkillBallCollision,
   assertSlugsUniqueAndLower,
   buildCrewWaitlistHref,
   getAllClusters,
   getAllClusterSlugs,
   getClusterBySlug,
+  getClusterForCity,
   isCanonicalHex,
+  isClusterSlug,
 } from "../src/lib/clusters";
+import { SERVICE_AREAS } from "../src/lib/seo";
 
 test.describe("CLUSTERS data integrity", () => {
   test("ships exactly 4 clusters for v1", () => {
@@ -116,6 +120,58 @@ test.describe("buildCrewWaitlistHref", () => {
     expect(buildCrewWaitlistHref("lime")).toBe("/crew?cluster=lime");
     expect(buildCrewWaitlistHref("orange")).toBe("/crew?cluster=orange");
     expect(buildCrewWaitlistHref("cyan")).toBe("/crew?cluster=cyan");
+  });
+});
+
+test.describe("isClusterSlug", () => {
+  test("accepts every canonical cluster slug", () => {
+    for (const slug of ["teal", "lime", "orange", "cyan"]) {
+      expect(isClusterSlug(slug)).toBe(true);
+    }
+  });
+
+  test("rejects unknown / malformed values", () => {
+    expect(isClusterSlug("magenta")).toBe(false);
+    expect(isClusterSlug("TEAL")).toBe(false);
+    expect(isClusterSlug("")).toBe(false);
+    expect(isClusterSlug(undefined)).toBe(false);
+    expect(isClusterSlug(null)).toBe(false);
+    expect(isClusterSlug(42)).toBe(false);
+    expect(isClusterSlug({ slug: "teal" })).toBe(false);
+  });
+});
+
+test.describe("getClusterForCity", () => {
+  test("maps every SERVICE_AREAS city to a cluster", () => {
+    for (const city of SERVICE_AREAS) {
+      const c = getClusterForCity(city);
+      expect(c, `${city} should map to a cluster`).toBeDefined();
+    }
+  });
+
+  test("Down-County cities map to Teal", () => {
+    expect(getClusterForCity("Bethesda")?.slug).toBe("teal");
+    expect(getClusterForCity("North Bethesda")?.slug).toBe("teal");
+    expect(getClusterForCity("Chevy Chase")?.slug).toBe("teal");
+  });
+
+  test("Up-County cities map to Lime", () => {
+    expect(getClusterForCity("Gaithersburg")?.slug).toBe("lime");
+    expect(getClusterForCity("Germantown")?.slug).toBe("lime");
+  });
+
+  test("East-County cities map to Orange", () => {
+    expect(getClusterForCity("Olney")?.slug).toBe("orange");
+    expect(getClusterForCity("Silver Spring")?.slug).toBe("orange");
+  });
+
+  test("Mid-County cities map to Cyan", () => {
+    expect(getClusterForCity("Rockville")?.slug).toBe("cyan");
+    expect(getClusterForCity("Potomac")?.slug).toBe("cyan");
+  });
+
+  test("assertEveryServiceCityHasCluster passes today", () => {
+    expect(() => assertEveryServiceCityHasCluster()).not.toThrow();
   });
 });
 

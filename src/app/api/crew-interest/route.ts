@@ -11,8 +11,10 @@ import {
 import { createCrewInterest } from "@/lib/notion-crew-interest";
 import {
   crewInterestWelcomeHtml,
+  crewInterestWelcomeSubject,
   crewInterestWelcomeText,
 } from "@/lib/email/crew-interest-welcome";
+import { getClusterBySlug, isClusterSlug } from "@/lib/clusters";
 
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
@@ -90,6 +92,19 @@ export async function POST(request: NextRequest) {
   const source = body.source ?? "Web";
   const parentFirst = parentName.split(" ")[0] || parentName;
 
+  // Cluster attribution from /clusters/[color] CTA. Unknown slugs silently
+  // drop so a stale link can never produce a 400 — attribution is best-effort.
+  const cluster = isClusterSlug(body.cluster)
+    ? getClusterBySlug(body.cluster)
+    : undefined;
+
+  // Append cluster preference to notes so it lands in the existing Notion
+  // notes column (no schema migration needed for v1; cluster filter is a
+  // text search on the rich_text Notes property).
+  const notesWithCluster = cluster
+    ? [notes, `Preferred cluster: ${cluster.name}`].filter(Boolean).join("\n")
+    : notes;
+
   const preferredSummary = `${childLevel} · ${preferredDays.join(", ")} · ${preferredTime}${preferredLocation ? ` · near ${preferredLocation}` : ""}`;
 
   // Notion write — fails soft. The welcome email and Open Brain ingest still
@@ -108,7 +123,7 @@ export async function POST(request: NextRequest) {
         preferredTime,
         preferredLocation,
         friendsWanted,
-        notes,
+        notes: notesWithCluster,
         source,
         marketingOptIn: true,
       });
@@ -139,6 +154,7 @@ export async function POST(request: NextRequest) {
     ${preferredLocation ? `<tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Location</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(preferredLocation)}</td></tr>` : ""}
     ${friendsWanted ? `<tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Friends</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(friendsWanted)}</td></tr>` : ""}
     ${notes ? `<tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notes</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notes)}</td></tr>` : ""}
+    ${cluster ? `<tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Cluster</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(cluster.name)}</td></tr>` : ""}
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Source</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(source)}</td></tr>
     <tr><td style="padding: 10px 8px; color: #7A88B8;">Notion</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notionStatus)}</td></tr>
   </table>
@@ -150,7 +166,7 @@ export async function POST(request: NextRequest) {
           from: FROM_EMAIL,
           to: ADMIN_EMAIL,
           cc: CC_EMAIL,
-          subject: `Crew Interest — ${childFirstName} (${childLevel}, ${preferredDays.join("/")})`,
+          subject: `Crew Interest — ${childFirstName} (${childLevel}, ${preferredDays.join("/")})${cluster ? ` · ${cluster.name}` : ""}`,
           html: adminHtml,
         }),
         resend.emails.send({
@@ -158,18 +174,20 @@ export async function POST(request: NextRequest) {
           to: email,
           bcc: CC_EMAIL,
           replyTo: site.email,
-          subject: `We're looking for ${childFirstName}'s crew`,
+          subject: crewInterestWelcomeSubject({ childFirst: childFirstName, cluster }),
           html: crewInterestWelcomeHtml({
             parentFirst,
             childFirst: childFirstName,
             preferredSummary,
             newsletterUrl: NEWSLETTER_URL,
+            cluster,
           }),
           text: crewInterestWelcomeText({
             parentFirst,
             childFirst: childFirstName,
             preferredSummary,
             newsletterUrl: NEWSLETTER_URL,
+            cluster,
           }),
         }),
       ]);
@@ -200,6 +218,8 @@ export async function POST(request: NextRequest) {
       friends_wanted: friendsWanted || null,
       crew_interest_source: source,
       notion_status: notionStatus,
+      cluster: cluster?.slug ?? null,
+      cluster_name: cluster?.name ?? null,
       is_parent: true,
     },
   });
