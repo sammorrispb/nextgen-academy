@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { c, s } from "@/lib/email/brand";
+import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { isFirstTimeParent } from "@/lib/notion-player-lookup";
 import { site } from "@/data/site";
 
 function getResend() {
@@ -102,6 +104,8 @@ export async function POST(request: NextRequest) {
   const phone = body.contact_phone!.trim();
   const notes = body.notes?.trim() || "";
 
+  const isFirstTimer = await isFirstTimeParent(email);
+
   const adminHtml = `
 <div style="${s.wrapper}">
   <h1 style="${s.headingYellow} margin-bottom: 24px;">
@@ -158,6 +162,7 @@ export async function POST(request: NextRequest) {
       tournament prep.
     </p>
   </div>
+  ${isFirstTimer ? whatsappInviteHtml() : ""}
   <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
       Questions? Reply here or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.

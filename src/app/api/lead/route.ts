@@ -5,6 +5,7 @@ import type { Kid, LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { c, s } from "@/lib/email/brand";
+import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -220,12 +221,17 @@ export async function POST(request: NextRequest) {
   // duplicating an existing family if the form is re-submitted. Coach can
   // add siblings manually until a richer per-kid dedup ships.
   let notionStatus = "skipped";
+  // Gate the WhatsApp invite on a confirmed-new parent. If Notion lookup
+  // fails or env is missing, default to NOT inviting so we don't re-prompt
+  // returning families.
+  let isFirstTimer = false;
   if (process.env.NOTION_API_KEY) {
     try {
       const existingId = await findNotionPlayer(body.contact);
       if (existingId) {
         notionStatus = "already exists";
       } else {
+        isFirstTimer = true;
         const results = await Promise.all(
           kids.map((kid, i) =>
             createNotionPlayerRow(
@@ -332,6 +338,7 @@ export async function POST(request: NextRequest) {
       Check out our <a href="https://nextgenpbacademy.com/schedule" style="${s.link} font-weight: 600;">upcoming sessions</a> to see what\u2019s available.
     </p>
   </div>
+  ${isFirstTimer ? whatsappInviteHtml() : ""}
   <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
       Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
