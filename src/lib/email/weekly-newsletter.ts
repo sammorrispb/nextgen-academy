@@ -44,6 +44,15 @@ export interface WeeklyNewsletterInput {
   openPolls: NewsletterOpenPoll[];
   /** Approved youth-pickleball news items from the scraper queue. Empty hides the block. */
   news: NewsletterNewsItem[];
+  /**
+   * Pre-rendered HTML for the "From Coach Sam" lead block, sourced from an
+   * Approved row in the newsletter-drafts Notion DB. Null/undefined hides
+   * the block — default behavior when Sam hasn't approved a draft this week.
+   * See notion-newsletter-drafts.ts.
+   */
+  newsletterLeadHtml?: string | null;
+  /** Plain-text mirror of newsletterLeadHtml for the text/plain MIME part. */
+  newsletterLeadText?: string | null;
   tip: CoachTip;
   scheduleUrl: string;
   crewInterestUrl: string;
@@ -78,6 +87,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     sessions,
     openPolls,
     news,
+    newsletterLeadHtml,
     tip,
     scheduleUrl,
     crewInterestUrl,
@@ -88,6 +98,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const hasSessions = sessions.length > 0;
   const hasPolls = openPolls.length > 0;
   const hasNews = news.length > 0;
+  const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
 
   const sessionBlock = hasSessions
     ? `
@@ -144,6 +155,19 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">Tell us your kid&rsquo;s level and the days that work &mdash; Sam looks for 3 more kids who match and texts the WhatsApp link when the slot has takers.</p>
       <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s crew &rarr;</a></p>
     </div>`;
+
+  // "From Coach Sam" lead block — rendered HTML from an Approved row in the
+  // newsletter-drafts Notion DB. Sits between the Coach Tip and the existing
+  // news-cards block so the editorial voice leads into the raw news items.
+  // Hidden by default; only renders when Sam has flipped a draft to Approved
+  // for this week's send.
+  const leadBlock = hasLead
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">From Coach Sam this week</p>
+      ${newsletterLeadHtml}
+    </div>`
+    : "";
 
   // News block — only renders items Sam has Approved in the news Notion DB.
   // Each title links to the original source so parents can read in context.
@@ -210,6 +234,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">Coach tip: ${escape(tip.title)}</h2>
     <p style="margin:0;color:${c.text};line-height:1.7;">${escape(tip.body)}</p>
 
+    ${leadBlock}
+
     ${newsBlock}
 
     ${privateBlock}
@@ -237,6 +263,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     sessions,
     openPolls,
     news,
+    newsletterLeadText,
     tip,
     scheduleUrl,
     crewInterestUrl,
@@ -300,6 +327,10 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     tip.body,
     "",
   );
+
+  if (newsletterLeadText && newsletterLeadText.trim()) {
+    lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
+  }
 
   if (news.length > 0) {
     lines.push("In the news: youth pickleball", "A few stories Sam thought you'd want to see.", "");

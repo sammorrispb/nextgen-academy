@@ -7,6 +7,7 @@ import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { signReferralToken } from "@/lib/referral-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
+import { fetchApprovedNewsletterDraft } from "@/lib/notion-newsletter-drafts";
 import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
 import {
   weeklyNewsletterHtml,
@@ -191,6 +192,22 @@ export async function GET(req: NextRequest) {
     summary: n.summary,
   }));
 
+  // "From Coach Sam" lead block — sourced from an Approved row in the
+  // newsletter-drafts Notion DB written by the Wednesday cloud drafter.
+  // Null when Sam hasn't approved a draft this week → block stays hidden.
+  // Fails soft on any Notion error so the cron still ships the rest.
+  let newsletterDraft: Awaited<
+    ReturnType<typeof fetchApprovedNewsletterDraft>
+  > = null;
+  try {
+    newsletterDraft = await fetchApprovedNewsletterDraft();
+  } catch (err) {
+    console.warn(
+      "[cron/weekly-newsletter] newsletter draft fetch failed:",
+      err,
+    );
+  }
+
   const subscribers = await fetchActiveSubscribers();
   const scheduleUrl = `${SITE_ORIGIN}/schedule`;
   const crewInterestUrl = `${SITE_ORIGIN}/crew`;
@@ -236,6 +253,8 @@ export async function GET(req: NextRequest) {
       sessions,
       openPolls,
       news,
+      newsletterLeadHtml: newsletterDraft?.html ?? null,
+      newsletterLeadText: newsletterDraft?.text ?? null,
       tip,
       scheduleUrl,
       crewInterestUrl,
@@ -268,6 +287,8 @@ export async function GET(req: NextRequest) {
       sessions,
       openPolls,
       news,
+      newsletterLeadHtml: newsletterDraft?.html ?? null,
+      newsletterLeadText: newsletterDraft?.text ?? null,
       tip,
       scheduleUrl,
       crewInterestUrl,
@@ -307,6 +328,8 @@ export async function GET(req: NextRequest) {
     open_polls: openPolls.length,
     news_items: news.length,
     news_marked_used: newsMarkedUsed,
+    has_newsletter_lead: !!newsletterDraft,
+    newsletter_lead_sections: newsletterDraft?.sectionCount ?? 0,
     subscribers: subscribers.length,
     sent,
     failed,
