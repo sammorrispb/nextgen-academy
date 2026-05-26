@@ -1,10 +1,22 @@
 import { c, s } from "./brand";
+import type { Cluster } from "@/data/clusters";
 
 interface CrewInterestWelcomeInput {
   parentFirst: string;
   childFirst: string;
   preferredSummary: string;
   newsletterUrl: string;
+  /** When set, the email is themed for that cluster instead of the generic crew flow. */
+  cluster?: Cluster;
+}
+
+export function crewInterestWelcomeSubject(input: {
+  childFirst: string;
+  cluster?: Cluster;
+}): string {
+  return input.cluster
+    ? `Welcome to the ${input.cluster.name} interest list`
+    : `We're looking for ${input.childFirst}'s crew`;
 }
 
 /**
@@ -14,21 +26,37 @@ interface CrewInterestWelcomeInput {
  * for your slot goes live.
  */
 export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string {
-  const { parentFirst, childFirst, preferredSummary, newsletterUrl } = input;
+  const { parentFirst, childFirst, preferredSummary, newsletterUrl, cluster } = input;
+
+  const accentColor = cluster?.hex ?? c.accentLime;
+  const eyebrow = cluster ? cluster.name.toUpperCase() : "Got it";
+  const headline = cluster
+    ? `${escape(childFirst)} is on the ${escape(cluster.name)} list, ${escape(parentFirst)}.`
+    : `We&rsquo;re looking for ${escape(childFirst)}&rsquo;s crew, ${escape(parentFirst)}.`;
+  const intro = cluster
+    ? `Thanks for putting your family on the ${escape(cluster.name)} list. Year-round training, real reps, age-division play that gets ${escape(childFirst)} match-ready before Fall &mdash; that&rsquo;s what a Color Cluster delivers.`
+    : `Thanks for telling us what works. Same four kids every week, same court, same time &mdash; that&rsquo;s how skills actually compound. Here&rsquo;s what happens next.`;
+  const nextSteps = cluster
+    ? `<li>We&rsquo;re locking in venues and head coaches for Fall 2026 right now.</li>
+      <li>The moment your cluster&rsquo;s home site and start date are confirmed, we&rsquo;ll email you the registration link first.</li>
+      <li>${escape(cluster.name)} kids train together every week, then compete cluster-vs-cluster through the season.</li>`
+    : `<li>Sam looks for 3 more kids at ${escape(childFirst)}&rsquo;s level who can make the same day and court.</li>
+      <li>When there are enough takers, Sam shares a WhatsApp link &mdash; one tap to vote you in.</li>
+      <li>Hit the minimum and the crew locks in. Four weeks, same slot, same kids.</li>`;
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>We&rsquo;re looking for ${escape(childFirst)}&rsquo;s crew</title>
+  <title>${escape(crewInterestWelcomeSubject({ childFirst, cluster }))}</title>
 </head>
 <body style="margin:0;padding:0;background:${c.bgDark};">
   <div style="${s.wrapper}">
-    <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Got it</p>
-    <h1 style="${s.heading} margin:0 0 16px 0;">We&rsquo;re looking for ${escape(childFirst)}&rsquo;s crew, ${escape(parentFirst)}.</h1>
+    <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${accentColor};font-weight:700;">${escape(eyebrow)}</p>
+    <h1 style="${s.heading} margin:0 0 16px 0;">${headline}</h1>
     <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">
-      Thanks for telling us what works. Same four kids every week, same court, same time &mdash; that&rsquo;s how skills actually compound. Here&rsquo;s what happens next.
+      ${intro}
     </p>
 
     <div style="${s.card}">
@@ -38,9 +66,7 @@ export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string
 
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">What happens next</h2>
     <ul style="margin:0;padding-left:18px;color:${c.text};line-height:1.7;">
-      <li>Sam looks for 3 more kids at ${escape(childFirst)}&rsquo;s level who can make the same day and court.</li>
-      <li>When there are enough takers, Sam shares a WhatsApp link &mdash; one tap to vote you in.</li>
-      <li>Hit the minimum and the crew locks in. Four weeks, same slot, same kids.</li>
+      ${nextSteps}
     </ul>
 
     <div style="${s.cardAccent}">
@@ -72,21 +98,38 @@ export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string
 }
 
 export function crewInterestWelcomeText(input: CrewInterestWelcomeInput): string {
-  const { parentFirst, childFirst, preferredSummary, newsletterUrl } = input;
+  const { parentFirst, childFirst, preferredSummary, newsletterUrl, cluster } = input;
+
+  const headline = cluster
+    ? `${childFirst} is on the ${cluster.name} list, ${parentFirst}.`
+    : `We're looking for ${childFirst}'s crew, ${parentFirst}.`;
+  const intro = cluster
+    ? `Thanks for putting your family on the ${cluster.name} list. Year-round training, real reps, age-division play that gets ${childFirst} match-ready before Fall — that's what a Color Cluster delivers.`
+    : `Thanks for telling us what works. Same four kids every week, same court, same time — that's how skills actually compound. Here's what happens next.`;
+  const nextSteps = cluster
+    ? [
+        `- We're locking in venues and head coaches for Fall 2026 right now.`,
+        `- The moment your cluster's home site and start date are confirmed, we'll email you the registration link first.`,
+        `- ${cluster.name} kids train together every week, then compete cluster-vs-cluster through the season.`,
+      ]
+    : [
+        `- Sam looks for 3 more kids at ${childFirst}'s level who can make the same day and court.`,
+        `- When there are enough takers, Sam shares a WhatsApp link — one tap to vote you in.`,
+        `- Hit the minimum and the crew locks in. Four weeks, same slot, same kids.`,
+      ];
+
   return [
-    `We're looking for ${childFirst}'s crew, ${parentFirst}.`,
+    headline,
     "",
-    `Thanks for telling us what works. Same four kids every week, same court, same time — that's how skills actually compound. Here's what happens next.`,
+    intro,
     "",
     `What you told us:`,
     preferredSummary,
     "",
     `What happens next:`,
-    `- Sam looks for 3 more kids at ${childFirst}'s level who can make the same day and court.`,
-    `- When there are enough takers, Sam shares a WhatsApp link — one tap to vote you in.`,
-    `- Hit the minimum and the crew locks in. Four weeks, same slot, same kids.`,
+    ...nextSteps,
     "",
-    `Want to play this week? While we're building the crew, ${childFirst} can drop in on any open session — the weekly newsletter shows everything that's open.`,
+    `Want to play this week? While we're locking in cluster details, ${childFirst} can drop in on any open session — the weekly newsletter shows everything that's open.`,
     "",
     `See open sessions: ${newsletterUrl}`,
     "",

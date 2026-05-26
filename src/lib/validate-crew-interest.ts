@@ -35,6 +35,8 @@ export interface CrewInterestFormData {
   utm_medium?: string;
   utm_campaign?: string;
   source?: "Newsletter" | "Web" | "Other";
+  /** Cluster slug from /clusters/[color] handoff. Optional — unknown values silently drop. */
+  cluster?: string;
 }
 
 export type CrewInterestErrors = Partial<

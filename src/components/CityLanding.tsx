@@ -13,6 +13,7 @@ import {
   SITE_URL,
   type ServiceCity,
 } from "@/lib/seo";
+import { getClusterForCity } from "@/lib/clusters";
 
 interface CityLandingProps {
   /** Canonical city — must match an entry in SERVICE_AREAS. */
@@ -43,6 +44,39 @@ const localFaq = faq.filter((item) => LOCAL_FAQ_QUESTIONS.has(item.question));
  * "invent nothing, cite everything" + no-venue-specifics-in-lead-replies
  * rules). Lead with the free evaluation.
  */
+// Static color mapping for the cluster callout — Tailwind purge requires
+// class names to be statically discoverable. Lime stays dark-surface safe
+// because the callout sits on bg-ngpa-deep.
+const CLUSTER_ACCENT_CLASSES: Record<
+  string,
+  { ring: string; chip: string; link: string; linkHover: string }
+> = {
+  teal: {
+    ring: "ring-[#00B4D8]/40",
+    chip: "bg-[#00B4D8] text-ngpa-deep",
+    link: "text-[#48CAE4]",
+    linkHover: "hover:text-[#00D4FF]",
+  },
+  lime: {
+    ring: "ring-[#AADC00]/40",
+    chip: "bg-[#AADC00] text-ngpa-deep",
+    link: "text-[#AADC00]",
+    linkHover: "hover:text-[#BFE635]",
+  },
+  orange: {
+    ring: "ring-[#FF6B2B]/40",
+    chip: "bg-[#FF6B2B] text-ngpa-deep",
+    link: "text-[#FF6B2B]",
+    linkHover: "hover:text-[#FF8A52]",
+  },
+  cyan: {
+    ring: "ring-[#00D4FF]/40",
+    chip: "bg-[#00D4FF] text-ngpa-deep",
+    link: "text-[#00D4FF]",
+    linkHover: "hover:text-[#5BE3FF]",
+  },
+};
+
 export default function CityLanding({
   city,
   slug,
@@ -51,6 +85,8 @@ export default function CityLanding({
 }: CityLandingProps) {
   const url = `${SITE_URL}/${slug}`;
   const description = `Youth pickleball coaching for kids ages 6–16 in ${city}, MD — and across Montgomery County. Free evaluations, small-group sessions, and private lessons with Next Gen Pickleball Academy.`;
+  const cluster = getClusterForCity(city);
+  const clusterClasses = cluster ? CLUSTER_ACCENT_CLASSES[cluster.slug] : null;
 
   return (
     <>
@@ -175,6 +211,48 @@ export default function CityLanding({
           </p>
         </div>
       </section>
+
+      {/* ─── Cluster Callout (when this city maps to a cluster) ─────── */}
+      {cluster && clusterClasses && (
+        <section
+          data-testid="cluster-callout"
+          className="bg-ngpa-deep py-12 sm:py-16 px-4 sm:px-6 lg:px-10"
+        >
+          <div className="max-w-5xl mx-auto">
+            <div
+              className={`relative rounded-3xl bg-ngpa-panel/80 backdrop-blur p-8 sm:p-10 ring-1 ${clusterClasses.ring}`}
+            >
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span
+                  aria-hidden="true"
+                  className={`inline-block h-8 w-8 rounded-full ${clusterClasses.chip}`}
+                />
+                <span
+                  className={`rounded-full ${clusterClasses.chip} px-3 py-1 text-xs font-bold uppercase tracking-wider`}
+                >
+                  {cluster.region} · {cluster.name}
+                </span>
+                <span className="rounded-full border border-ngpa-lime/40 px-3 py-1 text-xs font-semibold text-ngpa-lime">
+                  Coming Fall 2026
+                </span>
+              </div>
+              <h2 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white tracking-tight mb-3">
+                {city} families train with the {cluster.name}.
+              </h2>
+              <p className="text-base sm:text-lg text-ngpa-white/85 leading-relaxed mb-5 max-w-2xl">
+                {cluster.blurb}
+              </p>
+              <Link
+                href={`/clusters/${cluster.slug}`}
+                data-testid="cluster-callout-link"
+                className={`inline-flex items-center gap-2 font-bold ${clusterClasses.link} ${clusterClasses.linkHover} underline-offset-4 hover:underline transition-colors`}
+              >
+                See what {cluster.name} families get →
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ─── Pathway ──────────────────────────── */}
       <section className="relative bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10 overflow-hidden">

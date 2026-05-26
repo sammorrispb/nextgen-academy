@@ -46,6 +46,7 @@ type TrackingContext = {
   referrer?: string;
   landing_page?: string;
   source?: "Newsletter" | "Web" | "Other";
+  cluster?: string;
 };
 
 interface CrewInterestFormProps {
@@ -78,6 +79,7 @@ export default function CrewInterestForm({
       referrer: document.referrer || undefined,
       landing_page: window.location.href,
       source,
+      cluster: params.get("cluster") ?? undefined,
     };
   }, [source]);
 
