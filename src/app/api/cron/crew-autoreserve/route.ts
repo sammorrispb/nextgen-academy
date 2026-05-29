@@ -172,24 +172,84 @@ async function processOne(
   // its place. The cancel flow uses it to retrieve and refund the PI.
   const checkoutSessionId = paymentIntentId;
 
-  await createDropInRegistration({
-    parentName: commit.parentName,
-    parentEmail: commit.parentEmail,
-    parentPhone: commit.parentPhone,
-    childFirstName: commit.childFirstName,
-    childBirthYear: 0,
-    sessionTitle: next.title,
-    sessionDate: next.date,
-    sessionStartTime: next.startTime,
-    location: next.location,
-    level: next.level,
-    amountPaidUsd: CHARGE_AMOUNT_CENTS / 100,
-    stripeCheckoutSessionId: checkoutSessionId,
-    stripePaymentIntentId: paymentIntentId,
-    displayConsent: false,
-    smsConsent: false,
-    smsConsentText: "",
-  });
+  // The roster row is the source of truth (roster, reminders, check-in, cancel
+  // refunds). We've ALREADY charged the card, so a failed create can't be
+  // swallowed the way it used to be — that left a parent paid with no
+  // reservation. Retry a few times to ride out a transient Notion blip; if it
+  // still fails, refund the charge and pull the commit from the auto-charge
+  // loop (next run keys idempotency off the roster row, which wouldn't exist —
+  // so leaving it Active would double-charge).
+  let rowCreated = false;
+  for (let attempt = 1; attempt <= 3 && !rowCreated; attempt++) {
+    rowCreated = await createDropInRegistration({
+      parentName: commit.parentName,
+      parentEmail: commit.parentEmail,
+      parentPhone: commit.parentPhone,
+      childFirstName: commit.childFirstName,
+      childBirthYear: 0,
+      sessionTitle: next.title,
+      sessionDate: next.date,
+      sessionStartTime: next.startTime,
+      location: next.location,
+      level: next.level,
+      amountPaidUsd: CHARGE_AMOUNT_CENTS / 100,
+      stripeCheckoutSessionId: checkoutSessionId,
+      stripePaymentIntentId: paymentIntentId,
+      displayConsent: false,
+      smsConsent: false,
+      smsConsentText: "",
+    });
+    if (!rowCreated && attempt < 3) {
+      await new Promise((r) => setTimeout(r, 400 * attempt));
+    }
+  }
+
+  if (!rowCreated) {
+    let refunded = false;
+    try {
+      await stripe.refunds.create({ payment_intent: paymentIntentId });
+      refunded = true;
+    } catch (refundErr) {
+      console.error(
+        "[cron/crew-autoreserve] refund after row-create failure failed",
+        refundErr,
+      );
+    }
+    await updateCommit(commit.id, {
+      status: "CardFailed",
+      lastError: refunded
+        ? "Roster row create failed after charge; charge refunded. Set back to Active to rebook."
+        : "Roster row create failed AND refund failed — parent charged with no reservation. Fix in Stripe + Notion.",
+    });
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: FROM_EMAIL,
+          to: ADMIN_EMAIL,
+          subject: `[crew-autoreserve] roster row failed for ${commit.childFirstName} — ${refunded ? "refunded" : "REFUND FAILED"}`,
+          text:
+            `Auto-reserve charged the card but the Notion roster row didn't save after 3 tries.\n\n` +
+            `Commit: ${commit.id}\n` +
+            `Parent: ${commit.parentName} <${commit.parentEmail}>\n` +
+            `Child: ${commit.childFirstName}\n` +
+            `Session: ${next.title} — ${next.date} ${next.startTime}\n` +
+            `PaymentIntent: ${paymentIntentId}\n\n` +
+            (refunded
+              ? `The charge was refunded and the commit set to CardFailed. Flip it back to Active to retry the booking.`
+              : `REFUND ALSO FAILED — the parent is charged with no reservation. Refund the PaymentIntent in Stripe and create the roster row manually.`),
+        });
+      } catch (mailErr) {
+        console.error(
+          "[cron/crew-autoreserve] row-failure admin alert failed",
+          mailErr,
+        );
+      }
+    }
+    outcome.action = "error";
+    outcome.error = "row-create-failed";
+    outcome.sessionDate = next.date;
+    return outcome;
+  }
 
   await incrementSessionRegistered(next.id, 1);
 
