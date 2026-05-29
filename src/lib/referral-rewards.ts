@@ -72,7 +72,13 @@ async function mintPromoCode(
 export async function processReferralReward(
   session: Stripe.Checkout.Session,
 ): Promise<void> {
-  const friendEmail = session.customer_email?.trim().toLowerCase() || "";
+  // Payment Links leave customer_email null — the payer email lands in
+  // customer_details.email. Read both so referral payouts fire on discount-link
+  // registrations too.
+  const friendEmail =
+    (session.customer_details?.email ?? session.customer_email)
+      ?.trim()
+      .toLowerCase() || "";
   if (!friendEmail) return;
 
   const friend = await findSubscriberByEmail(friendEmail);

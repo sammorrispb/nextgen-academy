@@ -21,12 +21,16 @@ export interface DropInRow {
   smsConsentText: string;
 }
 
-export async function createDropInRegistration(row: DropInRow): Promise<void> {
+// Returns true if the row was created (or skipped because env is unset), false
+// if Notion rejected the write. Callers that treat the row as the source of
+// truth (the Stripe webhook) use this to decide whether to fail the request so
+// Stripe retries; best-effort callers can ignore it.
+export async function createDropInRegistration(row: DropInRow): Promise<boolean> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DROPINS_DB_ID;
   if (!notionKey || !dbId) {
     console.warn("[notion-dropins] missing NOTION_API_KEY or NOTION_DROPINS_DB_ID");
-    return;
+    return true;
   }
 
   const title = `${row.childFirstName} — ${row.sessionTitle || row.sessionDate}`;
@@ -91,7 +95,9 @@ export async function createDropInRegistration(row: DropInRow): Promise<void> {
       res.status,
       await res.text().catch(() => ""),
     );
+    return false;
   }
+  return true;
 }
 
 export interface DropInRegistration {

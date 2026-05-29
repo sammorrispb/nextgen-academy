@@ -31,6 +31,16 @@ function metaString(meta: Stripe.Metadata, key: string): string {
   return typeof meta[key] === "string" ? meta[key] : "";
 }
 
+// The payer's email. Checkout Sessions created with a `customer_email` populate
+// `session.customer_email`; Payment Links (the discount-link path) don't — the
+// email the customer enters lands in `session.customer_details.email` while
+// `customer_email` stays null. Read both so Payment Link registrations resolve
+// the same as regular checkouts; an empty result would 400 the Notion row
+// create and silently drop the registration.
+function payerEmail(session: Stripe.Checkout.Session): string {
+  return session.customer_details?.email ?? session.customer_email ?? "";
+}
+
 function formatLongDate(date: string): string {
   if (!date) return "";
   const d = new Date(`${date}T12:00:00Z`);
@@ -59,7 +69,7 @@ async function emailAdmin(session: Stripe.Checkout.Session) {
   const subject = `New drop-in: ${metaString(m, "child_first_name")} — ${metaString(m, "session_title") || metaString(m, "session_date")}`;
   const lines = [
     `Parent: ${metaString(m, "parent_name")}`,
-    `Email: ${session.customer_email ?? metaString(m, "parent_email")}`,
+    `Email: ${payerEmail(session) || metaString(m, "parent_email")}`,
     `Phone: ${metaString(m, "parent_phone")}`,
     `Child: ${metaString(m, "child_first_name")} (age ${childAgeStr})`,
     "",
@@ -87,7 +97,7 @@ async function emailParent(
   isFirstTimer: boolean,
 ) {
   const apiKey = process.env.RESEND_API_KEY;
-  const to = session.customer_email;
+  const to = payerEmail(session);
   if (!apiKey) {
     console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping parent email");
     return;
@@ -266,7 +276,7 @@ export async function POST(req: NextRequest) {
 
   const row: DropInRow = {
     parentName: metaString(m, "parent_name"),
-    parentEmail: session.customer_email ?? "",
+    parentEmail: payerEmail(session),
     parentPhone: metaString(m, "parent_phone"),
     childFirstName: metaString(m, "child_first_name"),
     childBirthYear: Number(metaString(m, "child_birth_year")) || 0,
@@ -286,18 +296,33 @@ export async function POST(req: NextRequest) {
   // First-touch check runs against the Player CRM. A miss (Notion unavailable
   // or env unset) defaults to "not first timer" so returning families never
   // get re-prompted with the WhatsApp invite.
-  const parentEmailForLookup = session.customer_email ?? "";
+  const parentEmailForLookup = payerEmail(session);
   const isFirstTimer = parentEmailForLookup
     ? await isFirstTimeParent(parentEmailForLookup)
     : false;
 
-  // Run side effects concurrently. Failures in one shouldn't block the others.
+  // The drop-in row is the source of truth (roster, reminders, check-in, cancel
+  // refunds). Create it FIRST and treat failure as fatal: return non-2xx so
+  // Stripe retries delivery rather than losing the registration to a swallowed
+  // error. The findDropInByCheckoutId guard above makes the retry idempotent —
+  // once the row lands, a redelivery short-circuits before re-running anything.
+  const rowCreated = await createDropInRegistration(row);
+  if (!rowCreated) {
+    console.error(
+      "[stripe-webhook] drop-in row create failed — returning 500 so Stripe retries",
+      session.id,
+    );
+    return NextResponse.json({ error: "row_create_failed" }, { status: 500 });
+  }
+
+  // Everything below is best-effort: a flaky email/SMS/referral/increment must
+  // NOT fail the request, or Stripe would retry and double-create the row
+  // (which now exists but only the full-rerun guard catches). Run concurrently.
   await Promise.allSettled([
     emailAdmin(session),
     emailParent(session, isFirstTimer),
     sendConfirmationSms(session, row),
     sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
-    createDropInRegistration(row),
     // Referral payout: if this parent signed up to the newsletter via someone
     // else's forward link and this is their first paid drop-in, mint two
     // single-use 50%-off promo codes (friend + referrer) and email both.
