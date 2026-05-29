@@ -170,7 +170,8 @@ console.error(`Coupon created: ${coupon.id} (${discountPct}% off, 1 redemption)`
 // 2) Promotion code on top of the coupon — this is what we can auto-apply via
 //    the link URL. Let Stripe generate the code so re-runs never collide.
 const promo = await stripePost("promotion_codes", {
-  coupon: coupon.id,
+  "promotion[type]": "coupon",
+  "promotion[coupon]": coupon.id,
   max_redemptions: "1",
 });
 console.error(`Promotion code created: ${promo.code} (${promo.id})`);
