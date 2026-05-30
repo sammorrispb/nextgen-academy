@@ -42,11 +42,13 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
   const label =
     session.status === "Cancelled"
       ? "Cancelled"
-      : session.spotsLeft <= 0
-        ? "Full"
-        : !isWithinRegistrationWindow(session.date)
-          ? `Opens ${REGISTRATION_WINDOW_DAYS} days out`
-          : "Reserve · $20";
+      : session.status === "Completed" || session.status === "Passed"
+        ? "Ended"
+        : session.spotsLeft <= 0
+          ? "Full"
+          : !isWithinRegistrationWindow(session.date)
+            ? `Opens ${REGISTRATION_WINDOW_DAYS} days out`
+            : "Reserve · $20";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
