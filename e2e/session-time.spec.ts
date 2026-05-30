@@ -93,3 +93,29 @@ test.describe("lifecycleStatusFor", () => {
     expect(lifecycleStatusFor(1)).toBe("Completed");
   });
 });
+
+test.describe("isSessionClosed", () => {
+  test("ended Open session is closed", () => {
+    expect(
+      isSessionClosed("Open", "2026-05-30", "11:00 AM", new Date("2026-05-30T20:00:00Z")),
+    ).toBe(true);
+  });
+
+  test("future Open session is not closed", () => {
+    expect(
+      isSessionClosed("Open", "2026-05-30", "11:00 AM", new Date("2026-05-30T12:00:00Z")),
+    ).toBe(false);
+  });
+
+  test("terminal statuses are always closed", () => {
+    expect(isSessionClosed("Completed", "2099-01-01", "10:00 AM")).toBe(true);
+    expect(isSessionClosed("Passed", "2099-01-01", "10:00 AM")).toBe(true);
+    expect(isSessionClosed("Cancelled", "2099-01-01", "10:00 AM")).toBe(true);
+  });
+
+  test("future Open with unparseable end time is not closed (fail-open)", () => {
+    expect(
+      isSessionClosed("Open", "2026-05-30", "noon", new Date("2026-05-30T12:00:00Z")),
+    ).toBe(false);
+  });
+});

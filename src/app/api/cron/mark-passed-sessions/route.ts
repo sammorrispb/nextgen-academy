@@ -3,7 +3,11 @@ import {
   fetchActiveSessionsOnOrBefore,
   setSessionLifecycle,
 } from "@/lib/notion-sessions";
-import { isSessionEnded, lifecycleStatusFor } from "@/lib/session-time";
+import {
+  isSessionEnded,
+  lifecycleStatusFor,
+  sessionEndUtcMs,
+} from "@/lib/session-time";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,6 +37,19 @@ export async function GET(req: NextRequest) {
     isSessionEnded(s.date, s.endTime, now),
   );
 
+  // Past-dated rows whose end time can't be parsed: isSessionEnded fails open,
+  // so these never hide from the schedule AND never get auto-stamped — they'd
+  // linger invisibly forever. Surface them (logs + response) so a typo'd time
+  // gets caught instead of rotting. Lexical compare is safe for YYYY-MM-DD.
+  const unparseable = candidates.filter(
+    (s) => s.date < todayEt && sessionEndUtcMs(s.date, s.endTime) == null,
+  );
+  for (const s of unparseable) {
+    console.warn(
+      `[cron/mark-passed-sessions] unparseable end time on past row: ${s.id} "${s.title}" ${s.date} "${s.endTime}"`,
+    );
+  }
+
   let completed = 0;
   let passed = 0;
   for (const s of ended) {
@@ -48,5 +65,11 @@ export async function GET(req: NextRequest) {
     ended: ended.length,
     completed,
     passed,
+    unparseable: unparseable.map((s) => ({
+      id: s.id,
+      title: s.title,
+      date: s.date,
+      endTime: s.endTime,
+    })),
   });
 }
