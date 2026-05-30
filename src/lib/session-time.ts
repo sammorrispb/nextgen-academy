@@ -92,3 +92,32 @@ export function isWithinPreEventWindow(
   const h = hoursUntilStart(dateIso, startTime, now);
   return h != null && h > 0 && h <= 24;
 }
+
+/** UTC epoch ms for a session's ET end, or null if the end time is unparseable. */
+export function sessionEndUtcMs(dateIso: string, endTime: string): number | null {
+  return sessionStartUtcMs(dateIso, endTime);
+}
+
+/**
+ * True once a session's END time has passed in ET. Drives the auto-lifecycle:
+ * a finished session drops off the public schedule the moment its end time
+ * passes — not at midnight — so a 10–11am slot disappears at 11am, not 24h
+ * later. A bad/unparseable end string returns false (fail-open) so we never
+ * hide a live session on a typo.
+ */
+export function isSessionEnded(
+  dateIso: string,
+  endTime: string,
+  now: Date = new Date(),
+): boolean {
+  const endMs = sessionEndUtcMs(dateIso, endTime);
+  if (endMs == null) return false;
+  return endMs <= now.getTime();
+}
+
+/** A session that has ended → "Completed" if anyone registered, else "Passed". */
+export function lifecycleStatusFor(
+  registeredCount: number,
+): "Completed" | "Passed" {
+  return registeredCount > 0 ? "Completed" : "Passed";
+}

@@ -1,5 +1,6 @@
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
+import { isSessionEnded } from "@/lib/session-time";
 
 export type SessionLevel = "Red" | "Orange" | "Green" | "Yellow";
 
@@ -15,7 +16,7 @@ export interface NgaSession {
   capacity: number;
   registeredCount: number;
   spotsLeft: number;
-  status: "Open" | "Full" | "Cancelled";
+  status: "Open" | "Full" | "Cancelled" | "Completed" | "Passed";
   /** Child first names of confirmed registrants who opted in to public display. */
   roster: string[];
   /** Non-PII social-proof aggregate over all confirmed registrants. */
@@ -91,6 +92,8 @@ export async function fetchUpcomingSessions(
           { property: "Date", date: { on_or_after: today } },
           { property: "Date", date: { on_or_before: endIso } },
           { property: "Status", select: { does_not_equal: "Cancelled" } },
+          { property: "Status", select: { does_not_equal: "Completed" } },
+          { property: "Status", select: { does_not_equal: "Passed" } },
         ],
       },
       sorts: [{ property: "Date", direction: "ascending" }],
@@ -171,7 +174,10 @@ export async function fetchUpcomingSessions(
     console.error("[notion-sessions] roster batch failed", err);
   }
 
-  return sessions;
+  // Drop sessions whose end time has already passed in ET — the Status flip to
+  // Completed/Passed is async (hourly cron), so filter at read time too so a
+  // finished slot disappears the moment it ends, not on the next cron tick.
+  return sessions.filter((s) => !isSessionEnded(s.date, s.endTime, now));
 }
 
 export async function findSessionIdByDateAndTime(
@@ -312,6 +318,122 @@ export async function setSessionStatus(
     return false;
   }
   return true;
+}
+
+/**
+ * Stamp a session row with a lifecycle Status ("Completed" / "Passed") AND a
+ * Notes audit line in one PATCH. Used by the mark-passed-sessions cron when a
+ * session's end time passes. Records are kept — we never delete the row.
+ */
+export async function setSessionLifecycle(
+  id: string,
+  status: "Completed" | "Passed",
+  note: string,
+): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${id}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: {
+        Status: { select: { name: status } },
+        Notes: { rich_text: [{ text: { content: note } }] },
+      },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] setSessionLifecycle failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
+}
+
+export interface ActiveSessionRow {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  registeredCount: number;
+  status: string;
+  title: string;
+}
+
+/**
+ * Query the Sessions DB for still-active (Open/Full) rows dated within
+ * [dateIso - lookbackDays, dateIso]. The lookback catches any rows the cron
+ * missed on a prior tick (e.g. a deploy gap). Date math is done on the ISO
+ * string via Date.UTC — never `new Date(y,m,d)` (UTC-build hazard).
+ */
+export async function fetchActiveSessionsOnOrBefore(
+  dateIso: string,
+  lookbackDays: number = 3,
+): Promise<ActiveSessionRow[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_SESSIONS_DB_ID;
+  if (!notionKey || !dbId || !/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return [];
+
+  const [y, mo, d] = dateIso.split("-").map(Number);
+  const sinceMs = Date.UTC(y, mo - 1, d) - lookbackDays * 86_400_000;
+  const since = new Date(sinceMs).toISOString().slice(0, 10);
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: {
+        and: [
+          { property: "Date", date: { on_or_after: since } },
+          { property: "Date", date: { on_or_before: dateIso } },
+          {
+            or: [
+              { property: "Status", select: { equals: "Open" } },
+              { property: "Status", select: { equals: "Full" } },
+            ],
+          },
+        ],
+      },
+      page_size: 100,
+    }),
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] fetchActiveSessionsOnOrBefore failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  return data.results.map((page) => {
+    const props = page.properties;
+    return {
+      id: page.id as string,
+      date: props["Date"]?.date?.start ?? "",
+      startTime: readPlainText(props["Start time"]),
+      endTime: readPlainText(props["End time"]),
+      registeredCount: readNumber(props["Registered count"]),
+      status: readSelect(props["Status"]) ?? "Open",
+      title: readPlainText(props["Session"]),
+    };
+  });
 }
 
 /** Flip the session row's "Coach Reminder Sent" checkbox (pre-event cron dedup). */
