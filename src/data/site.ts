@@ -7,7 +7,7 @@ export const site = {
   phone: "301-325-4731",
   instagram: "https://www.instagram.com/nextgenpickleballacademy",
   website: "https://nextgenpbacademy.com",
-  whatsapp: "https://chat.whatsapp.com/D298cbHYUZo53zdBkbafq8?mode=gi_t",
+  whatsapp: "https://chat.whatsapp.com/D298cbHYUZo53zdBkbafq8?s=cl&p=i&mlu=2",
   boilerplate25:
     "Junior pickleball academy for kids ages 6–16 in Montgomery County, MD — small groups for kids who can rally, private lessons for anyone still learning.",
   boilerplate50:
