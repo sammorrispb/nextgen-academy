@@ -1,34 +1,42 @@
 {
   "_comment": "Single source of truth for the NGA rolling session cadence. Consumed by the 'NGA Session Cadence' weekly cloud routine (which git-clones this repo and reads docs/ops/cadence_config.json) and mirrored in Session_Cadence_Playbook.md. Canonical copy: nextgen-academy/docs/ops/ — keep the ~/Documents/NGA/06_operations/ copy byte-identical. Dates are ISO (America/New_York). August is ON HOLD — do not add Aug weekends until Sam unfreezes (see seasonHoldFrom).",
-  "version": 1,
+  "version": 2,
   "lastUpdated": "2026-05-30",
   "timezone": "America/New_York",
 
+  "format": "single",
+  "_formatNote": "v2 (2026-05-30): one 1-hour session per event day, $20/player, single rotating venue per weekend. Replaced the v1 afternoon Early/Late two-slot pattern. The $35 two-hour bundle was reverted (no adjacent slot to bundle).",
+
+  "eventDay": "Saturday",
+  "_eventDayNote": "Saturday-only. Each event weekend's session runs Saturday 10:00-11:00 at that weekend's rotation venue. eventWeekends still carry a sun date for reference but no Sunday session is scheduled.",
+
   "venues": [
     { "key": "WJHS", "name": "Walter Johnson HS", "address": "6400 Rock Spring Dr, Bethesda, MD 20814" },
-    { "key": "GHS",  "name": "Gaithersburg HS",  "address": "314 S Frederick Ave, Gaithersburg, MD 20877" }
+    { "key": "GHS",  "name": "Gaithersburg HS",  "address": "314 S Frederick Ave, Gaithersburg, MD 20877" },
+    { "key": "SHS",  "name": "Sherwood HS",      "address": "300 Olney-Sandy Spring Rd, Sandy Spring, MD 20860" }
   ],
+  "venueRotation": ["WJHS", "GHS", "SHS"],
+  "_venueRotationNote": "One venue per weekend, cycling WJHS -> GHS -> SHS. The per-weekend assignment is pinned in eventWeekends[].venue (source of truth); venueRotation just documents the order.",
 
   "timeSlots": [
-    { "key": "early", "label": "Early", "start": "16:30", "end": "17:30" },
-    { "key": "late",  "label": "Late",  "start": "17:30", "end": "18:30" }
+    { "key": "session", "label": "Session", "start": "10:00", "end": "11:00" }
   ],
-  "_timeSlotsNote": "Default = existing weekend-afternoon Early/Late pattern. Swap to a 10:00-12:00 morning block for peak summer heat if Sam decides — change here only.",
+  "_timeSlotsNote": "Single 1-hour morning session (10:00-11:00 ET). Chosen for summer-heat avoidance + simplicity. One session per day, no Early/Late split.",
 
   "newsletterDay": "Thursday",
   "newsletterSendCron": "0 22 * * 4",
   "_newsletterNote": "Thu 18:00 ET. Cadence blocks ride inside the approved 'From Coach Sam' newsletter draft block — no website code change.",
 
   "leadOffsetsWeeks": { "poll": 3, "register": 2, "lastCall": 0 },
-  "_leadNote": "3-2-0 rolling. Relative to the event weekend, the controlling newsletter is: poll ~T-17d, register ~T-10d, lastCall ~T-2d (the Thursday before the Sat/Sun event).",
+  "_leadNote": "3-2-0 rolling. Relative to the event Saturday, the controlling newsletter is: poll ~T-17d, register ~T-10d, lastCall ~T-2d (the Thursday before the Saturday event).",
 
   "pollForm": {
-    "status": "LIVE",
+    "status": "NEEDS_UPDATE",
     "createdAt": "2026-05-30",
     "url": "https://docs.google.com/forms/d/e/1FAIpQLSdFwgeJgZxg-m-UEyPWGwa2PYQWv0OdWcVTMU9GOx-ivDTrHg/viewform",
     "editUrl": "https://docs.google.com/forms/d/1qVfWId_EmEJYbGxa1Tekj1dFK-WokPjIiNQ3-sOt1nM/edit",
     "responsesSheetUrl": "https://docs.google.com/spreadsheets/d/1-E4LWpWrpDtEnYDwFWL4H9O8zpmjVl4W8wmEwIfOrYA/edit",
-    "_note": "Reusable Google Form 'NGA — Vote the Next Session'. url = public viewform (newsletter button target); editUrl = Sam's edit link; responsesSheetUrl = vote tally Sheet (Sam reads manually in v1)."
+    "_note": "FOLLOW-UP: the live Google Form still lists 2 venues (WJHS/GHS) + a Sat/Sun day question. Update it to all 3 venues (add Sherwood HS) and drop the day question (Saturday-only now). url = public viewform; editUrl = Sam's edit link; responsesSheetUrl = vote tally Sheet (Sam reads manually in v1)."
   },
 
   "seasonHoldFrom": "2026-08-01",
@@ -41,10 +49,10 @@
   ],
 
   "eventWeekends": [
-    { "sat": "2026-06-06", "sun": "2026-06-07", "rampUp": true,  "_note": "Pre-cadence: open registration compressed, no poll cycle." },
-    { "sat": "2026-06-13", "sun": "2026-06-14", "rampUp": true,  "_note": "Pre-cadence: open registration compressed, no poll cycle." },
-    { "sat": "2026-06-27", "sun": "2026-06-28", "rampUp": false, "_note": "First full poll->register->lastcall cycle." },
-    { "sat": "2026-07-18", "sun": "2026-07-19", "rampUp": false },
-    { "sat": "2026-07-25", "sun": "2026-07-26", "rampUp": false }
+    { "sat": "2026-06-06", "sun": "2026-06-07", "venue": "WJHS", "rampUp": true,  "_note": "Pre-cadence: open registration compressed, no poll cycle." },
+    { "sat": "2026-06-13", "sun": "2026-06-14", "venue": "GHS",  "rampUp": true,  "_note": "Pre-cadence: open registration compressed, no poll cycle." },
+    { "sat": "2026-06-27", "sun": "2026-06-28", "venue": "SHS",  "rampUp": false, "_note": "First full poll->register->lastcall cycle." },
+    { "sat": "2026-07-18", "sun": "2026-07-19", "venue": "WJHS", "rampUp": false },
+    { "sat": "2026-07-25", "sun": "2026-07-26", "venue": "GHS",  "rampUp": false }
   ]
 }
