@@ -25,36 +25,21 @@ function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function sessionKey(s: Pick<NgaSession, "date" | "title">): string {
-  return `${s.date}|${s.title}`;
-}
-
 function groupBySessionKey(
   drops: DropInRegistration[],
-  sessions: NgaSession[],
 ): Map<string, DropInRegistration[]> {
-  // Resolve a slot's (date, start time) to its session, so a two-hour bundle
-  // row can be attached to BOTH its primary and second slot's session group.
-  const byDateTime = new Map<string, NgaSession>();
-  for (const s of sessions) {
-    byDateTime.set(`${s.date}|${(s.startTime ?? "").trim().toLowerCase()}`, s);
-  }
   const map = new Map<string, DropInRegistration[]>();
-  const add = (key: string, r: DropInRegistration) => {
+  for (const r of drops) {
+    const key = `${r.sessionDate}|${r.sessionTitle}`;
     const arr = map.get(key) ?? [];
     arr.push(r);
     map.set(key, arr);
-  };
-  for (const r of drops) {
-    add(`${r.sessionDate}|${r.sessionTitle}`, r);
-    if (r.secondSlotStartTime) {
-      const second = byDateTime.get(
-        `${r.secondSlotDate}|${r.secondSlotStartTime.trim().toLowerCase()}`,
-      );
-      if (second) add(sessionKey(second), r);
-    }
   }
   return map;
+}
+
+function sessionKey(s: NgaSession): string {
+  return `${s.date}|${s.title}`;
 }
 
 export default async function CoachDashboard() {
@@ -67,7 +52,7 @@ export default async function CoachDashboard() {
     fetchUpcomingDropIns(isoDate(now), isoDate(end)),
   ]);
 
-  const dropsByKey = groupBySessionKey(drops, sessions);
+  const dropsByKey = groupBySessionKey(drops);
 
   return (
     <>

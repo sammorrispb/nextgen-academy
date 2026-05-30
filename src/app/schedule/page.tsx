@@ -131,9 +131,8 @@ export default async function SchedulePage() {
             Drop-in sessions on rotating Montgomery County courts.
           </h2>
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
-            $20 per 1-hour slot, or $35 for both slots in a session (pick the
-            two-hour bundle at checkout). Sessions split into Early and Late
-            slots — pick one or both. Each pickleball court is capped at 4 players.
+            $20 per 1-hour slot. Sessions split into Early and Late slots —
+            pick one or both. Each pickleball court is capped at 4 players.
           </p>
           <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
             Sessions are outdoors &mdash; if we cancel for weather, you get an
@@ -158,7 +157,7 @@ export default async function SchedulePage() {
           <SectionHeading
             eyebrow="Upcoming Sessions"
             title="Pick a date and reserve your spot."
-            subtitle="$20 per 1-hour slot, or $35 for both (pick the two-hour bundle at checkout). Sessions split into Early and Late — pick one or both. Each pickleball court is capped at 4 players."
+            subtitle="$20 per 1-hour slot. Sessions split into Early and Late — pick one or both. Each pickleball court is capped at 4 players."
           />
 
           <RegistrationNotice />
