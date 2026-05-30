@@ -1,0 +1,50 @@
+{
+  "_comment": "Single source of truth for the NGA rolling session cadence. Consumed by the 'NGA Session Cadence' weekly cloud routine (which git-clones this repo and reads docs/ops/cadence_config.json) and mirrored in Session_Cadence_Playbook.md. Canonical copy: nextgen-academy/docs/ops/ — keep the ~/Documents/NGA/06_operations/ copy byte-identical. Dates are ISO (America/New_York). August is ON HOLD — do not add Aug weekends until Sam unfreezes (see seasonHoldFrom).",
+  "version": 1,
+  "lastUpdated": "2026-05-30",
+  "timezone": "America/New_York",
+
+  "venues": [
+    { "key": "WJHS", "name": "Walter Johnson HS", "address": "6400 Rock Spring Dr, Bethesda, MD 20814" },
+    { "key": "GHS",  "name": "Gaithersburg HS",  "address": "314 S Frederick Ave, Gaithersburg, MD 20877" }
+  ],
+
+  "timeSlots": [
+    { "key": "early", "label": "Early", "start": "16:30", "end": "17:30" },
+    { "key": "late",  "label": "Late",  "start": "17:30", "end": "18:30" }
+  ],
+  "_timeSlotsNote": "Default = existing weekend-afternoon Early/Late pattern. Swap to a 10:00-12:00 morning block for peak summer heat if Sam decides — change here only.",
+
+  "newsletterDay": "Thursday",
+  "newsletterSendCron": "0 22 * * 4",
+  "_newsletterNote": "Thu 18:00 ET. Cadence blocks ride inside the approved 'From Coach Sam' newsletter draft block — no website code change.",
+
+  "leadOffsetsWeeks": { "poll": 3, "register": 2, "lastCall": 0 },
+  "_leadNote": "3-2-0 rolling. Relative to the event weekend, the controlling newsletter is: poll ~T-17d, register ~T-10d, lastCall ~T-2d (the Thursday before the Sat/Sun event).",
+
+  "pollForm": {
+    "status": "LIVE",
+    "createdAt": "2026-05-30",
+    "url": "https://docs.google.com/forms/d/e/1FAIpQLSdFwgeJgZxg-m-UEyPWGwa2PYQWv0OdWcVTMU9GOx-ivDTrHg/viewform",
+    "editUrl": "https://docs.google.com/forms/d/1qVfWId_EmEJYbGxa1Tekj1dFK-WokPjIiNQ3-sOt1nM/edit",
+    "responsesSheetUrl": "https://docs.google.com/spreadsheets/d/1-E4LWpWrpDtEnYDwFWL4H9O8zpmjVl4W8wmEwIfOrYA/edit",
+    "_note": "Reusable Google Form 'NGA — Vote the Next Session'. url = public viewform (newsletter button target); editUrl = Sam's edit link; responsesSheetUrl = vote tally Sheet (Sam reads manually in v1)."
+  },
+
+  "seasonHoldFrom": "2026-08-01",
+  "_holdNote": "Event weekends on/after this date are frozen. The routine omits any poll/register/last-call block that would target a held weekend (same handling as a skip). Extend eventWeekends + push this date out when August is unfrozen.",
+
+  "skipWeekends": [
+    { "sat": "2026-06-20", "sun": "2026-06-21", "reason": "Father's Day weekend skip" },
+    { "sat": "2026-07-04", "sun": "2026-07-05", "reason": "July 4 holiday skip" },
+    { "sat": "2026-07-11", "sun": "2026-07-12", "reason": "July 4-11 skip window (whole weekend; confirm if Sun 7/12 should run)" }
+  ],
+
+  "eventWeekends": [
+    { "sat": "2026-06-06", "sun": "2026-06-07", "rampUp": true,  "_note": "Pre-cadence: open registration compressed, no poll cycle." },
+    { "sat": "2026-06-13", "sun": "2026-06-14", "rampUp": true,  "_note": "Pre-cadence: open registration compressed, no poll cycle." },
+    { "sat": "2026-06-27", "sun": "2026-06-28", "rampUp": false, "_note": "First full poll->register->lastcall cycle." },
+    { "sat": "2026-07-18", "sun": "2026-07-19", "rampUp": false },
+    { "sat": "2026-07-25", "sun": "2026-07-26", "rampUp": false }
+  ]
+}

@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Operations
+
+`docs/ops/` holds operational SOPs read by cloud `/schedule` routines (they git-clone this repo): the session-cadence config + playbook. See [`docs/ops/README.md`](docs/ops/README.md).
+
 ## Getting Started
 
 First, run the development server:
