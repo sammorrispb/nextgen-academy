@@ -89,7 +89,7 @@ function buildEmailHtml(args: {
     <li>Sun May 24 &mdash; Gaithersburg HS (Early 4:30 + Late 5:30 PM)</li>
     <li>Sat May 30 &mdash; Sherwood HS, Sandy Spring (Early 10:00 + Late 11:00 AM)</li>
   </ul>
-  <p style="font-size: 15px; line-height: 1.6;">$40 per 1-hour slot ($80 for both slots in a session).</p>
+  <p style="font-size: 15px; line-height: 1.6;">$20 per 1-hour slot.</p>
   <p style="font-size: 15px; line-height: 1.6; margin: 16px 0;">
     <a href="https://nextgenpbacademy.com/schedule" style="${s.cta}">Reserve a slot</a>
   </p>`;

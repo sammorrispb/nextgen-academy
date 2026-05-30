@@ -25,13 +25,13 @@ export function commitConfirmationHtml(input: CommitConfirmationInput): string {
     <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Locked in</p>
     <h1 style="${s.heading} margin:0 0 16px 0;">${escape(childFirst)} is in for ${weeksCommitted} weeks, ${escape(parentFirst)}.</h1>
     <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">
-      ${escape(crewDescription)}. ${escape(childFirst)}&rsquo;s name now auto-reserves into each weekly session and we charge $40 to the card ending in ${escape(cardLast4)} the morning each spot opens. Skip a week any time &mdash; we&rsquo;ll refund automatically.
+      ${escape(crewDescription)}. ${escape(childFirst)}&rsquo;s name now auto-reserves into each weekly session and we charge $20 to the card ending in ${escape(cardLast4)} the morning each spot opens. Skip a week any time &mdash; we&rsquo;ll refund automatically.
     </p>
 
     <div style="${s.cardAccent}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">What to expect</p>
       <ul style="margin:0;padding-left:18px;color:${c.text};line-height:1.7;font-size:14px;">
-        <li>$40 per week, only on weeks ${escape(childFirst)} is reserved</li>
+        <li>$20 per week, only on weeks ${escape(childFirst)} is reserved</li>
         <li>Email receipt + day-before reminder for each session</li>
         <li>Same court, same crew, same time of day &mdash; consistency is the whole point</li>
       </ul>
@@ -61,7 +61,7 @@ export function commitConfirmationText(input: CommitConfirmationInput): string {
     "",
     `${input.childFirst} is locked in for ${input.weeksCommitted} weeks. ${input.crewDescription}.`,
     "",
-    `Their name now auto-reserves into each weekly session. We'll charge $40 to the card ending in ${input.cardLast4} the morning each spot opens. Skip any week — we'll refund automatically.`,
+    `Their name now auto-reserves into each weekly session. We'll charge $20 to the card ending in ${input.cardLast4} the morning each spot opens. Skip any week — we'll refund automatically.`,
     "",
     `Manage your commit: ${input.manageUrl}`,
     "",

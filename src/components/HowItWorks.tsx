@@ -23,9 +23,8 @@ const steps: Step[] = [
     title: "Drop in to sessions",
     body: (
       <>
-        <span className="font-bold text-ngpa-white">$40 per 1-hour session</span>{" "}
-        ($80 for both slots). Drop in anytime &mdash; no contracts, no monthly
-        fees.
+        <span className="font-bold text-ngpa-white">$20 per 1-hour session</span>.{" "}
+        Drop in anytime &mdash; no contracts, no monthly fees.
       </>
     ),
   },

@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 /**
  * HMAC-signed 4-week soft-commit tokens. Embedded in the post-session email
  * CTA: parent click → /commit/[token] → Stripe SetupIntent + Notion Crew Commit
- * row → daily autoreserve cron starts charging $40/week.
+ * row → daily autoreserve cron starts charging $20/week.
  *
  * Payload encodes parent email + child first name + crew-id so the commit
  * page can show the exact next 4 weekly Sessions this family belongs to

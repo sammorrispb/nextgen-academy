@@ -61,7 +61,7 @@ ${
     <div style="${s.actionCallout}">
       <p style="${s.actionLabel}">Or lock in 4 weeks at once</p>
       <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
-        Same time, same court, same crew &mdash; we&rsquo;ll auto-reserve ${escape(childFirst)}&rsquo;s spot for the next 4 weeks and charge $40 only on weeks they actually play. Skip a week any time.
+        Same time, same court, same crew &mdash; we&rsquo;ll auto-reserve ${escape(childFirst)}&rsquo;s spot for the next 4 weeks and charge $20 only on weeks they actually play. Skip a week any time.
       </p>
       <p style="margin:14px 0 0 0;">
         <a href="${commitUrl}" style="${s.link}font-weight:700;text-decoration:none;">Lock in 4 weeks &rarr;</a>
@@ -106,7 +106,7 @@ export function postSessionText(input: PostSessionInput): string {
   if (input.commitUrl) {
     lines.push(
       "",
-      `Or lock in 4 weeks at once — same time, same court, same crew. We'll auto-reserve ${input.childFirst}'s spot and charge $40 only on weeks they play. Skip any week.`,
+      `Or lock in 4 weeks at once — same time, same court, same crew. We'll auto-reserve ${input.childFirst}'s spot and charge $20 only on weeks they play. Skip any week.`,
       `Lock in 4 weeks: ${input.commitUrl}`,
     );
   }

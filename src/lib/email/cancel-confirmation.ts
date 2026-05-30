@@ -8,7 +8,7 @@ import { c, s } from "./brand";
  * session-wide broadcast (PR #68) already covered the parent.
  *
  * Two micro-variants:
- *   - status === "Refunded" — parent gets the $40 back (Stripe-initiated
+ *   - status === "Refunded" — parent gets their payment back (Stripe-initiated
  *     refund or admin-initiated). Copy leads with the refund cue.
  *   - status === "Cancelled" — parent self-cancel without refund.
  *     Drop-ins are non-refundable; copy leads with the community cue

@@ -113,7 +113,7 @@ export default function CommitForm({
       </button>
 
       <p className="text-ngpa-white/55 text-xs text-center mt-4">
-        We&rsquo;ll save your card on Stripe and only charge $40 on weeks{" "}
+        We&rsquo;ll save your card on Stripe and only charge $20 on weeks{" "}
         {childFirstName} is reserved. Skip any week and we refund automatically.
         Stop the auto-reserve any time.
       </p>

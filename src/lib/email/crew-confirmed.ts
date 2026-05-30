@@ -30,7 +30,7 @@ export function crewConfirmedHtml(input: CrewConfirmedInput): string {
     <div style="${s.cardAccent}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">How it works</p>
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">
-        Book session 1 ($40, 4-player cap). After that first session you&rsquo;ll get a one-tap option to lock in the next 4 weeks &mdash; same time, same court, same crew. Skip a week any time, no questions asked.
+        Book session 1 ($20, 4-player cap). After that first session you&rsquo;ll get a one-tap option to lock in the next 4 weeks &mdash; same time, same court, same crew. Skip a week any time, no questions asked.
       </p>
     </div>
 

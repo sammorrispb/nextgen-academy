@@ -146,7 +146,7 @@ export default async function Home() {
               },
               offers: {
                 "@type": "Offer",
-                price: "40",
+                price: "20",
                 priceCurrency: "USD",
                 availability:
                   session.spotsLeft > 0

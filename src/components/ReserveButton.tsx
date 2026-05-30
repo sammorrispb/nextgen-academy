@@ -46,7 +46,7 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
         ? "Full"
         : !isWithinRegistrationWindow(session.date)
           ? `Opens ${REGISTRATION_WINDOW_DAYS} days out`
-          : "Reserve · $40";
+          : "Reserve · $20";
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -235,7 +235,7 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
 
                 <div className="px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel sm:rounded-b-2xl space-y-3">
                   <p className="text-xs text-ngpa-white/60 leading-relaxed">
-                    You&rsquo;ll be redirected to Stripe to pay $40 for this
+                    You&rsquo;ll be redirected to Stripe to pay $20 for this
                     1-hour slot. Non-refundable unless we cancel — if we call
                     off a session for weather, you get an automatic full refund.
                   </p>
@@ -244,7 +244,7 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                     disabled={submitting}
                     className="w-full px-6 py-3.5 rounded-full bg-ngpa-lime text-ngpa-deep font-bold hover:brightness-110 transition-all disabled:opacity-60 min-h-[48px] shadow-xl shadow-ngpa-lime/20"
                   >
-                    {submitting ? "Redirecting…" : "Continue to payment · $40"}
+                    {submitting ? "Redirecting…" : "Continue to payment · $20"}
                   </button>
                 </div>
               </form>
