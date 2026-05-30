@@ -11,7 +11,6 @@ import ShareButton from "@/components/ShareButton";
 import SessionInfoBlock from "@/components/SessionInfoBlock";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { findSessionBySlug } from "@/lib/session-slug";
-import { findSiblingSlot } from "@/lib/session-bundle";
 
 export const revalidate = 300;
 
@@ -99,13 +98,6 @@ export default async function SessionPage({ params }: PageProps) {
 
   if (!session) notFound();
 
-  // Offer the $35 two-hour bundle only when the adjacent slot is itself bookable.
-  const siblingRaw = findSiblingSlot(session, sessions);
-  const sibling =
-    siblingRaw && siblingRaw.status === "Open" && siblingRaw.spotsLeft > 0
-      ? siblingRaw
-      : null;
-
   return (
     <>
       <h1 className="sr-only">{session.title} — Reserve</h1>
@@ -167,7 +159,7 @@ export default async function SessionPage({ params }: PageProps) {
 
           <RegistrationNotice />
 
-          <SessionDetailCard session={session} slug={slug} sibling={sibling} />
+          <SessionDetailCard session={session} slug={slug} />
 
           <div className="mt-8 text-center">
             <Link
@@ -194,11 +186,9 @@ export default async function SessionPage({ params }: PageProps) {
 function SessionDetailCard({
   session,
   slug,
-  sibling,
 }: {
   session: NgaSession;
   slug: string;
-  sibling: NgaSession | null;
 }) {
   const levelClass =
     (session.level && LEVEL_COLOR[session.level]) ??
@@ -251,7 +241,7 @@ function SessionDetailCard({
       </div>
 
       <div className="mt-6 flex flex-col sm:flex-row gap-3">
-        <ReserveButton session={session} sibling={sibling} />
+        <ReserveButton session={session} />
         <ShareButton
           url={shareUrl}
           title={shareTitle}

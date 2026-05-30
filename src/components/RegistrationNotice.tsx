@@ -8,11 +8,10 @@ export default function RegistrationNotice() {
       </h3>
       <p className="text-base text-ngpa-white/80 leading-relaxed">
         <strong className="text-ngpa-white">
-          $20 per 1-hour slot, or $35 for both slots.
+          $20 per 1-hour slot.
         </strong>{" "}
         Drop-in only — no subscription, no commitment. Sessions split into
-        Early and Late slots — pick one or both below (choose the two-hour
-        bundle at checkout to save). Spots are capped at 4
+        Early and Late slots — pick one or both below. Spots are capped at 4
         players per pickleball court, so reserve early. If we cancel a session
         for weather, you get an automatic full refund — otherwise payments are
         non-refundable. Questions? Email{" "}

@@ -31,8 +31,6 @@ function row(over: Partial<DropInRegistration>): DropInRegistration {
     postSessionSent: false,
     cancellationNotified: false,
     attendance: "",
-    secondSlotDate: "",
-    secondSlotStartTime: "",
     ...over,
   };
 }

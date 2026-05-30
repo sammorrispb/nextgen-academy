@@ -19,14 +19,6 @@ export interface DropInRow {
   smsConsent: boolean;
   /** Verbatim disclosure shown at opt-in. Empty if smsConsent === false. */
   smsConsentText: string;
-  /**
-   * Two-hour bundle: the SECOND (late) slot this one booking also reserves.
-   * Set only on bundle checkouts. Presence of secondSlotStartTime is the
-   * bundle marker — it drives the both-slots roster expansion and the
-   * both-slots capacity decrement on cancel.
-   */
-  secondSlotDate?: string;
-  secondSlotStartTime?: string;
 }
 
 // Returns true if the row was created (or skipped because env is unset), false
@@ -78,14 +70,6 @@ export async function createDropInRegistration(row: DropInRow): Promise<boolean>
   }
   if (row.level) {
     properties.Level = { select: { name: row.level } };
-  }
-  if (row.secondSlotDate) {
-    properties["Second Slot Date"] = { date: { start: row.secondSlotDate } };
-  }
-  if (row.secondSlotStartTime) {
-    properties["Second Slot Start Time"] = {
-      rich_text: [{ text: { content: row.secondSlotStartTime } }],
-    };
   }
   if (row.stripePaymentIntentId) {
     properties["Stripe Payment Intent ID"] = {
@@ -140,9 +124,6 @@ export interface DropInRegistration {
   cancellationNotified: boolean;
   /** "Present" | "No-show" | "" (not yet recorded). */
   attendance: AttendanceValue | "";
-  /** Two-hour bundle second slot — empty unless this booking covers both slots. */
-  secondSlotDate: string;
-  secondSlotStartTime: string;
 }
 
 export type AttendanceValue = "Present" | "No-show";
@@ -191,8 +172,6 @@ function pageToDropIn(page: any): DropInRegistration {
     postSessionSent: props["Post Session Sent"]?.checkbox === true,
     cancellationNotified: props["Cancellation Notified"]?.checkbox === true,
     attendance: (readSelectProp(props["Attendance"]) as AttendanceValue | "") || "",
-    secondSlotDate: props["Second Slot Date"]?.date?.start ?? "",
-    secondSlotStartTime: readTextProp(props["Second Slot Start Time"]),
   };
 }
 
