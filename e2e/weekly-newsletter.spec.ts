@@ -22,6 +22,7 @@ const baseInput: WeeklyNewsletterInput = {
       ],
     },
   ],
+  summerSessions: [],
   openPolls: [],
   news: [],
   tip,
@@ -173,6 +174,29 @@ test.describe("weeklyNewsletterHtml", () => {
     const html = weeklyNewsletterHtml(baseInput);
     expect(html).not.toContain("In the news");
   });
+
+  test("hides the summer block when there are no summer sessions", () => {
+    expect(weeklyNewsletterHtml(baseInput)).not.toContain(
+      "Summer sessions are live",
+    );
+  });
+
+  test("renders the summer block with a sign-up CTA when present", () => {
+    const withSummer: WeeklyNewsletterInput = {
+      ...baseInput,
+      summerSessions: [
+        {
+          dateLong: "Saturday, July 18",
+          location: "Walter Johnson HS, Bethesda",
+          slots: [],
+        },
+      ],
+    };
+    const html = weeklyNewsletterHtml(withSummer);
+    expect(html).toContain("Summer sessions are live");
+    expect(html).toContain("Saturday, July 18");
+    expect(html).toContain("Sign up for summer");
+  });
 });
 
 test.describe("weeklyNewsletterText", () => {
@@ -203,6 +227,22 @@ test.describe("weeklyNewsletterText", () => {
     expect(text).toContain("Bethesda middle school launches pickleball PE unit");
     expect(text).toContain("(Bethesda Beat)");
     expect(text).toContain("https://example.com/article");
+  });
+
+  test("mirrors the summer block in plain text with a sign-up link", () => {
+    const text = weeklyNewsletterText({
+      ...baseInput,
+      summerSessions: [
+        {
+          dateLong: "Saturday, July 18",
+          location: "Walter Johnson HS, Bethesda",
+          slots: [],
+        },
+      ],
+    });
+    expect(text).toContain("Summer sessions are live:");
+    expect(text).toContain("Saturday, July 18");
+    expect(text).toContain(`Sign up for summer: ${ORIGIN}/schedule`);
   });
 
   test("mirrors the polls block in plain text", () => {

@@ -41,6 +41,13 @@ export interface NewsletterOpenPoll {
 export interface WeeklyNewsletterInput {
   parentFirst: string;
   sessions: NewsletterSessionGroup[];
+  /**
+   * Open summer sessions beyond the weekly window — surfaced in a dedicated
+   * "summer is live" promo block so parents can plan ahead and sign up early.
+   * Empty hides the block. Registration for any given date still opens 30 days
+   * out on /schedule; this block is the heads-up + sign-up nudge.
+   */
+  summerSessions: NewsletterSessionGroup[];
   openPolls: NewsletterOpenPoll[];
   /** Approved youth-pickleball news items from the scraper queue. Empty hides the block. */
   news: NewsletterNewsItem[];
@@ -85,6 +92,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
     sessions,
+    summerSessions,
     openPolls,
     news,
     newsletterLeadHtml,
@@ -96,6 +104,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     origin,
   } = input;
   const hasSessions = sessions.length > 0;
+  const hasSummer = summerSessions.length > 0;
   const hasPolls = openPolls.length > 0;
   const hasNews = news.length > 0;
   const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
@@ -130,6 +139,25 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">This week</p>
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">No open sessions this week &mdash; but new ones post regularly. <a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">Check the schedule &rarr;</a></p>
     </div>`;
+
+  // Summer promo block — Open sessions beyond the weekly window. Lists each
+  // date+location so parents can plan ahead, with a single sign-up CTA to the
+  // schedule. Spots aren't shown here (registration opens 30 days out, so the
+  // count isn't meaningful yet); this is a "summer is live, claim your dates"
+  // nudge. Hidden when there are no upcoming summer sessions.
+  const summerBlock = hasSummer
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Summer sessions are live</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Summer dates are on the calendar &mdash; lock in your kid&rsquo;s spot before they fill. Registration for each date opens 30 days ahead.</p>
+      ${summerSessions
+        .map(
+          (g) => `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;">${escape(g.dateLong)} &mdash; <span style="color:${c.muted};">${escape(g.location)}</span></p>`,
+        )
+        .join("")}
+      <p style="margin:14px 0 0 0;"><a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">Sign up for summer &rarr;</a></p>
+    </div>`
+    : "";
 
   const pollsBlock = hasPolls
     ? `
@@ -227,6 +255,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 
     ${sessionBlock}
 
+    ${summerBlock}
+
     ${pollsBlock}
 
     ${crewBlock}
@@ -261,6 +291,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
     sessions,
+    summerSessions,
     openPolls,
     news,
     newsletterLeadText,
@@ -299,6 +330,18 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
       `Check the schedule: ${scheduleUrl}`,
       "",
     );
+  }
+
+  if (summerSessions.length > 0) {
+    lines.push(
+      "Summer sessions are live:",
+      "Summer dates are on the calendar — lock in your kid's spot before they fill. Registration for each date opens 30 days ahead.",
+      "",
+    );
+    for (const g of summerSessions) {
+      lines.push(`  ${g.dateLong} — ${g.location}`);
+    }
+    lines.push("", `Sign up for summer: ${scheduleUrl}`, "");
   }
 
   if (openPolls.length > 0) {

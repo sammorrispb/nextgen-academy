@@ -56,19 +56,13 @@ function formatLongDate(isoDate: string): string {
 /** A session group plus the raw ISO date, used to join the weather forecast. */
 type DatedGroup = NewsletterSessionGroup & { date: string };
 
-/** Group Open sessions in the window by date+location, joining time slots. */
-function groupSessions(sessions: NgaSession[]): DatedGroup[] {
-  const todayIso = isoEtPlusDays(0);
-  const endIso = isoEtPlusDays(WINDOW_DAYS);
-
+/** Group Open sessions matching `keep` by date+location, joining time slots. */
+function groupSessions(
+  sessions: NgaSession[],
+  keep: (s: NgaSession) => boolean,
+): DatedGroup[] {
   const open = sessions
-    .filter(
-      (s) =>
-        s.status === "Open" &&
-        s.date &&
-        s.date >= todayIso &&
-        s.date <= endIso,
-    )
+    .filter((s) => s.status === "Open" && s.date && keep(s))
     .sort((a, b) =>
       a.date === b.date
         ? a.startTime.localeCompare(b.startTime)
@@ -164,7 +158,21 @@ export async function GET(req: NextRequest) {
   }
 
   const tip = pickWeeklyTip();
-  const sessions = groupSessions(await fetchUpcomingSessions());
+  const todayIso = isoEtPlusDays(0);
+  const weekEndIso = isoEtPlusDays(WINDOW_DAYS);
+  const allSessions = await fetchUpcomingSessions();
+  // "This week" — Open sessions inside the 9-day window.
+  const sessions = groupSessions(
+    allSessions,
+    (s) => s.date >= todayIso && s.date <= weekEndIso,
+  );
+  // Summer promo — Open sessions beyond the weekly window whose date falls in
+  // June/July/August. Month-on-the-date-string keeps it timezone-safe.
+  const summerSessions = groupSessions(allSessions, (s) => {
+    if (s.date <= weekEndIso) return false;
+    const month = s.date.slice(5, 7);
+    return month === "06" || month === "07" || month === "08";
+  });
   // County-level forecast per session date. Fails soft — a miss (NWS down or
   // date beyond the ~7-day horizon) just leaves the group without a note.
   const weather = await fetchWeatherByDate([
@@ -226,7 +234,9 @@ export async function GET(req: NextRequest) {
     ? "Open courts this week — Next Gen"
     : openPolls.length
       ? "Crews forming this week — Next Gen"
-      : `Coach tip of the week — ${tip.title}`;
+      : summerSessions.length
+        ? "Summer sessions are live — Next Gen"
+        : `Coach tip of the week — ${tip.title}`;
 
   let sent = 0;
   let failed = 0;
@@ -251,6 +261,7 @@ export async function GET(req: NextRequest) {
     const input = {
       parentFirst,
       sessions,
+      summerSessions,
       openPolls,
       news,
       newsletterLeadHtml: newsletterDraft?.html ?? null,
@@ -285,6 +296,7 @@ export async function GET(req: NextRequest) {
     const adminInput = {
       parentFirst: "Coach",
       sessions,
+      summerSessions,
       openPolls,
       news,
       newsletterLeadHtml: newsletterDraft?.html ?? null,
@@ -325,6 +337,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     has_sessions: sessions.length > 0,
     session_groups: sessions.length,
+    summer_groups: summerSessions.length,
     open_polls: openPolls.length,
     news_items: news.length,
     news_marked_used: newsMarkedUsed,
