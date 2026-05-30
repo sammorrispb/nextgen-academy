@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSessionById } from "@/lib/notion-sessions";
+import { isSessionClosed } from "@/lib/session-time";
 import { getStripe } from "@/lib/stripe";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
@@ -36,6 +37,15 @@ export async function POST(req: NextRequest) {
   if (session.status !== "Open") {
     return NextResponse.json(
       { error: `Session is ${session.status.toLowerCase()}` },
+      { status: 409 },
+    );
+  }
+
+  // Reject a still-"Open" row whose ET end time has already passed (a stale
+  // deep-link hitting checkout before the hourly lifecycle cron flips it).
+  if (isSessionClosed(session.status, session.date, session.endTime)) {
+    return NextResponse.json(
+      { error: "This session has ended and is no longer open for registration." },
       { status: 409 },
     );
   }

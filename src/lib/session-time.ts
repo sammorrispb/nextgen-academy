@@ -121,3 +121,25 @@ export function lifecycleStatusFor(
 ): "Completed" | "Passed" {
   return registeredCount > 0 ? "Completed" : "Passed";
 }
+
+/**
+ * Money-correctness gate: a session is NOT registerable when its status is a
+ * terminal one (Cancelled/Completed/Passed) OR its ET end time has already
+ * passed. Used to reject checkout for ended sessions reached via a stale
+ * /schedule/[slug] deep-link between cron ticks. Fail-open end-time parsing
+ * (isSessionEnded) means a typo'd time only ever leaves a session open, never
+ * wrongly blocks a live one.
+ */
+export function isSessionClosed(
+  status: string,
+  dateIso: string,
+  endTime: string,
+  now: Date = new Date(),
+): boolean {
+  return (
+    status === "Cancelled" ||
+    status === "Completed" ||
+    status === "Passed" ||
+    isSessionEnded(dateIso, endTime, now)
+  );
+}
