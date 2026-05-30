@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   formatSessionDateTimeIso,
+  isSessionClosed,
   isSessionEnded,
   lifecycleStatusFor,
   parseStartTime,
