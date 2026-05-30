@@ -17,8 +17,9 @@ export const seasons: Season[] = [
  * pickleball court is capped at 4 players. Red Ball and Orange Ball =
  * private lessons (no published rate, quoted post-evaluation).
  *
- * NOTE: a discounted $35 two-hour bundle (both slots in one checkout) is
- * planned as a fast-follow; until it ships, two slots = 2 × $20.
+ * Booking both consecutive slots is a discounted $35 two-hour bundle (one
+ * $35 checkout that reserves a seat in both slots) — offered at checkout when
+ * the adjacent slot is itself open. See src/lib/session-bundle.ts.
  */
 export const PRICE_PER_SESSION_USD = 20;
 export const REGISTRATION_WINDOW_DAYS = 30;

@@ -268,6 +268,9 @@ export async function POST(req: NextRequest) {
 
   const m = session.metadata ?? {};
   const sessionId = metaString(m, "session_id");
+  // Two-hour bundle: one $35 booking that also reserves the adjacent slot.
+  const isBundle = metaString(m, "bundle") === "true";
+  const sessionId2 = isBundle ? metaString(m, "session_id_2") : "";
 
   const piId =
     typeof session.payment_intent === "string"
@@ -291,6 +294,9 @@ export async function POST(req: NextRequest) {
     displayConsent: metaString(m, "display_consent") === "true",
     smsConsent: metaString(m, "sms_consent") === "true",
     smsConsentText: metaString(m, "sms_consent_text"),
+    // Bundle's second slot — drives both-slots roster + both-slots cancel.
+    secondSlotDate: isBundle ? metaString(m, "session_2_date") : undefined,
+    secondSlotStartTime: isBundle ? metaString(m, "session_2_start") : undefined,
   };
 
   // First-touch check runs against the Player CRM. A miss (Notion unavailable
@@ -323,6 +329,8 @@ export async function POST(req: NextRequest) {
     emailParent(session, isFirstTimer),
     sendConfirmationSms(session, row),
     sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
+    // A bundle reserves a seat in the second slot too.
+    sessionId2 ? incrementSessionRegistered(sessionId2, 1) : Promise.resolve(),
     // Referral payout: if this parent signed up to the newsletter via someone
     // else's forward link and this is their first paid drop-in, mint two
     // single-use 50%-off promo codes (friend + referrer) and email both.

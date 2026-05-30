@@ -187,6 +187,14 @@ export async function cancelDropIn(
       dropIn.sessionStartTime,
     );
     if (sessionId) await decrementSessionRegistered(sessionId, 1);
+    // A two-hour bundle held a seat in the second slot too — free both.
+    if (dropIn.secondSlotStartTime) {
+      const secondId = await findSessionIdByDateAndTime(
+        dropIn.secondSlotDate,
+        dropIn.secondSlotStartTime,
+      );
+      if (secondId) await decrementSessionRegistered(secondId, 1);
+    }
   }
 
   // Comms — send Coach-voice confirmation if we haven't already. Wrapped

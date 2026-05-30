@@ -43,7 +43,7 @@ export const faq: FaqItem[] = [
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
     answer:
-      "Group classes are $20 per 1-hour slot, drop-in. Sessions split into Early and Late slots — pick one or both. No subscription and no commitment — you pay for each slot you attend. Each pickleball court is capped at 4 players so quality stays high. Registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund. The 30-minute evaluation is always free. Private lesson rates are quoted after the evaluation based on what your child needs.",
+      "Group classes are $20 per 1-hour slot, or $35 for both slots in a session (a two-hour bundle you pick at checkout), drop-in. Sessions split into Early and Late slots — pick one or both. No subscription and no commitment — you pay for each slot you attend. Each pickleball court is capped at 4 players so quality stays high. Registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund. The 30-minute evaluation is always free. Private lesson rates are quoted after the evaluation based on what your child needs.",
   },
   {
     question: "What’s your refund policy?",

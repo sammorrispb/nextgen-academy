@@ -146,17 +146,24 @@ export async function fetchUpcomingSessions(
     const namesByKey = new Map<string, string[]>();
     const agesByKey = new Map<string, number[]>();
     for (const d of drops) {
-      const k = rosterKey(d.sessionDate, d.sessionStartTime);
-      if (d.childFirstName && d.displayConsent) {
-        const arr = namesByKey.get(k) ?? [];
-        arr.push(d.childFirstName);
-        namesByKey.set(k, arr);
+      // A two-hour bundle is one row that reserves a seat in BOTH slots, so it
+      // contributes to the primary slot's roster AND its second slot's roster.
+      const keys = [rosterKey(d.sessionDate, d.sessionStartTime)];
+      if (d.secondSlotStartTime) {
+        keys.push(rosterKey(d.secondSlotDate, d.secondSlotStartTime));
       }
       const age = ageFromBirthYear(d.childBirthYear, now);
-      if (age !== null) {
-        const arr = agesByKey.get(k) ?? [];
-        arr.push(age);
-        agesByKey.set(k, arr);
+      for (const k of keys) {
+        if (d.childFirstName && d.displayConsent) {
+          const arr = namesByKey.get(k) ?? [];
+          arr.push(d.childFirstName);
+          namesByKey.set(k, arr);
+        }
+        if (age !== null) {
+          const arr = agesByKey.get(k) ?? [];
+          arr.push(age);
+          agesByKey.set(k, arr);
+        }
       }
     }
     for (const s of sessions) {
@@ -235,10 +242,14 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
   if (date) {
     try {
       const drops = await fetchUpcomingDropIns(date, date, { revalidate: 300 });
+      const thisKey = rosterKey(date, startTime);
+      // Match rows booked for this slot directly, plus two-hour bundle rows
+      // whose SECOND slot is this session (one booking, both rosters).
       const matching = drops.filter(
         (d) =>
-          rosterKey(d.sessionDate, d.sessionStartTime) ===
-          rosterKey(date, startTime),
+          rosterKey(d.sessionDate, d.sessionStartTime) === thisKey ||
+          (d.secondSlotStartTime &&
+            rosterKey(d.secondSlotDate, d.secondSlotStartTime) === thisKey),
       );
       roster = matching
         .filter((d) => d.displayConsent)
