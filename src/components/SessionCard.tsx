@@ -32,15 +32,20 @@ export default function SessionCard({
     (session.level && LEVEL_COLOR[session.level]) ??
     "bg-ngpa-slate text-ngpa-white";
 
+  const isEnded =
+    session.status === "Completed" || session.status === "Passed";
+
   const seatsText =
     session.status === "Cancelled"
       ? "Cancelled"
-      : session.spotsLeft === 0
-        ? "Full"
-        : `${session.spotsLeft} / ${session.capacity} seats left`;
+      : isEnded
+        ? "Ended"
+        : session.spotsLeft === 0
+          ? "Full"
+          : `${session.spotsLeft} / ${session.capacity} seats left`;
 
   const seatsClass =
-    session.status === "Cancelled" || session.spotsLeft === 0
+    session.status === "Cancelled" || isEnded || session.spotsLeft === 0
       ? "text-red-400"
       : session.spotsLeft <= 2
         ? "text-ngpa-skill-orange"

@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import {
   formatSessionDateTimeIso,
+  isSessionEnded,
+  lifecycleStatusFor,
   parseStartTime,
 } from "../src/lib/session-time";
 
@@ -56,5 +58,38 @@ test.describe("parseStartTime (sanity)", () => {
     expect(parseStartTime("4:30 PM")).toEqual({ h: 16, m: 30 });
     expect(parseStartTime("12:00 AM")).toEqual({ h: 0, m: 0 });
     expect(parseStartTime("12:00 PM")).toEqual({ h: 12, m: 0 });
+  });
+});
+
+test.describe("isSessionEnded", () => {
+  test("returns true once the end time has passed in ET", () => {
+    // 20:00 UTC = 4 PM EDT, past an 11 AM ET end.
+    expect(
+      isSessionEnded("2026-05-30", "11:00 AM", new Date("2026-05-30T20:00:00Z")),
+    ).toBe(true);
+  });
+
+  test("returns false before the end time", () => {
+    // 12:00 UTC = 8 AM EDT, before an 11 AM ET end.
+    expect(
+      isSessionEnded("2026-05-30", "11:00 AM", new Date("2026-05-30T12:00:00Z")),
+    ).toBe(false);
+  });
+
+  test("fails open (false) on an unparseable end time", () => {
+    expect(
+      isSessionEnded("2026-05-30", "11am", new Date("2026-05-30T20:00:00Z")),
+    ).toBe(false);
+    expect(
+      isSessionEnded("2026-05-30", "", new Date("2026-05-30T20:00:00Z")),
+    ).toBe(false);
+  });
+});
+
+test.describe("lifecycleStatusFor", () => {
+  test("Completed when anyone registered, Passed when none", () => {
+    expect(lifecycleStatusFor(2)).toBe("Completed");
+    expect(lifecycleStatusFor(0)).toBe("Passed");
+    expect(lifecycleStatusFor(1)).toBe("Completed");
   });
 });
