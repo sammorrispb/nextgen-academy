@@ -16,14 +16,24 @@ const FIELD_INPUT =
 
 interface Props {
   session: NgaSession;
+  /** Adjacent bookable slot — when present, parents can upgrade to a $35 two-hour bundle. */
+  sibling?: NgaSession | null;
   fullWidth?: boolean;
 }
 
-export default function ReserveButton({ session, fullWidth = false }: Props) {
+export default function ReserveButton({
+  session,
+  sibling = null,
+  fullWidth = false,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [bundle, setBundle] = useState(false);
   const [errors, setErrors] = useState<RsvpValidationErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const useBundle = bundle && !!sibling;
+  const price = useBundle ? 35 : 20;
 
   useEffect(() => {
     if (!open) return;
@@ -71,7 +81,11 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(
+          useBundle && sibling
+            ? { ...data, secondSessionId: sibling.id }
+            : data,
+        ),
       });
       const json = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !json.url) {
@@ -198,6 +212,28 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                     />
                   </Field>
 
+                  {sibling && (
+                    <label className="flex items-start gap-3 cursor-pointer rounded-lg border border-ngpa-lime/40 bg-ngpa-lime/5 p-3">
+                      <input
+                        type="checkbox"
+                        checked={bundle}
+                        onChange={(e) => setBundle(e.target.checked)}
+                        className="mt-1 w-5 h-5 rounded border-ngpa-slate/60 bg-ngpa-deep/80 accent-ngpa-lime shrink-0"
+                      />
+                      <span className="text-sm text-ngpa-white/80 leading-snug">
+                        <span className="font-bold text-ngpa-white">
+                          Make it two hours — add the {sibling.startTime}–
+                          {sibling.endTime} slot
+                        </span>{" "}
+                        <span className="text-ngpa-white/60">
+                          Both slots for{" "}
+                          <strong className="text-ngpa-lime">$35</strong> instead
+                          of $40. Same court, back-to-back.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+
                   <label className="flex items-start gap-3 cursor-pointer pt-1">
                     <input
                       name="displayConsent"
@@ -235,16 +271,19 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
 
                 <div className="px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel sm:rounded-b-2xl space-y-3">
                   <p className="text-xs text-ngpa-white/60 leading-relaxed">
-                    You&rsquo;ll be redirected to Stripe to pay $20 for this
-                    1-hour slot. Non-refundable unless we cancel — if we call
-                    off a session for weather, you get an automatic full refund.
+                    You&rsquo;ll be redirected to Stripe to pay ${price} for{" "}
+                    {useBundle ? "both 1-hour slots" : "this 1-hour slot"}.
+                    Non-refundable unless we cancel — if we call off a session
+                    for weather, you get an automatic full refund.
                   </p>
                   <button
                     type="submit"
                     disabled={submitting}
                     className="w-full px-6 py-3.5 rounded-full bg-ngpa-lime text-ngpa-deep font-bold hover:brightness-110 transition-all disabled:opacity-60 min-h-[48px] shadow-xl shadow-ngpa-lime/20"
                   >
-                    {submitting ? "Redirecting…" : "Continue to payment · $20"}
+                    {submitting
+                      ? "Redirecting…"
+                      : `Continue to payment · $${price}`}
                   </button>
                 </div>
               </form>
