@@ -94,7 +94,7 @@ export default function YellowBallInquiryPage() {
                 ))}
               </ul>
 
-              {/* Pricing strip — $40 group rate (Orange/Green/Yellow). Private rates not published. */}
+              {/* Pricing strip — $20 group rate (Orange/Green/Yellow). Private rates not published. */}
               <div className="mt-10">
                 <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-white/60 mb-3">
                   Pricing
@@ -102,7 +102,7 @@ export default function YellowBallInquiryPage() {
                 <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-xl p-5 border border-ngpa-skill-yellow/30 max-w-md">
                   <div className="flex items-baseline gap-2 mb-1.5">
                     <span className="font-mono font-bold text-3xl text-ngpa-skill-yellow">
-                      $40
+                      $20
                     </span>
                     <span className="text-sm text-ngpa-white/65">per 1-hour group slot</span>
                   </div>

@@ -71,7 +71,7 @@ export default function CancelClient({
 
       <div className="rounded-xl bg-ngpa-deep/60 border border-ngpa-slate/40 px-4 py-3 mb-6">
         <p className="text-sm text-ngpa-white/85 leading-relaxed">
-          <strong className="text-ngpa-white">Your $40 isn&rsquo;t refundable</strong>{" "}
+          <strong className="text-ngpa-white">Your $20 isn&rsquo;t refundable</strong>{" "}
           (per our drop-in policy), but cancelling now opens the seat for another
           player.
         </p>

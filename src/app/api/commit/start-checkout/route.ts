@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   const stripe = getStripe();
 
   // Reuse an existing customer keyed on email so a parent who already has a
-  // Stripe Customer (from prior $40 drop-in checkouts) doesn't get a duplicate.
+  // Stripe Customer (from prior $20 drop-in checkouts) doesn't get a duplicate.
   const existing = await stripe.customers.list({
     email: payload.parentEmail,
     limit: 1,

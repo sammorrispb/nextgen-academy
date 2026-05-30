@@ -8,7 +8,7 @@ export default function RegistrationNotice() {
       </h3>
       <p className="text-base text-ngpa-white/80 leading-relaxed">
         <strong className="text-ngpa-white">
-          $40 per 1-hour slot ($80 for both slots in a session).
+          $20 per 1-hour slot.
         </strong>{" "}
         Drop-in only — no subscription, no commitment. Sessions split into
         Early and Late slots — pick one or both below. Spots are capped at 4

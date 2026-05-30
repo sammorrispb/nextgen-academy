@@ -78,7 +78,7 @@ Free, top-of-funnel offer: a cold parent says yes to the free thing first; price
 6. **Resend**: welcome email to the subscriber (template `src/lib/email/newsletter-welcome.ts`, bcc admin, replyTo `nextgenacademypb@gmail.com`) carrying the personalized forward link + `/crew` CTA + a short admin notification. Flips `Welcome Sent`=true after a successful send; suppresses the welcome only if dedup found an already-welcomed row.
 7. **Open Brain** ingest (`source: "nga_newsletter_signup"`, includes `referred_by` in metadata), awaited.
 
-**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/$40/monthly). The only live price is the single $40 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references the referral perk ("you both get 50% off your next drop-in") as a percentage rather than a dollar amount, so a parent never reads a base price that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
+**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/monthly). The only live price is the single $20 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references the referral perk ("you both get 50% off your next drop-in") as a percentage rather than a dollar amount, so a parent never reads a base price that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
 
 ### Crew Interest (`/crew` + `/api/crew-interest`)
 **The no-active-poll fallback.** If a parent's preferred slot doesn't match any Crew Poll Sam is currently running, they fill out the Crew Interest form instead. Sam reviews the Notion DB and decides whether to spin up a new poll for the day/level mix coming through. Surfaces: a dedicated `/crew` landing page (`src/app/crew/page.tsx`) rendering `src/components/CrewInterestForm.tsx`, plus a "None of these fit? / Want a regular crew?" callout in every weekly newsletter.
@@ -117,13 +117,13 @@ On top of the open sessions, the Thursday cron (`/api/cron/weekly-newsletter`) n
 One-time (re-runnable) outreach inviting existing eval leads to opt into the newsletter. `?secret=$NGA_ADMIN_SECRET`-gated. Queries the lead CRM (`NOTION_DB_ID`), classifies every row with `src/lib/lead-segmentation.ts` (`classifyLead`), and sends the brand-reviewed `eval-reengagement` template (`src/lib/email/*`) only to the **ELIGIBLE** bucket — deduped by email, per-recipient via Resend (BCC admin). **The DD-derived rule lives in code here:** OFF-LIMITS = Source CourtReserve/Google Sheet, any CR-event history, DD-era season (Fall 2025 / Winter 2026), or DD/CR in notes; ELIGIBLE = clean own-marketing sources (Website / Lead Form / Facebook Ad / etc.); everything else (empty/Evaluation/Referral source) is AMBIGUOUS and **never mailed**. Always `{"dryRun": true}` first to verify the eligible count + recipient list before a live send. Pricing teased, not quoted; the email is an opt-in invite (no unsubscribe token — recipients join via `/newsletter`).
 
 ### Drop-in registration flow (`/schedule` + Stripe)
-Pricing is **$40 per 1-hour slot, drop-in only — no subscription, no refunds** ($80 for both slots in a session). Sessions split into Early and Late slots. Each session opens for registration **30 days ahead** and caps at 4 players per pickleball court.
+Pricing is **$20 per 1-hour slot, drop-in only — no subscription, no refunds**. Sessions split into Early and Late slots — pick one or both (two slots = 2 × $20 until the planned $35 two-hour bundle ships). Each session opens for registration **30 days ahead** and caps at 4 players per pickleball court.
 
 Source of truth for the public class schedule is the **NGA Sessions Schedule** Notion DB (`NOTION_SESSIONS_DB_ID`). Sam edits it (or a connected Google Sheet); the site reads it via `src/lib/notion-sessions.ts` with 5-min ISR.
 
 User flow:
 1. Parent visits `/schedule`, picks one open session.
-2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($40, qty 1) on NGA Stripe `acct_1TU4iSBpXOfTC961` with metadata `{parent, child, sessionId}`.
+2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($20, qty 1) on NGA Stripe `acct_1TU4iSBpXOfTC961` with metadata `{parent, child, sessionId}`.
 3. Parent pays in Stripe Checkout, lands on `/schedule/success`.
 4. `/api/stripe/webhook` (signed by `STRIPE_WEBHOOK_SECRET`) on `checkout.session.completed`:
    - Sends real-time email to `nextgenacademypb@gmail.com` via Resend.
@@ -196,7 +196,7 @@ See `.env.example`. Categories:
 - `NOTION_DROPINS_DB_ID` — NGA Drop-in Registrations database ID (`557f01d8-e4c6-47d9-a67b-f0817dd8724f`).
 - `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1TU4iSBpXOfTC961`.
 - `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret.
-- `STRIPE_DROPIN_PRICE_ID` — price ID for the single $40 NGA Drop-in slot product.
+- `STRIPE_DROPIN_PRICE_ID` — price ID for the single $20 NGA Drop-in slot product.
 - `NOTION_CREW_INTEREST_DB_ID` — NGA Crew Interest DB (the no-active-poll fallback form). Optional — endpoint logs + continues if unset.
 - `NOTION_NEWS_DB_ID` — NGA Youth Pickleball News DB (scraped news queue Sam triages for the weekly newsletter). Optional — scraper runs as a dry-run if unset, weekly newsletter just hides the news block.
 - `NOTION_NEWSLETTER_DRAFTS_DB_ID` — NGA Newsletter Drafts DB (Coach-voice longform sections drafted Wednesday by the cloud drafter routine; Sam approves a row before Thu 6pm for the cron to inject as the "From Coach Sam" lead block). Optional — weekly newsletter just hides the lead block if unset. See the "Newsletter lead block — drafter pipeline" section above.

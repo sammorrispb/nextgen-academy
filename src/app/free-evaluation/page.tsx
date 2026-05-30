@@ -153,7 +153,7 @@ export default function FreeEvaluationPage() {
                   <p className="text-ngpa-white/55 text-xs mt-2.5 leading-relaxed">
                     After the eval, group sessions are{" "}
                     <span className="text-ngpa-white/80 font-bold">
-                      $40 each
+                      $20 each
                     </span>{" "}
                     &mdash; drop in anytime. No contracts. Private-lesson rates
                     quoted after we see your child play.
