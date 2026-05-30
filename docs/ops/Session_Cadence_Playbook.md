@@ -19,9 +19,9 @@ One weekly **beat** = the Thursday newsletter. Each issue carries up to three bl
 
 So a single event weekend moves through **three consecutive Thursday newsletters**: polled → registration opened → last call.
 
-**Why poll *before* booking:** ActiveMontgomery's max-refund cancel-by is ~10 business days out (≈ T-14 calendar days). If you book first and the session under-fills, you're past the refund cliff and forfeit the fees. The poll at T-17 tells you which venue/day combos have real demand, so you only commit money (book the court) at the register stage for combos that will fill. **The poll is the risk gate, not just marketing.**
+**Why poll *before* booking:** ActiveMontgomery's max-refund cancel-by is ~10 business days out (≈ T-14 calendar days). If you book first and the session under-fills, you're past the refund cliff and forfeit the fees. The poll at T-17 tells you which venue has real demand, so you only commit money (book the court) at the register stage if it will fill. **The poll is the risk gate, not just marketing.**
 
-**Multiple sessions per weekend:** a weekend can run more than one session (both venues, both days, both Early/Late slots) if the poll supports it. The poll informs; it doesn't cap you at one.
+**Format (v2, 2026-05-30):** one **1-hour session, Saturdays 10:00–11:00 AM**, **$20/player**, at a **single rotating venue per weekend** — cycling **Walter Johnson HS → Gaithersburg HS → Sherwood HS** (per-weekend assignment pinned in `cadence_config.json` → `eventWeekends[].venue`). No Sunday session, no Early/Late split, no two-hour bundle. The poll now picks the venue only (day is fixed).
 
 ---
 
@@ -67,9 +67,9 @@ So a single event weekend moves through **three consecutive Thursday newsletters
 
 The Tuesday routine does the drafting + reminding. Your manual steps:
 
-1. **Close last week's poll.** Open the Google Sheet (`pollForm.responsesSheetUrl`); tally venue (WJHS / GHS) + day (Sat / Sun) for the weekend that's now at the REGISTER stage. *(v1: you tally by hand — the routine reminds you but does not read the Sheet.)*
-2. **Book the winning combo(s) on ActiveMontgomery** via `/am-book`. Book every venue/day with enough demand to fill (≥1 court). Log it in `AM_Booking_Log.md`.
-3. **Create the Notion session row(s)** for what you booked: Date, Start/End (Early 4:30–5:30 / Late 5:30–6:30 by default), Location, court count, capacity, Status = **Open**. Within the 30-day window it appears on `/schedule` automatically.
+1. **Close last week's poll.** Open the Google Sheet (`pollForm.responsesSheetUrl`); the venue is pinned per weekend in `cadence_config.json → eventWeekends[].venue` (WJHS → GHS → Sherwood rotation), so the poll mainly gauges turnout/interest for the Saturday at the REGISTER stage. *(v1: you tally by hand — the routine reminds you but does not read the Sheet.)*
+2. **Book the venue's court on ActiveMontgomery** via `/am-book` for that Saturday if demand justifies it (≥1 court). Log it in `AM_Booking_Log.md`.
+3. **Create the Notion session row** for what you booked: Date, Start/End (**10:00–11:00 AM**, single 1-hour session), Location, court count, capacity, Status = **Open**. Within the 30-day window it appears on `/schedule` automatically.
 4. **Review + approve the newsletter draft.** The routine wrote the POLL / REGISTER / LAST-CALL blocks into the **single shared weekly Newsletter Drafts row** (the Wednesday editorial drafter appends its sections to the *same* row). Sanity-check voice (already run through `brand-review-nga`), confirm the booked sessions match the REGISTER block, flip Status → **Approved** before Thu 6pm ET.
 5. **(Optional, for new-lead reach)** Paste the routine's **FB/IG + WhatsApp** variants of the REGISTER + LAST-CALL blocks into the parent groups / socials. The newsletter hits current families; this is the acquisition surface.
 
@@ -84,8 +84,8 @@ Created **once**, reused every week (the weekend is a field, so you never make a
 **Form name:** `NGA — Vote the Next Session`
 **Fields:**
 1. *Which weekend are you voting for?* — short answer or dropdown (the routine tells families which weekend in the newsletter copy; a dropdown of upcoming weekends is cleaner).
-2. *Venue preference* — multiple choice: `Walter Johnson HS (Bethesda)` / `Gaithersburg HS` / `Either works`.
-3. *Day preference* — multiple choice: `Saturday` / `Sunday` / `Either works`.
+2. *Venue preference* — multiple choice: `Walter Johnson HS (Bethesda)` / `Gaithersburg HS` / `Sherwood HS (Sandy Spring)` / `Either works`. **(FOLLOW-UP: the live Form still lists only WJHS/GHS — add Sherwood.)**
+3. ~~*Day preference*~~ — **removed.** Sessions are Saturday-only (10:00–11:00 AM); the day question is obsolete in v2.
 4. *Player age* — short answer (sanity-check the 5–16 band + group sizing).
 5. *Name / contact (optional)* — short answer (lets you follow up with voters when registration opens).
 
