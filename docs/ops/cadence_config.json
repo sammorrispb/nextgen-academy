@@ -31,12 +31,12 @@
   "_leadNote": "3-2-0 rolling. Relative to the event Saturday, the controlling newsletter is: poll ~T-17d, register ~T-10d, lastCall ~T-2d (the Thursday before the Saturday event).",
 
   "pollForm": {
-    "status": "NEEDS_UPDATE",
+    "status": "LIVE",
     "createdAt": "2026-05-30",
     "url": "https://docs.google.com/forms/d/e/1FAIpQLSdFwgeJgZxg-m-UEyPWGwa2PYQWv0OdWcVTMU9GOx-ivDTrHg/viewform",
     "editUrl": "https://docs.google.com/forms/d/1qVfWId_EmEJYbGxa1Tekj1dFK-WokPjIiNQ3-sOt1nM/edit",
     "responsesSheetUrl": "https://docs.google.com/spreadsheets/d/1-E4LWpWrpDtEnYDwFWL4H9O8zpmjVl4W8wmEwIfOrYA/edit",
-    "_note": "FOLLOW-UP: the live Google Form still lists 2 venues (WJHS/GHS) + a Sat/Sun day question. Update it to all 3 venues (add Sherwood HS) and drop the day question (Saturday-only now). url = public viewform; editUrl = Sam's edit link; responsesSheetUrl = vote tally Sheet (Sam reads manually in v1)."
+    "_note": "Updated 2026-05-30 to v2 format: venue question now lists all 3 venues (WJHS / Gaithersburg / Sherwood / Either works) and the Sat/Sun day question was removed (Saturday-only). url = public viewform; editUrl = Sam's edit link; responsesSheetUrl = vote tally Sheet (Sam reads manually in v1)."
   },
 
   "seasonHoldFrom": "2026-08-01",
