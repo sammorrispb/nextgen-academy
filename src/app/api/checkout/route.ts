@@ -101,6 +101,10 @@ export async function POST(req: NextRequest) {
       session_start: session.startTime,
       session_end: session.endTime,
       session_location: session.location,
+      // Hidden-location sessions: broad area + flag so the webhook/emails show
+      // the area (not the exact venue) until the 24h reveal cron fires.
+      session_public_area: session.publicArea,
+      location_hidden: session.publicArea ? "true" : "false",
       parent_name: data.parentName,
       parent_phone: data.phone,
       child_first_name: data.childFirstName,

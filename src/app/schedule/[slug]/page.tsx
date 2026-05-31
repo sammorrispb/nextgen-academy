@@ -10,6 +10,7 @@ import ReserveButton from "@/components/ReserveButton";
 import ShareButton from "@/components/ShareButton";
 import SessionInfoBlock from "@/components/SessionInfoBlock";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
+import { publicLocation } from "@/lib/session-location";
 import { findSessionBySlug } from "@/lib/session-slug";
 
 export const revalidate = 300;
@@ -61,7 +62,10 @@ export async function generateMetadata({
 
   const url = `${SITE_ORIGIN}/schedule/${slug}`;
   const dayLabel = formatLongDate(session.date);
-  const shortLoc = locationShortName(session.location);
+  // Public-safe: never expose a hidden session's exact venue in metadata.
+  const shortLoc = locationShortName(
+    publicLocation(session.location, session.publicArea),
+  );
   const title = `${session.title} · ${dayLabel} · NGA Drop-in`;
   const description = `$20 to reserve a 1-hour pickleball slot on ${dayLabel} at ${shortLoc}. ${session.spotsLeft}/${session.capacity} seats left.`;
 
@@ -127,7 +131,9 @@ export default async function SessionPage({ params }: PageProps) {
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             {formatLongDate(session.date)} · {session.startTime}
             {session.endTime ? `–${session.endTime}` : ""} ·{" "}
-            {locationShortName(session.location)}
+            {locationShortName(
+              publicLocation(session.location, session.publicArea),
+            )}
           </p>
 
           <div className="mt-7 inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-teal/30">
@@ -234,7 +240,9 @@ function SessionDetailCard({
           {session.endTime ? `–${session.endTime}` : ""}
         </time>
       </p>
-      <p className="text-sm text-ngpa-white/65 mt-1">{session.location}</p>
+      <p className="text-sm text-ngpa-white/65 mt-1">
+        {publicLocation(session.location, session.publicArea)}
+      </p>
 
       <div className="mt-6 pt-6 border-t border-ngpa-slate/60">
         <SessionInfoBlock session={session} />

@@ -9,6 +9,8 @@ interface ConfirmationInput {
   sessionStart: string; // "5:30 PM"
   sessionEnd: string; // "6:30 PM"
   sessionLocation: string;
+  /** True for hidden-location sessions — show the area + reveal note, no map link. */
+  locationHidden?: boolean;
   amountPaid: string; // "40.00"
   detailUrl: string;
   /** Signed self-serve cancel URL. Optional — feature is off if secret missing. */
@@ -26,6 +28,7 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     sessionStart,
     sessionEnd,
     sessionLocation,
+    locationHidden,
     amountPaid,
     detailUrl,
     cancelUrl,
@@ -53,9 +56,13 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">${escape(sessionDateLong)} &middot; ${escape(sessionStart)}&ndash;${escape(sessionEnd)}</p>
       <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:18px;font-weight:900;color:${c.text};">${escape(sessionTitle)}</p>
       <p style="margin:0 0 12px 0;color:${c.muted};font-size:14px;">${escape(sessionLocation)}</p>
-      <p style="margin:0;">
+      ${
+        locationHidden
+          ? `<p style="margin:0;color:${c.text};font-size:13px;line-height:1.5;">We&rsquo;ll email the exact location 24 hours before start.</p>`
+          : `<p style="margin:0;">
         <a href="${directions}" style="${s.link}font-weight:700;text-decoration:none;">Open in Google Maps &rarr;</a>
-      </p>
+      </p>`
+      }
     </div>
 
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">What to bring</h2>

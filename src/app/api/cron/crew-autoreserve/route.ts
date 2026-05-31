@@ -191,6 +191,8 @@ async function processOne(
       sessionDate: next.date,
       sessionStartTime: next.startTime,
       location: next.location,
+      publicArea: next.publicArea,
+      locationHidden: !!(next.publicArea && next.publicArea.trim()),
       level: next.level,
       amountPaidUsd: CHARGE_AMOUNT_CENTS / 100,
       stripeCheckoutSessionId: checkoutSessionId,
