@@ -18,6 +18,7 @@ import { sendSms, bookingConfirmationSms } from "@/lib/sms";
 import { signCancelToken } from "@/lib/cancel-token";
 import { processReferralReward } from "@/lib/referral-rewards";
 import { isFirstTimeParent } from "@/lib/notion-player-lookup";
+import { syncPlayerFromDropIn } from "@/lib/notion-player-sync";
 
 export const runtime = "nodejs";
 
@@ -342,6 +343,18 @@ export async function POST(req: NextRequest) {
     // No-op when the friend isn't a subscriber, has no Referred By, or has
     // already been rewarded.
     processReferralReward(session),
+    // Mirror the registration into the Player CRM so a paid website signup
+    // lands a player row (or refreshes Last Attended on the existing one) — the
+    // lead form already wrote to the Player DB, the drop-in path didn't.
+    syncPlayerFromDropIn({
+      parentName: row.parentName,
+      parentEmail: row.parentEmail,
+      parentPhone: row.parentPhone,
+      childFirstName: row.childFirstName,
+      childBirthYear: row.childBirthYear,
+      sessionDate: row.sessionDate,
+      location: row.location,
+    }),
   ]);
 
   // Bust the /schedule ISR cache so the seat count reflects the new
