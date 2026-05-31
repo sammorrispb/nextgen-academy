@@ -117,7 +117,13 @@ async function emailParent(
   const sessionDate = metaString(m, "session_date");
   const sessionStart = metaString(m, "session_start");
   const sessionEnd = metaString(m, "session_end");
-  const sessionLocation = metaString(m, "session_location");
+  const sessionExact = metaString(m, "session_location");
+  const sessionPublicArea = metaString(m, "session_public_area");
+  const locationHidden = metaString(m, "location_hidden") === "true";
+  // Hidden sessions: confirmation shows the broad area; the exact venue is sent
+  // separately by the 24h reveal cron. Never put the exact address (or a maps
+  // link / ICS location derived from it) in this email.
+  const sessionLocation = locationHidden ? sessionPublicArea : sessionExact;
 
   const slug =
     sessionTitle && sessionDate
@@ -147,7 +153,9 @@ async function emailParent(
     `${sessionTitle}`,
     `${sessionDateLong} · ${sessionStart}${sessionEnd ? `–${sessionEnd}` : ""}`,
     `${sessionLocation}`,
-    `Directions: ${mapsUrl}`,
+    locationHidden
+      ? `We'll email the exact location 24 hours before start.`
+      : `Directions: ${mapsUrl}`,
     "",
     `Paid: $${amount}. We attached an .ics calendar invite — tap it to add the session to your calendar.`,
     "",
@@ -175,6 +183,7 @@ async function emailParent(
     sessionStart,
     sessionEnd: sessionEnd || "",
     sessionLocation,
+    locationHidden,
     amountPaid: amount,
     detailUrl,
     cancelUrl,
@@ -193,7 +202,9 @@ async function emailParent(
           endTime: sessionEnd,
           title: `NGA Drop-in · ${sessionTitle}`,
           location: sessionLocation,
-          description: `${childFirst}'s NGA drop-in. Bring water + court shoes. Loaners available. Questions? Text Sam 301-325-4731.`,
+          description: locationHidden
+            ? `${childFirst}'s NGA drop-in in ${sessionLocation}. Exact location emailed 24h before start. Bring water + court shoes. Loaners available. Questions? Text Sam 301-325-4731.`
+            : `${childFirst}'s NGA drop-in. Bring water + court shoes. Loaners available. Questions? Text Sam 301-325-4731.`,
         })
       : null;
 
@@ -284,6 +295,8 @@ export async function POST(req: NextRequest) {
     sessionDate: metaString(m, "session_date"),
     sessionStartTime: metaString(m, "session_start"),
     location: metaString(m, "session_location"),
+    publicArea: metaString(m, "session_public_area"),
+    locationHidden: metaString(m, "location_hidden") === "true",
     level: null, // Notion session row's level isn't carried in metadata; admin can fill if needed.
     amountPaidUsd: (session.amount_total ?? 0) / 100,
     stripeCheckoutSessionId: session.id,

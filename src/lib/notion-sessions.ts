@@ -11,7 +11,12 @@ export interface NgaSession {
   startTime: string;
   endTime: string;
   level: SessionLevel | null;
+  /** Exact venue. For location-hidden sessions, NEVER render this publicly or
+   * in pre-reveal email — use `publicArea` via the session-location helpers. */
   location: string;
+  /** Broad area for location-hidden sessions (e.g. "Olney, MD"). Empty string
+   * for normal sessions. Presence = location-hidden mode. */
+  publicArea: string;
   courtCount: number;
   capacity: number;
   registeredCount: number;
@@ -130,6 +135,7 @@ export async function fetchUpcomingSessions(
       endTime: readPlainText(props["End time"]),
       level: readSelect(props["Level"]) as SessionLevel | null,
       location: readPlainText(props["Location"]),
+      publicArea: readPlainText(props["Public Area"]),
       courtCount,
       capacity,
       registeredCount,
@@ -273,6 +279,7 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
     endTime: readPlainText(props["End time"]),
     level: readSelect(props["Level"]) as SessionLevel | null,
     location: readPlainText(props["Location"]),
+    publicArea: readPlainText(props["Public Area"]),
     courtCount,
     capacity,
     registeredCount,

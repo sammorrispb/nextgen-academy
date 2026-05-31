@@ -7,6 +7,8 @@ interface ReminderInput {
   sessionDateLong: string; // "Saturday, May 23, 2026"
   sessionStart: string; // "5:30 PM"
   sessionLocation: string;
+  /** True for hidden-location sessions — show the area + reveal note, no map link. */
+  locationHidden?: boolean;
   detailUrl: string;
   /** Signed self-serve cancel URL. Optional — feature is off if secret missing. */
   cancelUrl?: string;
@@ -20,6 +22,7 @@ export function bookingReminderHtml(input: ReminderInput): string {
     sessionDateLong,
     sessionStart,
     sessionLocation,
+    locationHidden,
     detailUrl,
     cancelUrl,
   } = input;
@@ -45,9 +48,13 @@ export function bookingReminderHtml(input: ReminderInput): string {
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">${escape(sessionDateLong)} &middot; ${escape(sessionStart)}</p>
       <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:18px;font-weight:900;color:${c.text};">${escape(sessionTitle)}</p>
       <p style="margin:0 0 12px 0;color:${c.muted};font-size:14px;">${escape(sessionLocation)}</p>
-      <p style="margin:0;">
+      ${
+        locationHidden
+          ? `<p style="margin:0;color:${c.text};font-size:13px;line-height:1.5;">Exact location lands in your inbox today &mdash; about 24 hours before start.</p>`
+          : `<p style="margin:0;">
         <a href="${directions}" style="${s.link}font-weight:700;text-decoration:none;">Open in Google Maps &rarr;</a>
-      </p>
+      </p>`
+      }
     </div>
 
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">Tonight&rsquo;s checklist</h2>
@@ -103,7 +110,9 @@ export function bookingReminderText(input: ReminderTextInput): string {
     `${input.sessionTitle}`,
     `${input.sessionDateLong} · ${input.sessionStart}`,
     `${input.sessionLocation}`,
-    `Directions: ${mapsUrl}`,
+    input.locationHidden
+      ? `Exact location lands in your inbox today — about 24 hours before start.`
+      : `Directions: ${mapsUrl}`,
     "",
     `Tonight's checklist:`,
     `- Water bottle, packed`,

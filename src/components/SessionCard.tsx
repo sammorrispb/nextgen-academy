@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { NgaSession } from "@/lib/notion-sessions";
+import { publicLocation } from "@/lib/session-location";
 import { sessionToSlug } from "@/lib/session-slug";
 import ReserveButton from "./ReserveButton";
 import ShareButton from "./ShareButton";
@@ -102,7 +103,7 @@ export default function SessionCard({
             </time>
             <span className="text-ngpa-white/65 font-normal">
               {" "}
-              · {session.location}
+              · {publicLocation(session.location, session.publicArea)}
             </span>
           </p>
           {session.title && (

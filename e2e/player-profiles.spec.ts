@@ -20,6 +20,8 @@ function row(over: Partial<DropInRegistration>): DropInRegistration {
     sessionDate: "2026-05-23",
     sessionStartTime: "4:30 PM",
     location: "Walter Johnson HS, Bethesda, MD",
+    publicArea: "",
+    locationHidden: false,
     amountPaidUsd: 40,
     status: "Confirmed",
     paidAt: "",
@@ -30,6 +32,7 @@ function row(over: Partial<DropInRegistration>): DropInRegistration {
     reminderSent: false,
     postSessionSent: false,
     cancellationNotified: false,
+    locationRevealed: false,
     attendance: "",
     ...over,
   };

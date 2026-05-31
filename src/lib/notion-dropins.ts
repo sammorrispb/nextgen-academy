@@ -10,7 +10,12 @@ export interface DropInRow {
   sessionTitle: string;
   sessionDate: string;
   sessionStartTime: string;
+  /** Exact venue (private — admin/roster only). */
   location: string;
+  /** Broad area for hidden-location sessions ("Olney, MD"). Empty if not hidden. */
+  publicArea: string;
+  /** True when the exact venue is withheld until the 24h reveal cron. */
+  locationHidden: boolean;
   level: "Red" | "Orange" | "Green" | "Yellow" | null;
   amountPaidUsd: number;
   stripeCheckoutSessionId: string;
@@ -52,6 +57,10 @@ export async function createDropInRegistration(row: DropInRow): Promise<boolean>
       rich_text: [{ text: { content: row.sessionStartTime } }],
     },
     Location: { rich_text: [{ text: { content: row.location } }] },
+    "Public Area": {
+      rich_text: row.publicArea ? [{ text: { content: row.publicArea } }] : [],
+    },
+    "Location Hidden": { checkbox: row.locationHidden },
     "Amount Paid": { number: row.amountPaidUsd },
     "Stripe Checkout Session ID": {
       rich_text: [{ text: { content: row.stripeCheckoutSessionId } }],
@@ -112,6 +121,8 @@ export interface DropInRegistration {
   sessionDate: string;
   sessionStartTime: string;
   location: string;
+  publicArea: string;
+  locationHidden: boolean;
   amountPaidUsd: number;
   status: string;
   paidAt: string;
@@ -122,6 +133,7 @@ export interface DropInRegistration {
   reminderSent: boolean;
   postSessionSent: boolean;
   cancellationNotified: boolean;
+  locationRevealed: boolean;
   /** "Present" | "No-show" | "" (not yet recorded). */
   attendance: AttendanceValue | "";
 }
@@ -161,6 +173,8 @@ function pageToDropIn(page: any): DropInRegistration {
     sessionDate: props["Session Date"]?.date?.start ?? "",
     sessionStartTime: readTextProp(props["Session Start Time"]),
     location: readTextProp(props["Location"]),
+    publicArea: readTextProp(props["Public Area"]),
+    locationHidden: props["Location Hidden"]?.checkbox === true,
     amountPaidUsd: readNumberProp(props["Amount Paid"]),
     status: readSelectProp(props["Status"]),
     paidAt: props["Paid At"]?.created_time ?? page.created_time ?? "",
@@ -171,6 +185,7 @@ function pageToDropIn(page: any): DropInRegistration {
     reminderSent: props["Reminder Sent"]?.checkbox === true,
     postSessionSent: props["Post Session Sent"]?.checkbox === true,
     cancellationNotified: props["Cancellation Notified"]?.checkbox === true,
+    locationRevealed: props["Location Revealed"]?.checkbox === true,
     attendance: (readSelectProp(props["Attendance"]) as AttendanceValue | "") || "",
   };
 }
@@ -392,7 +407,8 @@ export async function updateDropInStatus(
 export type DropInFlag =
   | "Reminder Sent"
   | "Post Session Sent"
-  | "Cancellation Notified";
+  | "Cancellation Notified"
+  | "Location Revealed";
 
 export async function markDropInFlag(
   pageId: string,
