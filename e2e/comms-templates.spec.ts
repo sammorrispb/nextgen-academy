@@ -185,8 +185,8 @@ test.describe("Comms templates — post-session re-book", () => {
 
   test("HTML: kid-name headline, EASE-Skills framing, Coach Sam signoff, single arrowed CTA", () => {
     const html = postSessionHtml(post);
-    // Opens with kid name doing something concrete
-    expect(html).toContain("Riley got reps in yesterday.");
+    // Opens with kid name doing something concrete on the exact session date
+    expect(html).toContain("Riley got reps in on Saturday, May 23, 2026.");
     // EASE-Skills: "consistency beats intensity," pathway language, real-progress framing
     expect(html).toContain("Real progress is built one session at a time");
     expect(html).toContain("consistency beats intensity");
@@ -210,7 +210,7 @@ test.describe("Comms templates — post-session re-book", () => {
 
   test("plain-text fallback: parity on headline, pathway list, signoff, skip-cue", () => {
     const text = postSessionText(post);
-    expect(text).toContain("Riley got reps in yesterday.");
+    expect(text).toContain("Riley got reps in on Saturday, May 23, 2026.");
     expect(text).toContain("consistency beats intensity");
     expect(text).toContain("See the next session: https://nextgenpbacademy.com/schedule");
     expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");

@@ -24,18 +24,18 @@ export function postSessionHtml(input: PostSessionInput): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Thanks for yesterday &mdash; what&rsquo;s next for ${escape(childFirst)}</title>
+  <title>Thanks for ${escape(sessionDateLong)} &mdash; what&rsquo;s next for ${escape(childFirst)}</title>
 </head>
 <body style="margin:0;padding:0;background:${c.bgDark};">
   <div style="${s.wrapper}">
     <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Recap</p>
-    <h1 style="${s.heading} margin:0 0 16px 0;">${escape(childFirst)} got reps in yesterday.</h1>
+    <h1 style="${s.heading} margin:0 0 16px 0;">${escape(childFirst)} got reps in on ${escape(sessionDateLong)}.</h1>
     <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">
       Thanks for showing up, ${escape(parentFirst)}. Real progress is built one session at a time &mdash; today&rsquo;s reps become tomorrow&rsquo;s instincts. Keep the cadence going while it&rsquo;s fresh.
     </p>
 
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Yesterday: ${escape(sessionDateLong)}</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Session: ${escape(sessionDateLong)}</p>
       <p style="margin:0;font-family:Montserrat,Arial,sans-serif;font-size:18px;font-weight:900;color:${c.text};">${escape(sessionTitle)}</p>
     </div>
 
@@ -88,11 +88,11 @@ export function postSessionText(input: PostSessionInput): string {
   const lines = [
     `Hi ${input.parentFirst},`,
     "",
-    `${input.childFirst} got reps in yesterday.`,
+    `${input.childFirst} got reps in on ${input.sessionDateLong}.`,
     "",
     `Thanks for showing up. Real progress is built one session at a time — today's reps become tomorrow's instincts. Keep the cadence going while it's fresh.`,
     "",
-    `Yesterday: ${input.sessionDateLong}`,
+    `Session: ${input.sessionDateLong}`,
     `${input.sessionTitle}`,
     "",
     `What keeps the pathway moving:`,
