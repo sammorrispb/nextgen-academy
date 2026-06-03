@@ -484,7 +484,7 @@ async function emailCampParent(session: Stripe.Checkout.Session) {
     `- Lunch + snacks (full-day campers)`,
     `- A paddle if you have one — we have loaners.`,
     "",
-    `Rain plan: camp runs rain or shine with indoor backup, and every week has a built-in Friday makeup day.`,
+    `Camp runs rain or shine.`,
     "",
     `Questions? Just reply to this email or text Coach Sam at 301-325-4731.`,
     "",

@@ -7,9 +7,6 @@ import {
   CAMP_OPTIONS,
   CAMP_AGE_MIN,
   CAMP_AGE_MAX,
-  SIBLING_DISCOUNT_PCT,
-  MACARONI_KID_PROMO_CODE,
-  MACARONI_KID_DISCOUNT_PCT,
   findCampBySlug,
 } from "@/data/camps";
 
@@ -87,17 +84,8 @@ export default async function CampWeekPage({ params }: PageProps) {
               </li>
             ))}
             <li className="pt-1.5">
-              <span className="text-ngpa-white font-semibold">Rain plan:</span>{" "}
-              indoor backup + a built-in Friday makeup day ({" "}
-              {formatLongDate(camp.makeupDate)}).
-            </li>
-            <li>
-              <span className="text-ngpa-white font-semibold">Discounts:</span>{" "}
-              {SIBLING_DISCOUNT_PCT}% sibling · Macaroni Kid code{" "}
-              <span className="font-mono font-bold text-ngpa-teal-bright">
-                {MACARONI_KID_PROMO_CODE}
-              </span>{" "}
-              = {MACARONI_KID_DISCOUNT_PCT}% off at checkout.
+              <span className="text-ngpa-white font-semibold">Weather:</span>{" "}
+              Rain or shine.
             </li>
             <li>
               <span className="text-ngpa-white font-semibold">Location:</span>{" "}

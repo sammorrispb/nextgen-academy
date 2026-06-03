@@ -39,9 +39,9 @@ export interface Camp {
 
 export const CAMP_AGE_MIN = 6;
 export const CAMP_AGE_MAX = 16;
-export const SIBLING_DISCOUNT_PCT = 10;
-export const MACARONI_KID_PROMO_CODE = "MACKID";
-export const MACARONI_KID_DISCOUNT_PCT = 15;
+// Macaroni Kid promo (`MACKID`, 15% off) lives in Stripe and is entered at
+// checkout. Intentionally NOT advertised on the public page — it's exclusive to
+// Macaroni Kid families who receive it in the campaign.
 
 export const CAMP_OPTIONS: CampOption[] = [
   {

@@ -79,8 +79,7 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
         <div className="mt-6 text-sm text-ngpa-muted leading-relaxed max-w-md mx-auto">
           <p>
             A confirmation email is on its way with everything you need. Camp
-            runs rain or shine with indoor backup and a built-in Friday makeup
-            day. Questions? Text Coach Sam at 301-325-4731.
+            runs rain or shine. Questions? Text Coach Sam at 301-325-4731.
           </p>
         </div>
 

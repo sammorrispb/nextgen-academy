@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  CAMP_OPTIONS,
-  MACARONI_KID_PROMO_CODE,
-  MACARONI_KID_DISCOUNT_PCT,
-  type CampOptionKey,
-} from "@/data/camps";
+import { CAMP_OPTIONS, type CampOptionKey } from "@/data/camps";
 import {
   validateCampForm,
   type CampFormData,
@@ -93,7 +88,6 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
   const inputClass =
     "w-full bg-ngpa-deep/60 border border-ngpa-slate/60 rounded-xl px-4 py-3.5 text-ngpa-white placeholder:text-ngpa-white/40 focus:outline-none focus:ring-2 focus:ring-ngpa-teal focus:border-ngpa-teal transition-all";
   const labelClass = "block font-heading text-sm font-bold text-ngpa-white mb-1.5";
-  const hintClass = "block text-xs text-ngpa-white/55 mb-1.5";
   const errorClass = "text-ngpa-red text-sm mt-1.5";
 
   const busy = status === "submitting" || status === "redirecting";
@@ -298,9 +292,16 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
               onChange={(e) => update("waiverAccepted", e.target.checked)}
             />
             <span className="text-sm text-ngpa-white/80">
-              I&rsquo;m this camper&rsquo;s parent/guardian and I accept the camp
-              liability waiver and photo release. I understand camp runs rain or
-              shine with indoor backup and a Friday makeup day.
+              I&rsquo;m this camper&rsquo;s parent/guardian and I accept the{" "}
+              <a
+                href="/waiver"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+              >
+                liability waiver and photo release
+              </a>
+              . I understand camp runs rain or shine.
             </span>
           </label>
           {errors.waiverAccepted && (
@@ -325,18 +326,10 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
         </div>
       </div>
 
-      <p className={`${hintClass} mt-5 text-center`}>
-        Macaroni Kid families: use code{" "}
-        <span className="font-mono font-bold text-ngpa-teal-bright">
-          {MACARONI_KID_PROMO_CODE}
-        </span>{" "}
-        at checkout for {MACARONI_KID_DISCOUNT_PCT}% off.
-      </p>
-
       <button
         type="submit"
         disabled={busy}
-        className="mt-2 w-full px-8 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
+        className="mt-6 w-full px-8 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
       >
         {busy ? "Taking you to checkout…" : "Register & pay →"}
       </button>
