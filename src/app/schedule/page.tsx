@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
 import { seasons } from "@/data/schedule";
@@ -148,6 +149,33 @@ export default async function SchedulePage() {
             <span className="text-ngpa-white/50" aria-hidden="true">|</span>
             <span className="text-sm sm:text-base text-ngpa-white/80">{heroSeason.dates}</span>
           </div>
+        </div>
+      </section>
+
+      {/* ─── Sessions ─────────────────────────── */}
+      {/* ─── Summer Camp callout ─────────────── */}
+      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16">
+        <div className="max-w-3xl mx-auto">
+          <Link
+            href="/camp"
+            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-teal/40 bg-ngpa-teal/10 p-5 sm:p-6 hover:border-ngpa-teal transition-colors"
+          >
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal-bright">
+                New · Summer 2026
+              </p>
+              <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
+                Summer Pickleball Camp in Gaithersburg
+              </p>
+              <p className="text-sm text-ngpa-muted mt-0.5">
+                Two weeks (Jun 29 &amp; Jul 20), ages 6&ndash;16 &middot; full &amp;
+                half-day options &middot; small groups.
+              </p>
+            </div>
+            <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-teal text-ngpa-deep font-heading font-bold group-hover:bg-ngpa-teal-bright transition-colors min-h-[48px]">
+              See camp &rarr;
+            </span>
+          </Link>
         </div>
       </section>
 
