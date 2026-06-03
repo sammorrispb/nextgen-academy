@@ -12,6 +12,10 @@ import {
   postSessionText,
 } from "../src/lib/email/post-session";
 import {
+  postSessionRebookHtml,
+  postSessionRebookText,
+} from "../src/lib/email/post-session-rebook";
+import {
   cancelConfirmationHtml,
   cancelConfirmationText,
 } from "../src/lib/email/cancel-confirmation";
@@ -337,5 +341,45 @@ test.describe("Comms SMS — GSM-7 segment-cost regression guard", () => {
         `${name} SMS body contains non-GSM-7 chars: "${offending}"`,
       ).toBe("");
     }
+  });
+});
+
+test.describe("Comms templates — post-session no-show rebook", () => {
+  const rebook = {
+    parentFirst: "Alex",
+    childFirst: "Riley",
+    sessionTitle: "Green Ball Drop-in",
+    sessionDateLong: "Saturday, June 6, 2026",
+    scheduleUrl: "https://nextgenpbacademy.com/schedule",
+  };
+
+  test("HTML is warm, blame-free, on-brand, single-CTA", () => {
+    const html = postSessionRebookHtml(rebook);
+    expect(html).toContain("We missed Riley on the court.");
+    expect(html).toContain("life happens");
+    expect(html).toContain("Grab the next session &rarr;");
+    expect(html).toContain(rebook.scheduleUrl);
+    // Signoff + tagline line.
+    expect(html).toContain("Coach Sam &middot; Next Gen Pickleball Academy");
+    expect(html).toContain("Better than yesterday, together.");
+    // Must NOT carry the recap's "got reps" copy or the 4-week commit upsell.
+    expect(html).not.toContain("got reps");
+    expect(html).not.toContain("Lock in 4 weeks");
+    expect(html).not.toContain("/commit/");
+  });
+
+  test("plain-text mirrors the HTML and the CTA URL", () => {
+    const text = postSessionRebookText(rebook);
+    expect(text).toContain("We missed Riley on the court.");
+    expect(text).toContain("Grab the next session: " + rebook.scheduleUrl);
+    expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");
+    expect(text).toContain("Better than yesterday, together.");
+    expect(text).not.toContain("got reps");
+  });
+
+  test("escapes HTML in interpolated names", () => {
+    const html = postSessionRebookHtml({ ...rebook, childFirst: "<b>Riley</b>" });
+    expect(html).toContain("&lt;b&gt;Riley&lt;/b&gt;");
+    expect(html).not.toContain("<b>Riley</b>");
   });
 });
