@@ -22,6 +22,7 @@ const SITE_OPTIONS = [
   "Sherwood HS",
   "Westland MS",
   "Cabin John MS",
+  "Walter Johnson HS",
   "Olney area",
   "Camp",
   "Other / TBD",

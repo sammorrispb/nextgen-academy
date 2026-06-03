@@ -24,6 +24,11 @@ import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 export const runtime = "nodejs";
 
 const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
+// Recipients for the real-time "new registration" admin notifications (drop-in
+// + camp). Sam's personal inbox is included alongside the academy inbox so
+// registrations surface where he actually reads. The parent-confirmation BCC
+// stays academy-only (below) so he isn't double-emailed a copy of every receipt.
+const ADMIN_NOTIFY = [ADMIN_EMAIL, "sam.morris2131@gmail.com"];
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 const SITE_ORIGIN =
@@ -85,7 +90,7 @@ async function emailAdmin(session: Stripe.Checkout.Session) {
 
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
-    to: ADMIN_EMAIL,
+    to: ADMIN_NOTIFY,
     subject,
     text: lines.join("\n"),
   });
@@ -442,7 +447,7 @@ async function emailCampAdmin(session: Stripe.Checkout.Session) {
   ];
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
-    to: ADMIN_EMAIL,
+    to: ADMIN_NOTIFY,
     subject,
     text: lines.join("\n"),
   });
