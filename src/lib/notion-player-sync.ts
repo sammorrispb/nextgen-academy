@@ -6,6 +6,8 @@
 // player row. Best-effort: the Stripe webhook swallows the result so a CRM
 // blip never triggers a webhook retry / double-charge replay.
 
+import { fetchDropInsByParent } from "./notion-dropins";
+
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 const NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7";
@@ -168,6 +170,79 @@ export async function syncPlayerFromDropIn(d: DropInPlayerSync): Promise<PlayerS
     return "created";
   } catch (err) {
     console.error("[notion-player-sync] upsert failed", err);
+    return "error";
+  }
+}
+
+export interface AttendanceTally {
+  count: number;
+  /** Latest Present session date (ISO YYYY-MM-DD), or null if never attended. */
+  lastSessionDate: string | null;
+}
+
+// Pure tally of one child's actually-attended sessions from the family's
+// drop-in rows. Attendance is recorded on the drop-in row at day-of check-in,
+// so only rows marked "Present" count — a registration or a No-show never does.
+// The child is matched by case-insensitive first name (a family shares Parent
+// Email/Phone across multiple per-child rows). ISO date strings sort
+// lexicographically, so the last sorted Present date is the latest.
+export function computeAttendance(
+  rows: { childFirstName: string; sessionDate: string; attendance: string }[],
+  childFirstName: string,
+): AttendanceTally {
+  const child = childFirstName.trim().toLowerCase();
+  const present = rows.filter(
+    (r) =>
+      r.attendance === "Present" &&
+      r.childFirstName.trim().toLowerCase() === child &&
+      Boolean(r.sessionDate),
+  );
+  const lastSessionDate =
+    present.map((r) => r.sessionDate).sort().at(-1) ?? null;
+  return { count: present.length, lastSessionDate };
+}
+
+// Recompute a child's live attendance stats and write them onto their player
+// row: Attendance Count (# of Present drop-ins) + Last Session Date (latest
+// Present session). These two fields were dead rollups over an Attendance Log
+// relation NGA's integration can't reach, so they never computed; they're now
+// plain number/date fields this function owns. The drop-in rows are the source
+// of truth. Best-effort — swallows errors so a check-in is never blocked.
+export async function recomputePlayerAttendance(input: {
+  parentEmail: string | null;
+  parentPhone: string;
+  childFirstName: string;
+}): Promise<PlayerSyncResult> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return "skipped";
+
+  const email = input.parentEmail?.trim() || null;
+  const phone = input.parentPhone?.trim() || "";
+  if (!email && !phone) return "skipped";
+
+  try {
+    const rows = await fetchDropInsByParent(email ?? "", phone);
+    const { count, lastSessionDate } = computeAttendance(rows, input.childFirstName);
+
+    const existingId = await findPlayerRow(notionKey, email, phone, input.childFirstName);
+    if (!existingId) return "skipped";
+
+    const res = await fetch(`${NOTION_API}/pages/${existingId}`, {
+      method: "PATCH",
+      headers: notionHeaders(notionKey),
+      body: JSON.stringify({
+        properties: {
+          "Attendance Count": { number: count },
+          "Last Session Date": {
+            date: lastSessionDate ? { start: lastSessionDate } : null,
+          },
+        },
+      }),
+    });
+    if (!res.ok) throw new Error(`attendance update failed (${res.status})`);
+    return "updated";
+  } catch (err) {
+    console.error("[notion-player-sync] recomputePlayerAttendance failed", err);
     return "error";
   }
 }
