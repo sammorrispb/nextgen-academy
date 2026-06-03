@@ -7,8 +7,9 @@ import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { signReferralToken } from "@/lib/referral-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
-import { fetchApprovedNewsletterDraft } from "@/lib/notion-newsletter-drafts";
+import { fetchApprovedNewsletterDrafts } from "@/lib/notion-newsletter-drafts";
 import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
+import { c } from "@/lib/email/brand";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -200,21 +201,36 @@ export async function GET(req: NextRequest) {
     summary: n.summary,
   }));
 
-  // "From Coach Sam" lead block — sourced from an Approved row in the
-  // newsletter-drafts Notion DB written by the Wednesday cloud drafter.
-  // Null when Sam hasn't approved a draft this week → block stays hidden.
+  // "From Coach Sam" lead block — sourced from EVERY Approved row in the
+  // newsletter-drafts Notion DB within the freshness window (the Wednesday
+  // cloud-drafter row plus anything else Sam approved, e.g. an event promo).
+  // Empty when Sam hasn't approved anything this week → block stays hidden.
   // Fails soft on any Notion error so the cron still ships the rest.
-  let newsletterDraft: Awaited<
-    ReturnType<typeof fetchApprovedNewsletterDraft>
-  > = null;
+  let newsletterDrafts: Awaited<
+    ReturnType<typeof fetchApprovedNewsletterDrafts>
+  > = [];
   try {
-    newsletterDraft = await fetchApprovedNewsletterDraft();
+    newsletterDrafts = await fetchApprovedNewsletterDrafts();
   } catch (err) {
     console.warn(
       "[cron/weekly-newsletter] newsletter draft fetch failed:",
       err,
     );
   }
+  // Concatenate every approved row into the single lead-block field so all of
+  // them ship, not just the latest. A thin rule separates rows; null when none
+  // so the template keeps the block hidden.
+  const leadDivider = `<hr style="border:0;border-top:1px solid ${c.border};margin:18px 0;" />`;
+  const newsletterLeadHtml = newsletterDrafts.length
+    ? newsletterDrafts.map((d) => d.html).join(`\n${leadDivider}\n`)
+    : null;
+  const newsletterLeadText = newsletterDrafts.length
+    ? newsletterDrafts.map((d) => d.text).join("\n\n---\n\n")
+    : null;
+  const newsletterLeadSections = newsletterDrafts.reduce(
+    (n, d) => n + (d.sectionCount || 0),
+    0,
+  );
 
   const subscribers = await fetchActiveSubscribers();
   const scheduleUrl = `${SITE_ORIGIN}/schedule`;
@@ -264,8 +280,8 @@ export async function GET(req: NextRequest) {
       summerSessions,
       openPolls,
       news,
-      newsletterLeadHtml: newsletterDraft?.html ?? null,
-      newsletterLeadText: newsletterDraft?.text ?? null,
+      newsletterLeadHtml,
+      newsletterLeadText,
       tip,
       scheduleUrl,
       crewInterestUrl,
@@ -299,8 +315,8 @@ export async function GET(req: NextRequest) {
       summerSessions,
       openPolls,
       news,
-      newsletterLeadHtml: newsletterDraft?.html ?? null,
-      newsletterLeadText: newsletterDraft?.text ?? null,
+      newsletterLeadHtml,
+      newsletterLeadText,
       tip,
       scheduleUrl,
       crewInterestUrl,
@@ -341,8 +357,9 @@ export async function GET(req: NextRequest) {
     open_polls: openPolls.length,
     news_items: news.length,
     news_marked_used: newsMarkedUsed,
-    has_newsletter_lead: !!newsletterDraft,
-    newsletter_lead_sections: newsletterDraft?.sectionCount ?? 0,
+    has_newsletter_lead: newsletterDrafts.length > 0,
+    newsletter_lead_rows: newsletterDrafts.length,
+    newsletter_lead_sections: newsletterLeadSections,
     subscribers: subscribers.length,
     sent,
     failed,

@@ -195,19 +195,18 @@ function blocksToText(blocks: any[]): string {
 }
 
 /**
- * Return the most recent Approved newsletter draft within the last 7 days,
- * or null if none. The cron uses this to decide whether to inject a "From
- * Coach Sam" lead block. Fails soft — any Notion error returns null so the
- * static-tip-bank email still ships.
+ * Query the drafts DB for Approved rows whose Drafted At falls within the last
+ * 7 days. Returns the raw Notion rows (or null on a query error so callers can
+ * fail soft). The 7-day window prevents stale Approved rows from earlier weeks
+ * shipping if Sam never flipped them to Skip; with weekly sends and a date-only
+ * window, each Approved row is caught by exactly one Thursday broadcast.
  */
-export async function fetchApprovedNewsletterDraft(): Promise<NewsletterDraft | null> {
-  const notionKey = process.env.NOTION_API_KEY;
-  const dbId = process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID;
-  if (!notionKey || !dbId) return null;
-
-  // 7-day window prevents stale Approved rows from earlier weeks shipping if
-  // Sam never flipped them to Skip. The drafter writes a fresh row every Wed
-  // so a current-week Approved row will always supersede when present.
+async function queryApprovedRows(
+  notionKey: string,
+  dbId: string,
+  opts: { pageSize: number; direction: "ascending" | "descending" },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[] | null> {
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
@@ -226,8 +225,8 @@ export async function fetchApprovedNewsletterDraft(): Promise<NewsletterDraft | 
           { property: "Drafted At", date: { on_or_after: cutoff } },
         ],
       },
-      sorts: [{ property: "Drafted At", direction: "descending" }],
-      page_size: 1,
+      sorts: [{ property: "Drafted At", direction: opts.direction }],
+      page_size: opts.pageSize,
     }),
     cache: "no-store",
   });
@@ -241,17 +240,25 @@ export async function fetchApprovedNewsletterDraft(): Promise<NewsletterDraft | 
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const queryData = (await queryRes.json()) as { results: any[] };
-  const row = queryData.results[0];
-  if (!row) return null;
+  return queryData.results;
+}
 
+/**
+ * Fetch a draft row's child blocks (the actual newsletter section markdown,
+ * stored as native Notion blocks) and build a NewsletterDraft. Returns null on
+ * a blocks-fetch error or empty body. 100-block cap is fine — drafter rows are
+ * short (1-3 sections × ~10 blocks each).
+ */
+async function buildDraftFromRow(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  row: any,
+  notionKey: string,
+): Promise<NewsletterDraft | null> {
   const props = row.properties ?? {};
   const weekTitle = readTitle(props["Week"]);
   const sourceRadar = (props["Source Radar"]?.url ?? "") as string;
   const sectionCount = (props["Section Count"]?.number ?? 0) as number;
 
-  // Pull the page's child blocks (the actual newsletter section markdown,
-  // stored as native Notion blocks). 100-block cap is fine — drafter rows
-  // are short (1-3 sections × ~10 blocks each).
   const blocksRes = await fetch(
     `${NOTION_API}/blocks/${row.id}/children?page_size=100`,
     {
@@ -284,4 +291,52 @@ export async function fetchApprovedNewsletterDraft(): Promise<NewsletterDraft | 
     text,
     sectionCount,
   };
+}
+
+/**
+ * Return ALL Approved newsletter drafts within the last 7 days, oldest first.
+ * The cron concatenates these into the "From Coach Sam" lead block so that
+ * *every* row Sam approved in a given week ships — not just the most recent.
+ * (A second Approved row — e.g. an event promo alongside the weekly drafter
+ * row — used to be silently dropped by the single-row fetch.) Fails soft: any
+ * Notion error returns []. Empty when nothing is approved → block stays hidden.
+ */
+export async function fetchApprovedNewsletterDrafts(): Promise<
+  NewsletterDraft[]
+> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID;
+  if (!notionKey || !dbId) return [];
+
+  const rows = await queryApprovedRows(notionKey, dbId, {
+    pageSize: 100,
+    direction: "ascending",
+  });
+  if (!rows) return [];
+
+  const drafts: NewsletterDraft[] = [];
+  for (const row of rows) {
+    const draft = await buildDraftFromRow(row, notionKey);
+    if (draft) drafts.push(draft);
+  }
+  return drafts;
+}
+
+/**
+ * Return the most recent Approved newsletter draft within the last 7 days, or
+ * null if none. Retained for callers/tests that want a single row; the cron
+ * uses fetchApprovedNewsletterDrafts (plural) so all approved rows ship. Fails
+ * soft — any Notion error returns null.
+ */
+export async function fetchApprovedNewsletterDraft(): Promise<NewsletterDraft | null> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID;
+  if (!notionKey || !dbId) return null;
+
+  const rows = await queryApprovedRows(notionKey, dbId, {
+    pageSize: 1,
+    direction: "descending",
+  });
+  if (!rows || !rows[0]) return null;
+  return buildDraftFromRow(rows[0], notionKey);
 }
