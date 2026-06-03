@@ -111,29 +111,41 @@ for (const opt of OPTIONS) {
 const PROMO_CODE = "MACKID";
 const PERCENT_OFF = 15;
 
+const COUPON_NAME = "Macaroni Kid — 15% off camp";
+
 const existingPromos = await stripe.promotionCodes.list({ code: PROMO_CODE, limit: 1 });
 if (existingPromos.data[0]) {
   const pc = existingPromos.data[0];
   console.log(
-    `\nFound promotion code ${PROMO_CODE} (${pc.id}) → coupon ${pc.coupon.id}` +
+    `\nFound promotion code ${PROMO_CODE} (${pc.id})` +
       (pc.active ? "" : " [INACTIVE — re-activate in Stripe if needed]"),
   );
 } else {
-  const coupon = await stripe.coupons.create({
-    name: "Macaroni Kid — 15% off camp",
-    percent_off: PERCENT_OFF,
-    duration: "once",
-    applies_to: { products: [product.id] },
-  });
+  // Reuse an existing matching coupon (e.g. one left by a prior partial run)
+  // rather than creating duplicates.
+  const coupons = await stripe.coupons.list({ limit: 100 });
+  let coupon = coupons.data.find(
+    (c) => c.name === COUPON_NAME && c.percent_off === PERCENT_OFF && c.valid,
+  );
+  if (!coupon) {
+    coupon = await stripe.coupons.create({
+      name: COUPON_NAME,
+      percent_off: PERCENT_OFF,
+      duration: "once",
+      applies_to: { products: [product.id] },
+    });
+    console.log(`\nCreated coupon ${coupon.id} (${PERCENT_OFF}% off, camp product only)`);
+  } else {
+    console.log(`\nReusing existing coupon ${coupon.id} (${PERCENT_OFF}% off)`);
+  }
+  // Stripe API (dahlia) nests the coupon under `promotion`, not a top-level
+  // `coupon` param.
   const promo = await stripe.promotionCodes.create({
-    coupon: coupon.id,
+    promotion: { type: "coupon", coupon: coupon.id },
     code: PROMO_CODE,
     active: true,
   });
-  console.log(
-    `\nCreated coupon ${coupon.id} (${PERCENT_OFF}% off, camp product only)` +
-      `\nCreated promotion code ${promo.code} (${promo.id})`,
-  );
+  console.log(`Created promotion code ${promo.code} (${promo.id})`);
 }
 
 console.log("\n=== Paste into .env.local + Vercel prod env ===");
