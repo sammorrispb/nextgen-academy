@@ -61,6 +61,18 @@ function formatLongDate(isoDate: string): string {
   });
 }
 
+// Short date for the subject line — keeps it under the ~50-char target while
+// still naming the exact day (e.g. "Sat, Jun 6") instead of "yesterday".
+function formatShortDate(isoDate: string): string {
+  if (!isoDate) return "";
+  const d = new Date(`${isoDate}T12:00:00Z`);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 interface SendOutcome {
   pageId: string;
   parentEmail: string;
@@ -149,7 +161,7 @@ async function sendOne(
   } else {
     // The 4-week commit upsell only makes sense for someone who showed up.
     const commitUrl = await buildCommitUrl(row);
-    subject = `${childFirst} got reps in yesterday — what's next`;
+    subject = `${childFirst} got reps in ${formatShortDate(row.sessionDate)} — what's next`;
     html = postSessionHtml({
       parentFirst,
       childFirst,
