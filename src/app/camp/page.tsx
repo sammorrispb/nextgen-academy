@@ -5,9 +5,6 @@ import {
   CAMP_OPTIONS,
   CAMP_AGE_MIN,
   CAMP_AGE_MAX,
-  SIBLING_DISCOUNT_PCT,
-  MACARONI_KID_PROMO_CODE,
-  MACARONI_KID_DISCOUNT_PCT,
 } from "@/data/camps";
 
 const SITE_ORIGIN =
@@ -115,13 +112,7 @@ export default function CampIndexPage() {
               ))}
             </ul>
             <p className="mt-4 text-xs text-ngpa-muted">
-              {SIBLING_DISCOUNT_PCT}% sibling discount · Macaroni Kid families use
-              code{" "}
-              <span className="font-mono font-bold text-ngpa-teal-bright">
-                {MACARONI_KID_PROMO_CODE}
-              </span>{" "}
-              for {MACARONI_KID_DISCOUNT_PCT}% off · rain plan with a built-in
-              Friday makeup day.
+              Small groups · grouped by age &amp; skill · rain or shine.
             </p>
           </div>
 
