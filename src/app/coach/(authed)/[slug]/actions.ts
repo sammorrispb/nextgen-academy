@@ -15,6 +15,7 @@ import {
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { recomputePlayerAttendance } from "@/lib/notion-player-sync";
 import { resolveRefundCents, type RefundOption } from "@/lib/refund-amount";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -173,6 +174,18 @@ export async function markAttendanceAction(input: {
         location: dropIn.location,
         attendance: value,
       },
+    });
+  }
+
+  // Recompute the child's attendance stats on their player profile. Runs for
+  // every change (Present / No-show / clear) so the count stays exact — e.g.
+  // clearing a Present row decrements it. Reads the drop-in rows we just wrote,
+  // so it reflects this toggle. Awaited but never fatal to the check-in.
+  if (dropIn.parentEmail || dropIn.parentPhone) {
+    await recomputePlayerAttendance({
+      parentEmail: dropIn.parentEmail || null,
+      parentPhone: dropIn.parentPhone || "",
+      childFirstName: dropIn.childFirstName,
     });
   }
 
