@@ -19,6 +19,7 @@ import { signCancelToken } from "@/lib/cancel-token";
 import { processReferralReward } from "@/lib/referral-rewards";
 import { isFirstTimeParent } from "@/lib/notion-player-lookup";
 import { syncPlayerFromDropIn } from "@/lib/notion-player-sync";
+import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 
 export const runtime = "nodejs";
 
@@ -272,6 +273,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, skipped: "not_paid" });
   }
 
+  // Summer Camp registrations are a separate product from the $20 drop-in. They
+  // carry kind=camp metadata and run their own confirmation + CRM/OB sync — they
+  // do NOT touch the drop-in Notion roster or the drop-in comms crons.
+  if (metaString(session.metadata ?? {}, "kind") === "camp") {
+    return handleCampCheckout(session);
+  }
+
   // Idempotency — Stripe retries webhook delivery.
   const already = await findDropInByCheckoutId(session.id);
   if (already) {
@@ -406,6 +414,151 @@ async function sendConfirmationSms(
     consent: row.smsConsent,
     tag: `booking-confirm:${session.id}`,
   });
+}
+
+async function emailCampAdmin(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const birthYear = Number(metaString(m, "child_birth_year")) || 0;
+  const age = birthYear ? `${new Date().getFullYear() - birthYear}` : "?";
+
+  const subject = `New CAMP reg: ${metaString(m, "child_first_name")} — ${metaString(m, "camp_title")} (${metaString(m, "option_label")})`;
+  const lines = [
+    `Camp: ${metaString(m, "camp_title")} — ${metaString(m, "camp_week")}`,
+    `Option: ${metaString(m, "option_label")} (${metaString(m, "option_hours")})`,
+    "",
+    `Parent: ${metaString(m, "parent_name")}`,
+    `Email: ${payerEmail(session) || metaString(m, "parent_email")}`,
+    `Phone: ${metaString(m, "parent_phone")}`,
+    `Camper: ${metaString(m, "child_first_name")} (age ${age})`,
+    `Emergency: ${metaString(m, "emergency_name")} · ${metaString(m, "emergency_phone")}`,
+    `Allergies/medical: ${metaString(m, "allergies") || "none listed"}`,
+    "",
+    `Paid: $${amount}`,
+    `Stripe: ${session.id}`,
+  ];
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_EMAIL,
+    subject,
+    text: lines.join("\n"),
+  });
+  if (error) console.error("[stripe-webhook] camp admin email rejected", error);
+}
+
+async function emailCampParent(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = payerEmail(session);
+  if (!apiKey) return;
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
+
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const parentFirst = metaString(m, "parent_name").split(/\s+/)[0] || "there";
+  const childFirst = metaString(m, "child_first_name") || "your camper";
+  const campTitle = metaString(m, "camp_title");
+  const campWeek = metaString(m, "camp_week");
+  const optionLabel = metaString(m, "option_label");
+  const optionHours = metaString(m, "option_hours");
+
+  const subject = `You're registered — ${campTitle}`;
+  const text = [
+    `Hi ${parentFirst},`,
+    "",
+    `${childFirst} is registered for Next Gen Summer Camp!`,
+    "",
+    `${campTitle}`,
+    `${campWeek} (Mon–Thu)`,
+    `${optionLabel} · ${optionHours}`,
+    `Location: Gaithersburg, MD — we'll email the exact site before camp starts.`,
+    "",
+    `Paid: $${amount}.`,
+    "",
+    `What to bring each day:`,
+    `- Refillable water bottle`,
+    `- Court shoes (no flat-soled sneakers)`,
+    `- Lunch + snacks (full-day campers)`,
+    `- A paddle if you have one — we have loaners.`,
+    "",
+    `Rain plan: camp runs rain or shine with indoor backup, and every week has a built-in Friday makeup day.`,
+    "",
+    `Questions? Just reply to this email or text Coach Sam at 301-325-4731.`,
+    "",
+    `See you on the court — better than yesterday, together.`,
+    `Coach Sam · Next Gen Pickleball Academy`,
+  ].join("\n");
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    bcc: ADMIN_EMAIL,
+    replyTo: REPLY_TO,
+    subject,
+    text,
+  });
+  if (error) console.error("[stripe-webhook] camp parent email rejected", error);
+}
+
+async function handleCampCheckout(session: Stripe.Checkout.Session) {
+  const m = session.metadata ?? {};
+  const parentName = metaString(m, "parent_name");
+  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
+  const parentPhone = metaString(m, "parent_phone");
+  const childFirst = metaString(m, "child_first_name");
+  const childBirthYear = Number(metaString(m, "child_birth_year")) || 0;
+  const campTitle = metaString(m, "camp_title");
+  const campWeek = metaString(m, "camp_week");
+  const optionLabel = metaString(m, "option_label");
+  const optionHours = metaString(m, "option_hours");
+  const campStart = metaString(m, "camp_start");
+  const publicArea = metaString(m, "public_area");
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+
+  // v1 has no Notion camp roster, so no DB-backed idempotency. The CRM sync is
+  // an upsert (safe to repeat); emails could resend if Stripe redelivers a
+  // 200'd event (rare). A dedicated Camp Registrations DB is the planned
+  // fast-follow for a clean roster + an idempotency key.
+  await Promise.allSettled([
+    emailCampAdmin(session),
+    emailCampParent(session),
+    // Land the camper in the Player CRM (keyed on family). Location = public
+    // area only; the exact venue stays hidden.
+    syncPlayerFromDropIn({
+      parentName,
+      parentEmail,
+      parentPhone,
+      childFirstName: childFirst,
+      childBirthYear,
+      sessionDate: campStart,
+      location: publicArea,
+    }),
+    ingestToOpenBrain({
+      business: "nga",
+      source: "nga_summer_camp",
+      name: parentName,
+      email: parentEmail || undefined,
+      phone: parentPhone || undefined,
+      interest: `${campTitle} (${optionLabel})`,
+      metadata: {
+        camp_week: campWeek,
+        option: optionLabel,
+        option_hours: optionHours,
+        child_first_name: childFirst,
+        child_birth_year: childBirthYear,
+        emergency_name: metaString(m, "emergency_name"),
+        emergency_phone: metaString(m, "emergency_phone"),
+        allergies: metaString(m, "allergies"),
+        amount_paid_usd: amount,
+        stripe_session: session.id,
+      },
+    }),
+  ]);
+
+  return NextResponse.json({ received: true, camp: true });
 }
 
 async function handleChargeRefunded(charge: Stripe.Charge) {

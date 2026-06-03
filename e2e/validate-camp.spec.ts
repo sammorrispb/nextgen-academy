@@ -1,0 +1,96 @@
+import { test, expect } from "@playwright/test";
+import { validateCampForm, type CampFormData } from "../src/lib/validate-camp";
+import { CAMPS, CAMP_OPTIONS } from "../src/data/camps";
+
+const thisYear = new Date().getFullYear();
+
+function validForm(overrides: Partial<CampFormData> = {}): CampFormData {
+  return {
+    campSlug: CAMPS[0].slug,
+    optionKey: "full",
+    parentName: "Jordan Parent",
+    email: "jordan@example.com",
+    phone: "301-555-0142",
+    childFirstName: "Riley",
+    childBirthYear: String(thisYear - 10), // age 10 — inside 6–16
+    emergencyName: "Sam Backup",
+    emergencyPhone: "240-555-0199",
+    allergies: "",
+    waiverAccepted: true,
+    smsConsent: false,
+    ...overrides,
+  };
+}
+
+test.describe("validateCampForm", () => {
+  test("a fully valid form has no errors", () => {
+    expect(validateCampForm(validForm())).toEqual({});
+  });
+
+  test("each camp option key is accepted", () => {
+    for (const opt of CAMP_OPTIONS) {
+      expect(validateCampForm(validForm({ optionKey: opt.key }))).toEqual({});
+    }
+  });
+
+  test("unknown camp slug is rejected", () => {
+    expect(validateCampForm(validForm({ campSlug: "not-a-week" })).campSlug).toBeTruthy();
+  });
+
+  test("unknown option key is rejected", () => {
+    expect(validateCampForm(validForm({ optionKey: "vip" })).optionKey).toBeTruthy();
+  });
+
+  test("waiver must be accepted", () => {
+    expect(validateCampForm(validForm({ waiverAccepted: false })).waiverAccepted).toBeTruthy();
+  });
+
+  test("emergency contact name + phone are required", () => {
+    const e = validateCampForm(validForm({ emergencyName: "", emergencyPhone: "" }));
+    expect(e.emergencyName).toBeTruthy();
+    expect(e.emergencyPhone).toBeTruthy();
+  });
+
+  test("a too-short emergency phone is rejected", () => {
+    expect(validateCampForm(validForm({ emergencyPhone: "12345" })).emergencyPhone).toBeTruthy();
+  });
+
+  test("a child too old (under age 6 floor) is rejected", () => {
+    // born 17 years ago → age 17 → out of range
+    expect(
+      validateCampForm(validForm({ childBirthYear: String(thisYear - 17) })).childBirthYear,
+    ).toBeTruthy();
+  });
+
+  test("a child too young (over age 16... i.e. under 6) is rejected", () => {
+    // born 4 years ago → age 4 → out of range
+    expect(
+      validateCampForm(validForm({ childBirthYear: String(thisYear - 4) })).childBirthYear,
+    ).toBeTruthy();
+  });
+
+  test("age boundaries 6 and 16 are accepted", () => {
+    expect(validateCampForm(validForm({ childBirthYear: String(thisYear - 6) }))).toEqual({});
+    expect(validateCampForm(validForm({ childBirthYear: String(thisYear - 16) }))).toEqual({});
+  });
+
+  test("a non-numeric birth year is rejected", () => {
+    expect(validateCampForm(validForm({ childBirthYear: "twelve" })).childBirthYear).toBeTruthy();
+  });
+
+  test("an invalid email is rejected", () => {
+    expect(validateCampForm(validForm({ email: "nope" })).email).toBeTruthy();
+  });
+
+  test("empty required fields are all flagged", () => {
+    const e = validateCampForm({});
+    expect(e.parentName).toBeTruthy();
+    expect(e.email).toBeTruthy();
+    expect(e.phone).toBeTruthy();
+    expect(e.childFirstName).toBeTruthy();
+    expect(e.childBirthYear).toBeTruthy();
+    expect(e.emergencyName).toBeTruthy();
+    expect(e.emergencyPhone).toBeTruthy();
+    expect(e.waiverAccepted).toBeTruthy();
+  });
+});
