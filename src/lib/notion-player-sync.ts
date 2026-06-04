@@ -79,7 +79,7 @@ function notionHeaders(key: string): Record<string, string> {
 // Finds the player row for THIS child: a family shares one Parent Email/Phone
 // across multiple per-child rows, so we narrow by Player Name too. Returns the
 // page id or null.
-async function findPlayerRow(
+export async function findPlayerRow(
   notionKey: string,
   email: string | null,
   phone: string,
@@ -170,6 +170,66 @@ export async function syncPlayerFromDropIn(d: DropInPlayerSync): Promise<PlayerS
     return "created";
   } catch (err) {
     console.error("[notion-player-sync] upsert failed", err);
+    return "error";
+  }
+}
+
+// Deregisters a camper from the Player CRM after a camp withdrawal/refund.
+// Camps have no Notion roster row to flip (unlike drop-ins), so the Player DB +
+// Open Brain are the registration footprint — this flips the child's player row
+// to an inactive Status and appends a dated note. `status` defaults to
+// "Inactive" (a real Player DB select option — there is no "Withdrawn"); an
+// unknown value would 400 the whole write, so callers must pass a known option.
+// Best-effort: returns "skipped"/"error" rather than throwing so a refund is
+// never blocked by a CRM blip.
+export async function markPlayerWithdrawnFromCamp(input: {
+  parentEmail: string | null;
+  parentPhone: string;
+  childFirstName: string;
+  note: string;
+  status?: string;
+}): Promise<PlayerSyncResult> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return "skipped";
+
+  const email = input.parentEmail?.trim() || null;
+  const phone = input.parentPhone?.trim() || "";
+  if (!email && !phone) return "skipped";
+
+  try {
+    const existingId = await findPlayerRow(notionKey, email, phone, input.childFirstName);
+    if (!existingId) return "skipped";
+
+    // Append to (not clobber) any coach-written Notes.
+    const pageRes = await fetch(`${NOTION_API}/pages/${existingId}`, {
+      headers: notionHeaders(notionKey),
+    });
+    let existingNotes = "";
+    if (pageRes.ok) {
+      const page = (await pageRes.json()) as {
+        properties?: { Notes?: { rich_text?: { plain_text?: string }[] } };
+      };
+      existingNotes =
+        page.properties?.Notes?.rich_text?.map((r) => r.plain_text ?? "").join("") ?? "";
+    }
+    const combinedNotes = existingNotes
+      ? `${existingNotes}\n${input.note}`
+      : input.note;
+
+    const res = await fetch(`${NOTION_API}/pages/${existingId}`, {
+      method: "PATCH",
+      headers: notionHeaders(notionKey),
+      body: JSON.stringify({
+        properties: {
+          Status: { select: { name: input.status ?? "Inactive" } },
+          Notes: { rich_text: [{ text: { content: combinedNotes.slice(0, 1900) } }] },
+        },
+      }),
+    });
+    if (!res.ok) throw new Error(`player withdraw update failed (${res.status})`);
+    return "updated";
+  } catch (err) {
+    console.error("[notion-player-sync] markPlayerWithdrawnFromCamp failed", err);
     return "error";
   }
 }
