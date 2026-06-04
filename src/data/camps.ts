@@ -37,7 +37,9 @@ export interface Camp {
   exactLocation: string;
 }
 
-export const CAMP_AGE_MIN = 6;
+// Camp is ages 8+ (distinct from the academy's general 6–16 range) — the
+// day-camp format runs older than the youngest private-lesson on-ramp.
+export const CAMP_AGE_MIN = 8;
 export const CAMP_AGE_MAX = 16;
 // Macaroni Kid promo (`MACKID`, 15% off) lives in Stripe and is entered at
 // checkout. Intentionally NOT advertised on the public page — it's exclusive to
