@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
 
 /** One open time slot within a date+location group. */
@@ -68,6 +69,12 @@ export interface WeeklyNewsletterInput {
   referralUrl: string | null;
   /** Site origin for absolute links inside the poll cards. */
   origin: string;
+  /**
+   * UTM campaign label for first-party click attribution (e.g. "weekly-2026-06-04").
+   * Stamps the same-origin CTAs built inside this template (poll, eval). The
+   * scheduleUrl/crewInterestUrl passed in are already UTM-stamped by the cron.
+   */
+  utmCampaign: string;
 }
 
 /** Honest, scannable spots phrasing. Low counts get urgency; never faked. */
@@ -102,6 +109,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     unsubscribeUrl,
     referralUrl,
     origin,
+    utmCampaign,
   } = input;
   const hasSessions = sessions.length > 0;
   const hasSummer = summerSessions.length > 0;
@@ -169,7 +177,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:15px;font-weight:900;color:${c.text};">${escape(p.title)}</p>
       <p style="margin:0 0 6px 0;color:${c.muted};font-size:13px;">${escape([p.day, pollTimeRange(p), p.location, p.level].filter(Boolean).join(" · "))}</p>
       <p style="margin:0 0 10px 0;color:${c.accentLime};font-size:13px;font-weight:700;">${escape(pollProgressLabel(p))}</p>
-      <p style="margin:0;"><a href="${origin}/poll/${encodeURIComponent(p.slug)}" style="${s.link}font-weight:700;text-decoration:none;">Vote on this slot &rarr;</a></p>
+      <p style="margin:0;"><a href="${appendUtm(`${origin}/poll/${encodeURIComponent(p.slug)}`, "poll", utmCampaign)}" style="${s.link}font-weight:700;text-decoration:none;">Vote on this slot &rarr;</a></p>
     </div>`,
       )
       .join("")}`
@@ -221,7 +229,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <div style="${s.card}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.muted};font-weight:700;">Brand new to a court?</p>
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">If your kid hasn&rsquo;t held a paddle yet, a private one-on-one with Coach Sam is the right first step &mdash; we&rsquo;ll get them rallying before they join a crew. Book a free evaluation to see where they fit.</p>
-      <p style="margin:0;"><a href="${origin}/#contact-form" style="${s.link}font-weight:700;text-decoration:none;">Get a free evaluation &rarr;</a></p>
+      <p style="margin:0;"><a href="${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}" style="${s.link}font-weight:700;text-decoration:none;">Get a free evaluation &rarr;</a></p>
     </div>`;
 
   // Forward card — personalized when the signing key is configured so the
@@ -301,6 +309,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     unsubscribeUrl,
     referralUrl,
     origin,
+    utmCampaign,
   } = input;
   const lines: string[] = [
     `Where to play, ${parentFirst}.`,
@@ -355,7 +364,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
         .join(" · ");
       if (meta) lines.push(`  ${meta}`);
       lines.push(`  ${pollProgressLabel(p)}`);
-      lines.push(`  Vote: ${origin}/poll/${encodeURIComponent(p.slug)}`);
+      lines.push(`  Vote: ${appendUtm(`${origin}/poll/${encodeURIComponent(p.slug)}`, "poll", utmCampaign)}`);
       lines.push("");
     }
   }
@@ -387,7 +396,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
 
   lines.push(
     `Brand new to a court? A private one-on-one with Coach Sam gets your kid rallying before they join a crew.`,
-    `Book a free evaluation: ${origin}/#contact-form`,
+    `Book a free evaluation: ${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}`,
     "",
   );
 
