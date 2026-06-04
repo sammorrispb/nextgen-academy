@@ -5,6 +5,7 @@ import {
   weeklyNewsletterText,
   type WeeklyNewsletterInput,
 } from "../src/lib/email/weekly-newsletter";
+import { appendUtm } from "../src/lib/email/utm";
 
 const tip = { title: "Soft hands win", body: "Loosen the grip." };
 const ORIGIN = "https://nextgenpbacademy.com";
@@ -31,7 +32,28 @@ const baseInput: WeeklyNewsletterInput = {
   unsubscribeUrl: `${ORIGIN}/api/newsletter/unsubscribe?token=abc`,
   referralUrl: `${ORIGIN}/newsletter?ref=signed-token-abc`,
   origin: ORIGIN,
+  utmCampaign: "weekly-2026-06-04",
 };
+
+test.describe("appendUtm", () => {
+  test("appends utm params to a bare path", () => {
+    expect(appendUtm("https://x.com/schedule", "schedule", "weekly-2026-06-04")).toBe(
+      "https://x.com/schedule?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-2026-06-04&utm_content=schedule",
+    );
+  });
+
+  test("uses & when the url already has a query string", () => {
+    expect(appendUtm("https://x.com/newsletter?ref=abc", "referral", "wk")).toBe(
+      "https://x.com/newsletter?ref=abc&utm_source=newsletter&utm_medium=email&utm_campaign=wk&utm_content=referral",
+    );
+  });
+
+  test("inserts the query before a #hash so the anchor still jumps", () => {
+    expect(appendUtm("https://x.com/#contact-form", "eval", "wk")).toBe(
+      "https://x.com/?utm_source=newsletter&utm_medium=email&utm_campaign=wk&utm_content=eval#contact-form",
+    );
+  });
+});
 
 test.describe("spotsLabel", () => {
   test("shows X of Y when plenty remain", () => {
@@ -118,8 +140,39 @@ test.describe("weeklyNewsletterHtml", () => {
   test("private-lessons card routes to the free evaluation form", () => {
     const html = weeklyNewsletterHtml(baseInput);
     expect(html).toContain("Brand new to a court?");
-    expect(html).toContain(`${ORIGIN}/#contact-form`);
+    // UTM query is inserted before the #hash so the anchor still jumps.
+    expect(html).toContain(`${ORIGIN}/?utm_source=newsletter`);
+    expect(html).toContain("utm_content=eval");
+    expect(html).toContain("#contact-form");
     expect(html).toContain("Get a free evaluation");
+  });
+
+  test("internal CTA links carry first-party UTM tags for click attribution", () => {
+    const html = weeklyNewsletterHtml({
+      ...baseInput,
+      openPolls: [
+        {
+          title: "Sat 4pm Bethesda — Green",
+          slug: "sat-4pm-green",
+          day: "Sat",
+          startTime: "4:00 PM",
+          endTime: "5:00 PM",
+          location: "Walter Johnson HS",
+          level: "Green",
+          minPartySize: 4,
+          yesCount: 2,
+        },
+      ],
+    });
+    // Poll + eval links built inside the template get stamped with the campaign.
+    expect(html).toContain(
+      `${ORIGIN}/poll/sat-4pm-green?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-2026-06-04&utm_content=poll`,
+    );
+    expect(html).toContain("utm_campaign=weekly-2026-06-04");
+    // The referral forward link stays clean (own ref attribution, shown verbatim).
+    expect(html).toContain(`${ORIGIN}/newsletter?ref=signed-token-abc"`);
+    // Unsubscribe link is never UTM-tagged.
+    expect(html).not.toContain("unsubscribe?token=abc&utm");
   });
 
   test("quotes no hard prices in session/tip/CTA blocks (drop-in $40 stays on /schedule only)", () => {

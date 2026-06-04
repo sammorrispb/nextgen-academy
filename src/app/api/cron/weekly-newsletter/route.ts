@@ -10,6 +10,7 @@ import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
 import { fetchApprovedNewsletterDrafts } from "@/lib/notion-newsletter-drafts";
 import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
 import { c } from "@/lib/email/brand";
+import { appendUtm } from "@/lib/email/utm";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -233,8 +234,11 @@ export async function GET(req: NextRequest) {
   );
 
   const subscribers = await fetchActiveSubscribers();
-  const scheduleUrl = `${SITE_ORIGIN}/schedule`;
-  const crewInterestUrl = `${SITE_ORIGIN}/crew`;
+  // First-party click attribution: tag this week's send so /api/analytics can
+  // separate newsletter-driven traffic from organic. One campaign per issue.
+  const utmCampaign = `weekly-${new Date().toISOString().slice(0, 10)}`;
+  const scheduleUrl = appendUtm(`${SITE_ORIGIN}/schedule`, "schedule", utmCampaign);
+  const crewInterestUrl = appendUtm(`${SITE_ORIGIN}/crew`, "crew", utmCampaign);
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -288,6 +292,7 @@ export async function GET(req: NextRequest) {
       unsubscribeUrl,
       referralUrl,
       origin: SITE_ORIGIN,
+      utmCampaign,
     };
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -325,6 +330,7 @@ export async function GET(req: NextRequest) {
         ? `${SITE_ORIGIN}/newsletter?ref=${encodeURIComponent(signReferralToken("sample@example.com") ?? "")}`
         : null,
       origin: SITE_ORIGIN,
+      utmCampaign,
     };
     await resend.emails.send({
       from: FROM_EMAIL,
