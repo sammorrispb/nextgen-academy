@@ -76,7 +76,7 @@ export const CAMPS: Camp[] = [
     endDate: "2026-07-02",
     makeupDate: "2026-07-03",
     publicArea: "Gaithersburg, MD",
-    exactLocation: "",
+    exactLocation: "Gaithersburg HS, 314 South Frederick Ave, Gaithersburg, MD 20877",
   },
   {
     slug: "july-20",
@@ -86,7 +86,7 @@ export const CAMPS: Camp[] = [
     endDate: "2026-07-23",
     makeupDate: "2026-07-24",
     publicArea: "Gaithersburg, MD",
-    exactLocation: "",
+    exactLocation: "Gaithersburg HS, 314 South Frederick Ave, Gaithersburg, MD 20877",
   },
 ];
 
