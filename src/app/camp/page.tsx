@@ -13,7 +13,7 @@ const SITE_ORIGIN =
 export const metadata: Metadata = {
   title: `Summer Pickleball Camp | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
   description:
-    "Next Gen Pickleball Academy summer day camp in Gaithersburg, MD. Two weeks this summer for ages 6–16 — full-day and half-day options, small groups, real coaching.",
+    "Next Gen Pickleball Academy summer day camp in Gaithersburg, MD. Two weeks this summer for ages 8 and up — full-day and half-day options, small groups, real coaching.",
   alternates: { canonical: `${SITE_ORIGIN}/camp` },
 };
 

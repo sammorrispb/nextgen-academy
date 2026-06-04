@@ -168,7 +168,7 @@ export default async function SchedulePage() {
                 Summer Pickleball Camp in Gaithersburg
               </p>
               <p className="text-sm text-ngpa-muted mt-0.5">
-                Two weeks (Jun 29 &amp; Jul 20), ages 6&ndash;16 &middot; full &amp;
+                Two weeks (Jun 29 &amp; Jul 20), ages 8 &amp; up &middot; full &amp;
                 half-day options &middot; small groups.
               </p>
             </div>
