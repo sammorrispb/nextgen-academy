@@ -69,6 +69,12 @@ export default async function CoachDashboard() {
       </p>
       <div className="flex flex-wrap gap-3 mb-8">
         <Link
+          href="/coach/eval"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ngpa-teal/15 border border-ngpa-teal/50 text-ngpa-teal hover:bg-ngpa-teal/25 text-sm font-bold transition-colors"
+        >
+          Confirm an eval →
+        </Link>
+        <Link
           href="/coach/players"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
         >
