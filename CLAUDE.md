@@ -80,6 +80,13 @@ Free, top-of-funnel offer: a cold parent says yes to the free thing first; price
 
 **Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/monthly). The only live price is the single $20 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references the referral perk ("you both get 50% off your next drop-in") as a percentage rather than a dollar amount, so a parent never reads a base price that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
 
+### Eval confirmation (`POST /api/eval-confirmation`)
+**Always send the templated eval confirmation through this endpoint — never hand-build the email.** Free evaluations are booked manually (a parent inquires, Sam picks a time), so there's no Stripe webhook to fire the confirmation. This `?secret=$NGA_ADMIN_SECRET`-gated endpoint is the single source of truth for that send: it renders `src/lib/email/eval-confirmation.ts` (shared `brand.ts` chrome, EASE = Excellence), builds the `.ics` via `buildDropInIcs()` (`src/lib/email/ics.ts`), sends via Resend (`from` noreply@, **BCC** `nextgenacademypb@gmail.com`, replyTo `nextgenacademypb@gmail.com`) with the `.ics` attached, then stamps `Eval Date` on the lead's NGA Player CRM row (`src/lib/notion-eval.ts`, fail-soft — a Notion miss never fails a delivered email).
+
+Body (JSON): `parentEmail`, `childFirst`, `date` (`YYYY-MM-DD`), `startTime`/`endTime` (`"10:00 AM"`), `location` (all required); `parentFirst`, `coachName` (defaults "Coach Sam"), `dryRun` (optional). Validates all required fields up front (400 with `errors[]` on bad input) so a malformed call never half-sends. `dryRun: true` (or `?dryRun=1`) returns the rendered subject + plain-text preview without sending. Template/subject/text logic is unit-tested in `e2e/eval-confirmation.spec.ts` (pure functions, no dev server). Pure-function specs run with `npx playwright test e2e/eval-confirmation.spec.ts --project=desktop`.
+
+Note: the endpoint does NOT create the coach's Google Calendar event — that's still an operator/agent step (the parent's calendar is covered by the attached `.ics`). Always `dryRun` first to eyeball the copy before a live send.
+
 ### Crew Interest (`/crew` + `/api/crew-interest`)
 **The no-active-poll fallback.** If a parent's preferred slot doesn't match any Crew Poll Sam is currently running, they fill out the Crew Interest form instead. Sam reviews the Notion DB and decides whether to spin up a new poll for the day/level mix coming through. Surfaces: a dedicated `/crew` landing page (`src/app/crew/page.tsx`) rendering `src/components/CrewInterestForm.tsx`, plus a "None of these fit? / Want a regular crew?" callout in every weekly newsletter.
 
