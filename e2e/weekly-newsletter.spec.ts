@@ -33,6 +33,10 @@ const baseInput: WeeklyNewsletterInput = {
   referralUrl: `${ORIGIN}/newsletter?ref=signed-token-abc`,
   origin: ORIGIN,
   utmCampaign: "weekly-2026-06-04",
+  camps: [],
+  campUrl: `${ORIGIN}/camp`,
+  campAgeMin: 8,
+  campPriceFromUsd: 170,
 };
 
 test.describe("appendUtm", () => {
@@ -79,7 +83,7 @@ test.describe("weeklyNewsletterHtml", () => {
 
   test("personalized forward link surfaces with the 50% referral offer", () => {
     const html = weeklyNewsletterHtml(baseInput);
-    expect(html).toContain("Bring the crew");
+    expect(html).toContain("Bring a friend");
     expect(html).toContain("50% off");
     expect(html).toContain("/newsletter?ref=signed-token-abc");
   });
@@ -92,7 +96,7 @@ test.describe("weeklyNewsletterHtml", () => {
 
   test("crew interest CTA always renders, with copy that adapts to poll presence", () => {
     const noPolls = weeklyNewsletterHtml(baseInput);
-    expect(noPolls).toContain("Want a regular crew?");
+    expect(noPolls).toContain("Want a regular group?");
     expect(noPolls).toContain(`${ORIGIN}/crew`);
 
     const withPolls = weeklyNewsletterHtml({
@@ -111,7 +115,7 @@ test.describe("weeklyNewsletterHtml", () => {
         },
       ],
     });
-    expect(withPolls).toContain("Forming crews now");
+    expect(withPolls).toContain("Forming groups now");
     expect(withPolls).toContain("Sat 4pm Bethesda — Green");
     expect(withPolls).toContain(`${ORIGIN}/poll/sat-4pm-green`);
     expect(withPolls).toContain("None of these fit?");
@@ -134,7 +138,7 @@ test.describe("weeklyNewsletterHtml", () => {
         },
       ],
     });
-    expect(html).toContain("2 in · need 2 more to lock the crew");
+    expect(html).toContain("2 in · need 2 more to lock it in");
   });
 
   test("private-lessons card routes to the free evaluation form", () => {
@@ -250,6 +254,52 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(html).toContain("Saturday, July 18");
     expect(html).toContain("Sign up for summer");
   });
+
+  test("hides the camp block when there are no upcoming camps", () => {
+    expect(weeklyNewsletterHtml(baseInput)).not.toContain("Summer camp");
+  });
+
+  test("renders the camp block with weeks, price tease, and a UTM-stamped /camp link", () => {
+    const html = weeklyNewsletterHtml({
+      ...baseInput,
+      camps: [{ weekLabel: "June 29 – July 2, 2026" }, { weekLabel: "July 20 – July 23, 2026" }],
+    });
+    expect(html).toContain("Summer camp");
+    expect(html).toContain("ages 8+");
+    expect(html).toContain("June 29 – July 2, 2026");
+    expect(html).toContain("July 20 – July 23, 2026");
+    expect(html).toContain("From $170/week");
+    // campUrl is UTM-stamped by the cron (like scheduleUrl); the template
+    // renders whatever it's handed. Assert the passed-in link appears.
+    expect(html).toContain(`href="${ORIGIN}/camp"`);
+  });
+
+  test("no parent-facing copy uses the word 'crew'", () => {
+    const html = weeklyNewsletterHtml({
+      ...baseInput,
+      camps: [{ weekLabel: "June 29 – July 2, 2026" }],
+      openPolls: [
+        {
+          title: "Sat 4pm Bethesda — Green",
+          slug: "sat-4pm-green",
+          day: "Sat",
+          startTime: "4:00 PM",
+          endTime: "5:00 PM",
+          location: "Walter Johnson HS",
+          level: "Green",
+          minPartySize: 4,
+          yesCount: 2,
+        },
+      ],
+    });
+    // The /crew route still appears in hrefs; assert no visible "crew" word by
+    // checking the human copy phrases that used to carry it are gone.
+    expect(html).not.toContain("Forming crews");
+    expect(html).not.toContain("regular crew");
+    expect(html).not.toContain("Bring the crew");
+    expect(html).not.toContain("join a crew");
+    expect(html).not.toContain("lock the crew");
+  });
 });
 
 test.describe("weeklyNewsletterText", () => {
@@ -315,7 +365,7 @@ test.describe("weeklyNewsletterText", () => {
         },
       ],
     });
-    expect(text).toContain("Forming crews now:");
+    expect(text).toContain("Forming groups now:");
     expect(text).toContain("Sat 4pm Bethesda — Green");
     expect(text).toContain(`${ORIGIN}/poll/sat-4pm-green`);
     expect(text).toContain("None of those fit?");

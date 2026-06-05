@@ -75,6 +75,18 @@ export interface WeeklyNewsletterInput {
    * scheduleUrl/crewInterestUrl passed in are already UTM-stamped by the cron.
    */
   utmCampaign: string;
+  /**
+   * Upcoming summer-camp weeks (label only) for the dedicated camp block.
+   * Empty hides the block. Camp pricing is real (a concrete bookable product),
+   * so this block may quote it — unlike the teased drop-in price.
+   */
+  camps: { weekLabel: string }[];
+  /** UTM-stamped /camp link. */
+  campUrl: string;
+  /** Minimum camp age (8) — the day-camp runs older than the 6–16 academy range. */
+  campAgeMin: number;
+  /** Lowest camp-option price (USD) for the "from $X/week" tease. */
+  campPriceFromUsd: number;
 }
 
 /** Honest, scannable spots phrasing. Low counts get urgency; never faked. */
@@ -91,8 +103,8 @@ function pollTimeRange(p: NewsletterOpenPoll): string {
 
 function pollProgressLabel(p: NewsletterOpenPoll): string {
   const need = Math.max(0, p.minPartySize - p.yesCount);
-  if (need <= 0) return "Crew locked — Sam will text the WhatsApp group";
-  return `${p.yesCount} in · need ${need} more to lock the crew`;
+  if (need <= 0) return "Locked in — Sam will text the WhatsApp group";
+  return `${p.yesCount} in · need ${need} more to lock it in`;
 }
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
@@ -110,9 +122,14 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     referralUrl,
     origin,
     utmCampaign,
+    camps,
+    campUrl,
+    campAgeMin,
+    campPriceFromUsd,
   } = input;
   const hasSessions = sessions.length > 0;
   const hasSummer = summerSessions.length > 0;
+  const hasCamps = camps.length > 0;
   const hasPolls = openPolls.length > 0;
   const hasNews = news.length > 0;
   const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
@@ -167,10 +184,28 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     </div>`
     : "";
 
+  // Summer camp block — a distinct product from drop-in sessions (multi-day,
+  // flat weekly price). Camp pricing is real, so we quote a "from $X" tease and
+  // link to /camp for dates + booking. Hidden when no upcoming camp weeks.
+  const campBlock = hasCamps
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Summer camp</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Next Gen Summer Pickleball Camp &mdash; ages ${campAgeMin}+, full- or half-day, small groups in Gaithersburg. Real reps, real coaching, a ton of fun.</p>
+      ${camps
+        .map(
+          (w) => `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;">${escape(w.weekLabel)}</p>`,
+        )
+        .join("")}
+      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">From $${campPriceFromUsd}/week.</p>
+      <p style="margin:14px 0 0 0;"><a href="${campUrl}" style="${s.link}font-weight:700;text-decoration:none;">See camp dates &amp; book &rarr;</a></p>
+    </div>`
+    : "";
+
   const pollsBlock = hasPolls
     ? `
-    <h2 style="margin:32px 0 6px 0;font-family:Montserrat,Arial,sans-serif;font-size:18px;color:${c.text};">Forming crews now</h2>
-    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">Vote in the slots that work and Sam locks the crew when it hits the headcount.</p>
+    <h2 style="margin:32px 0 6px 0;font-family:Montserrat,Arial,sans-serif;font-size:18px;color:${c.text};">Forming groups now</h2>
+    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">Vote in the slots that work and Sam locks the group in when it hits the headcount.</p>
     ${openPolls
       .map(
         (p) => `<div style="${s.card}">
@@ -187,9 +222,9 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   // "tell us what you want" anchor when polls are open. Always render.
   const crewBlock = `
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">${hasPolls ? "None of these fit?" : "Want a regular crew?"}</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">${hasPolls ? "None of these fit?" : "Want a regular group?"}</p>
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">Tell us your kid&rsquo;s level and the days that work &mdash; Sam looks for 3 more kids who match and texts the WhatsApp link when the slot has takers.</p>
-      <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s crew &rarr;</a></p>
+      <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s group &rarr;</a></p>
     </div>`;
 
   // "From Coach Sam" lead block — rendered HTML from an Approved row in the
@@ -228,7 +263,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const privateBlock = `
     <div style="${s.card}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.muted};font-weight:700;">Brand new to a court?</p>
-      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">If your kid hasn&rsquo;t held a paddle yet, a private one-on-one with Coach Sam is the right first step &mdash; we&rsquo;ll get them rallying before they join a crew. Book a free evaluation to see where they fit.</p>
+      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">If your kid hasn&rsquo;t held a paddle yet, a private one-on-one with Coach Sam is the right first step &mdash; we&rsquo;ll get them rallying before they join a group. Book a free evaluation to see where they fit.</p>
       <p style="margin:0;"><a href="${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}" style="${s.link}font-weight:700;text-decoration:none;">Get a free evaluation &rarr;</a></p>
     </div>`;
 
@@ -239,7 +274,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const forwardBlock = referralUrl
     ? `
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring the crew</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring a friend</p>
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">Forward this email to one parent whose kid would love this. When they sign up through your link and play their first session, you both get <strong>50% off</strong> your next drop-in.</p>
       <p style="margin:0;color:${c.muted};font-size:12px;line-height:1.5;">Your forward link: <a href="${referralUrl}" style="${s.link}text-decoration:underline;">${escape(referralUrl)}</a></p>
     </div>`
@@ -259,11 +294,13 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   <div style="${s.wrapper}">
     <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Next Gen this week</p>
     <h1 style="${s.heading} margin:0 0 16px 0;">Where to play, ${escape(parentFirst)}.</h1>
-    <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">Short, useful, worth opening. Here&rsquo;s where to play this week, the crews forming now, and one thing to work on between sessions.</p>
+    <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions.</p>
 
     ${sessionBlock}
 
     ${summerBlock}
+
+    ${campBlock}
 
     ${pollsBlock}
 
@@ -310,11 +347,15 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     referralUrl,
     origin,
     utmCampaign,
+    camps,
+    campUrl,
+    campAgeMin,
+    campPriceFromUsd,
   } = input;
   const lines: string[] = [
     `Where to play, ${parentFirst}.`,
     "",
-    `Short, useful, worth opening. Here's where to play this week, the crews forming now, and one thing to work on between sessions.`,
+    `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
     "",
   ];
 
@@ -353,9 +394,21 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     lines.push("", `Sign up for summer: ${scheduleUrl}`, "");
   }
 
+  if (camps.length > 0) {
+    lines.push(
+      "Summer camp:",
+      `Next Gen Summer Pickleball Camp — ages ${campAgeMin}+, full- or half-day, small groups in Gaithersburg. From $${campPriceFromUsd}/week.`,
+      "",
+    );
+    for (const w of camps) {
+      lines.push(`  ${w.weekLabel}`);
+    }
+    lines.push("", `See camp dates & book: ${campUrl}`, "");
+  }
+
   if (openPolls.length > 0) {
-    lines.push("Forming crews now:");
-    lines.push("Vote in the slots that work and Sam locks the crew when it hits the headcount.");
+    lines.push("Forming groups now:");
+    lines.push("Vote in the slots that work and Sam locks the group in when it hits the headcount.");
     lines.push("");
     for (const p of openPolls) {
       lines.push(`- ${p.title}`);
@@ -372,8 +425,8 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   lines.push(
     openPolls.length > 0
       ? `None of those fit? Tell us your kid's level and the days that work — Sam looks for 3 more kids who match.`
-      : `Want a regular crew? Tell us your kid's level and the days that work — Sam looks for 3 more kids who match.`,
-    `Find your kid's crew: ${crewInterestUrl}`,
+      : `Want a regular group? Tell us your kid's level and the days that work — Sam looks for 3 more kids who match.`,
+    `Find your kid's group: ${crewInterestUrl}`,
     "",
     `Coach tip: ${tip.title}`,
     tip.body,
@@ -395,7 +448,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   }
 
   lines.push(
-    `Brand new to a court? A private one-on-one with Coach Sam gets your kid rallying before they join a crew.`,
+    `Brand new to a court? A private one-on-one with Coach Sam gets your kid rallying before they join a group.`,
     `Book a free evaluation: ${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}`,
     "",
   );
