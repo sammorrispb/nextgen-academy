@@ -76,25 +76,45 @@ export function buildPostEvalFollowupHtml(args: PostEvalEmailArgs): string {
 
   const isPrivateBridge = isPrivateBridgeLevel(args.level);
 
-  const sessionsList = args.sessionLines.length
+  // The upcoming-sessions list + price + Reserve CTA, rendered only when we
+  // actually have lines to show.
+  const reservableBlock = args.sessionLines.length
     ? `<ul style="font-size: 15px; line-height: 1.7; padding-left: 20px;">${args.sessionLines
         .map((line) => `<li>${escape(line)}</li>`)
         .join("")}</ul>
-  <p style="font-size: 15px; line-height: 1.6;">$20 per 1-hour slot.</p>`
-    : `<p style="font-size: 15px; line-height: 1.6;">New ${args.level} Ball sessions post regularly &mdash; reply to this email and I&rsquo;ll grab you the next open slot, or check the schedule for the latest.</p>`;
+  <p style="font-size: 15px; line-height: 1.6;">$20 per 1-hour slot.</p>
+  <p style="font-size: 15px; line-height: 1.6; margin: 16px 0;">
+    <a href="${site.website}/schedule" style="${s.cta}">Reserve a slot</a>
+  </p>`
+    : "";
 
-  const nextStepsBlock = isPrivateBridge
-    ? `
+  let nextStepsBlock: string;
+  if (isPrivateBridge) {
+    // Private lessons stay the primary recommendation, but if there's an
+    // explicitly all-levels session open to this level (the Tuesday court),
+    // surface it as a low-pressure group on-ramp.
+    const onRamp = args.sessionLines.length
+      ? `
+  <p style="font-size: 15px; line-height: 1.6; margin-top: 20px;"><strong style="color: ${c.muted};">Want to get started sooner?</strong></p>
+  <p style="font-size: 15px; line-height: 1.6;">${args.childFirstName} is also welcome at our all-levels Tuesday night &mdash; every level gets its own court, so they can jump in and play while we build toward group play. Upcoming:</p>
+  ${reservableBlock}`
+      : "";
+    nextStepsBlock = `
   <p style="font-size: 15px; line-height: 1.6;"><strong style="color: ${c.muted};">Where to go from here:</strong></p>
-  <p style="font-size: 15px; line-height: 1.6;">${args.childFirstName} isn&rsquo;t quite ready for group sessions yet &mdash; group play assumes a kid can already sustain a rally. The best path forward is a short run of <strong>private lessons</strong> to build the rally, footwork, and consistency. Most kids are group-ready inside 4&ndash;6 privates.</p>
-  <p style="font-size: 15px; line-height: 1.6;">I&rsquo;ll send a tailored private-lesson plan and rate within 24 hours &mdash; based on where you&rsquo;d like to play, how often, and whether siblings or friends want to join.</p>`
-    : `
-  <p style="font-size: 15px; line-height: 1.6;"><strong style="color: ${c.muted};">Where to go from here:</strong></p>
-  <p style="font-size: 15px; line-height: 1.6;">The best fit right now is a ${args.level} Ball drop-in slot. Our current upcoming sessions:</p>
-  ${sessionsList}
+  <p style="font-size: 15px; line-height: 1.6;">${args.childFirstName} isn&rsquo;t quite ready for full group play yet &mdash; that assumes a kid can already sustain a rally. The best path forward is a short run of <strong>private lessons</strong> to build the rally, footwork, and consistency. Most kids are group-ready inside 4&ndash;6 privates.</p>
+  <p style="font-size: 15px; line-height: 1.6;">I&rsquo;ll send a tailored private-lesson plan and rate within 24 hours &mdash; based on where you&rsquo;d like to play, how often, and whether siblings or friends want to join.</p>${onRamp}`;
+  } else {
+    const groupSessions = args.sessionLines.length
+      ? reservableBlock
+      : `<p style="font-size: 15px; line-height: 1.6;">New ${args.level} Ball sessions post regularly &mdash; reply to this email and I&rsquo;ll grab you the next open slot, or check the schedule for the latest.</p>
   <p style="font-size: 15px; line-height: 1.6; margin: 16px 0;">
     <a href="${site.website}/schedule" style="${s.cta}">Reserve a slot</a>
   </p>`;
+    nextStepsBlock = `
+  <p style="font-size: 15px; line-height: 1.6;"><strong style="color: ${c.muted};">Where to go from here:</strong></p>
+  <p style="font-size: 15px; line-height: 1.6;">The best fit right now is a ${args.level} Ball drop-in slot. Our current upcoming sessions:</p>
+  ${groupSessions}`;
+  }
 
   return `
 <div style="${s.wrapper}">

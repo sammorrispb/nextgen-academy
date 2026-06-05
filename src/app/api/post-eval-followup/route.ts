@@ -70,9 +70,16 @@ async function updatePlayer(
 async function fetchSessionLinesForLevel(level: Level): Promise<string[]> {
   try {
     const sessions = await fetchUpcomingSessions();
+    // Group levels (Green/Yellow) can attend their own level OR an unleveled
+    // general session. Private-bridge levels (Red/Orange) only see sessions
+    // explicitly opened to their level — the all-levels Tuesday court — and
+    // never unleveled weekend rows, which assume rally-ready group play.
+    const matches = isPrivateBridgeLevel(level)
+      ? (l: Level | null) => l === level
+      : (l: Level | null) => l === level || l === null;
     return sessions
       .filter((s) => s.status === "Open" && s.spotsLeft > 0)
-      .filter((s) => s.level === level || s.level === null)
+      .filter((s) => matches(s.level))
       .slice(0, MAX_SESSION_LINES)
       .map((s) =>
         formatSessionLine({
@@ -136,11 +143,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Group levels (Green/Yellow) get the live drop-in list; Red/Orange go to the
-  // private-lesson bridge and skip the session fetch entirely.
-  const sessionLines = isPrivateBridgeLevel(body.level)
-    ? []
-    : await fetchSessionLinesForLevel(body.level);
+  // Every level gets a live session lookup now. Green/Yellow see general
+  // sessions; Red/Orange see only sessions explicitly opened to their level
+  // (the all-levels Tuesday court), surfaced as a group on-ramp beneath the
+  // private-lesson recommendation.
+  const sessionLines = await fetchSessionLinesForLevel(body.level);
 
   const cfn = childFirstName(playerName);
   const html = buildPostEvalFollowupHtml({
