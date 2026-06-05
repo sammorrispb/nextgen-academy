@@ -54,12 +54,25 @@ test.describe("formatSessionLine", () => {
 
 test.describe("buildPostEvalFollowupHtml — private bridge (Red/Orange)", () => {
   for (const level of ["Red", "Orange"] as Level[]) {
-    test(`${level} routes to private lessons, no session list, no price`, () => {
+    test(`${level} with no open sessions: private lessons only, no price/CTA`, () => {
       const html = buildPostEvalFollowupHtml(args(level, []));
       expect(html).toContain("private lessons");
       expect(html).toContain("Private Lessons (pre-rally bridge)");
       expect(html).not.toContain("$20");
       expect(html).not.toContain("Reserve a slot");
+    });
+
+    test(`${level} with a Tuesday all-levels court: private PLUS group on-ramp`, () => {
+      const html = buildPostEvalFollowupHtml(
+        args(level, ["Tue, Jun 9 — Olney, MD · 6:00 PM"]),
+      );
+      // Private bridge stays the primary recommendation.
+      expect(html).toContain("private lessons");
+      // ...and the all-levels Tuesday session is surfaced as an on-ramp.
+      expect(html).toContain("Want to get started sooner?");
+      expect(html).toContain("all-levels Tuesday night");
+      expect(html).toContain("Tue, Jun 9 — Olney, MD · 6:00 PM");
+      expect(html).toContain("Reserve a slot");
     });
   }
 });
