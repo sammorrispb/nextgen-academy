@@ -17,7 +17,12 @@ export interface NgaSession {
   /** Broad area for location-hidden sessions (e.g. "Olney, MD"). Empty string
    * for normal sessions. Presence = location-hidden mode. */
   publicArea: string;
+  /** Pickleball courts currently *open* (capacity = courtCount × 4). Auto-opens
+   * the next court when the current ones fill, up to `maxCourts`. */
   courtCount: number;
+  /** Ceiling on open courts (= 2 × tennis courts booked; 1 tennis court splits
+   * into 2 pickleball courts). Defaults to courtCount when unset (no expand). */
+  maxCourts: number;
   capacity: number;
   registeredCount: number;
   spotsLeft: number;
@@ -122,6 +127,7 @@ export async function fetchUpcomingSessions(
   const sessions = data.results.map((page) => {
     const props = page.properties;
     const courtCount = readNumber(props["Court count"]) || 1;
+    const maxCourts = Math.max(readNumber(props["Max courts"]), courtCount);
     const capacity = readFormulaNumber(props["Capacity"]) || courtCount * 4;
     const registeredCount = readNumber(props["Registered count"]);
     const status =
@@ -137,6 +143,7 @@ export async function fetchUpcomingSessions(
       location: readPlainText(props["Location"]),
       publicArea: readPlainText(props["Public Area"]),
       courtCount,
+      maxCourts,
       capacity,
       registeredCount,
       spotsLeft: Math.max(0, capacity - registeredCount),
@@ -235,6 +242,7 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
   const page = (await res.json()) as { id: string; properties: any };
   const props = page.properties;
   const courtCount = readNumber(props["Court count"]) || 1;
+  const maxCourts = Math.max(readNumber(props["Max courts"]), courtCount);
   const capacity = readFormulaNumber(props["Capacity"]) || courtCount * 4;
   const registeredCount = readNumber(props["Registered count"]);
   const status =
@@ -281,6 +289,7 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
     location: readPlainText(props["Location"]),
     publicArea: readPlainText(props["Public Area"]),
     courtCount,
+    maxCourts,
     capacity,
     registeredCount,
     spotsLeft: Math.max(0, capacity - registeredCount),
@@ -478,8 +487,18 @@ export async function incrementSessionRegistered(
   if (!session) return null;
 
   const newCount = session.registeredCount + by;
+
+  // Auto-expand: when registrations fill the open courts, open the next court
+  // (each adds 4 spots) up to maxCourts — so a session "soft-launches" at 4 and
+  // grows to its ceiling instead of dead-ending at "Full". One tennis court =
+  // 2 pickleball courts, so a 1-court booking expands 4 → 8.
+  let newCourtCount = session.courtCount;
+  while (newCount >= newCourtCount * 4 && newCourtCount < session.maxCourts) {
+    newCourtCount += 1;
+  }
+  const newCapacity = newCourtCount * 4;
   const newStatus: NgaSession["status"] =
-    newCount >= session.capacity ? "Full" : session.status;
+    newCount >= newCapacity ? "Full" : session.status;
 
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return null;
@@ -494,6 +513,9 @@ export async function incrementSessionRegistered(
     body: JSON.stringify({
       properties: {
         "Registered count": { number: newCount },
+        // Bump Court count when we open a court — the Notion Capacity formula
+        // (Court count × 4) recomputes off this.
+        "Court count": { number: newCourtCount },
         Status: { select: { name: newStatus } },
       },
     }),
@@ -508,8 +530,10 @@ export async function incrementSessionRegistered(
   }
   return {
     ...session,
+    courtCount: newCourtCount,
+    capacity: newCapacity,
     registeredCount: newCount,
-    spotsLeft: Math.max(0, session.capacity - newCount),
+    spotsLeft: Math.max(0, newCapacity - newCount),
     status: newStatus,
   };
 }
