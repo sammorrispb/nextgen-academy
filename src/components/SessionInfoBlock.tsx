@@ -53,6 +53,13 @@ export default function SessionInfoBlock({ session }: Props) {
           Each pickleball court is capped at 4 players. Courts × 4 = total
           spots.
         </p>
+        {session.status !== "Cancelled" &&
+          session.courtCount < session.maxCourts && (
+            <p className="text-xs text-ngpa-teal-bright mt-1">
+              These spots fill first — more open (up to {session.maxCourts * 4})
+              the moment they do.
+            </p>
+          )}
       </div>
 
       <RosterBlock session={session} />
