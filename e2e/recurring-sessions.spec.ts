@@ -42,7 +42,7 @@ test.describe("upcomingTuesdays", () => {
 });
 
 test.describe("buildTuesdayRowProps", () => {
-  test("builds a hidden-location Olney 6–7 PM row for the given level", () => {
+  test("builds an Olney 6–7 PM row (with broad-area fallback) for the given level", () => {
     const props = buildTuesdayRowProps("2026-06-30", "Red");
     expect(props.Session.title[0].text.content).toBe(`${TUESDAY_TITLE_BASE} — Red`);
     expect(props.Level.select.name).toBe("Red");

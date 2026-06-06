@@ -126,11 +126,11 @@ async function emailParent(
   const sessionEnd = metaString(m, "session_end");
   const sessionExact = metaString(m, "session_location");
   const sessionPublicArea = metaString(m, "session_public_area");
-  const locationHidden = metaString(m, "location_hidden") === "true";
-  // Hidden sessions: confirmation shows the broad area; the exact venue is sent
-  // separately by the 24h reveal cron. Never put the exact address (or a maps
-  // link / ICS location derived from it) in this email.
-  const sessionLocation = locationHidden ? sessionPublicArea : sessionExact;
+  // Locations are public (hidden-location retired 2026-06-05). Force false even
+  // for in-flight checkouts created before the change. Show the exact venue,
+  // falling back to the broad area only if the exact venue isn't filled in yet.
+  const locationHidden = false;
+  const sessionLocation = sessionExact || sessionPublicArea;
 
   const slug =
     sessionTitle && sessionDate
@@ -310,7 +310,8 @@ export async function POST(req: NextRequest) {
     sessionStartTime: metaString(m, "session_start"),
     location: metaString(m, "session_location"),
     publicArea: metaString(m, "session_public_area"),
-    locationHidden: metaString(m, "location_hidden") === "true",
+    locationHidden: false, // hidden-location retired 2026-06-05 — venues are public
+
     level: null, // Notion session row's level isn't carried in metadata; admin can fill if needed.
     amountPaidUsd: (session.amount_total ?? 0) / 100,
     stripeCheckoutSessionId: session.id,
@@ -530,8 +531,8 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
   await Promise.allSettled([
     emailCampAdmin(session),
     emailCampParent(session),
-    // Land the camper in the Player CRM (keyed on family). Location = public
-    // area only; the exact venue stays hidden.
+    // Land the camper in the Player CRM (keyed on family). Record the exact
+    // venue when present, falling back to the broad area.
     syncPlayerFromDropIn({
       parentName,
       parentEmail,
@@ -539,7 +540,7 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
       childFirstName: childFirst,
       childBirthYear,
       sessionDate: campStart,
-      location: publicArea,
+      location: metaString(m, "session_location") || publicArea,
     }),
     ingestToOpenBrain({
       business: "nga",

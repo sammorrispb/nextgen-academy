@@ -94,10 +94,9 @@ async function sendOne(
     ? `${SITE_ORIGIN}/schedule/${slug}`
     : `${SITE_ORIGIN}/schedule`;
 
-  // The reminder fires ~29h out — BEFORE the 24h reveal cron — so a hidden
-  // session must show only the broad area here. The exact venue goes out in
-  // the separate reveal email.
-  const displayLocation = row.locationHidden ? row.publicArea : row.location;
+  // Locations are public (hidden-location retired 2026-06-05). Show the exact
+  // venue, falling back to the broad area only if it isn't filled in yet.
+  const displayLocation = row.location || row.publicArea;
 
   // Re-mint the same signed cancel URL the booking confirmation carried, so
   // the parent self-serve cancel flow works from the reminder too.
@@ -129,7 +128,7 @@ async function sendOne(
       sessionDateLong,
       sessionStart: row.sessionStartTime,
       sessionLocation: displayLocation,
-      locationHidden: row.locationHidden,
+      locationHidden: false,
       detailUrl,
       cancelUrl,
     });
@@ -140,7 +139,7 @@ async function sendOne(
       sessionDateLong,
       sessionStart: row.sessionStartTime,
       sessionLocation: displayLocation,
-      locationHidden: row.locationHidden,
+      locationHidden: false,
       detailUrl,
       cancelUrl,
     });

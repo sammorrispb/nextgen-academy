@@ -1,9 +1,5 @@
 import type { NgaSession } from "@/lib/notion-sessions";
-import {
-  isLocationHidden,
-  publicLocation,
-  HIDDEN_LOCATION_NOTE,
-} from "@/lib/session-location";
+import { publicLocation } from "@/lib/session-location";
 
 export function socialProofLine(session: NgaSession): string | null {
   const s = session.ageStats;
@@ -22,10 +18,9 @@ interface Props {
 }
 
 export default function SessionInfoBlock({ session }: Props) {
-  const hidden = isLocationHidden(session.publicArea);
-  // For hidden sessions, the map query/embed/directions would all leak the
-  // exact venue — so they're only built (and rendered) for normal sessions.
-  const query = encodeURIComponent(session.location);
+  // Show the exact venue; fall back to the broad area if it's not filled yet.
+  const locationLabel = publicLocation(session.location, session.publicArea);
+  const query = encodeURIComponent(locationLabel);
   const embedSrc = `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
   const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
 
@@ -111,50 +106,40 @@ export default function SessionInfoBlock({ session }: Props) {
           Location
         </p>
         <p className="text-sm text-ngpa-white/85 mb-3">
-          {publicLocation(session.location, session.publicArea)}
+          {locationLabel}
         </p>
-        {hidden ? (
-          <div className="rounded-xl border border-ngpa-teal/30 bg-ngpa-deep/60 p-4">
-            <p className="text-sm text-ngpa-white/85 leading-relaxed">
-              {HIDDEN_LOCATION_NOTE}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="rounded-xl overflow-hidden border border-ngpa-slate/60 bg-ngpa-deep">
-              <iframe
-                src={embedSrc}
-                title={`Map of ${session.location}`}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="w-full h-56 sm:h-64 block"
-              />
-            </div>
-            <a
-              href={directionsHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-ngpa-teal hover:text-ngpa-teal-bright transition-colors min-h-[44px]"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                />
-              </svg>
-              Open in Google Maps for directions
-              <span aria-hidden="true">→</span>
-            </a>
-          </>
-        )}
+        <div className="rounded-xl overflow-hidden border border-ngpa-slate/60 bg-ngpa-deep">
+          <iframe
+            src={embedSrc}
+            title={`Map of ${locationLabel}`}
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="w-full h-56 sm:h-64 block"
+          />
+        </div>
+        <a
+          href={directionsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-ngpa-teal hover:text-ngpa-teal-bright transition-colors min-h-[44px]"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+            />
+          </svg>
+          Open in Google Maps for directions
+          <span aria-hidden="true">→</span>
+        </a>
       </div>
     </div>
   );
