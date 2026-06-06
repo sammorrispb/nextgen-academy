@@ -18,9 +18,35 @@ export interface VenueParking {
   draft?: boolean;
 }
 
+// Keys are matched as substrings of the Notion Location string (lowercased).
+// Ridgeview MS pending — satellite view not yet captured.
 const PARKING_TIPS: Record<string, VenueParking> = {
+  // ── High schools (active rotation) ──
+  gaithersburg: {
+    tip: "Enter off Education Blvd and park in the large main lot — the tennis courts (8) sit at the west edge of the lot by the stadium field, a short walk from your car. This is also where summer camp meets.",
+  },
+  "walter johnson": {
+    tip: "From Rockledge Dr, pull into the main school lot — the tennis courts are on the east side by the softball field, a short walk across the lot. Skip the West Parking Garage and medical lots across Rockledge Dr; those aren't the school's.",
+  },
+  sherwood: {
+    tip: "Closest parking is the lot just north of the tennis courts (lower-center of the campus) — the courts are right at its edge. Enter off Olney–Sandy Spring Rd; if that lot's full, the front lots are a 3–4 minute walk.",
+  },
+
+  // ── Middle schools (candidates — satellite-derived, confirm on first visit) ──
   westland: {
     tip: "Park in the main Westland MS lot off the school entrance (Massachusetts Ave side). The tennis courts are at the north end of the campus near Westbard Ave — about a 3–5 minute walk past the baseball and soccer fields, so give yourself a few extra minutes.",
+    draft: true,
+  },
+  redland: {
+    tip: "Park in the main lot off Muncaster Mill Rd at the front of the school. The tennis courts (4) are behind the building at the north end by the track — head around the building to reach them, about a 3–4 minute walk.",
+    draft: true,
+  },
+  frost: {
+    tip: "Park in the front entrance loop or the lot off Scott Dr. The tennis courts sit just northwest of the main entrance — a short 1–2 minute walk. Heads up: the campus is shared with the Maryland School for Jewish Education.",
+    draft: true,
+  },
+  sligo: {
+    tip: "Enter off Dennis Ave and park in the school lot. The tennis courts (4) are at the northeast corner of the campus near the Sligo Creek Trail — walk toward the back-right of the building, about 3–4 minutes.",
     draft: true,
   },
 };
