@@ -5,8 +5,7 @@ export interface Season {
 
 export const seasons: Season[] = [
   { label: "Spring 2026", dates: "April 11 – June 15" },
-  { label: "Summer 2026", dates: "June 18 – August 15" },
-  { label: "Late Spring 2026", dates: "May 23 – June (rolling)" },
+  { label: "Summer 2026", dates: "June – July 2026" },
 ];
 
 /**
