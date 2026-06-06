@@ -1,5 +1,6 @@
 import type { NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
+import { getParkingTip } from "@/data/venue-parking";
 
 export function socialProofLine(session: NgaSession): string | null {
   const s = session.ageStats;
@@ -21,8 +22,11 @@ export default function SessionInfoBlock({ session }: Props) {
   // Show the exact venue; fall back to the broad area if it's not filled yet.
   const locationLabel = publicLocation(session.location, session.publicArea);
   const query = encodeURIComponent(locationLabel);
-  const embedSrc = `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  // t=h = hybrid (satellite imagery + street labels), best for spotting the lot
+  // and the walk to the courts. z=18 frames the campus.
+  const embedSrc = `https://maps.google.com/maps?q=${query}&t=h&z=18&ie=UTF8&iwloc=&output=embed`;
   const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+  const parking = getParkingTip(session.location ?? session.publicArea);
 
   const seatsText =
     session.status === "Cancelled"
@@ -140,6 +144,17 @@ export default function SessionInfoBlock({ session }: Props) {
           Open in Google Maps for directions
           <span aria-hidden="true">→</span>
         </a>
+
+        {parking && (
+          <div className="mt-4 rounded-xl border border-ngpa-teal/30 bg-ngpa-teal/10 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal-bright mb-1.5">
+              Parking
+            </p>
+            <p className="text-sm text-ngpa-white/85 leading-relaxed">
+              {parking.tip}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
