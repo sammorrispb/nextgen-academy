@@ -1,32 +1,23 @@
 /**
- * Hidden-location sessions (e.g. the Tuesday Olney evenings): the exact venue
- * is withheld from every public surface and from pre-reveal emails, then sent
- * to confirmed registrants ~24h before start by the reveal-location cron.
+ * Session location display.
  *
- * The single source of truth for "is this session location-hidden" is the
- * presence of a `Public Area` value on the Notion session row. When set, every
- * public render + pre-reveal email shows the broad area ("Olney, MD") and never
- * the exact `Location`. These helpers are pure so they're trivially testable and
- * reused identically across web, email, and the cron — one logic path, no drift.
+ * The exact venue is shown on every public surface. If a row hasn't had its
+ * exact `Location` filled in yet (e.g. a freshly seeded recurring Tuesday), we
+ * fall back to the broad `Public Area` label ("Olney, MD") so the surface shows
+ * the area rather than nothing.
+ *
+ * The former hide-the-venue-until-24h-before policy was retired 2026-06-05 —
+ * youth-session locations are now public, same as L&D. Pure so it's trivially
+ * testable and reused identically across web, email, and cron.
  */
 
-/** True when the session withholds its exact venue (a non-empty public area). */
-export function isLocationHidden(publicArea: string | null | undefined): boolean {
-  return !!(publicArea && publicArea.trim());
-}
-
 /**
- * What to display as the location RIGHT NOW on a public/pre-reveal surface.
- * Hidden → the broad area; otherwise → the exact location. Never returns the
- * exact venue for a hidden session.
+ * The location to display publicly: the exact venue when set, otherwise the
+ * broad area as a fallback, otherwise an empty string.
  */
 export function publicLocation(
   location: string,
   publicArea: string | null | undefined,
 ): string {
-  return isLocationHidden(publicArea) ? publicArea!.trim() : location;
+  return location?.trim() || publicArea?.trim() || "";
 }
-
-/** Standard parent-facing line explaining the withheld venue. */
-export const HIDDEN_LOCATION_NOTE =
-  "Exact location is sent to registered families 24 hours before start.";
