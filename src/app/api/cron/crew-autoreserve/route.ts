@@ -192,7 +192,7 @@ async function processOne(
       sessionStartTime: next.startTime,
       location: next.location,
       publicArea: next.publicArea,
-      locationHidden: !!(next.publicArea && next.publicArea.trim()),
+      locationHidden: false, // hidden-location retired 2026-06-05 — venues are public
       level: next.level,
       amountPaidUsd: CHARGE_AMOUNT_CENTS / 100,
       stripeCheckoutSessionId: checkoutSessionId,
