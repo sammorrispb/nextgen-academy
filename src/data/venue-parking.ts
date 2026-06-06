@@ -19,7 +19,6 @@ export interface VenueParking {
 }
 
 // Keys are matched as substrings of the Notion Location string (lowercased).
-// Ridgeview MS pending — satellite view not yet captured.
 const PARKING_TIPS: Record<string, VenueParking> = {
   // ── High schools (active rotation) ──
   gaithersburg: {
@@ -47,6 +46,10 @@ const PARKING_TIPS: Record<string, VenueParking> = {
   },
   sligo: {
     tip: "Enter off Dennis Ave and park in the school lot. The tennis courts (4) are at the northeast corner of the campus near the Sligo Creek Trail — walk toward the back-right of the building, about 3–4 minutes.",
+    draft: true,
+  },
+  ridgeview: {
+    tip: "Park in the main lot off Raven Rock Dr on the southeast side of the school. The 2 tennis courts are at the north end of the campus by the ball fields — a 4–5 minute walk around the building, so arrive a few minutes early.",
     draft: true,
   },
 };
