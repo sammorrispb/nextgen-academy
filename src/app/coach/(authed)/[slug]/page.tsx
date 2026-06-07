@@ -13,6 +13,11 @@ export const dynamic = "force-dynamic";
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
+// How far back the coach can reach a finished session to record attendance.
+// The post-session "check them in" email lands the morning after, and Sam may
+// be a day or two late — so look back well past a single day.
+const CHECKIN_LOOKBACK_DAYS = 14;
+
 function formatLongDate(date: string): string {
   if (!date) return "";
   const d = new Date(`${date}T12:00:00Z`);
@@ -42,12 +47,18 @@ export default async function CoachSessionPage({ params }: PageProps) {
   const { slug } = await params;
 
   const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - CHECKIN_LOOKBACK_DAYS);
   const end = new Date(now);
   end.setDate(end.getDate() + 60);
 
   const [sessions, drops] = await Promise.all([
-    fetchUpcomingSessions(now),
-    fetchUpcomingDropIns(isoDate(now), isoDate(end)),
+    fetchUpcomingSessions(now, {
+      lookbackDays: CHECKIN_LOOKBACK_DAYS,
+      includeTerminal: true,
+      includeEnded: true,
+    }),
+    fetchUpcomingDropIns(isoDate(start), isoDate(end)),
   ]);
 
   const session = findSessionBySlug(sessions, slug);
