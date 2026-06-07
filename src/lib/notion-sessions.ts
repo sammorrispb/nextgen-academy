@@ -77,17 +77,49 @@ function readFormulaNumber(prop: any): number {
   return 0;
 }
 
+export interface FetchSessionsOptions {
+  /**
+   * Days *before* `now` to also include. The public schedule uses 0 (upcoming
+   * only); the coach check-in surfaces use a window so a session that just
+   * ended is still reachable to record attendance — otherwise the post-session
+   * "check them in" link 404s the moment the slot is over.
+   */
+  lookbackDays?: number;
+  /** Keep Completed/Passed rows. Public schedule hides them; coach needs them. */
+  includeTerminal?: boolean;
+  /** Keep sessions whose ET end time has already passed (same coach need). */
+  includeEnded?: boolean;
+}
+
 export async function fetchUpcomingSessions(
   now: Date = new Date(),
+  opts: FetchSessionsOptions = {},
 ): Promise<NgaSession[]> {
+  const { lookbackDays = 0, includeTerminal = false, includeEnded = false } =
+    opts;
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_SESSIONS_DB_ID;
   if (!notionKey || !dbId) return [];
 
-  const today = isoDate(now);
+  const start = new Date(now);
+  start.setDate(start.getDate() - lookbackDays);
+  const startIso = isoDate(start);
   const end = new Date(now);
   end.setDate(end.getDate() + REGISTRATION_WINDOW_DAYS);
   const endIso = isoDate(end);
+
+  // Always hide Cancelled; only hide the terminal Completed/Passed for the
+  // public schedule. The coach check-in view passes includeTerminal so a slot
+  // the mark-passed cron has already flipped to Completed stays in the list.
+  const statusFilters: object[] = [
+    { property: "Status", select: { does_not_equal: "Cancelled" } },
+  ];
+  if (!includeTerminal) {
+    statusFilters.push(
+      { property: "Status", select: { does_not_equal: "Completed" } },
+      { property: "Status", select: { does_not_equal: "Passed" } },
+    );
+  }
 
   const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
     method: "POST",
@@ -99,11 +131,9 @@ export async function fetchUpcomingSessions(
     body: JSON.stringify({
       filter: {
         and: [
-          { property: "Date", date: { on_or_after: today } },
+          { property: "Date", date: { on_or_after: startIso } },
           { property: "Date", date: { on_or_before: endIso } },
-          { property: "Status", select: { does_not_equal: "Cancelled" } },
-          { property: "Status", select: { does_not_equal: "Completed" } },
-          { property: "Status", select: { does_not_equal: "Passed" } },
+          ...statusFilters,
         ],
       },
       sorts: [{ property: "Date", direction: "ascending" }],
@@ -158,7 +188,7 @@ export async function fetchUpcomingSessions(
   // group by (date, start time) and attach to sessions. Failures here just
   // leave roster empty — never block the schedule render.
   try {
-    const drops = await fetchUpcomingDropIns(today, endIso, { revalidate: 300 });
+    const drops = await fetchUpcomingDropIns(startIso, endIso, { revalidate: 300 });
     const namesByKey = new Map<string, string[]>();
     const agesByKey = new Map<string, number[]>();
     for (const d of drops) {
@@ -190,6 +220,9 @@ export async function fetchUpcomingSessions(
   // Drop sessions whose end time has already passed in ET — the Status flip to
   // Completed/Passed is async (hourly cron), so filter at read time too so a
   // finished slot disappears the moment it ends, not on the next cron tick.
+  // The coach check-in view opts out (includeEnded) so attendance can still be
+  // recorded after a session ends.
+  if (includeEnded) return sessions;
   return sessions.filter((s) => !isSessionEnded(s.date, s.endTime, now));
 }
 
