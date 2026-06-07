@@ -137,7 +137,7 @@ the emoji + hashtag rules above.
 >
 > Better than yesterday — together.
 >
-> #MontgomeryCountyMD #YouthPickleball #[CityMD]
+> #MoCo #YouthPickleball #[CityMD] #DMV
 
 ### 2. Dated session-fill (Reel — Bethesda example)
 
@@ -155,7 +155,7 @@ the emoji + hashtag rules above.
 >
 > Better than yesterday — together.
 >
-> #[City]MD #MontgomeryCountyMD #YouthPickleball
+> #[City]MD #MoCo #YouthPickleball
 
 ### 3. Student win / milestone
 
@@ -169,7 +169,7 @@ the emoji + hashtag rules above.
 >
 > Better than yesterday — together.
 >
-> #MontgomeryCountyMD #YouthPickleball #JuniorPickleball
+> #MoCo #YouthPickleball #JuniorPickleball #DMV
 
 ### 4. Coach tip (value post)
 
@@ -183,7 +183,7 @@ the emoji + hashtag rules above.
 >
 > Better than yesterday — together.
 >
-> #YouthPickleball #PickleballTips #MontgomeryCountyMD
+> #YouthPickleball #PickleballTips #MoCo #DMV
 
 ### 5. TikTok — free evaluation (keyword-first)
 
@@ -199,7 +199,7 @@ the emoji + hashtag rules above.
 >
 > Better than yesterday — together.
 >
-> #YouthPickleball #MontgomeryCountyMD #PickleballKids
+> #YouthPickleball #MoCo #PickleballKids #DMV
 
 ---
 
@@ -225,9 +225,10 @@ keyword in the line.
 Build the set from these. **FB: pick 1–3. IG: pick 3–5.** Lead local, then
 sport. Drop anything that wouldn't help a real parent find the post.
 
-**Local (Montgomery County):**
-`#MontgomeryCountyMD` `#MoCo` `#BethesdaMD` `#OlneyMD` `#RockvilleMD`
-`#SilverSpringMD` `#GaithersburgMD` `#PotomacMD`
+**Local (Montgomery County / DMV):** lead with `#MoCo` and `#DMV` — use these
+as the regional default, **not** `#MontgomeryCountyMD` (too long, lower reach).
+`#MoCo` `#DMV` `#BethesdaMD` `#OlneyMD` `#RockvilleMD` `#SilverSpringMD`
+`#GaithersburgMD` `#PotomacMD`
 
 **Sport / niche:**
 `#YouthPickleball` `#JuniorPickleball` `#PickleballKids` `#MarylandPickleball`
