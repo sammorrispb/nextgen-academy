@@ -13,7 +13,7 @@ moves the item to the **Done log** below.
 - **Size**: S (≤200 LOC diff) / M (200–400 LOC) / L (400+ — agent must split before claiming)
 
 ## Hard rules for any work on this repo
-- Never reference Dill Dinkers, CourtReserve, linkanddink.com, or The Hub. NGA has relocated off DD facilities — no DD/CR cross-links anywhere.
+- Never reference Dill Dinkers, CourtReserve, or The Hub. NGA has relocated off DD facilities — no DD/CR cross-links anywhere. (`linkanddink.com` is a Sam Morris family brand, referenced in JSON-LD `sameAs` — family cross-links are allowed.)
 - Never push to main directly — always PR.
 - Never auto-merge.
 - Each city page must have unique substance — coach POV per location, hand-written. No template duplication.
