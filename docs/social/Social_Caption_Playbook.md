@@ -1,8 +1,9 @@
-# Social Caption Playbook (Instagram + Facebook)
+# Social Caption Playbook (Instagram + Facebook + TikTok)
 
 Reusable caption system for **Next Gen Pickleball Academy** on Instagram
-(`@nextgenpickleballacademy`) and Facebook. Goal: post-ready, on-brand captions
-in under five minutes that read like a human coach wrote them — never like AI.
+(`@nextgenpickleballacademy`), Facebook, and TikTok. Goal: post-ready, on-brand
+captions in under five minutes that read like a human coach wrote them — never
+like AI.
 
 **Source of truth:** `BRAND_GUIDELINES.md` (COPYWRITING GUARDRAILS) and
 `src/data/site.ts` (handles, tagline, boilerplate). If anything here ever
@@ -36,12 +37,31 @@ Write the keyword into the sentence first; add hashtags second.
   reach. Never exceed 3 on FB.
 - **Instagram: 3–5.** Light and relevant. The old "stuff 11–30 tags" advice is
   dead.
-- Both: prefer **local/community** tags (`#BethesdaMD`) over broad ones
+- **TikTok: 3–5.** Niche tags outperform broad ones; too many sends mixed
+  signals to the algorithm.
+- All three: prefer **local/community** tags (`#BethesdaMD`) over broad ones
   (`#sports`, `#love`). Skip any tag that wouldn't help a real person find or
   understand the video.
 
 **Alignment.** Caption, hashtags, and cover frame should describe the same
 thing — a cohesive signal to the algorithm about who should see it.
+
+### TikTok is a search engine — treat the caption like SEO
+
+TikTok ranks on keyword match across the caption, on-screen text, and the
+spoken audio, not just hashtags. So on TikTok specifically:
+
+- **Lead the caption with the literal topic keyword**, not a teaser or a
+  question — e.g. "Youth pickleball evaluation in Montgomery County" before any
+  flourish. Only the first ~100–150 characters show before the "more" fold, so
+  the keyword has to be in sentence one.
+- **Put the keyword on-screen in the first 2–3 seconds.** TikTok's OCR reads
+  text overlays — a title card like "Free youth pickleball evaluation · MoCo"
+  is a ranking signal the caption can't replace.
+- **Say the keyword out loud in the first ~5 seconds** of the video. The
+  speech layer is indexed too.
+- Keep the caption short (150–300 chars is plenty); the video does the work.
+- Hashtags: 3–5 niche/local, same banks below.
 
 ---
 
@@ -165,6 +185,22 @@ the emoji + hashtag rules above.
 >
 > #YouthPickleball #PickleballTips #MontgomeryCountyMD
 
+### 5. TikTok — free evaluation (keyword-first)
+
+> Keyword leads the line; pair with an on-screen title card carrying the same
+> phrase in the first 2–3 seconds, and say it out loud early in the video.
+
+> Youth pickleball evaluation in Montgomery County — free for ages 6–16.
+>
+> We meet your player, see where they land on the Red → Yellow pathway, and map
+> what's next. No pressure, no commitment.
+>
+> Book a free evaluation — link in bio.
+>
+> Better than yesterday — together.
+>
+> #YouthPickleball #MontgomeryCountyMD #PickleballKids
+
 ---
 
 ## Hook bank
@@ -205,8 +241,9 @@ sport. Drop anything that wouldn't help a real parent find the post.
 ## Pre-post checklist
 
 - [ ] Hook lands in the first line, with the core keyword in it.
+- [ ] TikTok only: keyword is on-screen (first 2–3s) and spoken early; caption leads with the literal topic, not a teaser.
 - [ ] Emoji: 1–3, functional only, none from the wrong sport, none replacing a word.
-- [ ] Hashtags: **≤3 on Facebook**, 3–5 on Instagram, local-first.
+- [ ] Hashtags: **≤3 on Facebook**, 3–5 on Instagram, 3–5 on TikTok, local-first.
 - [ ] One primary CTA, matching the post type (eval vs. save-your-spot).
 - [ ] Bio link points where the CTA says.
 - [ ] No hard prices quoted.
