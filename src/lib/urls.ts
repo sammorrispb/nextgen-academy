@@ -4,7 +4,10 @@ const UTM_SOURCE = "nga";
 export function getRefSource(pathname?: string | null): string {
   if (!pathname) return DEFAULT_REF;
   if (pathname.startsWith("/yellowball")) return "nga_yellowball";
+  // `/leagues` is checked before `/league` so the plural keeps its own ref; a
+  // `/league` path doesn't match `/leagues` (no trailing "s") and falls through.
   if (pathname.startsWith("/leagues")) return "nga_leagues";
+  if (pathname.startsWith("/league")) return "nga_league";
   return DEFAULT_REF;
 }
 

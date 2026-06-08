@@ -285,6 +285,13 @@ export async function POST(req: NextRequest) {
     return handleCampCheckout(session);
   }
 
+  // League season enrollments are a separate product from the $20 drop-in. They
+  // carry kind=league metadata and run their own confirmation + CRM/OB sync —
+  // they do NOT touch the drop-in Notion roster or the drop-in comms crons.
+  if (metaString(session.metadata ?? {}, "kind") === "league") {
+    return handleLeagueCheckout(session);
+  }
+
   // Idempotency — Stripe retries webhook delivery.
   const already = await findDropInByCheckoutId(session.id);
   if (already) {
@@ -565,6 +572,150 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
   ]);
 
   return NextResponse.json({ received: true, camp: true });
+}
+
+async function emailLeagueAdmin(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const birthYear = Number(metaString(m, "child_birth_year")) || 0;
+  const age = birthYear ? `${new Date().getFullYear() - birthYear}` : "?";
+
+  const subject = `New LEAGUE enroll: ${metaString(m, "child_first_name")} — ${metaString(m, "season_title")}`;
+  const lines = [
+    `Season: ${metaString(m, "season_title")} — ${metaString(m, "season_label")}`,
+    `Division: ${metaString(m, "season_band_label")}`,
+    `Option: ${metaString(m, "option_label")}`,
+    "",
+    `Parent: ${metaString(m, "parent_name")}`,
+    `Email: ${payerEmail(session) || metaString(m, "parent_email")}`,
+    `Phone: ${metaString(m, "parent_phone")}`,
+    `Player: ${metaString(m, "child_first_name")} (age ${age})`,
+    `Emergency: ${metaString(m, "emergency_name")} · ${metaString(m, "emergency_phone")}`,
+    `Allergies/medical: ${metaString(m, "allergies") || "none listed"}`,
+    "",
+    `Paid: $${amount}`,
+    `Stripe: ${session.id}`,
+  ];
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_NOTIFY,
+    subject,
+    text: lines.join("\n"),
+  });
+  if (error) console.error("[stripe-webhook] league admin email rejected", error);
+}
+
+async function emailLeagueParent(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = payerEmail(session);
+  if (!apiKey) return;
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
+
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const parentFirst = metaString(m, "parent_name").split(/\s+/)[0] || "there";
+  const childFirst = metaString(m, "child_first_name") || "your player";
+  const seasonTitle = metaString(m, "season_title");
+  const seasonLabel = metaString(m, "season_label");
+  const bandLabel = metaString(m, "season_band_label");
+
+  const subject = `You're enrolled — ${seasonTitle}`;
+  const text = [
+    `Hi ${parentFirst},`,
+    "",
+    `${childFirst} is enrolled for the Next Gen league season!`,
+    "",
+    `${seasonTitle}`,
+    `${seasonLabel} · ${bandLabel} division — 8 sessions across 9–10 weeks`,
+    `Location: Montgomery County, MD — we'll email the exact site before the season starts.`,
+    "",
+    `Paid: $${amount}.`,
+    "",
+    `What to bring each session:`,
+    `- Refillable water bottle`,
+    `- Court shoes (no flat-soled sneakers)`,
+    `- Protective eyewear (required, every player, every session)`,
+    `- A paddle if you have one — we have loaners.`,
+    "",
+    `Season terms: $25 is retained if you cancel with at least 10 business days' notice; under 10 days the season fee is non-refundable. We schedule 8 sessions across 9–10 weeks so weather make-ups are built in.`,
+    "",
+    `Questions? Just reply to this email or text Coach Sam at 301-325-4731.`,
+    "",
+    `See you on the court — better than yesterday, together.`,
+    `Coach Sam · Next Gen Pickleball Academy`,
+  ].join("\n");
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    bcc: ADMIN_EMAIL,
+    replyTo: REPLY_TO,
+    subject,
+    text,
+  });
+  if (error) console.error("[stripe-webhook] league parent email rejected", error);
+}
+
+async function handleLeagueCheckout(session: Stripe.Checkout.Session) {
+  const m = session.metadata ?? {};
+  const parentName = metaString(m, "parent_name");
+  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
+  const parentPhone = metaString(m, "parent_phone");
+  const childFirst = metaString(m, "child_first_name");
+  const childBirthYear = Number(metaString(m, "child_birth_year")) || 0;
+  const seasonTitle = metaString(m, "season_title");
+  const seasonLabel = metaString(m, "season_label");
+  const bandLabel = metaString(m, "season_band_label");
+  const seasonStart = metaString(m, "season_start");
+  const publicArea = metaString(m, "public_area");
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+
+  // v1 has no Notion league roster, so no DB-backed idempotency. The CRM sync is
+  // an upsert (safe to repeat); emails could resend if Stripe redelivers a 200'd
+  // event (rare). A dedicated League Enrollments DB is the planned fast-follow
+  // for a clean roster + an idempotency key, alongside the community-os growth app.
+  await Promise.allSettled([
+    emailLeagueAdmin(session),
+    emailLeagueParent(session),
+    // Land the player in the Player CRM (keyed on family). Record the exact
+    // venue when present, falling back to the broad area.
+    syncPlayerFromDropIn({
+      parentName,
+      parentEmail,
+      parentPhone,
+      childFirstName: childFirst,
+      childBirthYear,
+      sessionDate: seasonStart,
+      location: metaString(m, "session_location") || publicArea,
+    }),
+    ingestToOpenBrain({
+      business: "nga",
+      source: "nga_league_enrollment",
+      name: parentName,
+      email: parentEmail || undefined,
+      phone: parentPhone || undefined,
+      interest: `${seasonTitle} (${bandLabel})`,
+      metadata: {
+        season_label: seasonLabel,
+        season_band: metaString(m, "season_band"),
+        season_title: seasonTitle,
+        option: metaString(m, "option_label"),
+        child_first_name: childFirst,
+        child_birth_year: childBirthYear,
+        emergency_name: metaString(m, "emergency_name"),
+        emergency_phone: metaString(m, "emergency_phone"),
+        allergies: metaString(m, "allergies"),
+        amount_paid_usd: amount,
+        stripe_session: session.id,
+      },
+    }),
+  ]);
+
+  return NextResponse.json({ received: true, league: true });
 }
 
 async function handleChargeRefunded(charge: Stripe.Charge) {

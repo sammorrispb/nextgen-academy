@@ -93,6 +93,7 @@ assert(/export function getRefSource/.test(urls), "getRefSource export missing f
 assert(/UTM_SOURCE\s*=\s*"nga"/.test(urls), "crUrl no longer stamps utm_source=nga");
 assert(/"nga_yellowball"/.test(urls), "getRefSource no longer maps /yellowball → nga_yellowball");
 assert(/"nga_leagues"/.test(urls), "getRefSource no longer maps /leagues → nga_leagues");
+assert(/"nga_league"/.test(urls), "getRefSource no longer maps /league → nga_league");
 
 if (fails.length) {
   console.error("FAIL:");
