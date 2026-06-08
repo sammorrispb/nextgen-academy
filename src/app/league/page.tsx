@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LeagueInterestForm from "@/components/LeagueInterestForm";
+import LeagueSeasonForm from "@/components/LeagueSeasonForm";
 import JsonLd from "@/components/JsonLd";
 import { site } from "@/data/site";
-import { LEAGUE_BANDS } from "@/data/leagues";
+import { LEAGUE_BANDS, LEAGUE_SEASONS } from "@/data/leagues";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+
+// Dark go-live gate. The enrollment UI (season form + "Enroll" CTAs) only
+// appears when NEXT_PUBLIC_LEAGUE_ENROLLMENT_OPEN === "true". Two independent
+// guards keep money safe: this flag opens the UI, and STRIPE_LEAGUE_SEASON_PRICE_ID
+// opens the charge (checkout-league 503s without it). Default (flag unset) keeps
+// the page in interest-capture mode — byte-for-byte today's experience. Flipping
+// it on is deliberate and only after the P0 launch gate clears. See
+// docs/youth-pickleball-league-build-spec.md + the launch-readiness register.
+const ENROLLMENT_OPEN =
+  process.env.NEXT_PUBLIC_LEAGUE_ENROLLMENT_OPEN === "true";
+// One open season per page for v1 (the seeded pilot band).
+const OPEN_SEASON = LEAGUE_SEASONS[0];
+// CTAs target the form card; its id swaps with the mode so the anchor resolves.
+const FORM_ANCHOR = ENROLLMENT_OPEN ? "enroll" : "interest";
 
 export const metadata: Metadata = {
   title: "Youth Pickleball League — Next Gen, Montgomery County, MD",
@@ -134,10 +149,10 @@ export default function LeaguePage() {
 
               <div className="mt-8 flex flex-wrap gap-4">
                 <a
-                  href="#interest"
+                  href={`#${FORM_ANCHOR}`}
                   className="inline-flex items-center justify-center gap-2 px-7 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
                 >
-                  Save your spot
+                  {ENROLLMENT_OPEN ? "Enroll for the season" : "Save your spot"}
                   <svg
                     className="w-4 h-4"
                     fill="none"
@@ -173,21 +188,39 @@ export default function LeaguePage() {
             </div>
 
             <div
-              id="interest"
+              id={FORM_ANCHOR}
               className="lg:col-span-5 lg:sticky lg:top-28 scroll-mt-24"
             >
               <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
-                <div className="px-5 pt-6 pb-3 text-center">
-                  <p className="font-heading text-xl font-black text-ngpa-white tracking-tight">
-                    Get on the league list
-                  </p>
-                  <p className="text-ngpa-white/65 text-sm mt-1.5">
-                    No commitment &mdash; this just tells us which divisions to
-                    open first. We&rsquo;ll email you when a season near you is
-                    set.
-                  </p>
-                </div>
-                <LeagueInterestForm source="Web" />
+                {ENROLLMENT_OPEN ? (
+                  <>
+                    <div className="px-5 pt-6 pb-3 text-center">
+                      <p className="font-heading text-xl font-black text-ngpa-white tracking-tight">
+                        Enroll for {OPEN_SEASON.seasonLabel}
+                      </p>
+                      <p className="text-ngpa-white/65 text-sm mt-1.5">
+                        Reserve your player&rsquo;s spot for the full
+                        8-session season. We&rsquo;ll share the exact location
+                        with enrolled families before it starts.
+                      </p>
+                    </div>
+                    <LeagueSeasonForm seasonSlug={OPEN_SEASON.slug} />
+                  </>
+                ) : (
+                  <>
+                    <div className="px-5 pt-6 pb-3 text-center">
+                      <p className="font-heading text-xl font-black text-ngpa-white tracking-tight">
+                        Get on the league list
+                      </p>
+                      <p className="text-ngpa-white/65 text-sm mt-1.5">
+                        No commitment &mdash; this just tells us which divisions
+                        to open first. We&rsquo;ll email you when a season near
+                        you is set.
+                      </p>
+                    </div>
+                    <LeagueInterestForm source="Web" />
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -433,10 +466,10 @@ export default function LeaguePage() {
             run it. Two minutes now puts you at the front of the line.
           </p>
           <a
-            href="#interest"
+            href={`#${FORM_ANCHOR}`}
             className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
           >
-            Get on the league list
+            {ENROLLMENT_OPEN ? "Enroll for the season" : "Get on the league list"}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
