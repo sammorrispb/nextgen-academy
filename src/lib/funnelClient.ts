@@ -58,6 +58,14 @@ export type AnalyticsEventMap = {
     interest?: string;
     page?: string;
   };
+  league_interest_started: {
+    interest?: string;
+    page?: string;
+  };
+  league_interest_submitted: {
+    interest?: string;
+    page?: string;
+  };
   external_link: {
     label: string;
     url: string;
