@@ -6,9 +6,11 @@ import {
   validateCrewInterestForm,
   CREW_DAYS,
   CREW_LEVELS,
+  CREW_TIMES_OF_DAY,
   type CrewInterestFormData,
   type CrewInterestErrors,
   type CrewDay,
+  type CrewTimeOfDay,
 } from "@/lib/validate-crew-interest";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 
@@ -31,6 +33,7 @@ const emptyForm: CrewInterestFormData = {
   childAge: "",
   childLevel: "",
   preferredDays: [],
+  preferredTimeOfDay: [],
   preferredTime: "",
   preferredLocation: "",
   friendsWanted: "",
@@ -124,6 +127,22 @@ export default function CrewInterestForm({
       setErrors((prev) => {
         const next = { ...prev };
         delete next.preferredDays;
+        return next;
+      });
+    }
+  }
+
+  function toggleTimeOfDay(t: CrewTimeOfDay) {
+    setForm((prev) => {
+      const next = prev.preferredTimeOfDay.includes(t)
+        ? prev.preferredTimeOfDay.filter((x) => x !== t)
+        : [...prev.preferredTimeOfDay, t];
+      return { ...prev, preferredTimeOfDay: next };
+    });
+    if (errors.preferredTimeOfDay) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next.preferredTimeOfDay;
         return next;
       });
     }
@@ -402,8 +421,38 @@ export default function CrewInterestForm({
         </div>
 
         <div>
+          <label className={labelClass}>Time of day</label>
+          <span className={hintClass}>
+            Pick all that work — this is how we match crews to a shared slot.
+          </span>
+          <div className="grid grid-cols-3 gap-2 mt-1">
+            {CREW_TIMES_OF_DAY.map((t) => {
+              const active = form.preferredTimeOfDay.includes(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => toggleTimeOfDay(t)}
+                  aria-pressed={active}
+                  className={`min-h-[48px] rounded-xl border text-sm font-bold transition-colors ${
+                    active
+                      ? "bg-ngpa-teal text-ngpa-deep border-ngpa-teal"
+                      : "bg-ngpa-deep/60 text-ngpa-white border-ngpa-slate/60 hover:border-ngpa-teal/60"
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+          {errors.preferredTimeOfDay && (
+            <p className={errorClass}>{errors.preferredTimeOfDay}</p>
+          )}
+        </div>
+
+        <div>
           <label htmlFor="preferredTime" className={labelClass}>
-            Time that works
+            Anything more specific?
           </label>
           <input
             id="preferredTime"

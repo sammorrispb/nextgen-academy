@@ -18,6 +18,14 @@ export const CREW_DAYS: readonly CrewDay[] = [
   "Sun",
 ] as const;
 
+export type CrewTimeOfDay = "Morning" | "Afternoon" | "Evening";
+
+export const CREW_TIMES_OF_DAY: readonly CrewTimeOfDay[] = [
+  "Morning",
+  "Afternoon",
+  "Evening",
+] as const;
+
 export interface CrewInterestFormData {
   parentName: string;
   email: string;
@@ -26,6 +34,8 @@ export interface CrewInterestFormData {
   childAge: string;
   childLevel: string;
   preferredDays: CrewDay[];
+  /** Coarse time-of-day buckets — drives cohort matching. */
+  preferredTimeOfDay: CrewTimeOfDay[];
   preferredTime: string;
   preferredLocation?: string;
   friendsWanted?: string;
@@ -48,6 +58,7 @@ export type CrewInterestErrors = Partial<
     | "childAge"
     | "childLevel"
     | "preferredDays"
+    | "preferredTimeOfDay"
     | "preferredTime",
     string
   >
@@ -97,6 +108,14 @@ export function validateCrewInterestForm(
     errors.preferredDays = "Pick at least one day that works";
   } else if (!data.preferredDays.every((d) => CREW_DAYS.includes(d))) {
     errors.preferredDays = "Some days aren't valid";
+  }
+
+  if (!data.preferredTimeOfDay || data.preferredTimeOfDay.length === 0) {
+    errors.preferredTimeOfDay = "Pick at least one time of day";
+  } else if (
+    !data.preferredTimeOfDay.every((t) => CREW_TIMES_OF_DAY.includes(t))
+  ) {
+    errors.preferredTimeOfDay = "Some times aren't valid";
   }
 
   if (!data.preferredTime?.trim()) {

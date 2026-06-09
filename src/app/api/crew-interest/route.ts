@@ -7,7 +7,9 @@ import {
   type CrewInterestFormData,
   type CrewLevel,
   type CrewDay,
+  type CrewTimeOfDay,
 } from "@/lib/validate-crew-interest";
+import { forwardToCohortPool } from "@/lib/forward-to-cohort-pool";
 import { createCrewInterest } from "@/lib/notion-crew-interest";
 import {
   crewInterestWelcomeHtml,
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
   const childBirthYear = new Date().getFullYear() - childAge;
   const childLevel = body.childLevel as CrewLevel;
   const preferredDays = (body.preferredDays ?? []) as CrewDay[];
+  const preferredTimeOfDay = (body.preferredTimeOfDay ?? []) as CrewTimeOfDay[];
   const preferredTime = body.preferredTime!.trim().slice(0, 200);
   const preferredLocation = body.preferredLocation?.trim().slice(0, 200) ?? "";
   const friendsWanted = body.friendsWanted?.trim().slice(0, 600) ?? "";
@@ -221,6 +224,25 @@ export async function POST(request: NextRequest) {
       cluster: cluster?.slug ?? null,
       cluster_name: cluster?.name ?? null,
       is_parent: true,
+    },
+  });
+
+  // Feed the Coach OS cohort pool so this Crew interest is auto-matched +
+  // invoiced from the /cohorts dashboard. Fail-open — never blocks the response.
+  await forwardToCohortPool({
+    childFirstName,
+    parentName,
+    email,
+    phone,
+    childAge,
+    childLevel,
+    preferredDays,
+    preferredTimeOfDay,
+    preferredLocation,
+    utm: {
+      source: body.utm_source,
+      medium: body.utm_medium,
+      campaign: body.utm_campaign,
     },
   });
 
