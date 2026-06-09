@@ -42,7 +42,7 @@ test.describe("upcomingTuesdays", () => {
 });
 
 test.describe("buildTuesdayRowProps", () => {
-  test("builds an Olney 6–7 PM row at Rosa Parks MS for the given level", () => {
+  test("builds a 6–7 PM row at Redland MS for the given level", () => {
     const props = buildTuesdayRowProps("2026-06-30", "Red");
     expect(props.Session.title[0].text.content).toBe(`${TUESDAY_TITLE_BASE} — Red`);
     expect(props.Level.select.name).toBe("Red");
@@ -51,9 +51,9 @@ test.describe("buildTuesdayRowProps", () => {
     expect(props["End time"].rich_text[0].text.content).toBe("7:00 PM");
     expect(props["Court count"].number).toBe(1);
     expect(props.Location.rich_text[0].text.content).toBe(
-      "Rosa Parks Middle School Tennis Courts, 19200 Olney Mill Rd, Olney, MD 20832",
+      "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
     );
-    expect(props["Public Area"].rich_text[0].text.content).toBe("Olney, MD");
+    expect(props["Public Area"].rich_text[0].text.content).toBe("Derwood, MD");
     expect(props.Status.select.name).toBe("Open");
   });
 

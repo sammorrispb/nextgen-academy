@@ -20,10 +20,10 @@ const TEMPLATE = {
   endTime: "7:00 PM",
   courtCount: 1,
   location:
-    "Rosa Parks Middle School Tennis Courts, 19200 Olney Mill Rd, Olney, MD 20832",
-  publicArea: "Olney, MD",
+    "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
+  publicArea: "Derwood, MD",
   notes:
-    "All-levels Tuesday: one court per level (Red/Orange/Green/Yellow). Venue: Rosa Parks MS tennis courts. Auto-seeded by the seed-tuesday-sessions cron.",
+    "All-levels Tuesday: one court per level (Red/Orange/Green/Yellow). Venue: Redland MS tennis courts. Auto-seeded by the seed-tuesday-sessions cron.",
 } as const;
 
 /**
