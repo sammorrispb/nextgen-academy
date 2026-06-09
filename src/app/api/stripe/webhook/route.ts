@@ -302,6 +302,19 @@ export async function POST(req: NextRequest) {
   const sessionId = metaString(m, "session_id");
   const parentEmailForLookup = payerEmail(session);
 
+  // Only checkouts created by /api/checkout (which always stamps session_id)
+  // are youth drop-ins. Other payments on this Stripe account — e.g. a Coach
+  // Sam lesson-package Payment Link — arrive here too; without drop-in metadata
+  // we can't (and shouldn't) build a roster row. Ack and skip so they don't hit
+  // the drop-in path, fail the Notion write, and 500-loop the webhook.
+  if (!sessionId) {
+    console.log(
+      "[stripe-webhook] checkout.session.completed without drop-in metadata — acking as non-drop-in",
+      session.id,
+    );
+    return NextResponse.json({ received: true, skipped: "not_a_dropin" });
+  }
+
   // Idempotency (Stripe retries delivery) + first-touch check both read Notion;
   // run them concurrently to shave time off the response path. A first-timer
   // miss (Notion down / env unset) defaults to "not first timer" so returning
