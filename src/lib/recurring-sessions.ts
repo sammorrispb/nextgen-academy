@@ -1,6 +1,6 @@
 // Keeps the recurring all-levels Tuesday session stocked. Each future Tuesday
 // should have one row per level (Red/Orange/Green/Yellow) — a court each — at
-// the Olney Tuesday Evening 6–7 PM slot. The seed cron calls
+// the Redland Tuesday Evening 6–7 PM slot. The seed cron calls
 // ensureAllLevelsTuesdays() weekly; it's idempotent (never duplicates a row)
 // and never resurrects a deliberately-cancelled one (any existing row for a
 // date+level counts as present, whatever its Status).
@@ -8,7 +8,10 @@
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-export const TUESDAY_TITLE_BASE = "Olney Tuesday Evening";
+export const TUESDAY_TITLE_BASE = "Redland Tuesday Evening";
+// Rows seeded before the 2026-06-09 Redland move carry the old name; matching
+// both prefixes keeps the seeder from ever double-seeding a date+level.
+export const TUESDAY_TITLE_PREFIXES = [TUESDAY_TITLE_BASE, "Olney Tuesday Evening"];
 export const TUESDAY_LEVELS = ["Red", "Orange", "Green", "Yellow"] as const;
 export type TuesdayLevel = (typeof TUESDAY_LEVELS)[number];
 
@@ -69,7 +72,7 @@ function readPlainText(prop: any): string {
     : "";
 }
 
-/** Existing `date|level` keys for Olney-Tuesday rows in [minDate, maxDate]. */
+/** Existing `date|level` keys for recurring-Tuesday rows in [minDate, maxDate]. */
 async function fetchExistingTuesdayKeys(
   notionKey: string,
   dbId: string,
@@ -108,7 +111,7 @@ async function fetchExistingTuesdayKeys(
     for (const page of data.results ?? []) {
       const props = page.properties ?? {};
       const title = readPlainText(props["Session"]);
-      if (!title.startsWith(TUESDAY_TITLE_BASE)) continue;
+      if (!TUESDAY_TITLE_PREFIXES.some((p) => title.startsWith(p))) continue;
       const date = props["Date"]?.date?.start ?? "";
       const level = props["Level"]?.select?.name ?? "";
       if (date && level) keys.add(`${date}|${level}`);

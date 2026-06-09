@@ -4,6 +4,7 @@ import {
   buildTuesdayRowProps,
   TUESDAY_LEVELS,
   TUESDAY_TITLE_BASE,
+  TUESDAY_TITLE_PREFIXES,
 } from "../src/lib/recurring-sessions";
 
 // A day-of-week sanity check that's UTC-anchored like the implementation.
@@ -55,6 +56,13 @@ test.describe("buildTuesdayRowProps", () => {
     );
     expect(props["Public Area"].rich_text[0].text.content).toBe("Derwood, MD");
     expect(props.Status.select.name).toBe("Open");
+  });
+
+  test("title prefixes cover the current name and the legacy Olney name", () => {
+    expect(TUESDAY_TITLE_PREFIXES).toEqual([
+      "Redland Tuesday Evening",
+      "Olney Tuesday Evening",
+    ]);
   });
 
   test("covers all four levels", () => {
