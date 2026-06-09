@@ -26,16 +26,36 @@ export interface DropInRow {
   smsConsentText: string;
 }
 
-// Returns true if the row was created (or skipped because env is unset), false
-// if Notion rejected the write. Callers that treat the row as the source of
-// truth (the Stripe webhook) use this to decide whether to fail the request so
-// Stripe retries; best-effort callers can ignore it.
-export async function createDropInRegistration(row: DropInRow): Promise<boolean> {
+/**
+ * Outcome of a drop-in row create, so the caller can react correctly:
+ *   "ok"        — row landed (or env unset → graceful skip).
+ *   "transient" — Notion returned 429/5xx; a retry might succeed. The Stripe
+ *                 webhook returns 500 on this so Stripe redelivers.
+ *   "permanent" — Notion returned a deterministic 4xx (bad field, etc.); a
+ *                 retry will fail identically forever. The webhook must NOT
+ *                 500 on this (it would retry a doomed write for ~3 days and
+ *                 inflate the endpoint's error rate) — it alerts + 200s instead.
+ */
+export type CreateDropInResult = "ok" | "transient" | "permanent";
+
+// Map a failed Notion HTTP status to a retry policy. 429 (rate limit) and 5xx
+// (server error) are worth retrying; every other 4xx is deterministic — the
+// same request will fail identically, so retrying only wastes attempts.
+export function classifyNotionFailure(status: number): "transient" | "permanent" {
+  return status === 429 || status >= 500 ? "transient" : "permanent";
+}
+
+// Detailed variant. Callers that treat the row as the source of truth (the
+// Stripe webhook) use the classification to decide whether to fail-and-retry
+// (transient) or alert-and-ack (permanent).
+export async function createDropInRegistrationResult(
+  row: DropInRow,
+): Promise<CreateDropInResult> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_DROPINS_DB_ID;
   if (!notionKey || !dbId) {
     console.warn("[notion-dropins] missing NOTION_API_KEY or NOTION_DROPINS_DB_ID");
-    return true;
+    return "ok";
   }
 
   const title = `${row.childFirstName} — ${row.sessionTitle || row.sessionDate}`;
@@ -44,8 +64,10 @@ export async function createDropInRegistration(row: DropInRow): Promise<boolean>
   const properties: Record<string, any> = {
     Registration: { title: [{ text: { content: title } }] },
     "Parent Name": { rich_text: [{ text: { content: row.parentName } }] },
-    "Parent Email": { email: row.parentEmail },
-    "Parent Phone": { phone_number: row.parentPhone },
+    // Notion's email property rejects an empty string ("is expected to be
+    // email") — send null to clear it. Phone is lenient but kept symmetric.
+    "Parent Email": { email: row.parentEmail || null },
+    "Parent Phone": { phone_number: row.parentPhone || null },
     "Child First Name": {
       rich_text: [{ text: { content: row.childFirstName } }],
     },
@@ -104,9 +126,16 @@ export async function createDropInRegistration(row: DropInRow): Promise<boolean>
       res.status,
       await res.text().catch(() => ""),
     );
-    return false;
+    return classifyNotionFailure(res.status);
   }
-  return true;
+  return "ok";
+}
+
+// Boolean wrapper preserving the original contract (true = landed/skipped).
+// Used by the crew auto-reserve cron, whose retry/refund loop only needs the
+// pass/fail signal.
+export async function createDropInRegistration(row: DropInRow): Promise<boolean> {
+  return (await createDropInRegistrationResult(row)) === "ok";
 }
 
 export interface DropInRegistration {

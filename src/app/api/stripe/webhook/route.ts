@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
 import { incrementSessionRegistered } from "@/lib/notion-sessions";
 import {
-  createDropInRegistration,
+  createDropInRegistrationResult,
   findDropInByCheckoutId,
   type DropInRow,
 } from "@/lib/notion-dropins";
@@ -22,6 +22,12 @@ import { syncPlayerFromDropIn } from "@/lib/notion-player-sync";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 
 export const runtime = "nodejs";
+// Acknowledge Stripe fast (critical row create only), then finish the
+// best-effort comms via after() AFTER the response is sent. maxDuration keeps
+// the function alive long enough for that background work to drain. The old
+// code awaited every email/SMS/coupon-mint before 200'ing, which on a cold
+// start blew past Stripe's webhook timeout → retry storm → ~50% error rate.
+export const maxDuration = 60;
 
 const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
 // Recipients for the real-time "new registration" admin notifications (drop-in
@@ -292,14 +298,23 @@ export async function POST(req: NextRequest) {
     return handleLeagueCheckout(session);
   }
 
-  // Idempotency — Stripe retries webhook delivery.
-  const already = await findDropInByCheckoutId(session.id);
+  const m = session.metadata ?? {};
+  const sessionId = metaString(m, "session_id");
+  const parentEmailForLookup = payerEmail(session);
+
+  // Idempotency (Stripe retries delivery) + first-touch check both read Notion;
+  // run them concurrently to shave time off the response path. A first-timer
+  // miss (Notion down / env unset) defaults to "not first timer" so returning
+  // families never get re-prompted with the WhatsApp invite.
+  const [already, isFirstTimer] = await Promise.all([
+    findDropInByCheckoutId(session.id),
+    parentEmailForLookup
+      ? isFirstTimeParent(parentEmailForLookup)
+      : Promise.resolve(false),
+  ]);
   if (already) {
     return NextResponse.json({ received: true, idempotent: true });
   }
-
-  const m = session.metadata ?? {};
-  const sessionId = metaString(m, "session_id");
 
   const piId =
     typeof session.payment_intent === "string"
@@ -328,67 +343,114 @@ export async function POST(req: NextRequest) {
     smsConsentText: metaString(m, "sms_consent_text"),
   };
 
-  // First-touch check runs against the Player CRM. A miss (Notion unavailable
-  // or env unset) defaults to "not first timer" so returning families never
-  // get re-prompted with the WhatsApp invite.
-  const parentEmailForLookup = payerEmail(session);
-  const isFirstTimer = parentEmailForLookup
-    ? await isFirstTimeParent(parentEmailForLookup)
-    : false;
-
   // The drop-in row is the source of truth (roster, reminders, check-in, cancel
-  // refunds). Create it FIRST and treat failure as fatal: return non-2xx so
-  // Stripe retries delivery rather than losing the registration to a swallowed
-  // error. The findDropInByCheckoutId guard above makes the retry idempotent —
-  // once the row lands, a redelivery short-circuits before re-running anything.
-  const rowCreated = await createDropInRegistration(row);
-  if (!rowCreated) {
+  // refunds). Create it FIRST — this is the only critical work on the response
+  // path. The findDropInByCheckoutId guard above makes any retry idempotent.
+  const createResult = await createDropInRegistrationResult(row);
+  if (createResult === "transient") {
+    // Notion 429/5xx — a retry might land. Return 500 so Stripe redelivers.
     console.error(
-      "[stripe-webhook] drop-in row create failed — returning 500 so Stripe retries",
+      "[stripe-webhook] drop-in row create failed (transient) — returning 500 so Stripe retries",
       session.id,
     );
     return NextResponse.json({ error: "row_create_failed" }, { status: 500 });
   }
-
-  // Everything below is best-effort: a flaky email/SMS/referral/increment must
-  // NOT fail the request, or Stripe would retry and double-create the row
-  // (which now exists but only the full-rerun guard catches). Run concurrently.
-  await Promise.allSettled([
-    emailAdmin(session),
-    emailParent(session, isFirstTimer),
-    sendConfirmationSms(session, row),
-    sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
-    // Referral payout: if this parent signed up to the newsletter via someone
-    // else's forward link and this is their first paid drop-in, mint two
-    // single-use 50%-off promo codes (friend + referrer) and email both.
-    // No-op when the friend isn't a subscriber, has no Referred By, or has
-    // already been rewarded.
-    processReferralReward(session),
-    // Mirror the registration into the Player CRM so a paid website signup
-    // lands a player row (or refreshes Last Attended on the existing one) — the
-    // lead form already wrote to the Player DB, the drop-in path didn't.
-    syncPlayerFromDropIn({
-      parentName: row.parentName,
-      parentEmail: row.parentEmail,
-      parentPhone: row.parentPhone,
-      childFirstName: row.childFirstName,
-      childBirthYear: row.childBirthYear,
-      sessionDate: row.sessionDate,
-      location: row.location,
-    }),
-  ]);
-
-  // Bust the /schedule ISR cache so the seat count reflects the new
-  // registration on the next request, not after the 5-min revalidate window.
-  revalidatePath("/schedule");
-  const sessionTitle = metaString(m, "session_title");
-  const sessionDate = metaString(m, "session_date");
-  if (sessionTitle && sessionDate) {
-    const slug = sessionToSlug({ title: sessionTitle, date: sessionDate });
-    if (slug) revalidatePath(`/schedule/${slug}`);
+  if (createResult === "permanent") {
+    // Notion rejected the write deterministically (4xx). Retrying is pointless
+    // — it would fail identically for ~3 days and tank the endpoint's error
+    // rate while the parent stays paid-but-unregistered. Alert loudly so Sam
+    // can hand-add the row (scripts/backfill-dropin.mjs), and 200 to stop the
+    // retry storm.
+    console.error(
+      "[stripe-webhook] drop-in row create failed (permanent) — alerting + acking so Stripe stops retrying",
+      session.id,
+    );
+    after(() => alertDropInCreateFailure(session, row));
+    return NextResponse.json({ received: true, row_create_failed: true });
   }
 
+  // Everything below is best-effort: a flaky email/SMS/referral/increment must
+  // NOT block the ack, or Stripe could time out and retry (re-running this on a
+  // row that now exists). Run it AFTER the response is sent, concurrently.
+  after(async () => {
+    await Promise.allSettled([
+      emailAdmin(session),
+      emailParent(session, isFirstTimer),
+      sendConfirmationSms(session, row),
+      sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
+      // Referral payout: if this parent signed up to the newsletter via someone
+      // else's forward link and this is their first paid drop-in, mint two
+      // single-use 50%-off promo codes (friend + referrer) and email both.
+      // No-op when the friend isn't a subscriber, has no Referred By, or has
+      // already been rewarded.
+      processReferralReward(session),
+      // Mirror the registration into the Player CRM so a paid website signup
+      // lands a player row (or refreshes Last Attended on the existing one) —
+      // the lead form already wrote to the Player DB, the drop-in path didn't.
+      syncPlayerFromDropIn({
+        parentName: row.parentName,
+        parentEmail: row.parentEmail,
+        parentPhone: row.parentPhone,
+        childFirstName: row.childFirstName,
+        childBirthYear: row.childBirthYear,
+        sessionDate: row.sessionDate,
+        location: row.location,
+      }),
+    ]);
+
+    // Bust the /schedule ISR cache so the seat count reflects the new
+    // registration on the next request, not after the 5-min revalidate window.
+    revalidatePath("/schedule");
+    const sessionTitle = metaString(m, "session_title");
+    const sessionDate = metaString(m, "session_date");
+    if (sessionTitle && sessionDate) {
+      const slug = sessionToSlug({ title: sessionTitle, date: sessionDate });
+      if (slug) revalidatePath(`/schedule/${slug}`);
+    }
+  });
+
   return NextResponse.json({ received: true });
+}
+
+// Sent when a paid drop-in could not be written to the roster and a retry won't
+// help (deterministic Notion error). Surfaces the full registration so Sam can
+// hand-add the row and follow up with the family.
+async function alertDropInCreateFailure(
+  session: Stripe.Checkout.Session,
+  row: DropInRow,
+) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error(
+      "[stripe-webhook] permanent row-create failure AND no RESEND_API_KEY — manual recovery needed for",
+      session.id,
+    );
+    return;
+  }
+  const resend = new Resend(apiKey);
+  const lines = [
+    `A paid NGA drop-in could NOT be written to the roster (deterministic Notion error).`,
+    `The parent has paid but has no registration row. Hand-add it via scripts/backfill-dropin.mjs.`,
+    "",
+    `Parent: ${row.parentName}`,
+    `Email: ${row.parentEmail}`,
+    `Phone: ${row.parentPhone}`,
+    `Child: ${row.childFirstName}`,
+    `Session: ${row.sessionTitle} — ${row.sessionDate} ${row.sessionStartTime}`,
+    `Location: ${row.location}`,
+    `Paid: $${row.amountPaidUsd}`,
+    `Stripe checkout: ${session.id}`,
+    `Stripe PI: ${row.stripePaymentIntentId ?? "—"}`,
+  ];
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_NOTIFY,
+    subject: `⚠️ ACTION NEEDED — drop-in roster write failed: ${row.childFirstName} (${session.id})`,
+    text: lines.join("\n"),
+  });
+  if (error) {
+    console.error("[stripe-webhook] failed to send create-failure alert", error);
+  }
 }
 
 async function sendConfirmationSms(
@@ -534,7 +596,10 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
   // v1 has no Notion camp roster, so no DB-backed idempotency. The CRM sync is
   // an upsert (safe to repeat); emails could resend if Stripe redelivers a
   // 200'd event (rare). A dedicated Camp Registrations DB is the planned
-  // fast-follow for a clean roster + an idempotency key.
+  // fast-follow for a clean roster + an idempotency key. All of this is
+  // best-effort → run it after the ack so a slow Resend/Notion call can't time
+  // the webhook out into a Stripe retry.
+  after(async () => {
   await Promise.allSettled([
     emailCampAdmin(session),
     emailCampParent(session),
@@ -570,6 +635,7 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
       },
     }),
   ]);
+  });
 
   return NextResponse.json({ received: true, camp: true });
 }
@@ -678,6 +744,9 @@ async function handleLeagueCheckout(session: Stripe.Checkout.Session) {
   // an upsert (safe to repeat); emails could resend if Stripe redelivers a 200'd
   // event (rare). A dedicated League Enrollments DB is the planned fast-follow
   // for a clean roster + an idempotency key, alongside the community-os growth app.
+  // All best-effort → run it after the ack so a slow call can't time the webhook
+  // out into a Stripe retry.
+  after(async () => {
   await Promise.allSettled([
     emailLeagueAdmin(session),
     emailLeagueParent(session),
@@ -714,6 +783,7 @@ async function handleLeagueCheckout(session: Stripe.Checkout.Session) {
       },
     }),
   ]);
+  });
 
   return NextResponse.json({ received: true, league: true });
 }
