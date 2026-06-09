@@ -7,19 +7,19 @@ import { site } from "@/data/site";
 export const metadata: Metadata = {
   title: "Find your kid's pickleball crew — Next Gen, Montgomery County, MD",
   description:
-    "Tell us your kid's level and which days work. When Sam has 3 other kids who match, he texts the WhatsApp link — same four kids every week, same court, same time.",
+    "Tell us your kid's level and which days work. When Coach Sam has 3 other kids who match, he texts the WhatsApp link — same four kids every week, same court, same time.",
   alternates: { canonical: "/crew" },
   openGraph: {
     title: "Find your kid's pickleball crew — Next Gen Pickleball Academy",
     description:
-      "Same four kids every week. Tell us when works and Sam looks for the other three.",
+      "Same four kids every week. Tell us when works and Coach Sam looks for the other three.",
     url: "https://nextgenpbacademy.com/crew",
   },
 };
 
 const VALUE_BULLETS = [
   "Same four kids every week — consistency builds skills faster than rotating classes",
-  "Sam matches level + schedule before the crew forms — no awkward mismatches",
+  "Coach Sam matches level + schedule before the crew forms — no awkward mismatches",
   "Vote on the WhatsApp link when it goes live — one tap, no commitment until 4 are in",
 ];
 
@@ -33,7 +33,7 @@ export default function CrewPage() {
           name: "Find your kid's pickleball crew — Next Gen Pickleball Academy",
           url: "https://nextgenpbacademy.com/crew",
           description:
-            "Tell us your kid's level and which days work. When Sam has 3 other kids who match, the crew locks in.",
+            "Tell us your kid's level and which days work. When Coach Sam has 3 other kids who match, the crew locks in.",
           publisher: {
             "@type": "Organization",
             name: "Next Gen Pickleball Academy",
@@ -72,7 +72,7 @@ export default function CrewPage() {
 
               <p className="mt-6 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
                 If none of the open polls fit your schedule, fill this out
-                instead. Sam looks for 3 more kids at your kid&rsquo;s level
+                instead. Coach Sam looks for 3 more kids at your kid&rsquo;s level
                 who can make the same day and court &mdash; when there are
                 enough takers, he texts the WhatsApp link to vote you in.
               </p>
@@ -156,7 +156,8 @@ export default function CrewPage() {
             Same four kids every week is how skills actually compound. Rotating
             classes feel busy but they don&rsquo;t build the same chemistry
             &mdash; or the same growth. That&rsquo;s why we&rsquo;d rather grow
-            slow with a tight crew than fill a room with strangers.
+            slow with a tight crew than fill a room with strangers. Better than
+            yesterday&mdash;together.
           </p>
           <p className="mt-8 text-base text-ngpa-white/65">
             Questions?{" "}
@@ -164,7 +165,7 @@ export default function CrewPage() {
               href={`tel:${site.phone.replace(/\D/g, "")}`}
               className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
             >
-              Call or text Sam at {site.phone}
+              Call or text Coach Sam at {site.phone}
             </a>
           </p>
         </div>
