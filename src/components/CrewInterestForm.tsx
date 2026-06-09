@@ -14,7 +14,7 @@ import {
 } from "@/lib/validate-crew-interest";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 
-const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 7);
+const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6);
 
 const LEVEL_HINTS: Record<(typeof CREW_LEVELS)[number], string> = {
   Red: "First time on a court",

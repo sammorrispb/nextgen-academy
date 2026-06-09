@@ -51,18 +51,18 @@ test.describe("validateCrewInterestForm", () => {
     ).toBeTruthy();
   });
 
-  test("child age must be 7..17", () => {
+  test("child age must be 6..16", () => {
     expect(
-      validateCrewInterestForm({ ...validForm, childAge: "6" }).childAge,
+      validateCrewInterestForm({ ...validForm, childAge: "5" }).childAge,
     ).toBeTruthy();
-    expect(
-      validateCrewInterestForm({ ...validForm, childAge: "18" }).childAge,
-    ).toBeTruthy();
-    expect(
-      validateCrewInterestForm({ ...validForm, childAge: "7" }).childAge,
-    ).toBeUndefined();
     expect(
       validateCrewInterestForm({ ...validForm, childAge: "17" }).childAge,
+    ).toBeTruthy();
+    expect(
+      validateCrewInterestForm({ ...validForm, childAge: "6" }).childAge,
+    ).toBeUndefined();
+    expect(
+      validateCrewInterestForm({ ...validForm, childAge: "16" }).childAge,
     ).toBeUndefined();
   });
 
