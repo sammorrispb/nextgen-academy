@@ -117,7 +117,7 @@ export default function CrewPage() {
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                  Built by parents
+                  Ages 6&ndash;16
                 </span>
               </div>
             </div>
