@@ -42,7 +42,7 @@ test.describe("upcomingTuesdays", () => {
 });
 
 test.describe("buildTuesdayRowProps", () => {
-  test("builds an Olney 6–7 PM row (with broad-area fallback) for the given level", () => {
+  test("builds an Olney 6–7 PM row at Rosa Parks MS for the given level", () => {
     const props = buildTuesdayRowProps("2026-06-30", "Red");
     expect(props.Session.title[0].text.content).toBe(`${TUESDAY_TITLE_BASE} — Red`);
     expect(props.Level.select.name).toBe("Red");
@@ -50,10 +50,11 @@ test.describe("buildTuesdayRowProps", () => {
     expect(props["Start time"].rich_text[0].text.content).toBe("6:00 PM");
     expect(props["End time"].rich_text[0].text.content).toBe("7:00 PM");
     expect(props["Court count"].number).toBe(1);
+    expect(props.Location.rich_text[0].text.content).toBe(
+      "Rosa Parks Middle School Tennis Courts, 19200 Olney Mill Rd, Olney, MD 20832",
+    );
     expect(props["Public Area"].rich_text[0].text.content).toBe("Olney, MD");
     expect(props.Status.select.name).toBe("Open");
-    // Location is intentionally NOT set — hidden until the reveal cron.
-    expect("Location" in props).toBe(false);
   });
 
   test("covers all four levels", () => {
