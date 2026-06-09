@@ -13,6 +13,7 @@ const validForm: CrewInterestFormData = {
   childAge: "10",
   childLevel: "Green",
   preferredDays: ["Tue", "Thu"],
+  preferredTimeOfDay: ["Afternoon"],
   preferredTime: "after school",
   preferredLocation: "Bethesda",
   friendsWanted: "Theo (10)",
@@ -97,6 +98,13 @@ test.describe("validateCrewInterestForm", () => {
         preferredDays: [...CREW_DAYS],
       }).preferredDays,
     ).toBeUndefined();
+  });
+
+  test("at least one time of day required", () => {
+    expect(
+      validateCrewInterestForm({ ...validForm, preferredTimeOfDay: [] })
+        .preferredTimeOfDay,
+    ).toBeTruthy();
   });
 
   test("preferred time required", () => {
