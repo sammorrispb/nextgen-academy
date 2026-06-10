@@ -51,25 +51,25 @@ const CLUSTER_ACCENT_CLASSES: Record<
   string,
   { ring: string; chip: string; link: string; linkHover: string }
 > = {
-  teal: {
+  "down-county": {
     ring: "ring-[#00B4D8]/40",
     chip: "bg-[#00B4D8] text-ngpa-deep",
     link: "text-[#48CAE4]",
     linkHover: "hover:text-[#00D4FF]",
   },
-  lime: {
+  "up-county": {
     ring: "ring-[#AADC00]/40",
     chip: "bg-[#AADC00] text-ngpa-deep",
     link: "text-[#AADC00]",
     linkHover: "hover:text-[#BFE635]",
   },
-  orange: {
+  "east-county": {
     ring: "ring-[#FF6B2B]/40",
     chip: "bg-[#FF6B2B] text-ngpa-deep",
     link: "text-[#FF6B2B]",
     linkHover: "hover:text-[#FF8A52]",
   },
-  cyan: {
+  "mid-county": {
     ring: "ring-[#00D4FF]/40",
     chip: "bg-[#00D4FF] text-ngpa-deep",
     link: "text-[#00D4FF]",
@@ -230,7 +230,7 @@ export default function CityLanding({
                 <span
                   className={`rounded-full ${clusterClasses.chip} px-3 py-1 text-xs font-bold uppercase tracking-wider`}
                 >
-                  {cluster.region} · {cluster.name}
+                  {cluster.name}
                 </span>
                 <span className="rounded-full border border-ngpa-lime/40 px-3 py-1 text-xs font-semibold text-ngpa-lime">
                   Coming Fall 2026

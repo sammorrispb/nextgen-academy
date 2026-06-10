@@ -1,23 +1,31 @@
-// NGA Color Clusters — regional youth pickleball teams launching Fall 2026.
-// Each cluster owns one color from the locked NGA palette (NEVER a skill-ball
-// color: Red/Orange/Green/Yellow are reserved for the ball-pathway pathway).
+// NGA Clusters — regional youth pickleball teams launching Fall 2026.
+// Clusters are NAMED by their MoCo area (Down-County, Up-County, East-County,
+// Mid-County). Each cluster also owns one color from the locked NGA palette —
+// the color is a visual recognition cue ONLY (backgrounds/chips/accents so a
+// family can spot their group's info at a glance), never part of the name or
+// copy. Skill-ball colors (Red/Orange/Green/Yellow) stay reserved for the
+// ball pathway and can never be cluster colors.
 // See ~/.claude/plans/how-can-we-tie-crispy-narwhal.md for the full strategy.
 //
 // IMPORTANT: this surface is PRE-LAUNCH. No registration, no Stripe, no claims
 // about specific home sites or MCPS varsity status. The /crew waitlist captures
 // parent interest until coach roster + venue decisions are locked.
 
-export type ClusterSlug = "teal" | "lime" | "orange" | "cyan";
+export type ClusterSlug =
+  | "down-county"
+  | "up-county"
+  | "east-county"
+  | "mid-county";
 
 export interface Cluster {
   slug: ClusterSlug;
-  /** Display name shown to parents — always "Teal Cluster", "Lime Cluster" etc. */
+  /** Display name shown to parents — always "<Area> Cluster", never a color. */
   name: string;
   /** Hex from src/app/globals.css — must match a `--color-ngpa-*` token. */
   hex: string;
   /** Tailwind utility for the team color (text + border + background variants). */
   tokenClass: string;
-  /** Generic region name (no specific HS / venue — operational decisions still pending). */
+  /** Area name without the "Cluster" suffix — used in chips/metadata. */
   region: string;
   /** MoCo neighborhoods a parent searching for this cluster would recognize. */
   neighborhoods: readonly string[];
@@ -29,8 +37,8 @@ export interface Cluster {
 
 export const CLUSTERS: readonly Cluster[] = [
   {
-    slug: "teal",
-    name: "Teal Cluster",
+    slug: "down-county",
+    name: "Down-County Cluster",
     hex: "#00B4D8",
     tokenClass: "ngpa-teal",
     region: "Down-County",
@@ -40,8 +48,8 @@ export const CLUSTERS: readonly Cluster[] = [
     darkSurfaceOnly: false,
   },
   {
-    slug: "lime",
-    name: "Lime Cluster",
+    slug: "up-county",
+    name: "Up-County Cluster",
     hex: "#AADC00",
     tokenClass: "ngpa-lime",
     region: "Up-County",
@@ -51,8 +59,8 @@ export const CLUSTERS: readonly Cluster[] = [
     darkSurfaceOnly: true,
   },
   {
-    slug: "orange",
-    name: "Orange Cluster",
+    slug: "east-county",
+    name: "East-County Cluster",
     hex: "#FF6B2B",
     tokenClass: "ngpa-orange",
     region: "East-County",
@@ -62,8 +70,8 @@ export const CLUSTERS: readonly Cluster[] = [
     darkSurfaceOnly: false,
   },
   {
-    slug: "cyan",
-    name: "Cyan Cluster",
+    slug: "mid-county",
+    name: "Mid-County Cluster",
     hex: "#00D4FF",
     tokenClass: "ngpa-cyan",
     region: "Mid-County",
@@ -73,6 +81,18 @@ export const CLUSTERS: readonly Cluster[] = [
     darkSurfaceOnly: false,
   },
 ] as const;
+
+/**
+ * Pre-2026-06-09 the clusters were publicly named/routed by color
+ * (/clusters/teal etc.). Old links, cached pages, and ?cluster= params still
+ * carry these slugs — map them to the area slugs instead of 404ing/dropping.
+ */
+export const LEGACY_COLOR_SLUGS: Readonly<Record<string, ClusterSlug>> = {
+  teal: "down-county",
+  lime: "up-county",
+  orange: "east-county",
+  cyan: "mid-county",
+};
 
 /** Hex values reserved by the skill-ball pathway — clusters can NEVER use these. */
 export const RESERVED_BALL_COLOR_HEXES = [

@@ -40,6 +40,11 @@ const nextConfig: NextConfig = {
       { source: "/our-coaches-1", destination: "/#about", permanent: true },
       { source: "/home", destination: "/", permanent: true },
       { source: "/home-1", destination: "/", permanent: true },
+      // ── Legacy color-named cluster URLs (renamed to areas 2026-06-09) ──
+      { source: "/clusters/teal", destination: "/clusters/down-county", permanent: true },
+      { source: "/clusters/lime", destination: "/clusters/up-county", permanent: true },
+      { source: "/clusters/orange", destination: "/clusters/east-county", permanent: true },
+      { source: "/clusters/cyan", destination: "/clusters/mid-county", permanent: true },
     ];
   },
 };

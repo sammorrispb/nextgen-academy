@@ -1,8 +1,9 @@
-// Browser e2e for /clusters + /clusters/[color]. Requires `npm run dev` running.
+// Browser e2e for /clusters + /clusters/[area]. Requires `npm run dev` running.
 //   npx playwright test e2e/clusters-pages.spec.ts
 import { test, expect } from "@playwright/test";
-import { CLUSTERS } from "../src/data/clusters";
+import { CLUSTERS, LEGACY_COLOR_SLUGS } from "../src/data/clusters";
 import { CLUSTER_FAQ } from "../src/data/cluster-faq";
+import { getSchoolsForCluster } from "../src/lib/schools";
 
 test.describe("/clusters index", () => {
   test("shows the Coming Fall 2026 banner", async ({ page }) => {
@@ -71,7 +72,7 @@ test.describe("/clusters index", () => {
   });
 });
 
-test.describe("/clusters/[color] sub-pages", () => {
+test.describe("/clusters/[area] sub-pages", () => {
   for (const cluster of CLUSTERS) {
     test(`${cluster.slug}: renders core elements`, async ({ page }) => {
       await page.goto(`/clusters/${cluster.slug}`);
@@ -79,12 +80,39 @@ test.describe("/clusters/[color] sub-pages", () => {
       await expect(
         page.getByRole("heading", { level: 1, name: cluster.name }),
       ).toBeVisible();
-      await expect(page.getByTestId("region-chip")).toContainText(cluster.region);
       await expect(page.getByTestId("coming-soon-pill")).toContainText(
         /Coming Fall 2026/i,
       );
       await expect(page.getByTestId("neighborhoods")).toContainText(
         cluster.neighborhoods[0],
+      );
+    });
+
+    test(`${cluster.slug}: lists the MCPS schools for its area`, async ({
+      page,
+    }) => {
+      await page.goto(`/clusters/${cluster.slug}`);
+      const schools = page.getByTestId("cluster-schools");
+      await expect(schools).toBeVisible();
+      await expect(schools).toContainText(
+        `MCPS schools in the ${cluster.region} area`,
+      );
+
+      const highSchools = getSchoolsForCluster(cluster.slug, "high");
+      const middleSchools = getSchoolsForCluster(cluster.slug, "middle");
+      expect(highSchools.length).toBeGreaterThanOrEqual(3);
+      expect(middleSchools.length).toBeGreaterThanOrEqual(5);
+      for (const s of highSchools) {
+        await expect(page.getByTestId("cluster-high-schools")).toContainText(
+          s.name,
+        );
+      }
+      // Spot-check the first + last middle school rather than all (page weight).
+      await expect(page.getByTestId("cluster-middle-schools")).toContainText(
+        middleSchools[0].name,
+      );
+      await expect(page.getByTestId("cluster-middle-schools")).toContainText(
+        middleSchools[middleSchools.length - 1].name,
       );
     });
 
@@ -195,10 +223,10 @@ test.describe("/clusters/[color] sub-pages", () => {
     });
   }
 
-  test("renders against the dark navy ground (lime cluster on navy)", async ({
+  test("renders against the dark navy ground (lime-accented cluster on navy)", async ({
     page,
   }) => {
-    await page.goto("/clusters/lime");
+    await page.goto("/clusters/up-county");
     const main = page.getByTestId("cluster-main");
     const bg = await main.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
@@ -211,4 +239,14 @@ test.describe("/clusters/[color] sub-pages", () => {
     const resp = await page.goto("/clusters/magenta");
     expect(resp?.status()).toBe(404);
   });
+
+  for (const [legacy, target] of Object.entries(LEGACY_COLOR_SLUGS)) {
+    test(`legacy /clusters/${legacy} 301s to /clusters/${target}`, async ({
+      page,
+    }) => {
+      const resp = await page.goto(`/clusters/${legacy}`);
+      expect(resp?.status()).toBe(200);
+      expect(new URL(page.url()).pathname).toBe(`/clusters/${target}`);
+    });
+  }
 });

@@ -4,9 +4,9 @@ import JsonLd from "@/components/JsonLd";
 import { getAllClusters } from "@/lib/clusters";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 
-const PAGE_TITLE = "NGA Color Clusters — Fall 2026 Interest List";
+const PAGE_TITLE = "NGA Clusters — Fall 2026 Interest List";
 const PAGE_DESCRIPTION =
-  "Regional youth pickleball teams across Montgomery County. Four clusters by color, year-round training, age-division play. Join the Fall 2026 interest list for your region.";
+  "Regional youth pickleball teams across Montgomery County — Down-County, Up-County, East-County, Mid-County. Year-round training, age-division play. Join the Fall 2026 interest list for your area.";
 
 export const metadata: Metadata = {
   title: { absolute: PAGE_TITLE },
@@ -32,25 +32,25 @@ const COLOR_CLASSES: Record<
   string,
   { ring: string; chip: string; chipText: string; cardBorder: string }
 > = {
-  teal: {
+  "down-county": {
     ring: "ring-[#00B4D8]",
     chip: "bg-[#00B4D8]",
     chipText: "text-ngpa-navy",
     cardBorder: "border-[#00B4D8]/40",
   },
-  lime: {
+  "up-county": {
     ring: "ring-[#AADC00]",
     chip: "bg-[#AADC00]",
     chipText: "text-ngpa-navy",
     cardBorder: "border-[#AADC00]/40",
   },
-  orange: {
+  "east-county": {
     ring: "ring-[#FF6B2B]",
     chip: "bg-[#FF6B2B]",
     chipText: "text-ngpa-navy",
     cardBorder: "border-[#FF6B2B]/40",
   },
-  cyan: {
+  "mid-county": {
     ring: "ring-[#00D4FF]",
     chip: "bg-[#00D4FF]",
     chipText: "text-ngpa-navy",
@@ -67,7 +67,7 @@ export default function ClustersIndexPage() {
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", url: `${SITE_URL}/` },
-          { name: "Color Clusters", url },
+          { name: "Clusters", url },
         ])}
       />
       <main className="min-h-screen bg-ngpa-navy text-ngpa-white">
@@ -80,16 +80,16 @@ export default function ClustersIndexPage() {
             Coming Fall 2026 — interest list open now
           </div>
           <h1 className="text-4xl font-extrabold leading-tight sm:text-5xl">
-            NGA Color Clusters
+            NGA Clusters
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-ngpa-white/90">
             Four regional teams. One pathway. Kids train year-round with their
             NGA coach, build real reps in age-division play, and finish the
-            season at the MoCo Color Cup.
+            season at the MoCo Cup.
           </p>
           <p className="mt-3 max-w-2xl text-base text-ngpa-muted">
-            Your school colors in Fall. Your cluster color year-round — better
-            than yesterday, together.
+            Down-County, Up-County, East-County, Mid-County — find your area,
+            join your cluster. Better than yesterday, together.
           </p>
         </section>
 
@@ -112,13 +112,8 @@ export default function ClustersIndexPage() {
                       aria-hidden="true"
                       className={`inline-block h-6 w-6 rounded-full ${cls.chip}`}
                     />
-                    <span
-                      className={`rounded-full ${cls.chip} ${cls.chipText} px-3 py-1 text-xs font-bold uppercase tracking-wider`}
-                    >
-                      {c.region}
-                    </span>
+                    <h2 className="text-2xl font-bold">{c.name}</h2>
                   </div>
-                  <h2 className="mt-4 text-2xl font-bold">{c.name}</h2>
                   <p className="mt-2 text-sm text-ngpa-white/85">{c.blurb}</p>
                   <p className="mt-3 text-xs text-ngpa-muted">
                     {c.neighborhoods.join(" · ")}
@@ -134,7 +129,7 @@ export default function ClustersIndexPage() {
             What clusters are not
           </h2>
           <p>
-            Color Clusters are not MCPS varsity. Every MCPS high school already
+            NGA Clusters are not MCPS varsity. Every MCPS high school already
             runs a Fall corollary pickleball team and we cheer that on. Clusters
             are the year-round, age-division feeder layer that gets kids
             match-ready before tryouts — and keeps them sharp the rest of the
