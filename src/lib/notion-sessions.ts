@@ -512,6 +512,35 @@ export async function markSessionCoachReminderSent(id: string): Promise<boolean>
   return true;
 }
 
+// Auto-expand: when registrations leave only ONE open seat on the open courts,
+// open the next court (each adds 4 spots) up to maxCourts — so a session
+// "soft-launches" at 4 and grows to its ceiling instead of dead-ending at
+// "Full". Expanding at one-seat-left (not at full) keeps a live spot visible
+// while the new court opens. One tennis court = 2 pickleball courts, so a
+// 1-court booking expands 4 → 8.
+export function computeRegistrationIncrement(
+  session: Pick<
+    NgaSession,
+    "registeredCount" | "courtCount" | "maxCourts" | "status"
+  >,
+  by: number = 1,
+): {
+  newCount: number;
+  newCourtCount: number;
+  newCapacity: number;
+  newStatus: NgaSession["status"];
+} {
+  const newCount = session.registeredCount + by;
+  let newCourtCount = session.courtCount;
+  while (newCount >= newCourtCount * 4 - 1 && newCourtCount < session.maxCourts) {
+    newCourtCount += 1;
+  }
+  const newCapacity = newCourtCount * 4;
+  const newStatus: NgaSession["status"] =
+    newCount >= newCapacity ? "Full" : session.status;
+  return { newCount, newCourtCount, newCapacity, newStatus };
+}
+
 export async function incrementSessionRegistered(
   id: string,
   by: number = 1,
@@ -519,19 +548,8 @@ export async function incrementSessionRegistered(
   const session = await fetchSessionById(id);
   if (!session) return null;
 
-  const newCount = session.registeredCount + by;
-
-  // Auto-expand: when registrations fill the open courts, open the next court
-  // (each adds 4 spots) up to maxCourts — so a session "soft-launches" at 4 and
-  // grows to its ceiling instead of dead-ending at "Full". One tennis court =
-  // 2 pickleball courts, so a 1-court booking expands 4 → 8.
-  let newCourtCount = session.courtCount;
-  while (newCount >= newCourtCount * 4 && newCourtCount < session.maxCourts) {
-    newCourtCount += 1;
-  }
-  const newCapacity = newCourtCount * 4;
-  const newStatus: NgaSession["status"] =
-    newCount >= newCapacity ? "Full" : session.status;
+  const { newCount, newCourtCount, newCapacity, newStatus } =
+    computeRegistrationIncrement(session, by);
 
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return null;
@@ -579,6 +597,9 @@ export async function decrementSessionRegistered(
   if (!session) return null;
 
   const newCount = Math.max(0, session.registeredCount - by);
+  // Court count intentionally never shrinks on cancellation — once a court is
+  // opened (and possibly booked/staffed), pulling seats back would strand
+  // registrants' expectations.
   // If we drop below capacity, flip Full → Open. Never touch Cancelled.
   const newStatus: NgaSession["status"] =
     session.status === "Full" && newCount < session.capacity

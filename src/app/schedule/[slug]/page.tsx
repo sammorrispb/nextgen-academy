@@ -12,6 +12,7 @@ import SessionInfoBlock from "@/components/SessionInfoBlock";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { findSessionBySlug } from "@/lib/session-slug";
+import { LEVEL_COLOR } from "@/lib/level-colors";
 
 export const revalidate = 300;
 
@@ -19,13 +20,6 @@ const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 const heroSeason = seasons[seasons.length - 1];
-
-const LEVEL_COLOR: Record<string, string> = {
-  Red: "bg-ngpa-skill-red text-white",
-  Orange: "bg-ngpa-skill-orange text-white",
-  Green: "bg-ngpa-skill-green text-white",
-  Yellow: "bg-ngpa-skill-yellow text-ngpa-deep",
-};
 
 function formatLongDate(date: string): string {
   if (!date) return "";

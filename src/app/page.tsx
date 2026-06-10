@@ -22,9 +22,8 @@ import { faq } from "@/data/faq";
 import { seo } from "@/data/seo";
 import { familySiteUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
-import { inferCity } from "@/lib/venue-lookup";
 import { SITE_URL } from "@/lib/seo";
-import { formatSessionDateTimeIso } from "@/lib/session-time";
+import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 
 export const metadata = {
   alternates: { canonical: "/" },
@@ -101,63 +100,10 @@ export default async function Home() {
       ))}
 
       {/* Per-session Event schema — surfaces upcoming sessions to local search
-         and AI assistants. Address city is inferred from the location string
-         when recognized; falls back to "Montgomery County" otherwise. */}
-      {upcomingForSchema.map((session) => {
-        const city = inferCity(session.location) ?? "Montgomery County";
-        return (
-          <JsonLd
-            key={`event-${session.id}`}
-            data={{
-              "@context": "https://schema.org",
-              "@type": "SportsEvent",
-              name: session.title || `NGA Drop-in${session.level ? ` (${session.level} Ball)` : ""}`,
-              startDate: session.startTime
-                ? formatSessionDateTimeIso(session.date, session.startTime) ??
-                  session.date
-                : session.date,
-              ...(session.endTime
-                ? {
-                    endDate:
-                      formatSessionDateTimeIso(session.date, session.endTime) ??
-                      session.date,
-                  }
-                : {}),
-              eventStatus:
-                session.status === "Cancelled"
-                  ? "https://schema.org/EventCancelled"
-                  : "https://schema.org/EventScheduled",
-              eventAttendanceMode:
-                "https://schema.org/OfflineEventAttendanceMode",
-              location: {
-                "@type": "Place",
-                name: session.location,
-                address: {
-                  "@type": "PostalAddress",
-                  addressLocality: city,
-                  addressRegion: "MD",
-                  addressCountry: "US",
-                },
-              },
-              organizer: {
-                "@type": "SportsOrganization",
-                name: "Next Gen Pickleball Academy",
-                url: "https://nextgenpbacademy.com",
-              },
-              offers: {
-                "@type": "Offer",
-                price: "20",
-                priceCurrency: "USD",
-                availability:
-                  session.spotsLeft > 0
-                    ? "https://schema.org/InStock"
-                    : "https://schema.org/SoldOut",
-                url: "https://nextgenpbacademy.com/schedule",
-              },
-            }}
-          />
-        );
-      })}
+         and AI assistants. */}
+      {upcomingForSchema.map((session) => (
+        <JsonLd key={`event-${session.id}`} data={sportsEventJsonLd(session)} />
+      ))}
 
       <Hero />
 
