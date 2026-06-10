@@ -5,13 +5,7 @@ import { createPortal } from "react-dom";
 import type { NgaSession } from "@/lib/notion-sessions";
 import SessionInfoBlock from "./SessionInfoBlock";
 import ReserveButton from "./ReserveButton";
-
-const LEVEL_COLOR: Record<string, string> = {
-  Red: "bg-ngpa-skill-red text-white",
-  Orange: "bg-ngpa-skill-orange text-white",
-  Green: "bg-ngpa-skill-green text-white",
-  Yellow: "bg-ngpa-skill-yellow text-ngpa-deep",
-};
+import { LEVEL_COLOR } from "@/lib/level-colors";
 
 interface Props {
   session: NgaSession;

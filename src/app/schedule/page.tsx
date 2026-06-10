@@ -8,8 +8,11 @@ import CTABanner from "@/components/CTABanner";
 import CrewPathway from "@/components/CrewPathway";
 import RegistrationNotice from "@/components/RegistrationNotice";
 import SessionCard from "@/components/SessionCard";
+import SessionGroupCard from "@/components/SessionGroupCard";
 import JsonLd from "@/components/JsonLd";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
+import { groupSessions, sortByLevel } from "@/lib/schedule-grouping";
+import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 import WeatherBar from "@/components/WeatherBar";
 import { fetchWeatherByDate } from "@/lib/weather";
@@ -198,23 +201,40 @@ export default async function SchedulePage() {
 
           {sessions.length > 0 && (
             <div className="space-y-7">
-              {Array.from(grouped.entries()).map(([date, daySessions], dayIdx) => (
-                <div key={date}>
-                  <h2 className="font-heading text-sm font-bold text-ngpa-teal uppercase tracking-[0.2em] mb-3">
-                    {formatDayHeading(date)}
-                  </h2>
-                  <div className="space-y-3">
-                    {daySessions.map((s, sessionIdx) => (
-                      <SessionCard
-                        key={s.id}
-                        session={s}
-                        siteOrigin={SITE_ORIGIN}
-                        highlighted={dayIdx === 0 && sessionIdx === 0}
-                      />
-                    ))}
-                  </div>
-                </div>
+              {/* Server-rendered per-session schema — independent of the
+                 client-side collapse state, so grouped sessions stay visible
+                 to crawlers. */}
+              {sessions.map((s) => (
+                <JsonLd key={`event-${s.id}`} data={sportsEventJsonLd(s)} />
               ))}
+              {Array.from(grouped.entries()).map(([date, daySessions], dayIdx) => {
+                const items = groupSessions(sortByLevel(daySessions));
+                return (
+                  <div key={date}>
+                    <h2 className="font-heading text-sm font-bold text-ngpa-teal uppercase tracking-[0.2em] mb-3">
+                      {formatDayHeading(date)}
+                    </h2>
+                    <div className="space-y-3">
+                      {items.map((item, itemIdx) =>
+                        item.kind === "single" ? (
+                          <SessionCard
+                            key={item.session.id}
+                            session={item.session}
+                            siteOrigin={SITE_ORIGIN}
+                            highlighted={dayIdx === 0 && itemIdx === 0}
+                          />
+                        ) : (
+                          <SessionGroupCard
+                            key={item.key}
+                            sessions={item.sessions}
+                            highlighted={dayIdx === 0 && itemIdx === 0}
+                          />
+                        ),
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

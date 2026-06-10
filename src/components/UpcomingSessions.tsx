@@ -3,17 +3,11 @@ import type { NgaSession } from "@/lib/notion-sessions";
 import { sessionToSlug } from "@/lib/session-slug";
 import { inferCity } from "@/lib/venue-lookup";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
+import { LEVEL_COLOR } from "@/lib/level-colors";
 
 interface UpcomingSessionsProps {
   sessions: NgaSession[];
 }
-
-const LEVEL_COLOR: Record<string, string> = {
-  Red: "bg-ngpa-skill-red text-white",
-  Orange: "bg-ngpa-skill-orange text-white",
-  Green: "bg-ngpa-skill-green text-white",
-  Yellow: "bg-ngpa-skill-yellow text-ngpa-deep",
-};
 
 function formatDay(date: string): string {
   const d = new Date(`${date}T12:00:00Z`);

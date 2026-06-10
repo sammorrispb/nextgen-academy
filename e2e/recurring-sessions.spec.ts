@@ -51,6 +51,7 @@ test.describe("buildTuesdayRowProps", () => {
     expect(props["Start time"].rich_text[0].text.content).toBe("6:00 PM");
     expect(props["End time"].rich_text[0].text.content).toBe("7:00 PM");
     expect(props["Court count"].number).toBe(1);
+    expect(props["Max courts"].number).toBe(2);
     expect(props.Location.rich_text[0].text.content).toBe(
       "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
     );

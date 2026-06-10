@@ -22,6 +22,9 @@ const TEMPLATE = {
   startTime: "6:00 PM",
   endTime: "7:00 PM",
   courtCount: 1,
+  // Each level soft-launches at one court (4 kids) and may auto-expand to a
+  // second (8 kids) at one-seat-left — see computeRegistrationIncrement.
+  maxCourts: 2,
   location:
     "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
   publicArea: "Derwood, MD",
@@ -57,6 +60,7 @@ export function buildTuesdayRowProps(date: string, level: TuesdayLevel) {
     "Start time": { rich_text: [{ text: { content: TEMPLATE.startTime } }] },
     "End time": { rich_text: [{ text: { content: TEMPLATE.endTime } }] },
     "Court count": { number: TEMPLATE.courtCount },
+    "Max courts": { number: TEMPLATE.maxCourts },
     Location: { rich_text: [{ text: { content: TEMPLATE.location } }] },
     "Public Area": { rich_text: [{ text: { content: TEMPLATE.publicArea } }] },
     Status: { select: { name: "Open" } },

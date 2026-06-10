@@ -8,13 +8,7 @@ import ReserveButton from "./ReserveButton";
 import ShareButton from "./ShareButton";
 import SessionDetailsModal from "./SessionDetailsModal";
 import { socialProofLine } from "./SessionInfoBlock";
-
-const LEVEL_COLOR: Record<string, string> = {
-  Red: "bg-ngpa-skill-red text-white",
-  Orange: "bg-ngpa-skill-orange text-white",
-  Green: "bg-ngpa-skill-green text-white",
-  Yellow: "bg-ngpa-skill-yellow text-ngpa-deep",
-};
+import { LEVEL_COLOR } from "@/lib/level-colors";
 
 interface Props {
   session: NgaSession;
