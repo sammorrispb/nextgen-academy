@@ -19,6 +19,10 @@ import { signCancelToken } from "@/lib/cancel-token";
 import { processReferralReward } from "@/lib/referral-rewards";
 import { isFirstTimeParent } from "@/lib/notion-player-lookup";
 import { syncPlayerFromDropIn } from "@/lib/notion-player-sync";
+import {
+  createClusterRegistrationResult,
+  findClusterRegByCheckoutId,
+} from "@/lib/notion-clusters";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 
 export const runtime = "nodejs";
@@ -296,6 +300,13 @@ export async function POST(req: NextRequest) {
   // they do NOT touch the drop-in Notion roster or the drop-in comms crons.
   if (metaString(session.metadata ?? {}, "kind") === "league") {
     return handleLeagueCheckout(session);
+  }
+
+  // Cluster season registrations carry kind=cluster and get a dedicated roster
+  // DB that doubles as the idempotency key — unlike camp/league, a redelivered
+  // event can never resend cluster emails or double-write the roster.
+  if (metaString(session.metadata ?? {}, "kind") === "cluster") {
+    return handleClusterCheckout(session);
   }
 
   const m = session.metadata ?? {};
@@ -824,4 +835,203 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     return NextResponse.json({ received: true, skipped: result.reason });
   }
   return NextResponse.json({ received: true, refunded: true, ...result });
+}
+
+async function emailClusterAdmin(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_NOTIFY,
+    replyTo: REPLY_TO,
+    subject: `New cluster registration — ${metaString(m, "child_first_name")} (${metaString(m, "band")}) — ${metaString(m, "cluster_name")}`,
+    text: [
+      `Cluster: ${metaString(m, "cluster_name")} (${metaString(m, "cluster_slug")})`,
+      `Player: ${metaString(m, "child_first_name")} · ${metaString(m, "band")} · ${metaString(m, "ball_level")} ball`,
+      `Parent: ${metaString(m, "parent_name")} · ${payerEmail(session) || metaString(m, "parent_email")} · ${metaString(m, "parent_phone")}`,
+      `Emergency: ${metaString(m, "emergency_name")} · ${metaString(m, "emergency_phone")}`,
+      `Allergies/notes: ${metaString(m, "allergies") || "none listed"}`,
+      `Public name display consent: ${metaString(m, "display_consent")}`,
+      `Paid: $${amount}`,
+      `Stripe session: ${session.id}`,
+    ].join("\n"),
+  });
+  if (error) console.error("[stripe-webhook] cluster admin email rejected", error);
+}
+
+async function emailClusterParent(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const to = payerEmail(session) || metaString(m, "parent_email");
+  if (!to) return;
+
+  const parentFirst = metaString(m, "parent_name").split(/\s+/)[0] || "there";
+  const childFirst = metaString(m, "child_first_name") || "your player";
+  const clusterName = metaString(m, "cluster_name");
+  const band = metaString(m, "band");
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    bcc: ADMIN_EMAIL,
+    replyTo: REPLY_TO,
+    subject: `You're in — ${clusterName}, Fall ${metaString(m, "season_year")}`,
+    text: [
+      `Hi ${parentFirst},`,
+      ``,
+      `${childFirst} is registered with the ${clusterName} for the Fall season!`,
+      ``,
+      `${clusterName} · ${band} division`,
+      `Weekly training at your cluster's home site — we'll email the schedule and exact site details before the season starts.`,
+      ``,
+      `Paid: $${amount}.`,
+      ``,
+      `What to bring each week:`,
+      `- Refillable water bottle`,
+      `- Court shoes (no flat-soled sneakers)`,
+      `- Protective eyewear (required, every player, every session)`,
+      `- A paddle if you have one — we have loaners.`,
+      ``,
+      `Season terms: $25 is retained if you cancel with at least 10 business days' notice before the season starts; under 10 days the season fee is non-refundable. If we ever have to cancel a cluster (it happens if a group doesn't fill), you get a full refund or a spot in the nearest cluster — your choice.`,
+      ``,
+      `Questions? Just reply to this email or text Coach Sam at 301-325-4731.`,
+      ``,
+      `See you on the court — better than yesterday, together.`,
+      `Coach Sam · Next Gen Pickleball Academy`,
+    ].join("\n"),
+  });
+  if (error) console.error("[stripe-webhook] cluster parent email rejected", error);
+}
+
+// A charged parent with no roster row is the worst launch-week failure — make
+// the family whole automatically and escalate to Sam either way (mirrors the
+// crew-autoreserve refund-after-failed-write pattern).
+async function refundClusterCharge(session: Stripe.Checkout.Session) {
+  const m = session.metadata ?? {};
+  const pi =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : session.payment_intent?.id;
+
+  let refunded = false;
+  if (pi) {
+    try {
+      await getStripe().refunds.create({ payment_intent: pi });
+      refunded = true;
+    } catch (err) {
+      console.error("[stripe-webhook] cluster refund failed", err);
+    }
+  }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    const resend = new Resend(apiKey);
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_NOTIFY,
+      replyTo: REPLY_TO,
+      subject: `Cluster registration FAILED — ${refunded ? "refunded" : "REFUND FAILED"} — ${metaString(m, "child_first_name")} (${metaString(m, "cluster_name")})`,
+      text: [
+        `The cluster roster write failed permanently after the parent was charged.`,
+        refunded
+          ? `The charge was refunded automatically. Reach out to the parent and re-register them once the roster DB issue is fixed.`
+          : `THE REFUND ALSO FAILED — the parent is charged with no roster row. Refund manually in the Stripe dashboard NOW, then contact the parent.`,
+        ``,
+        `Parent: ${metaString(m, "parent_name")} · ${payerEmail(session) || metaString(m, "parent_email")} · ${metaString(m, "parent_phone")}`,
+        `Player: ${metaString(m, "child_first_name")} · ${metaString(m, "band")}`,
+        `Cluster: ${metaString(m, "cluster_name")} (${metaString(m, "cluster_slug")})`,
+        `Stripe session: ${session.id}`,
+        `Payment intent: ${pi ?? "MISSING"}`,
+      ].join("\n"),
+    });
+  }
+  return refunded;
+}
+
+async function handleClusterCheckout(session: Stripe.Checkout.Session) {
+  const m = session.metadata ?? {};
+
+  // The roster row IS the idempotency key — a redelivered event no-ops here.
+  if (await findClusterRegByCheckoutId(session.id)) {
+    return NextResponse.json({ received: true, idempotent: true });
+  }
+
+  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
+  const band = metaString(m, "band") === "U14" ? "U14" : "U12";
+  const created = await createClusterRegistrationResult({
+    parentName: metaString(m, "parent_name"),
+    parentEmail,
+    parentPhone: metaString(m, "parent_phone"),
+    childFirstName: metaString(m, "child_first_name"),
+    childBirthDate: metaString(m, "child_birth_date"),
+    band,
+    ballLevel: metaString(m, "ball_level"),
+    clusterSlug: metaString(m, "cluster_slug"),
+    amountPaidUsd: (session.amount_total ?? 0) / 100,
+    stripeCheckoutSessionId: session.id,
+    stripePaymentIntentId:
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : (session.payment_intent?.id ?? null),
+    displayConsent: metaString(m, "display_consent") === "true",
+    smsConsent: metaString(m, "sms_consent") === "true",
+    smsConsentText: metaString(m, "sms_consent_text"),
+    emergencyName: metaString(m, "emergency_name"),
+    emergencyPhone: metaString(m, "emergency_phone"),
+    allergies: metaString(m, "allergies"),
+  });
+
+  if (created === "transient") {
+    // 500 → Stripe redelivers; the idempotency check makes the retry safe.
+    return NextResponse.json(
+      { error: "cluster roster write failed (transient)" },
+      { status: 500 },
+    );
+  }
+  if (created === "permanent") {
+    const refunded = await refundClusterCharge(session);
+    return NextResponse.json({ received: true, rosterFailed: true, refunded });
+  }
+
+  after(async () => {
+    await Promise.allSettled([
+      emailClusterAdmin(session),
+      emailClusterParent(session),
+      syncPlayerFromDropIn({
+        parentName: metaString(m, "parent_name"),
+        parentEmail,
+        parentPhone: metaString(m, "parent_phone"),
+        childFirstName: metaString(m, "child_first_name"),
+        childBirthYear: Number(metaString(m, "child_birth_date").slice(0, 4)) || 0,
+        sessionDate: `${metaString(m, "season_year") || "2026"}-09-01`,
+        location: metaString(m, "cluster_name"),
+      }),
+      ingestToOpenBrain({
+        business: "nga",
+        source: "nga_cluster_registration",
+        name: metaString(m, "parent_name"),
+        email: parentEmail || undefined,
+        phone: metaString(m, "parent_phone") || undefined,
+        interest: `${metaString(m, "cluster_name")} (${band})`,
+        metadata: {
+          cluster_slug: metaString(m, "cluster_slug"),
+          band,
+          ball_level: metaString(m, "ball_level"),
+          child_first_name: metaString(m, "child_first_name"),
+          display_consent: metaString(m, "display_consent"),
+          amount_paid_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
+          stripe_session: session.id,
+        },
+      }),
+    ]);
+  });
+
+  return NextResponse.json({ received: true });
 }
