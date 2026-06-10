@@ -16,6 +16,10 @@ export default defineConfig({
     "**/newsletter.spec.ts",
     "**/reserve-modal.spec.ts",
     "**/seo.spec.ts",
+    // Hits the LIVE site over the network (www→apex redirects) — GitHub
+    // runners get the Vercel security checkpoint, not the 301s. Run locally
+    // or as a post-deploy smoke check, never in PR CI.
+    "**/redirects.spec.ts",
   ],
   projects: [{ name: "desktop", use: { viewport: { width: 1280, height: 800 } } }],
 });

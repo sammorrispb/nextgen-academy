@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { validateCampForm, type CampFormData } from "../src/lib/validate-camp";
-import { CAMPS, CAMP_OPTIONS } from "../src/data/camps";
+import { CAMPS, CAMP_OPTIONS, CAMP_AGE_MIN, CAMP_AGE_MAX } from "../src/data/camps";
 
 const thisYear = new Date().getFullYear();
 
@@ -69,9 +69,17 @@ test.describe("validateCampForm", () => {
     ).toBeTruthy();
   });
 
-  test("age boundaries 6 and 16 are accepted", () => {
-    expect(validateCampForm(validForm({ childBirthYear: String(thisYear - 6) }))).toEqual({});
-    expect(validateCampForm(validForm({ childBirthYear: String(thisYear - 16) }))).toEqual({});
+  test("age boundaries track CAMP_AGE_MIN/MAX (camp narrowed to 8+ in data)", () => {
+    expect(
+      validateCampForm(validForm({ childBirthYear: String(thisYear - CAMP_AGE_MIN) })),
+    ).toEqual({});
+    expect(
+      validateCampForm(validForm({ childBirthYear: String(thisYear - CAMP_AGE_MAX) })),
+    ).toEqual({});
+    expect(
+      validateCampForm(validForm({ childBirthYear: String(thisYear - CAMP_AGE_MIN + 1) }))
+        .childBirthYear,
+    ).toBeTruthy();
   });
 
   test("a non-numeric birth year is rejected", () => {
