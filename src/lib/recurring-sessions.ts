@@ -1,6 +1,6 @@
 // Keeps the recurring all-levels Tuesday session stocked. Each future Tuesday
 // should have one row per level (Red/Orange/Green/Yellow) — a court each — at
-// the Olney Tuesday Evening 6–7 PM hidden-location slot. The seed cron calls
+// the Redland Tuesday Evening 6–7 PM slot. The seed cron calls
 // ensureAllLevelsTuesdays() weekly; it's idempotent (never duplicates a row)
 // and never resurrects a deliberately-cancelled one (any existing row for a
 // date+level counts as present, whatever its Status).
@@ -8,20 +8,25 @@
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-export const TUESDAY_TITLE_BASE = "Olney Tuesday Evening";
+export const TUESDAY_TITLE_BASE = "Redland Tuesday Evening";
+// Rows seeded before the 2026-06-09 Redland move carry the old name; matching
+// both prefixes keeps the seeder from ever double-seeding a date+level.
+export const TUESDAY_TITLE_PREFIXES = [TUESDAY_TITLE_BASE, "Olney Tuesday Evening"];
 export const TUESDAY_LEVELS = ["Red", "Orange", "Green", "Yellow"] as const;
 export type TuesdayLevel = (typeof TUESDAY_LEVELS)[number];
 
-// One template for every generated row. Location is intentionally left empty —
-// these are hidden-location sessions; the reveal cron + Sam fill the exact venue
-// 24h before. Change the venue/time here and the cron follows.
+// One template for every generated row. Change the venue/time here and the
+// cron follows. `publicArea` stays as a broad fallback in case Location is
+// ever cleared on a row.
 const TEMPLATE = {
   startTime: "6:00 PM",
   endTime: "7:00 PM",
   courtCount: 1,
-  publicArea: "Olney, MD",
+  location:
+    "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
+  publicArea: "Derwood, MD",
   notes:
-    "Hidden-location session — exact venue revealed to registrants 24h before. FILL the Location field before the reveal cron fires. All-levels Tuesday: one court per level (Red/Orange/Green/Yellow). Auto-seeded by the seed-tuesday-sessions cron.",
+    "All-levels Tuesday: one court per level (Red/Orange/Green/Yellow). Venue: Redland MS tennis courts. Auto-seeded by the seed-tuesday-sessions cron.",
 } as const;
 
 /**
@@ -52,6 +57,7 @@ export function buildTuesdayRowProps(date: string, level: TuesdayLevel) {
     "Start time": { rich_text: [{ text: { content: TEMPLATE.startTime } }] },
     "End time": { rich_text: [{ text: { content: TEMPLATE.endTime } }] },
     "Court count": { number: TEMPLATE.courtCount },
+    Location: { rich_text: [{ text: { content: TEMPLATE.location } }] },
     "Public Area": { rich_text: [{ text: { content: TEMPLATE.publicArea } }] },
     Status: { select: { name: "Open" } },
     Notes: { rich_text: [{ text: { content: TEMPLATE.notes } }] },
@@ -66,7 +72,7 @@ function readPlainText(prop: any): string {
     : "";
 }
 
-/** Existing `date|level` keys for Olney-Tuesday rows in [minDate, maxDate]. */
+/** Existing `date|level` keys for recurring-Tuesday rows in [minDate, maxDate]. */
 async function fetchExistingTuesdayKeys(
   notionKey: string,
   dbId: string,
@@ -105,7 +111,7 @@ async function fetchExistingTuesdayKeys(
     for (const page of data.results ?? []) {
       const props = page.properties ?? {};
       const title = readPlainText(props["Session"]);
-      if (!title.startsWith(TUESDAY_TITLE_BASE)) continue;
+      if (!TUESDAY_TITLE_PREFIXES.some((p) => title.startsWith(p))) continue;
       const date = props["Date"]?.date?.start ?? "";
       const level = props["Level"]?.select?.name ?? "";
       if (date && level) keys.add(`${date}|${level}`);

@@ -4,6 +4,7 @@ import {
   buildTuesdayRowProps,
   TUESDAY_LEVELS,
   TUESDAY_TITLE_BASE,
+  TUESDAY_TITLE_PREFIXES,
 } from "../src/lib/recurring-sessions";
 
 // A day-of-week sanity check that's UTC-anchored like the implementation.
@@ -42,7 +43,7 @@ test.describe("upcomingTuesdays", () => {
 });
 
 test.describe("buildTuesdayRowProps", () => {
-  test("builds an Olney 6–7 PM row (with broad-area fallback) for the given level", () => {
+  test("builds a 6–7 PM row at Redland MS for the given level", () => {
     const props = buildTuesdayRowProps("2026-06-30", "Red");
     expect(props.Session.title[0].text.content).toBe(`${TUESDAY_TITLE_BASE} — Red`);
     expect(props.Level.select.name).toBe("Red");
@@ -50,10 +51,18 @@ test.describe("buildTuesdayRowProps", () => {
     expect(props["Start time"].rich_text[0].text.content).toBe("6:00 PM");
     expect(props["End time"].rich_text[0].text.content).toBe("7:00 PM");
     expect(props["Court count"].number).toBe(1);
-    expect(props["Public Area"].rich_text[0].text.content).toBe("Olney, MD");
+    expect(props.Location.rich_text[0].text.content).toBe(
+      "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
+    );
+    expect(props["Public Area"].rich_text[0].text.content).toBe("Derwood, MD");
     expect(props.Status.select.name).toBe("Open");
-    // Location is intentionally NOT set — hidden until the reveal cron.
-    expect("Location" in props).toBe(false);
+  });
+
+  test("title prefixes cover the current name and the legacy Olney name", () => {
+    expect(TUESDAY_TITLE_PREFIXES).toEqual([
+      "Redland Tuesday Evening",
+      "Olney Tuesday Evening",
+    ]);
   });
 
   test("covers all four levels", () => {

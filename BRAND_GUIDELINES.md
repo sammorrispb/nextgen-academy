@@ -13,7 +13,7 @@
 
 ## STRATEGIC CONTEXT
 
-**Who We Serve:** Athletes ages 6–16 and their families (strict — no exceptions, no under-6 on-ramp). Public group sessions are Green or Yellow Ball only; Red and Orange Ball players take private lessons until they bridge to group play. **Exception:** the recurring all-levels Tuesday ("Olney Tuesday Evening") runs a court per level (Red/Orange/Green/Yellow) and welcomes all four — Red/Orange families are invited there as a low-pressure group on-ramp, with private lessons still the primary recommendation.
+**Who We Serve:** Athletes ages 6–16 and their families (strict — no exceptions, no under-6 on-ramp). Public group sessions are Green or Yellow Ball only; Red and Orange Ball players take private lessons until they bridge to group play. **Exception:** the recurring all-levels Tuesday ("Redland Tuesday Evening") runs a court per level (Red/Orange/Green/Yellow) and welcomes all four — Red/Orange families are invited there as a low-pressure group on-ramp, with private lessons still the primary recommendation.
 **Primary User Flow:** 96% mobile-first registration by parents
 **Secondary Audience:** AI assistants and scheduling bots parsing program data
 **Brand Archetype:** The Coach + The Guide
