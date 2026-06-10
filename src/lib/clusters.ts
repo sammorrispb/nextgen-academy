@@ -1,7 +1,8 @@
-// Pure helpers around the Color Cluster data — kept side-effect-free so
+// Pure helpers around the NGA Cluster data — kept side-effect-free so
 // they're unit-testable without a dev server.
 import {
   CLUSTERS,
+  LEGACY_COLOR_SLUGS,
   RESERVED_BALL_COLOR_HEXES,
   type Cluster,
   type ClusterSlug,
@@ -55,6 +56,17 @@ export function buildCrewWaitlistHref(slug: ClusterSlug): string {
 /** True when a string is a known cluster slug — used in form validation. */
 export function isClusterSlug(value: unknown): value is ClusterSlug {
   return typeof value === "string" && CLUSTERS.some((c) => c.slug === value);
+}
+
+/**
+ * Resolves a canonical OR legacy-color slug to its cluster slug. Stale links
+ * and cached pages still send ?cluster=teal — accept them instead of silently
+ * dropping the attribution.
+ */
+export function resolveClusterSlug(value: unknown): ClusterSlug | undefined {
+  if (isClusterSlug(value)) return value;
+  if (typeof value === "string") return LEGACY_COLOR_SLUGS[value];
+  return undefined;
 }
 
 /**

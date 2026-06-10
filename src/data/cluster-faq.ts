@@ -1,9 +1,11 @@
-// Parent-facing FAQ for the NGA Color Clusters launch (Fall 2026).
+// Parent-facing FAQ for the NGA Clusters launch (Fall 2026).
 // DRAFT — must pass /brand-review-nga before going public. Specifically:
 //   - "Is this varsity?" answer must NOT claim varsity status (MCPS owns that)
 //   - No disparaging the MCPS corollary program
 //   - No JOOLA/DC Pickleball Team mentions
 //   - Pricing stays teased (no dollar amounts) until coach roster + venue lock
+//   - Clusters are named by AREA (Down/Up/East/Mid-County) — color is a visual
+//     recognition cue only, never part of the name or copy
 // Plan reference: ~/.claude/plans/how-can-we-tie-crispy-narwhal.md
 
 export interface ClusterFaqItem {
@@ -13,24 +15,24 @@ export interface ClusterFaqItem {
 
 export const CLUSTER_FAQ: readonly ClusterFaqItem[] = [
   {
-    question: "What is a Color Cluster?",
+    question: "What is an NGA Cluster?",
     answer:
-      "A Color Cluster is a regional team of MoCo kids who train together year-round with their NGA coach. Four clusters cover the county — Teal (Down-County), Lime (Up-County), Orange (East-County), Cyan (Mid-County) — and they compete head-to-head in age divisions through the season.",
+      "An NGA Cluster is a regional team of MoCo kids who train together year-round with their NGA coach. Four clusters cover the county — Down-County, Up-County, East-County, and Mid-County — and they compete head-to-head in age divisions through the season.",
   },
   {
     question: "Is this MCPS varsity pickleball?",
     answer:
-      "No. Every MCPS high school runs its own Fall pickleball team — an inclusion-first program pairing gen-ed and special-ed students on the same roster. We love it. NGA Color Clusters are the year-round layer underneath: real reps, age-division play, and a clear pathway so kids walk into Fall tryouts ready. We feed the school program; we don't replace it.",
+      "No. Every MCPS high school runs its own Fall pickleball team — an inclusion-first program pairing gen-ed and special-ed students on the same roster. We love it. NGA Clusters are the year-round layer underneath: real reps, age-division play, and a clear pathway so kids walk into Fall tryouts ready. We feed the school program; we don't replace it.",
   },
   {
     question: "Does my kid have to be in high school?",
     answer:
-      "No. Color Clusters welcome kids ages 10–14 for Fall 2026 (U12 and U14 divisions). Younger kids who can rally are eligible if they're at Green or Yellow ball level. Red and Orange ball players start with private lessons until they bridge to group play.",
+      "No. Clusters welcome kids ages 10–14 for Fall 2026 (U12 and U14 divisions). Younger kids who can rally are eligible if they're at Green or Yellow ball level. Red and Orange ball players start with private lessons until they bridge to group play.",
   },
   {
-    question: "Why colors instead of school names?",
+    question: "Which cluster is my school in?",
     answer:
-      "Clusters cover whole regions, not single schools. A Teal Cluster kid might come from any Down-County school — the color goes with your family, even if you move zip codes. In Fall they play in their school colors for their MCPS team; the rest of the year they play in their cluster color.",
+      "Each cluster page lists every MCPS high school and middle school in its area — find your school and you've found your cluster. Clusters cover whole regions, not single schools, so teammates come from across the area. In Fall, kids play for their own MCPS school team; the rest of the year they train and compete with their area cluster.",
   },
   {
     question: "Where do clusters train?",
@@ -45,7 +47,7 @@ export const CLUSTER_FAQ: readonly ClusterFaqItem[] = [
   {
     question: "When does the season start?",
     answer:
-      "First cluster practices run alongside the MCPS Fall pickleball window — late summer through early November 2026 — culminating in the MoCo Color Cup. A Spring cluster season may follow based on demand.",
+      "First cluster practices run alongside the MCPS Fall pickleball window — late summer through early November 2026 — culminating in the MoCo Cup. A Spring cluster season may follow based on demand.",
   },
   {
     question: "How are coaches vetted?",
@@ -60,6 +62,6 @@ export const CLUSTER_FAQ: readonly ClusterFaqItem[] = [
   {
     question: "How do I join?",
     answer:
-      "Add your family to the interest list for your region — that's the only way to be first in line when we open registration in summer 2026. Pick your cluster from the four regional pages.",
+      "Add your family to the interest list for your area — that's the only way to be first in line when we open registration in summer 2026. Pick your cluster from the four area pages.",
   },
 ] as const;

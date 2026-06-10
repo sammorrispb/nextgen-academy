@@ -8,25 +8,26 @@ import {
   getAllClusterSlugs,
   getClusterBySlug,
 } from "@/lib/clusters";
+import { getSchoolsForCluster } from "@/lib/schools";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 
 interface ClusterRouteProps {
-  params: Promise<{ color: string }>;
+  params: Promise<{ area: string }>;
 }
 
 // Pre-rendered at build time — keeps the four pages static + fast.
 export function generateStaticParams() {
-  return getAllClusterSlugs().map((slug) => ({ color: slug }));
+  return getAllClusterSlugs().map((slug) => ({ area: slug }));
 }
 
 export async function generateMetadata({
   params,
 }: ClusterRouteProps): Promise<Metadata> {
-  const { color } = await params;
-  const cluster = getClusterBySlug(color);
+  const { area } = await params;
+  const cluster = getClusterBySlug(area);
   if (!cluster) return {};
 
-  const title = `${cluster.name} — NGA Youth Pickleball, ${cluster.region} MoCo`;
+  const title = `${cluster.name} — NGA Youth Pickleball, ${cluster.neighborhoods.join(" · ")}`;
   const description = `${cluster.blurb} Join the Fall 2026 interest list.`;
   const url = `https://nextgenpbacademy.com/clusters/${cluster.slug}`;
 
@@ -52,25 +53,25 @@ const COLOR_CLASSES: Record<
   string,
   { chip: string; chipText: string; cta: string; ctaHover: string }
 > = {
-  teal: {
+  "down-county": {
     chip: "bg-[#00B4D8]",
     chipText: "text-ngpa-navy",
     cta: "bg-[#00B4D8] text-ngpa-navy",
     ctaHover: "hover:bg-[#48CAE4]",
   },
-  lime: {
+  "up-county": {
     chip: "bg-[#AADC00]",
     chipText: "text-ngpa-navy",
     cta: "bg-[#AADC00] text-ngpa-navy",
     ctaHover: "hover:bg-[#BFE635]",
   },
-  orange: {
+  "east-county": {
     chip: "bg-[#FF6B2B]",
     chipText: "text-ngpa-navy",
     cta: "bg-[#FF6B2B] text-ngpa-navy",
     ctaHover: "hover:bg-[#FF8A52]",
   },
-  cyan: {
+  "mid-county": {
     chip: "bg-[#00D4FF]",
     chipText: "text-ngpa-navy",
     cta: "bg-[#00D4FF] text-ngpa-navy",
@@ -79,20 +80,22 @@ const COLOR_CLASSES: Record<
 };
 
 export default async function ClusterPage({ params }: ClusterRouteProps) {
-  const { color } = await params;
-  const cluster = getClusterBySlug(color);
+  const { area } = await params;
+  const cluster = getClusterBySlug(area);
   if (!cluster) notFound();
 
   const cls = COLOR_CLASSES[cluster.slug];
   const url = `${SITE_URL}/clusters/${cluster.slug}`;
   const waitlistHref = buildCrewWaitlistHref(cluster.slug);
+  const highSchools = getSchoolsForCluster(cluster.slug, "high");
+  const middleSchools = getSchoolsForCluster(cluster.slug, "middle");
 
   return (
     <>
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", url: `${SITE_URL}/` },
-          { name: "Color Clusters", url: `${SITE_URL}/clusters` },
+          { name: "Clusters", url: `${SITE_URL}/clusters` },
           { name: cluster.name, url },
         ])}
       />
@@ -125,12 +128,6 @@ export default async function ClusterPage({ params }: ClusterRouteProps) {
               aria-hidden="true"
               className={`inline-block h-8 w-8 rounded-full ${cls.chip}`}
             />
-            <span
-              data-testid="region-chip"
-              className={`rounded-full ${cls.chip} ${cls.chipText} px-3 py-1 text-xs font-bold uppercase tracking-wider`}
-            >
-              {cluster.region}
-            </span>
             <span
               data-testid="coming-soon-pill"
               className="rounded-full border border-ngpa-lime/40 px-3 py-1 text-xs font-semibold text-ngpa-lime"
@@ -173,6 +170,54 @@ export default async function ClusterPage({ params }: ClusterRouteProps) {
             {" "}— we&apos;ll place them on the pathway and tell you whether a
             cluster or private lessons fit best right now.
           </p>
+        </section>
+
+        <section
+          className="mx-auto max-w-3xl px-5 pb-16"
+          data-testid="cluster-schools"
+        >
+          <h2 className="mb-3 text-2xl font-bold">
+            MCPS schools in the {cluster.region} area
+          </h2>
+          <p className="mb-6 text-sm text-ngpa-white/85">
+            Go to one of these schools? This is your cluster. Lists follow
+            geography, not MCPS attendance boundaries — families near the edge
+            of an area are welcome to join whichever cluster fits their drive.
+          </p>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div data-testid="cluster-high-schools">
+              <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-ngpa-muted">
+                High schools
+              </h3>
+              <ul className="space-y-2 text-sm text-ngpa-white/85">
+                {highSchools.map((s) => (
+                  <li
+                    key={s.name}
+                    className="rounded-lg border border-ngpa-slate bg-ngpa-panel px-4 py-2.5"
+                  >
+                    <span className="font-semibold">{s.name}</span>
+                    <span className="text-ngpa-muted"> · {s.town}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div data-testid="cluster-middle-schools">
+              <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-ngpa-muted">
+                Middle schools
+              </h3>
+              <ul className="space-y-2 text-sm text-ngpa-white/85">
+                {middleSchools.map((s) => (
+                  <li
+                    key={s.name}
+                    className="rounded-lg border border-ngpa-slate bg-ngpa-panel px-4 py-2.5"
+                  >
+                    <span className="font-semibold">{s.name}</span>
+                    <span className="text-ngpa-muted"> · {s.town}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </section>
 
         <section className="mx-auto max-w-3xl px-5 pb-20" data-testid="cluster-faq">

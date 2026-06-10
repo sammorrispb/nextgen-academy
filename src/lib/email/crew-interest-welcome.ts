@@ -34,7 +34,7 @@ export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string
     ? `${escape(childFirst)} is on the ${escape(cluster.name)} list, ${escape(parentFirst)}.`
     : `We&rsquo;re looking for ${escape(childFirst)}&rsquo;s crew, ${escape(parentFirst)}.`;
   const intro = cluster
-    ? `Thanks for putting your family on the ${escape(cluster.name)} list. Year-round training, real reps, age-division play that gets ${escape(childFirst)} match-ready before Fall &mdash; that&rsquo;s what a Color Cluster delivers.`
+    ? `Thanks for putting your family on the ${escape(cluster.name)} list. Year-round training, real reps, age-division play that gets ${escape(childFirst)} match-ready before Fall &mdash; that&rsquo;s what an NGA Cluster delivers.`
     : `Thanks for telling us what works. Same four kids every week, same court, same time &mdash; that&rsquo;s how skills actually compound. Here&rsquo;s what happens next.`;
   const nextSteps = cluster
     ? `<li>We&rsquo;re locking in venues and head coaches for Fall 2026 right now.</li>
@@ -104,7 +104,7 @@ export function crewInterestWelcomeText(input: CrewInterestWelcomeInput): string
     ? `${childFirst} is on the ${cluster.name} list, ${parentFirst}.`
     : `We're looking for ${childFirst}'s crew, ${parentFirst}.`;
   const intro = cluster
-    ? `Thanks for putting your family on the ${cluster.name} list. Year-round training, real reps, age-division play that gets ${childFirst} match-ready before Fall — that's what a Color Cluster delivers.`
+    ? `Thanks for putting your family on the ${cluster.name} list. Year-round training, real reps, age-division play that gets ${childFirst} match-ready before Fall — that's what an NGA Cluster delivers.`
     : `Thanks for telling us what works. Same four kids every week, same court, same time — that's how skills actually compound. Here's what happens next.`;
   const nextSteps = cluster
     ? [

@@ -1,8 +1,9 @@
-// Pure-function specs for the Color Cluster data + lib. No dev server needed.
+// Pure-function specs for the NGA Cluster data + lib. No dev server needed.
 //   npx playwright test e2e/clusters.spec.ts --project=desktop
 import { test, expect } from "@playwright/test";
 import {
   CLUSTERS,
+  LEGACY_COLOR_SLUGS,
   RESERVED_BALL_COLOR_HEXES,
   type ClusterSlug,
 } from "../src/data/clusters";
@@ -18,6 +19,7 @@ import {
   getClusterForCity,
   isCanonicalHex,
   isClusterSlug,
+  resolveClusterSlug,
 } from "../src/lib/clusters";
 import { SERVICE_AREAS } from "../src/lib/seo";
 
@@ -39,35 +41,60 @@ test.describe("CLUSTERS data integrity", () => {
     }
   });
 
-  test("slugs are the canonical 4 colors", () => {
+  test("slugs are the canonical 4 areas (never colors)", () => {
     const slugs = CLUSTERS.map((c) => c.slug).sort();
-    expect(slugs).toEqual(["cyan", "lime", "orange", "teal"]);
+    expect(slugs).toEqual([
+      "down-county",
+      "east-county",
+      "mid-county",
+      "up-county",
+    ]);
   });
 
-  test("lime is flagged darkSurfaceOnly (1.5:1 contrast on white)", () => {
-    const lime = CLUSTERS.find((c) => c.slug === "lime");
-    expect(lime?.darkSurfaceOnly).toBe(true);
+  test("no cluster name or slug mentions a color", () => {
+    for (const c of CLUSTERS) {
+      expect(c.name).not.toMatch(/teal|lime|orange|cyan/i);
+      expect(c.slug).not.toMatch(/teal|lime|orange|cyan/);
+      expect(c.name).toContain(c.region);
+    }
+  });
+
+  test("the lime-colored cluster is flagged darkSurfaceOnly (1.5:1 contrast on white)", () => {
+    const upCounty = CLUSTERS.find((c) => c.slug === "up-county");
+    expect(upCounty?.hex).toBe("#AADC00");
+    expect(upCounty?.darkSurfaceOnly).toBe(true);
   });
 });
 
 test.describe("getClusterBySlug", () => {
   test("returns the cluster for every canonical slug", () => {
-    for (const slug of ["teal", "lime", "orange", "cyan"] as ClusterSlug[]) {
+    for (const slug of [
+      "down-county",
+      "up-county",
+      "east-county",
+      "mid-county",
+    ] as ClusterSlug[]) {
       const c = getClusterBySlug(slug);
       expect(c?.slug).toBe(slug);
     }
   });
 
-  test("returns undefined for unknown slugs", () => {
+  test("returns undefined for unknown + legacy color slugs (strict lookup)", () => {
     expect(getClusterBySlug("magenta")).toBeUndefined();
     expect(getClusterBySlug("")).toBeUndefined();
-    expect(getClusterBySlug("TEAL")).toBeUndefined();
+    expect(getClusterBySlug("teal")).toBeUndefined();
+    expect(getClusterBySlug("DOWN-COUNTY")).toBeUndefined();
   });
 });
 
 test.describe("getAllClusterSlugs", () => {
   test("returns the same 4 slugs in CLUSTERS order", () => {
-    expect(getAllClusterSlugs()).toEqual(["teal", "lime", "orange", "cyan"]);
+    expect(getAllClusterSlugs()).toEqual([
+      "down-county",
+      "up-county",
+      "east-county",
+      "mid-county",
+    ]);
   });
 });
 
@@ -88,10 +115,10 @@ test.describe("skill-ball-color collision guards", () => {
     );
   });
 
-  test("Orange cluster hex is distinguishable from ball-orange", () => {
-    const orange = CLUSTERS.find((c) => c.slug === "orange");
-    expect(orange?.hex).toBe("#FF6B2B");
-    expect(orange?.hex).not.toBe("#FF8C00");
+  test("East-County accent hex is distinguishable from ball-orange", () => {
+    const eastCounty = CLUSTERS.find((c) => c.slug === "east-county");
+    expect(eastCounty?.hex).toBe("#FF6B2B");
+    expect(eastCounty?.hex).not.toBe("#FF8C00");
   });
 });
 
@@ -116,28 +143,57 @@ test.describe("hex + slug invariants", () => {
 
 test.describe("buildCrewWaitlistHref", () => {
   test("routes to /crew with the cluster query param", () => {
-    expect(buildCrewWaitlistHref("teal")).toBe("/crew?cluster=teal");
-    expect(buildCrewWaitlistHref("lime")).toBe("/crew?cluster=lime");
-    expect(buildCrewWaitlistHref("orange")).toBe("/crew?cluster=orange");
-    expect(buildCrewWaitlistHref("cyan")).toBe("/crew?cluster=cyan");
+    expect(buildCrewWaitlistHref("down-county")).toBe("/crew?cluster=down-county");
+    expect(buildCrewWaitlistHref("up-county")).toBe("/crew?cluster=up-county");
+    expect(buildCrewWaitlistHref("east-county")).toBe("/crew?cluster=east-county");
+    expect(buildCrewWaitlistHref("mid-county")).toBe("/crew?cluster=mid-county");
   });
 });
 
 test.describe("isClusterSlug", () => {
   test("accepts every canonical cluster slug", () => {
-    for (const slug of ["teal", "lime", "orange", "cyan"]) {
+    for (const slug of ["down-county", "up-county", "east-county", "mid-county"]) {
       expect(isClusterSlug(slug)).toBe(true);
     }
   });
 
-  test("rejects unknown / malformed values", () => {
+  test("rejects unknown / malformed / legacy values (strict guard)", () => {
     expect(isClusterSlug("magenta")).toBe(false);
-    expect(isClusterSlug("TEAL")).toBe(false);
+    expect(isClusterSlug("teal")).toBe(false);
+    expect(isClusterSlug("DOWN-COUNTY")).toBe(false);
     expect(isClusterSlug("")).toBe(false);
     expect(isClusterSlug(undefined)).toBe(false);
     expect(isClusterSlug(null)).toBe(false);
     expect(isClusterSlug(42)).toBe(false);
-    expect(isClusterSlug({ slug: "teal" })).toBe(false);
+    expect(isClusterSlug({ slug: "down-county" })).toBe(false);
+  });
+});
+
+test.describe("resolveClusterSlug — legacy color slug mapping", () => {
+  test("passes canonical area slugs through", () => {
+    for (const slug of ["down-county", "up-county", "east-county", "mid-county"]) {
+      expect(resolveClusterSlug(slug)).toBe(slug);
+    }
+  });
+
+  test("maps every legacy color slug to its area", () => {
+    expect(resolveClusterSlug("teal")).toBe("down-county");
+    expect(resolveClusterSlug("lime")).toBe("up-county");
+    expect(resolveClusterSlug("orange")).toBe("east-county");
+    expect(resolveClusterSlug("cyan")).toBe("mid-county");
+  });
+
+  test("every LEGACY_COLOR_SLUGS target is a real cluster", () => {
+    for (const target of Object.values(LEGACY_COLOR_SLUGS)) {
+      expect(getClusterBySlug(target)).toBeDefined();
+    }
+  });
+
+  test("rejects junk", () => {
+    expect(resolveClusterSlug("magenta")).toBeUndefined();
+    expect(resolveClusterSlug("")).toBeUndefined();
+    expect(resolveClusterSlug(undefined)).toBeUndefined();
+    expect(resolveClusterSlug(42)).toBeUndefined();
   });
 });
 
@@ -149,25 +205,25 @@ test.describe("getClusterForCity", () => {
     }
   });
 
-  test("Down-County cities map to Teal", () => {
-    expect(getClusterForCity("Bethesda")?.slug).toBe("teal");
-    expect(getClusterForCity("North Bethesda")?.slug).toBe("teal");
-    expect(getClusterForCity("Chevy Chase")?.slug).toBe("teal");
+  test("Down-County cities map to the Down-County Cluster", () => {
+    expect(getClusterForCity("Bethesda")?.slug).toBe("down-county");
+    expect(getClusterForCity("North Bethesda")?.slug).toBe("down-county");
+    expect(getClusterForCity("Chevy Chase")?.slug).toBe("down-county");
   });
 
-  test("Up-County cities map to Lime", () => {
-    expect(getClusterForCity("Gaithersburg")?.slug).toBe("lime");
-    expect(getClusterForCity("Germantown")?.slug).toBe("lime");
+  test("Up-County cities map to the Up-County Cluster", () => {
+    expect(getClusterForCity("Gaithersburg")?.slug).toBe("up-county");
+    expect(getClusterForCity("Germantown")?.slug).toBe("up-county");
   });
 
-  test("East-County cities map to Orange", () => {
-    expect(getClusterForCity("Olney")?.slug).toBe("orange");
-    expect(getClusterForCity("Silver Spring")?.slug).toBe("orange");
+  test("East-County cities map to the East-County Cluster", () => {
+    expect(getClusterForCity("Olney")?.slug).toBe("east-county");
+    expect(getClusterForCity("Silver Spring")?.slug).toBe("east-county");
   });
 
-  test("Mid-County cities map to Cyan", () => {
-    expect(getClusterForCity("Rockville")?.slug).toBe("cyan");
-    expect(getClusterForCity("Potomac")?.slug).toBe("cyan");
+  test("Mid-County cities map to the Mid-County Cluster", () => {
+    expect(getClusterForCity("Rockville")?.slug).toBe("mid-county");
+    expect(getClusterForCity("Potomac")?.slug).toBe("mid-county");
   });
 
   test("assertEveryServiceCityHasCluster passes today", () => {
@@ -204,6 +260,13 @@ test.describe("CLUSTER_FAQ shape", () => {
   test("does not quote dollar amounts (pricing teased per CLAUDE.md)", () => {
     const joined = CLUSTER_FAQ.map((i) => i.answer).join("\n");
     expect(joined).not.toMatch(/\$\d/);
+  });
+
+  test("never names clusters by color (colors are visual cues only)", () => {
+    const joined = CLUSTER_FAQ.map((i) => `${i.question} ${i.answer}`.toLowerCase()).join("\n");
+    expect(joined).not.toMatch(/color cluster/);
+    expect(joined).not.toMatch(/(teal|lime|cyan) cluster/);
+    expect(joined).not.toContain("color cup");
   });
 
   test("does not mention DD / CourtReserve / JOOLA gear pipeline", () => {

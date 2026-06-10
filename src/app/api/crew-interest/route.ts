@@ -16,7 +16,7 @@ import {
   crewInterestWelcomeSubject,
   crewInterestWelcomeText,
 } from "@/lib/email/crew-interest-welcome";
-import { getClusterBySlug, isClusterSlug } from "@/lib/clusters";
+import { getClusterBySlug, resolveClusterSlug } from "@/lib/clusters";
 
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
@@ -95,11 +95,11 @@ export async function POST(request: NextRequest) {
   const source = body.source ?? "Web";
   const parentFirst = parentName.split(" ")[0] || parentName;
 
-  // Cluster attribution from /clusters/[color] CTA. Unknown slugs silently
-  // drop so a stale link can never produce a 400 — attribution is best-effort.
-  const cluster = isClusterSlug(body.cluster)
-    ? getClusterBySlug(body.cluster)
-    : undefined;
+  // Cluster attribution from /clusters/[area] CTA. Legacy color slugs (teal/
+  // lime/orange/cyan) from stale links resolve to their area; unknown slugs
+  // silently drop so a stale link can never produce a 400 — best-effort.
+  const clusterSlug = resolveClusterSlug(body.cluster);
+  const cluster = clusterSlug ? getClusterBySlug(clusterSlug) : undefined;
 
   // Append cluster preference to notes so it lands in the existing Notion
   // notes column (no schema migration needed for v1; cluster filter is a
