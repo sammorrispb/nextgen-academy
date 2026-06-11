@@ -1,21 +1,23 @@
 import crypto from "node:crypto";
 
 /**
- * NGA admin auth — a single-operator (Sam) password gate over an HMAC-signed
- * session cookie. Mirrors the coach-auth primitives but with one shared
- * password instead of per-email magic links.
+ * NGA admin auth — stateless email magic-link sign-in over Resend, restricted
+ * to the ADMIN_ALLOWLIST (see src/lib/admin-allowlist.ts). Mirrors the
+ * coach-auth primitives.
  *
- *   - Login: POST the password to /api/admin/login. Verified timing-safe
- *     against NGA_ADMIN_PASSWORD, then a signed `{ exp }` cookie is set.
- *   - Session cookie: 30-day expiry, signed with COACH_SIGNING_SECRET (reused
- *     so there's no second signing secret to manage). Rotating that secret —
- *     or changing the password — invalidates every issued session.
+ *   - Magic-link token: emailed once, valid for 10 minutes. A single click
+ *     mints the longer-lived session cookie.
+ *   - Session cookie: 30-day expiry, signed payload `{ email, exp, scope }`.
  *
- * The cookie carries no identity, only an expiry; possession of a valid signed
- * cookie IS admin. httpOnly + secure so it never leaks to client JS.
+ * Both reuse COACH_SIGNING_SECRET (no second signing secret to manage) but
+ * stamp `scope: "admin"` into the payload and require it on verify, so a coach
+ * token can never be replayed as an admin one. Rotating the secret invalidates
+ * every issued token + cookie.
  */
 
+const MAGIC_LINK_TTL_SECONDS = 60 * 10; // 10 min
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const SCOPE = "admin" as const;
 
 export const ADMIN_SESSION_COOKIE = "nga_admin";
 
@@ -27,7 +29,7 @@ export const ADMIN_COOKIE_OPTIONS = {
   maxAge: SESSION_TTL_SECONDS,
 };
 
-function getSigningSecret(): string {
+function getSecret(): string {
   const s = process.env.COACH_SIGNING_SECRET;
   if (!s) throw new Error("COACH_SIGNING_SECRET is not set");
   return s;
@@ -49,7 +51,7 @@ function fromB64url(s: string): Buffer {
 
 function hmac(payload: string): string {
   return b64url(
-    crypto.createHmac("sha256", getSigningSecret()).update(payload).digest(),
+    crypto.createHmac("sha256", getSecret()).update(payload).digest(),
   );
 }
 
@@ -60,31 +62,55 @@ function timingSafeEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(ab, bb);
 }
 
-/** Timing-safe check of a submitted password against NGA_ADMIN_PASSWORD. */
-export function checkAdminPassword(submitted: string): boolean {
-  const expected = process.env.NGA_ADMIN_PASSWORD;
-  if (!expected) throw new Error("NGA_ADMIN_PASSWORD is not set");
-  // Compare HMACs so the comparison is constant-length regardless of input.
-  return timingSafeEqual(hmac(submitted), hmac(expected));
+interface SignedPayload {
+  email: string;
+  exp: number; // unix seconds
+  scope: typeof SCOPE;
 }
 
-/** Signed cookie value `{exp}.sig` for a fresh 30-day session. */
-export function createAdminSessionValue(): string {
-  const payload = { exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS };
+function signPayload(payload: SignedPayload): string {
   const data = b64url(JSON.stringify(payload));
   return `${data}.${hmac(data)}`;
 }
 
-/** True when the cookie value is well-signed and unexpired. */
-export function verifyAdminSessionValue(value: string | undefined | null): boolean {
-  if (!value) return false;
-  const [data, sig] = value.split(".");
-  if (!data || !sig) return false;
-  if (!timingSafeEqual(sig, hmac(data))) return false;
+function verifySigned(token: string): SignedPayload | null {
+  const [data, sig] = token.split(".");
+  if (!data || !sig) return null;
+  if (!timingSafeEqual(sig, hmac(data))) return null;
   try {
-    const { exp } = JSON.parse(fromB64url(data).toString("utf8")) as { exp: number };
-    return typeof exp === "number" && exp > Math.floor(Date.now() / 1000);
+    const payload = JSON.parse(fromB64url(data).toString("utf8")) as SignedPayload;
+    if (typeof payload.email !== "string" || typeof payload.exp !== "number") {
+      return null;
+    }
+    if (payload.scope !== SCOPE) return null; // blocks cross-scope (coach) replay
+    if (Math.floor(Date.now() / 1000) > payload.exp) return null;
+    return payload;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function createAdminMagicLinkToken(email: string): string {
+  return signPayload({
+    email: email.toLowerCase().trim(),
+    exp: Math.floor(Date.now() / 1000) + MAGIC_LINK_TTL_SECONDS,
+    scope: SCOPE,
+  });
+}
+
+export function verifyAdminMagicLinkToken(token: string): string | null {
+  return verifySigned(token)?.email ?? null;
+}
+
+export function createAdminSessionValue(email: string): string {
+  return signPayload({
+    email: email.toLowerCase().trim(),
+    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    scope: SCOPE,
+  });
+}
+
+export function verifyAdminSessionEmail(value: string | undefined | null): string | null {
+  if (!value) return null;
+  return verifySigned(value)?.email ?? null;
 }

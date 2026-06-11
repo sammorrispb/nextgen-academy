@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { ADMIN_SESSION_COOKIE, verifyAdminSessionValue } from "@/lib/admin-auth";
+import { ADMIN_SESSION_COOKIE, verifyAdminSessionEmail } from "@/lib/admin-auth";
+import { isAllowedAdminEmail } from "@/lib/admin-allowlist";
 import {
   listUpcomingSessions,
   updateSession,
@@ -12,7 +13,8 @@ export const dynamic = "force-dynamic";
 
 async function authed(): Promise<boolean> {
   const c = await cookies();
-  return verifyAdminSessionValue(c.get(ADMIN_SESSION_COOKIE)?.value);
+  const email = verifyAdminSessionEmail(c.get(ADMIN_SESSION_COOKIE)?.value);
+  return !!email && isAllowedAdminEmail(email);
 }
 
 export async function GET() {
