@@ -1,5 +1,11 @@
 import { c, s } from "./brand";
 import { whatsappInviteHtml } from "./whatsapp-invite";
+import { fillLabel } from "@/lib/fill-meter";
+
+export interface ConfirmationFill {
+  registered: number;
+  goal: number;
+}
 
 interface ConfirmationInput {
   parentFirst: string;
@@ -17,6 +23,8 @@ interface ConfirmationInput {
   cancelUrl?: string;
   /** Append the WhatsApp parent-group invite. True only on the parent's first NGA touch. */
   includeWhatsappInvite?: boolean;
+  /** Post-signup fill count (their spot included). Omit if the count is unknown. */
+  fill?: ConfirmationFill | null;
 }
 
 export function bookingConfirmationHtml(input: ConfirmationInput): string {
@@ -33,9 +41,25 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     detailUrl,
     cancelUrl,
     includeWhatsappInvite,
+    fill,
   } = input;
 
   const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sessionLocation)}`;
+
+  const fillBlock =
+    fill && fill.goal > 0
+      ? (() => {
+          const r = Math.min(Math.max(0, fill.registered), fill.goal);
+          const filled = r > 0 ? `<span style="color:${c.accentLime};">${"▰".repeat(r)}</span>` : "";
+          const empty = r < fill.goal ? `<span style="color:${c.muted};">${"▱".repeat(fill.goal - r)}</span>` : "";
+          return `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">You moved the meter</p>
+      <p style="margin:0 0 8px 0;font-size:18px;letter-spacing:2px;">${filled}${empty}</p>
+      <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">With ${escape(childFirst)} in, this session is <strong style="color:${c.accentLime};">${escape(fillLabel(r, fill.goal))}</strong>. Full courts make the best games &mdash; know a teammate who&rsquo;d love it? <a href="${detailUrl}" style="${s.link}font-weight:700;">Share the session</a>.</p>
+    </div>`;
+        })()
+      : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -64,6 +88,8 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
       </p>`
       }
     </div>
+
+    ${fillBlock}
 
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">What to bring</h2>
     <ul style="margin:0;padding-left:18px;color:${c.text};line-height:1.7;">

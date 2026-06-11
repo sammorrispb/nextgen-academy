@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
+import { fetchSessionById } from "@/lib/notion-sessions";
+import { fillGoal } from "@/lib/fill-meter";
+import FillMeter from "@/components/FillMeter";
 
 export const metadata: Metadata = {
   title: "Drop-in Confirmed · Next Gen Pickleball Academy",
@@ -24,6 +27,7 @@ export default async function ScheduleSuccessPage({ searchParams }: PageProps) {
   let sessionDate = "";
   let sessionStart = "";
   let location = "";
+  let fill: { registered: number; goal: number } | null = null;
 
   if (cs && process.env.STRIPE_SECRET_KEY) {
     try {
@@ -36,6 +40,19 @@ export default async function ScheduleSuccessPage({ searchParams }: PageProps) {
       sessionDate = String(m.session_date ?? "");
       sessionStart = String(m.session_start ?? "");
       location = String(m.session_location ?? "");
+
+      const sessionId = String(m.session_id ?? "");
+      if (sessionId) {
+        const live = await fetchSessionById(sessionId);
+        if (live) {
+          // The webhook bumps the count in the background and may not have
+          // landed yet — count this signup either way, never overstate.
+          fill = {
+            registered: Math.max(1, live.registeredCount),
+            goal: fillGoal(live),
+          };
+        }
+      }
     } catch (err) {
       console.error("[schedule/success] failed to load checkout", err);
     }
@@ -86,6 +103,27 @@ export default async function ScheduleSuccessPage({ searchParams }: PageProps) {
                 {parentName}
               </p>
             )}
+          </div>
+        )}
+
+        {fill && fill.goal > 0 && (
+          <div className="mt-6 bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 text-left">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime mb-3">
+              You moved the meter
+            </p>
+            <FillMeter registered={fill.registered} goal={fill.goal} size="lg" />
+            <p className="mt-3 text-sm text-ngpa-muted leading-relaxed">
+              Every signup gets this session closer to a full court — the best
+              kind of session there is. Know a teammate who&rsquo;d love it?
+              Send them to the{" "}
+              <Link
+                href="/schedule"
+                className="text-ngpa-lime font-bold hover:underline"
+              >
+                schedule
+              </Link>
+              .
+            </p>
           </div>
         )}
 

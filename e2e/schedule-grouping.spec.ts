@@ -120,19 +120,32 @@ test.describe("groupSessions", () => {
 });
 
 test.describe("aggregateSeats", () => {
-  test("sums spots and capacity across the group", () => {
+  test("sums spots, capacity, registered, and fill goal across the group", () => {
     const out = aggregateSeats([
-      level("a", "Red", { spotsLeft: 1, capacity: 4 }),
-      level("b", "Green", { spotsLeft: 5, capacity: 8 }),
+      level("a", "Red", { spotsLeft: 1, capacity: 4, registeredCount: 3 }),
+      level("b", "Green", { spotsLeft: 5, capacity: 8, registeredCount: 3 }),
     ]);
-    expect(out).toEqual({ spotsLeft: 6, capacity: 12, allFull: false });
+    // Goal sums each session's full build-out (maxCourts × 4 = 8 each here).
+    expect(out).toEqual({
+      spotsLeft: 6,
+      capacity: 12,
+      registered: 6,
+      goal: 16,
+      allFull: false,
+    });
   });
 
   test("allFull only when every seat is gone", () => {
     const out = aggregateSeats([
-      level("a", "Red", { spotsLeft: 0, capacity: 4 }),
-      level("b", "Green", { spotsLeft: 0, capacity: 8 }),
+      level("a", "Red", { spotsLeft: 0, capacity: 4, registeredCount: 4 }),
+      level("b", "Green", { spotsLeft: 0, capacity: 8, registeredCount: 8 }),
     ]);
-    expect(out).toEqual({ spotsLeft: 0, capacity: 12, allFull: true });
+    expect(out).toEqual({
+      spotsLeft: 0,
+      capacity: 12,
+      registered: 12,
+      goal: 16,
+      allFull: true,
+    });
   });
 });

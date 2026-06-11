@@ -5,6 +5,8 @@ import type { NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { LEVEL_COLOR, LEVEL_COLOR_FALLBACK } from "@/lib/level-colors";
 import { aggregateSeats } from "@/lib/schedule-grouping";
+import { fillGoal } from "@/lib/fill-meter";
+import FillMeter from "./FillMeter";
 import ReserveButton from "./ReserveButton";
 import SessionDetailsModal from "./SessionDetailsModal";
 
@@ -13,17 +15,10 @@ interface Props {
   highlighted?: boolean;
 }
 
-function rowSeatsText(s: NgaSession): string {
+function rowEndedText(s: NgaSession): string | null {
   if (s.status === "Cancelled") return "Cancelled";
   if (s.status === "Completed" || s.status === "Passed") return "Ended";
-  if (s.spotsLeft === 0) return "Full";
-  return `${s.spotsLeft} / ${s.capacity} seats left`;
-}
-
-function rowSeatsClass(s: NgaSession): string {
-  if (s.status !== "Open" || s.spotsLeft === 0) return "text-red-400";
-  if (s.spotsLeft <= 2) return "text-ngpa-skill-orange";
-  return "text-ngpa-white/65";
+  return null;
 }
 
 export default function SessionGroupCard({
@@ -35,14 +30,7 @@ export default function SessionGroupCard({
   const panelId = useId();
 
   const first = sessions[0];
-  const { spotsLeft, capacity, allFull } = aggregateSeats(sessions);
-
-  const seatsText = allFull ? "Full" : `${spotsLeft} / ${capacity} seats left`;
-  const seatsClass = allFull
-    ? "text-red-400"
-    : spotsLeft <= 2
-      ? "text-ngpa-skill-orange"
-      : "text-ngpa-white/65";
+  const { registered, goal } = aggregateSeats(sessions);
 
   const cardClass = highlighted
     ? "relative bg-ngpa-panel rounded-2xl border-2 border-ngpa-teal shadow-[0_0_40px_-12px_rgba(0,180,216,0.55)] ring-1 ring-ngpa-teal/40 transition-colors"
@@ -83,9 +71,7 @@ export default function SessionGroupCard({
                   {s.level ?? "All"}
                 </span>
               ))}
-              <span className={`text-xs font-bold ${seatsClass}`}>
-                {seatsText}
-              </span>
+              <FillMeter registered={registered} goal={goal} />
             </div>
             <p className="text-base font-bold text-ngpa-white">
               <time dateTime={first.date}>
@@ -140,9 +126,16 @@ export default function SessionGroupCard({
                   >
                     {s.level ? `${s.level} Ball` : "All levels"}
                   </span>
-                  <span className={`text-xs font-bold ${rowSeatsClass(s)}`}>
-                    {rowSeatsText(s)}
-                  </span>
+                  {rowEndedText(s) ? (
+                    <span className="text-xs font-bold text-red-400">
+                      {rowEndedText(s)}
+                    </span>
+                  ) : (
+                    <FillMeter
+                      registered={s.registeredCount}
+                      goal={fillGoal(s)}
+                    />
+                  )}
                   <button
                     type="button"
                     onClick={() => setDetailsSession(s)}

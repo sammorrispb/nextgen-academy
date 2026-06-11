@@ -1,4 +1,5 @@
 import type { NgaSession, SessionLevel } from "@/lib/notion-sessions";
+import { fillGoal } from "@/lib/fill-meter";
 
 const LEVEL_ORDER: Record<SessionLevel, number> = {
   Red: 0,
@@ -55,9 +56,13 @@ export function groupSessions(daySessions: NgaSession[]): ScheduleItem[] {
 export function aggregateSeats(sessions: NgaSession[]): {
   spotsLeft: number;
   capacity: number;
+  registered: number;
+  goal: number;
   allFull: boolean;
 } {
   const spotsLeft = sessions.reduce((n, s) => n + s.spotsLeft, 0);
   const capacity = sessions.reduce((n, s) => n + s.capacity, 0);
-  return { spotsLeft, capacity, allFull: spotsLeft === 0 };
+  const registered = sessions.reduce((n, s) => n + s.registeredCount, 0);
+  const goal = sessions.reduce((n, s) => n + fillGoal(s), 0);
+  return { spotsLeft, capacity, registered, goal, allFull: spotsLeft === 0 };
 }

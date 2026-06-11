@@ -7,8 +7,10 @@ import { sessionToSlug } from "@/lib/session-slug";
 import ReserveButton from "./ReserveButton";
 import ShareButton from "./ShareButton";
 import SessionDetailsModal from "./SessionDetailsModal";
+import FillMeter from "./FillMeter";
 import { socialProofLine } from "./SessionInfoBlock";
 import { LEVEL_COLOR } from "@/lib/level-colors";
+import { fillGoal } from "@/lib/fill-meter";
 
 interface Props {
   session: NgaSession;
@@ -29,22 +31,6 @@ export default function SessionCard({
 
   const isEnded =
     session.status === "Completed" || session.status === "Passed";
-
-  const seatsText =
-    session.status === "Cancelled"
-      ? "Cancelled"
-      : isEnded
-        ? "Ended"
-        : session.spotsLeft === 0
-          ? "Full"
-          : `${session.spotsLeft} / ${session.capacity} seats left`;
-
-  const seatsClass =
-    session.status === "Cancelled" || isEnded || session.spotsLeft === 0
-      ? "text-red-400"
-      : session.spotsLeft <= 2
-        ? "text-ngpa-skill-orange"
-        : "text-ngpa-white/65";
 
   const shareUrl = `${siteOrigin}/schedule/${sessionToSlug(session)}`;
   const proof = socialProofLine(session);
@@ -81,9 +67,16 @@ export default function SessionCard({
                 {session.level} Ball
               </span>
             )}
-            <span className={`text-xs font-bold ${seatsClass}`}>
-              {seatsText}
-            </span>
+            {session.status === "Cancelled" || isEnded ? (
+              <span className="text-xs font-bold text-red-400">
+                {session.status === "Cancelled" ? "Cancelled" : "Ended"}
+              </span>
+            ) : (
+              <FillMeter
+                registered={session.registeredCount}
+                goal={fillGoal(session)}
+              />
+            )}
             {proof && (
               <span className="text-xs font-bold text-ngpa-teal">
                 · {proof}

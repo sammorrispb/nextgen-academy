@@ -12,7 +12,11 @@ import {
 import { sessionToSlug } from "@/lib/session-slug";
 import { cancelDropIn } from "@/lib/cancel-dropin";
 import { buildDropInIcs } from "@/lib/email/ics";
-import { bookingConfirmationHtml } from "@/lib/email/booking-confirmation";
+import {
+  bookingConfirmationHtml,
+  type ConfirmationFill,
+} from "@/lib/email/booking-confirmation";
+import { fillGoal, fillBar, fillLabel } from "@/lib/fill-meter";
 import { whatsappInviteText } from "@/lib/email/whatsapp-invite";
 import { sendSms, bookingConfirmationSms } from "@/lib/sms";
 import { signCancelToken } from "@/lib/cancel-token";
@@ -112,6 +116,7 @@ async function emailAdmin(session: Stripe.Checkout.Session) {
 async function emailParent(
   session: Stripe.Checkout.Session,
   isFirstTimer: boolean,
+  fill: ConfirmationFill | null,
 ) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = payerEmail(session);
@@ -175,6 +180,12 @@ async function emailParent(
       : `Directions: ${mapsUrl}`,
     "",
     `Paid: $${amount}. We attached an .ics calendar invite — tap it to add the session to your calendar.`,
+    ...(fill && fill.goal > 0
+      ? [
+          "",
+          `You moved the meter: ${fillBar(fill.registered, fill.goal)} — with ${childFirst} in, this session is ${fillLabel(fill.registered, fill.goal)}. Full courts make the best games — know a teammate who'd love it? Share: ${detailUrl}`,
+        ]
+      : []),
     "",
     `What to bring:`,
     `- Water bottle`,
@@ -205,6 +216,7 @@ async function emailParent(
     detailUrl,
     cancelUrl,
     includeWhatsappInvite: isFirstTimer,
+    fill,
   });
 
   // Attach a one-shot .ics calendar invite. End time may be missing in
@@ -397,11 +409,23 @@ export async function POST(req: NextRequest) {
   // NOT block the ack, or Stripe could time out and retry (re-running this on a
   // row that now exists). Run it AFTER the response is sent, concurrently.
   after(async () => {
+    // Bump the registered count BEFORE the parent email so the confirmation's
+    // fill meter shows the session with their signup counted. A failed bump
+    // just drops the meter block — the confirmation still sends.
+    let updated: Awaited<ReturnType<typeof incrementSessionRegistered>> = null;
+    try {
+      updated = await incrementSessionRegistered(sessionId, 1);
+    } catch (err) {
+      console.error("[stripe-webhook] registered-count increment failed", err);
+    }
+    const fill: ConfirmationFill | null = updated
+      ? { registered: updated.registeredCount, goal: fillGoal(updated) }
+      : null;
+
     await Promise.allSettled([
       emailAdmin(session),
-      emailParent(session, isFirstTimer),
+      emailParent(session, isFirstTimer, fill),
       sendConfirmationSms(session, row),
-      sessionId ? incrementSessionRegistered(sessionId, 1) : Promise.resolve(),
       // Referral payout: if this parent signed up to the newsletter via someone
       // else's forward link and this is their first paid drop-in, mint two
       // single-use 50%-off promo codes (friend + referrer) and email both.

@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 import {
-  spotsLabel,
   weeklyNewsletterHtml,
   weeklyNewsletterText,
   type WeeklyNewsletterInput,
@@ -18,8 +17,8 @@ const baseInput: WeeklyNewsletterInput = {
       location: "Walter Johnson HS, Bethesda",
       weatherNote: "Sunny, 75°",
       slots: [
-        { label: "4:30–5:30 PM", spotsLeft: 12, capacity: 16 },
-        { label: "5:30–6:30 PM", spotsLeft: 2, capacity: 16 },
+        { label: "4:30–5:30 PM", registered: 4, goal: 16 },
+        { label: "5:30–6:30 PM", registered: 14, goal: 16 },
       ],
     },
   ],
@@ -59,26 +58,20 @@ test.describe("appendUtm", () => {
   });
 });
 
-test.describe("spotsLabel", () => {
-  test("shows X of Y when plenty remain", () => {
-    expect(spotsLabel(12, 16)).toBe("12 of 16 spots left");
-  });
-  test("adds urgency at 3 or fewer", () => {
-    expect(spotsLabel(3, 16)).toBe("only 3 spots left");
-    expect(spotsLabel(1, 16)).toBe("only 1 spot left");
-  });
-  test("says Full at zero", () => {
-    expect(spotsLabel(0, 16)).toBe("Full");
-  });
-});
-
 test.describe("weeklyNewsletterHtml", () => {
-  test("renders spots, weather, and unsubscribe", () => {
+  test("renders the fill meter, weather, and unsubscribe", () => {
     const html = weeklyNewsletterHtml(baseInput);
-    expect(html).toContain("12 of 16 spots left");
-    expect(html).toContain("only 2 spots left");
+    expect(html).toContain("4 of 16 in");
+    expect(html).toContain("14 of 16 in — 2 to go");
+    expect(html).toContain("▰▰▰▰");
     expect(html).toContain("Forecast: Sunny, 75°");
     expect(html).toContain("/api/newsletter/unsubscribe?token=abc");
+  });
+
+  test("never frames seats as spots left", () => {
+    const html = weeklyNewsletterHtml(baseInput);
+    expect(html).not.toContain("spots left");
+    expect(html).not.toContain("spot left");
   });
 
   test("personalized forward link surfaces with the 50% referral offer", () => {
@@ -303,9 +296,10 @@ test.describe("weeklyNewsletterHtml", () => {
 });
 
 test.describe("weeklyNewsletterText", () => {
-  test("mirrors spots, weather, and referral block in plain text", () => {
+  test("mirrors the fill meter, weather, and referral block in plain text", () => {
     const text = weeklyNewsletterText(baseInput);
-    expect(text).toContain("only 2 spots left");
+    expect(text).toContain("14 of 16 in — 2 to go");
+    expect(text).toContain("▰▰▰▰▱");
     expect(text).toContain("Forecast: Sunny, 75°");
     expect(text).toContain("50% off");
     expect(text).toContain("/newsletter?ref=signed-token-abc");
