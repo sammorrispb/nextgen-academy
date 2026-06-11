@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_SESSION_COOKIE, verifyAdminSessionValue } from "@/lib/admin-auth";
+import { ADMIN_SESSION_COOKIE, verifyAdminSessionEmail } from "@/lib/admin-auth";
+import { isAllowedAdminEmail } from "@/lib/admin-allowlist";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-async function requireAdmin(): Promise<void> {
+async function requireAdmin(): Promise<string> {
   const c = await cookies();
-  if (!verifyAdminSessionValue(c.get(ADMIN_SESSION_COOKIE)?.value)) {
+  const email = verifyAdminSessionEmail(c.get(ADMIN_SESSION_COOKIE)?.value);
+  if (!email || !isAllowedAdminEmail(email)) {
     redirect("/admin/login");
   }
+  return email;
 }
 
 export default async function AdminAuthedLayout({
@@ -19,7 +22,7 @@ export default async function AdminAuthedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await requireAdmin();
+  const email = await requireAdmin();
 
   return (
     <div className="min-h-screen bg-ngpa-deep text-ngpa-white">
@@ -28,14 +31,19 @@ export default async function AdminAuthedLayout({
           <span className="font-heading text-lg sm:text-xl font-black tracking-tight">
             NGA Admin
           </span>
-          <form action="/admin/logout" method="post">
+          <div className="flex items-center gap-3 text-xs text-ngpa-white/65">
+            <span className="hidden sm:inline truncate max-w-[16rem]">
+              {email}
+            </span>
+            <form action="/admin/logout" method="post">
             <button
               type="submit"
               className="px-3 py-1.5 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal transition-colors min-h-[32px] font-bold text-xs"
             >
               Sign out
             </button>
-          </form>
+            </form>
+          </div>
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-12">{children}</main>
