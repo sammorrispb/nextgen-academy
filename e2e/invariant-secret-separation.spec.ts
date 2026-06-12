@@ -13,6 +13,14 @@ import {
   verifySessionCancelToken,
 } from "../src/lib/session-cancel-token";
 import { signCommitToken, verifyCommitToken } from "../src/lib/commit-token";
+import {
+  signReferralToken,
+  verifyReferralToken,
+} from "../src/lib/referral-token";
+import {
+  signUnsubscribeToken,
+  verifyUnsubscribeToken,
+} from "../src/lib/newsletter-token";
 
 function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): T {
   const saved: Record<string, string | undefined> = {};
@@ -87,7 +95,9 @@ test.describe("cancel-token secret separation", () => {
 
   test("legacy outstanding tokens still verify after CANCEL_TOKEN_SECRET is introduced", () => {
     // Signed in the legacy era (no dedicated secret) → lives in a parent's inbox.
-    const legacyToken = signCancelToken("cs_legacy_link")!;
+    const legacyToken = withEnv({ CANCEL_TOKEN_SECRET: undefined }, () =>
+      signCancelToken("cs_legacy_link"),
+    )!;
     const verified = withEnv({ CANCEL_TOKEN_SECRET: "dedicated-cancel" }, () =>
       verifyCancelToken(legacyToken),
     );
@@ -137,7 +147,10 @@ test.describe("session-cancel-token secret separation", () => {
   });
 
   test("legacy outstanding tokens still verify after the dedicated secret is introduced", () => {
-    const legacyToken = signSessionCancelToken("notion-row-legacy")!;
+    const legacyToken = withEnv(
+      { SESSION_CANCEL_TOKEN_SECRET: undefined },
+      () => signSessionCancelToken("notion-row-legacy"),
+    )!;
     const verified = withEnv(
       { SESSION_CANCEL_TOKEN_SECRET: "dedicated-session" },
       () => verifySessionCancelToken(legacyToken),
@@ -146,12 +159,83 @@ test.describe("session-cancel-token secret separation", () => {
   });
 });
 
+test.describe("referral-token secret separation (dual-verify)", () => {
+  test("legacy referral links (in old welcome emails) still verify after REFERRAL_TOKEN_SECRET is set", () => {
+    // Sign explicitly in the legacy era — workers are reused across spec
+    // files and referral-token.spec.ts sets the dedicated var module-side.
+    const legacyToken = withEnv({ REFERRAL_TOKEN_SECRET: undefined }, () =>
+      signReferralToken("referrer@example.com"),
+    )!;
+    const verified = withEnv({ REFERRAL_TOKEN_SECRET: "dedicated-referral" }, () =>
+      verifyReferralToken(legacyToken),
+    );
+    expect(verified).toBe("referrer@example.com");
+  });
+
+  test("with REFERRAL_TOKEN_SECRET set, new tokens survive NGA_ADMIN_SECRET rotation", () => {
+    const token = withEnv({ REFERRAL_TOKEN_SECRET: "dedicated-referral" }, () =>
+      signReferralToken("referrer@example.com"),
+    )!;
+    const verified = withEnv(
+      { REFERRAL_TOKEN_SECRET: "dedicated-referral", NGA_ADMIN_SECRET: "rotated" },
+      () => verifyReferralToken(token),
+    );
+    expect(verified).toBe("referrer@example.com");
+  });
+
+  test("unsub token can never replay as a referral (ref: prefix domain separation)", () => {
+    // Same email, SAME key on both families — the macInput prefix alone must
+    // keep them apart (the worst case for domain separation).
+    const sameKey = {
+      REFERRAL_TOKEN_SECRET: "shared-era-key",
+      NEWSLETTER_UNSUB_SECRET: "shared-era-key",
+    };
+    const unsubToken = withEnv(sameKey, () =>
+      signUnsubscribeToken("parent@example.com"),
+    )!;
+    const referralToken = withEnv(sameKey, () =>
+      signReferralToken("parent@example.com"),
+    )!;
+    withEnv(sameKey, () => {
+      expect(verifyReferralToken(unsubToken)).toBeNull();
+      expect(verifyUnsubscribeToken(referralToken)).toBeNull();
+    });
+  });
+});
+
+test.describe("newsletter-unsub-token secret separation (dual-verify)", () => {
+  test("unsub links in EVERY past issue still verify after NEWSLETTER_UNSUB_SECRET is set", () => {
+    // CAN-SPAM-relevant: a broken historical unsubscribe link is not acceptable.
+    const legacyToken = withEnv({ NEWSLETTER_UNSUB_SECRET: undefined }, () =>
+      signUnsubscribeToken("parent@example.com"),
+    )!;
+    const verified = withEnv(
+      { NEWSLETTER_UNSUB_SECRET: "dedicated-unsub" },
+      () => verifyUnsubscribeToken(legacyToken),
+    );
+    expect(verified).toBe("parent@example.com");
+  });
+
+  test("with NEWSLETTER_UNSUB_SECRET set, new tokens survive NGA_ADMIN_SECRET rotation", () => {
+    const token = withEnv({ NEWSLETTER_UNSUB_SECRET: "dedicated-unsub" }, () =>
+      signUnsubscribeToken("parent@example.com"),
+    )!;
+    const verified = withEnv(
+      { NEWSLETTER_UNSUB_SECRET: "dedicated-unsub", NGA_ADMIN_SECRET: "rotated" },
+      () => verifyUnsubscribeToken(token),
+    );
+    expect(verified).toBe("parent@example.com");
+  });
+});
+
 test.describe("commit-token secret separation (dual-verify gap)", () => {
   test("legacy outstanding commit links still verify after COMMIT_TOKEN_SECRET is set", () => {
     // commit-token already SIGNS with a dedicated secret when set — but
     // without dual-verify, flipping the env var bricks every commit link
     // already sitting in a parent inbox (they're non-expiring by design).
-    const legacyToken = signCommitToken(COMMIT_PAYLOAD)!;
+    const legacyToken = withEnv({ COMMIT_TOKEN_SECRET: undefined }, () =>
+      signCommitToken(COMMIT_PAYLOAD),
+    )!;
     const verified = withEnv({ COMMIT_TOKEN_SECRET: "dedicated-commit" }, () =>
       verifyCommitToken(legacyToken),
     );
