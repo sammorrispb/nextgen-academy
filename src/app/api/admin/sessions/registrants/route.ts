@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionEmail } from "@/lib/admin-auth";
 import { isAllowedAdminEmail } from "@/lib/admin-allowlist";
 import { fetchAllDropInsInRange, type DropInRegistration } from "@/lib/notion-dropins";
+import { encodeParentKey } from "@/lib/player-profiles";
 import { partitionRegistrants } from "@/lib/registrant-match";
 
 export const runtime = "nodejs";
@@ -27,10 +28,13 @@ export interface AdminRegistrant {
   attendance: string;
   smsConsent: boolean;
   paidAt: string;
+  /** Key for /coach/players/[key]; "" when the row has no email or phone. */
+  profileKey: string;
 }
 
 function toRegistrant(row: DropInRegistration): AdminRegistrant {
   return {
+    profileKey: encodeParentKey(row.parentEmail, row.parentPhone),
     id: row.id,
     url: row.url,
     parentName: row.parentName,
