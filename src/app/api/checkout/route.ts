@@ -11,6 +11,11 @@ import {
 
 const REGISTRATION_WINDOW_MS = REGISTRATION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
+// Stripe metadata values are strings with a 500-char limit per value.
+function metaValue(v: string | undefined): string {
+  return (v ?? "").slice(0, 500);
+}
+
 export async function POST(req: NextRequest) {
   let body: Partial<RsvpFormData>;
   try {
@@ -115,6 +120,15 @@ export async function POST(req: NextRequest) {
       // Snapshot the exact disclosure shown at opt-in for TCPA audit trail.
       // Only stored when the user actually opted in.
       sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
+      // Attribution stash forwarded by the RSVP form (UtmCapture →
+      // sessionStorage). The webhook maps these to a human Source label on
+      // the Notion roster row. Stripe metadata values are strings capped at
+      // 500 chars — truncate defensively.
+      source_utm_source: metaValue(data.utm_source),
+      source_utm_medium: metaValue(data.utm_medium),
+      source_utm_campaign: metaValue(data.utm_campaign),
+      source_utm_content: metaValue(data.utm_content),
+      source_ref: metaValue(data.ref),
     },
     success_url: `${origin}/schedule/success?cs={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/schedule`,

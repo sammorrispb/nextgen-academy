@@ -4,8 +4,8 @@ import { useEffect } from "react";
 import { captureUtm } from "@/lib/funnelClient";
 
 /**
- * One-shot UTM capture. Reads utm_source/utm_campaign/utm_medium/ref from
- * the URL on first landing and stashes in sessionStorage. Idempotent —
+ * One-shot UTM capture. Reads utm_source/utm_campaign/utm_medium/utm_content/ref
+ * from the URL on first landing and stashes in sessionStorage. Idempotent —
  * safe to mount unconditionally.
  *
  * Note: unlike the sammorrispb sibling component this does NOT strip the

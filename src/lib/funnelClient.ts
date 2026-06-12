@@ -130,6 +130,7 @@ export type CapturedUtm = {
   utm_source?: string;
   utm_campaign?: string;
   utm_medium?: string;
+  utm_content?: string;
   ref?: string;
 };
 
@@ -157,7 +158,7 @@ function writeSessionUtm(utm: CapturedUtm): void {
 }
 
 /**
- * Capture utm_source / utm_campaign / utm_medium / ref from the current URL
+ * Capture utm_source / utm_campaign / utm_medium / utm_content / ref from the current URL
  * into sessionStorage on first landing. Idempotent — non-empty params merge
  * onto an existing stash so a later campaign click can refine attribution.
  */
@@ -175,10 +176,12 @@ export function captureUtm(): void {
   const utmSource = params.get("utm_source");
   const utmCampaign = params.get("utm_campaign");
   const utmMedium = params.get("utm_medium");
+  const utmContent = params.get("utm_content");
   const ref = params.get("ref");
   if (utmSource) fromUrl.utm_source = utmSource;
   if (utmCampaign) fromUrl.utm_campaign = utmCampaign;
   if (utmMedium) fromUrl.utm_medium = utmMedium;
+  if (utmContent) fromUrl.utm_content = utmContent;
   if (ref) fromUrl.ref = ref;
 
   if (Object.keys(fromUrl).length === 0) return;

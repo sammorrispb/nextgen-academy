@@ -4,6 +4,7 @@ import { normalizeKids, validateLeadForm } from "@/lib/validate-lead";
 import type { Kid, LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { attributedSource } from "@/lib/attribution";
 import { c, s } from "@/lib/email/brand";
 import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
 
@@ -88,14 +89,10 @@ function formatAttribution(body: LeadFormData): string {
   return lines.join(" | ");
 }
 
-function attributedSource(body: LeadFormData): string {
-  // Map common ad sources to clean Notion select values.
-  const src = body.utm_source?.toLowerCase();
-  if (src === "facebook" || src === "fb") return "Facebook Ad";
-  if (src === "instagram" || src === "ig") return "Instagram Ad";
-  if (src === "google") return "Google Ad";
-  if (body.utm_source) return `Ad: ${body.utm_source}`;
-  return "Website Lead Form";
+// Shared vocab lives in @/lib/attribution — this wrapper only pins the lead
+// route's historical fallback so existing Notion select values don't drift.
+function leadSource(body: LeadFormData): string {
+  return attributedSource(body, "Website Lead Form");
 }
 
 // Pick the cohort tag a fresh lead should be slotted into. New leads in May
@@ -146,7 +143,7 @@ async function createNotionPlayerRow(
     },
     Level: { select: { name: "Eval Needed" } },
     Status: { select: { name: "Lead" } },
-    Source: { select: { name: attributedSource(body) } },
+    Source: { select: { name: leadSource(body) } },
     Season: { select: { name: currentSeasonLabel() } },
     Audience: { select: { name: kid.age >= 17 ? "Adult" : "Youth" } },
     Notes: {

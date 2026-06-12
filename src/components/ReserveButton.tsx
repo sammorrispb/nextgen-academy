@@ -10,6 +10,7 @@ import {
   type RsvpFormData,
   type RsvpValidationErrors,
 } from "@/lib/validate-rsvp";
+import { getUtm } from "@/lib/funnelClient";
 
 const FIELD_INPUT =
   "w-full rounded-lg bg-ngpa-deep/80 border border-ngpa-slate/60 text-ngpa-white px-3 py-2.5 text-base placeholder:text-ngpa-white/40 focus:outline-none focus:border-ngpa-teal focus:ring-1 focus:ring-ngpa-teal transition-colors";
@@ -63,6 +64,9 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
       sessionId: session.id,
       displayConsent: fd.get("displayConsent") === "on",
       smsConsent: fd.get("smsConsent") === "on",
+      // Attribution stash from UtmCapture (sessionStorage) — rides along so
+      // /api/checkout can stamp Stripe metadata for Source attribution.
+      ...getUtm(),
     };
     const ve = validateRsvpForm(data);
     setErrors(ve);

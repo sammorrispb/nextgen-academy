@@ -24,6 +24,13 @@ export interface DropInRow {
   smsConsent: boolean;
   /** Verbatim disclosure shown at opt-in. Empty if smsConsent === false. */
   smsConsentText: string;
+  /**
+   * Human attribution label from the shared attributedSource() vocab
+   * ("Website", "Facebook Ad", "Ad: nextdoor", ...). Optional so non-funnel
+   * callers (crew auto-reserve, backfill) can omit it — no Source is written.
+   * Notion auto-creates select options on first write.
+   */
+  source?: string;
 }
 
 /**
@@ -106,6 +113,9 @@ export async function createDropInRegistrationResult(
     properties["Stripe Payment Intent ID"] = {
       rich_text: [{ text: { content: row.stripePaymentIntentId } }],
     };
+  }
+  if (row.source) {
+    properties.Source = { select: { name: row.source } };
   }
 
   const res = await fetch(`${NOTION_API}/pages`, {

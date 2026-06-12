@@ -9,6 +9,16 @@ export interface RsvpFormData {
   displayConsent: boolean;
   /** TCPA opt-in for SMS notifications. Default false. */
   smsConsent: boolean;
+  /**
+   * Attribution (optional) — the sessionStorage UTM stash captured by
+   * UtmCapture, forwarded so /api/checkout can stamp Stripe metadata for the
+   * webhook's Source attribution. Never validated; absent = direct/organic.
+   */
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  ref?: string;
 }
 
 export type RsvpValidationErrors = Partial<

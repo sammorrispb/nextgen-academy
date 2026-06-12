@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { attributedSource } from "@/lib/attribution";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -70,6 +71,14 @@ interface WaitlistBody {
   contact?: string;
   preferredArea?: string;
   marketingOptIn?: boolean;
+  // Attribution (optional) — UTM stash forwarded by the waitlist form
+  // (UtmCapture → sessionStorage). Mapped to a Source select on the Notion
+  // row via the shared attributedSource() vocab; absent = "Website".
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  ref?: string;
 }
 
 function validate(body: WaitlistBody): Record<string, string> {
@@ -111,6 +120,7 @@ async function createWaitlistEntry(body: Required<WaitlistBody>): Promise<{
     "Preferred Area": { select: { name: body.preferredArea } },
     Status: { select: { name: "Active" } },
     "Marketing Opt-In": { checkbox: !!body.marketingOptIn },
+    Source: { select: { name: attributedSource(body) } },
   };
 
   if (email) properties["Parent Email"] = { email };
