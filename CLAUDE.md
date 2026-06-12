@@ -217,6 +217,37 @@ See `.env.example`. Categories:
 - Tag mobile-only / desktop-only tests by checking `testInfo.project.name` and calling `test.skip()` (see `homepage.spec.ts`).
 - Validate any form input (XSS / injection) before persisting or echoing back.
 
+## Minor-Data Governance (COPPA-aligned)
+NGA serves children ages 6–16; parents are the account holders and control everything until 18. Rules that bind every change:
+
+- **Child-PII inventory & flow.** Child fields (first name, birth year — never more) flow exactly one path on registration: Stripe checkout metadata → `/api/stripe/webhook` → Notion roster row (+ Player CRM sync) + admin/parent email. The Notion row holds parent contact + child fields together; there is no separate child record. Any NEW egress destination for child fields is a hostile-review trigger (see `docs/hostile-reviewer.md`) and is pinned by `e2e/invariant-child-pii-egress.spec.ts`.
+- **Comms go to parents, never minors.** Email/SMS recipients are parent or admin addresses only. SMS additionally requires TCPA consent: `sendSms()` hard-refuses without `consent: true`, and consent flips only on the exact string `"true"` from checkout metadata (`e2e/invariant-consent-gating.spec.ts`). The verbatim opt-in language is stored on the row for audit defense.
+- **Child data is reachable only through parent-scoped or coach-scoped auth.** Parent scope = HMAC tokens binding exactly one registration (`src/lib/cancel-token.ts`). Coach scope = signed session cookie + `COACH_ALLOWED_EMAILS` allowlist, composed in `coach/(authed)/layout.tsx`. Both gates fail closed and are pinned by `e2e/invariant-cancel-token-scope.spec.ts` and `e2e/invariant-coach-session-scope.spec.ts`.
+- **Don't collect more.** No DOB (birth year only), no school, no medical fields, no photos of minors without `Display Consent`. Adding any new child field requires Sam's explicit approval first.
+
+## Slop-Free Zones (no edits without separate explicit approval)
+Tests OBSERVE these files; they never modify them. Any change here goes through the IPAV loop (below) with its own approval:
+
+- **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
+- **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 5 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto}.ts`, `api/admin/sessions/registrants`, coach roster/player pages, the 3 eval routes.
+
+Full inventory + risk log: `docs/source-inventory.md`.
+
+## Production Class Ladder (per module)
+**production** (full invariant-test coverage, fail-closed, alerting): drop-in funnel (schedule/checkout/webhook/cancel/crons), camps, crew autoreserve, weekly newsletter, coach + admin portals.
+**hardened** (gated + observed, lighter coverage): eval endpoints, notion-session-webhook, referral rewards.
+**prototype** (deliberately dark or staged; don't gold-plate): league (ships 503 until price env), clusters (staged pilot), coach polls/crew machinery.
+**show pony** (static; zero test investment): SEO city pages, schools/yellowball lead forms, waiver page.
+Promotion up the ladder requires: invariant tests first, then the hostile-review checklist, then Sam's sign-off.
+
+## Working Loop: Investigate → Propose → Approve → Validate (IPAV)
+Default for ANY change touching payments, auth/tokens, or minor PII (and recommended everywhere):
+1. **Investigate** — read the real code/inventory; verify claims against the tree, not memory.
+2. **Propose** — plan with files, invariants at risk, and rollback; present before writing code.
+3. **Approve** — Sam's explicit go. Approval gates are HARD STOPS; approval in one scope doesn't extend to the next.
+4. **Validate** — invariant tests written/extended FIRST (fail before, pass after — see `skills/add-invariant-test.md`), full `npm run test:pure` + lint + build green, mutation-check new specs, log the decision in `agent-log.md` (Situation · Decision · Risk · Change).
+
 ## Reference Files
 - `BRAND_GUIDELINES.md` — single source of truth for colors, typography, component naming (BEM `card__title` etc.), thumb-zone rules, copywriting do/don't lists. Read this before any visual change.
 
