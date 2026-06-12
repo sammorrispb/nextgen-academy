@@ -28,6 +28,7 @@ import {
   findClusterRegByCheckoutId,
 } from "@/lib/notion-clusters";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { attributedSource } from "@/lib/attribution";
 
 export const runtime = "nodejs";
 // Acknowledge Stripe fast (critical row create only), then finish the
@@ -377,6 +378,16 @@ export async function POST(req: NextRequest) {
     displayConsent: metaString(m, "display_consent") === "true",
     smsConsent: metaString(m, "sms_consent") === "true",
     smsConsentText: metaString(m, "sms_consent_text"),
+    // Source attribution from the checkout's source_utm_* metadata. Tolerates
+    // absent keys (pre-deploy sessions, Payment Links) — metaString returns ""
+    // and attributedSource falls back to "Website".
+    source: attributedSource({
+      utm_source: metaString(m, "source_utm_source"),
+      utm_medium: metaString(m, "source_utm_medium"),
+      utm_campaign: metaString(m, "source_utm_campaign"),
+      utm_content: metaString(m, "source_utm_content"),
+      ref: metaString(m, "source_ref"),
+    }),
   };
 
   // The drop-in row is the source of truth (roster, reminders, check-in, cancel

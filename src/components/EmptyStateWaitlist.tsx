@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { trackEvent } from "@/lib/funnelClient";
+import { getUtm, trackEvent } from "@/lib/funnelClient";
 
 const AREAS = [
   "Anywhere in MoCo",
@@ -55,6 +55,9 @@ export default function EmptyStateWaitlist({
           contact,
           preferredArea,
           marketingOptIn,
+          // Attribution stash from UtmCapture (sessionStorage) — the route
+          // maps it to a Source select on the Notion waitlist row.
+          ...getUtm(),
         }),
       });
       const data = await res.json();
