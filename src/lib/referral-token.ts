@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac } from "node:crypto";
+import { secretEquals, signingSecrets } from "./secret-compare";
 
 /**
  * HMAC-signed referral tokens. Each newsletter subscriber gets one signed
@@ -12,18 +13,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * leaked unsubscribe token can never be replayed as a referral and vice
  * versa.
  *
- * Signing key: REFERRAL_TOKEN_SECRET, falling back to NGA_ADMIN_SECRET so the
- * feature ships without provisioning a new env var. Tokens never expire — a
- * forwarded-email link from six months ago should still attribute the new
- * signup correctly.
+ * Signing key: REFERRAL_TOKEN_SECRET, with verify-fallback to the legacy
+ * NGA_ADMIN_SECRET (same dual-verify pattern as the other token libs) so
+ * setting the dedicated secret never breaks links already in inboxes. Tokens
+ * never expire — a forwarded-email link from six months ago should still
+ * attribute the new signup correctly.
  */
 
-function getSecret(): string | null {
-  return (
-    process.env.REFERRAL_TOKEN_SECRET ||
-    process.env.NGA_ADMIN_SECRET ||
-    null
-  );
+function secrets(): string[] {
+  return signingSecrets("REFERRAL_TOKEN_SECRET");
 }
 
 function macInput(email: string): string {
@@ -31,7 +29,7 @@ function macInput(email: string): string {
 }
 
 export function signReferralToken(email: string): string | null {
-  const secret = getSecret();
+  const [secret] = secrets();
   if (!secret) return null;
   const normalized = email.trim().toLowerCase();
   if (!normalized || !normalized.includes("@")) return null;
@@ -43,8 +41,8 @@ export function signReferralToken(email: string): string | null {
 }
 
 export function verifyReferralToken(token: string): string | null {
-  const secret = getSecret();
-  if (!secret) return null;
+  const candidates = secrets();
+  if (candidates.length === 0) return null;
   const parts = token.split(".");
   if (parts.length !== 2) return null;
   const [payload, mac] = parts;
@@ -58,12 +56,11 @@ export function verifyReferralToken(token: string): string | null {
   }
   if (!email || !email.includes("@")) return null;
 
-  const expected = createHmac("sha256", secret)
-    .update(macInput(email))
-    .digest("base64url");
-  const a = Buffer.from(mac);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
-  return email;
+  for (const secret of candidates) {
+    const expected = createHmac("sha256", secret)
+      .update(macInput(email))
+      .digest("base64url");
+    if (secretEquals(mac, expected)) return email;
+  }
+  return null;
 }

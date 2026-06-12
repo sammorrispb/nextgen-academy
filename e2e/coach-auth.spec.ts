@@ -24,18 +24,24 @@ test.describe("coach magic-link token", () => {
     expect(verifyMagicLinkToken(token)).toBe("coach@example.com");
   });
 
+  // Flip the last char to something it ISN'T — the token embeds Date.now()
+  // (exp), so a fixed replacement char silently no-ops ~1/64 runs when the
+  // char already matches (flaked in CI 2026-06-12).
+  function flipLastChar(s: string): string {
+    return s.slice(0, -1) + (s.endsWith("A") ? "B" : "A");
+  }
+
   test("rejects a tampered payload (MAC stops matching)", () => {
     const token = createMagicLinkToken("coach@example.com");
     const [payload, mac] = token.split(".");
-    // Flip the last char of the base64url payload
-    const tampered = `${payload.slice(0, -1)}A.${mac}`;
+    const tampered = `${flipLastChar(payload)}.${mac}`;
     expect(verifyMagicLinkToken(tampered)).toBeNull();
   });
 
   test("rejects a tampered MAC", () => {
     const token = createMagicLinkToken("coach@example.com");
     const [payload, mac] = token.split(".");
-    const tampered = `${payload}.${mac.slice(0, -1)}A`;
+    const tampered = `${payload}.${flipLastChar(mac)}`;
     expect(verifyMagicLinkToken(tampered)).toBeNull();
   });
 

@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac } from "node:crypto";
+import { secretEquals, signingSecrets } from "./secret-compare";
 
 /**
  * HMAC-signed one-click unsubscribe tokens for the weekly newsletter.
@@ -12,17 +13,18 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * work. The only action it grants is "unsubscribe this address," which is
  * idempotent and harmless if leaked.
  *
- * Signing key: NEWSLETTER_UNSUB_SECRET, falling back to NGA_ADMIN_SECRET so
- * the feature works without provisioning a new env var. Set the dedicated
- * secret if you ever want to rotate unsubscribe links independently.
+ * Signing key: NEWSLETTER_UNSUB_SECRET, with verify-fallback to the legacy
+ * NGA_ADMIN_SECRET (dual-verify) — unsubscribe links in every past issue MUST
+ * keep working when the dedicated secret is introduced (CAN-SPAM). Rotate the
+ * dedicated secret to invalidate new-era links only.
  */
 
-function getSecret(): string | null {
-  return process.env.NEWSLETTER_UNSUB_SECRET || process.env.NGA_ADMIN_SECRET || null;
+function secrets(): string[] {
+  return signingSecrets("NEWSLETTER_UNSUB_SECRET");
 }
 
 export function signUnsubscribeToken(email: string): string | null {
-  const secret = getSecret();
+  const [secret] = secrets();
   if (!secret) return null;
   const normalized = email.trim().toLowerCase();
   const payload = Buffer.from(normalized, "utf-8").toString("base64url");
@@ -31,8 +33,8 @@ export function signUnsubscribeToken(email: string): string | null {
 }
 
 export function verifyUnsubscribeToken(token: string): string | null {
-  const secret = getSecret();
-  if (!secret) return null;
+  const candidates = secrets();
+  if (candidates.length === 0) return null;
   const parts = token.split(".");
   if (parts.length !== 2) return null;
   const [payload, mac] = parts;
@@ -46,10 +48,11 @@ export function verifyUnsubscribeToken(token: string): string | null {
   }
   if (!email) return null;
 
-  const expected = createHmac("sha256", secret).update(email).digest("base64url");
-  const a = Buffer.from(mac);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
-  return email;
+  for (const secret of candidates) {
+    const expected = createHmac("sha256", secret)
+      .update(email)
+      .digest("base64url");
+    if (secretEquals(mac, expected)) return email;
+  }
+  return null;
 }
