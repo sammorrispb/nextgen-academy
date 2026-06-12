@@ -1,3 +1,4 @@
+import { secretEquals } from "@/lib/secret-compare";
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
@@ -354,7 +355,7 @@ export async function GET(req: NextRequest) {
     );
   }
   const auth = req.headers.get("authorization") ?? "";
-  if (auth !== `Bearer ${expected}`) {
+  if (!secretEquals(auth, `Bearer ${expected}`)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

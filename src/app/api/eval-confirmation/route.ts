@@ -1,3 +1,4 @@
+import { secretEquals } from "@/lib/secret-compare";
 import { NextRequest, NextResponse } from "next/server";
 import {
   sendEvalConfirmation,
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
-  if (!process.env.NGA_ADMIN_SECRET || secret !== process.env.NGA_ADMIN_SECRET) {
+  if (!secretEquals(secret, process.env.NGA_ADMIN_SECRET)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

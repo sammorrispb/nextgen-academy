@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac } from "node:crypto";
+import { secretEquals, signingSecrets } from "./secret-compare";
 
 /**
  * HMAC-signed 4-week soft-commit tokens. Embedded in the post-session email
@@ -10,9 +11,11 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * without the parent retyping anything. Crew-id is the join key with the
  * Sessions DB rows the coach manually creates after the poll confirms.
  *
- * Signing key: COMMIT_TOKEN_SECRET, falls back to NGA_ADMIN_SECRET (same
- * pattern as newsletter-token / cancel-token). Non-expiring: parents need to
- * be able to retry after a card decline a week later.
+ * Signing key: COMMIT_TOKEN_SECRET, with verify-fallback to the legacy
+ * NGA_ADMIN_SECRET (same pattern as cancel-token / session-cancel-token) so
+ * introducing the dedicated secret never bricks links already in parent
+ * inboxes. Non-expiring: parents need to be able to retry after a card
+ * decline a week later.
  */
 
 export interface CommitTokenPayload {
@@ -21,8 +24,8 @@ export interface CommitTokenPayload {
   crewId: string;
 }
 
-function getSecret(): string | null {
-  return process.env.COMMIT_TOKEN_SECRET || process.env.NGA_ADMIN_SECRET || null;
+function secrets(): string[] {
+  return signingSecrets("COMMIT_TOKEN_SECRET");
 }
 
 function encodePayload(p: CommitTokenPayload): string {
@@ -48,7 +51,7 @@ function decodePayload(encoded: string): CommitTokenPayload | null {
 }
 
 export function signCommitToken(payload: CommitTokenPayload): string | null {
-  const secret = getSecret();
+  const [secret] = secrets();
   if (!secret) return null;
   const encoded = encodePayload(payload);
   const mac = createHmac("sha256", secret).update(encoded).digest("base64url");
@@ -56,20 +59,20 @@ export function signCommitToken(payload: CommitTokenPayload): string | null {
 }
 
 export function verifyCommitToken(token: string): CommitTokenPayload | null {
-  const secret = getSecret();
-  if (!secret) return null;
+  const candidates = secrets();
+  if (candidates.length === 0) return null;
   const parts = token.split(".");
   if (parts.length !== 2) return null;
   const [encoded, mac] = parts;
   if (!encoded || !mac) return null;
 
-  const expected = createHmac("sha256", secret).update(encoded).digest("base64url");
-  const a = Buffer.from(mac);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
-
-  return decodePayload(encoded);
+  for (const secret of candidates) {
+    const expected = createHmac("sha256", secret)
+      .update(encoded)
+      .digest("base64url");
+    if (secretEquals(mac, expected)) return decodePayload(encoded);
+  }
+  return null;
 }
 
 /**
