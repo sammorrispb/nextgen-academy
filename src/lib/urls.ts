@@ -17,10 +17,11 @@ export function crUrl(target: string, ref: string = UTM_SOURCE): string {
   return url.toString();
 }
 
-export type FamilyDest = "sammorrispb";
+export type FamilyDest = "sammorrispb" | "linkanddink";
 
 const FAMILY_BASES: Record<FamilyDest, string> = {
   sammorrispb: "https://sammorrispb.com",
+  linkanddink: "https://www.linkanddink.com",
 };
 
 /**
