@@ -29,6 +29,27 @@ const STATUS_COLOR: Record<string, string> = {
   Passed: "text-amber-300 border-amber-400/40 bg-amber-400/10",
 };
 
+interface Registrant {
+  id: string;
+  url: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  childFirstName: string;
+  childBirthYear: number;
+  amountPaidUsd: number;
+  status: string;
+  attendance: string;
+}
+
+interface RegistrantPanel {
+  open: boolean;
+  loading?: boolean;
+  err?: string;
+  list?: Registrant[];
+  otherTitleCount?: number;
+}
+
 function prettyDate(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso || "—";
   const [y, m, d] = iso.split("-").map(Number);
@@ -56,6 +77,41 @@ export default function SessionsEditor({
   const [state, setState] = useState<Record<string, { busy?: boolean; msg?: string; err?: boolean }>>(
     {},
   );
+  const [registrants, setRegistrants] = useState<Record<string, RegistrantPanel>>({});
+
+  async function toggleRegistrants(row: AdminSession) {
+    const cur = registrants[row.id];
+    if (cur?.open) {
+      setRegistrants((m) => ({ ...m, [row.id]: { ...cur, open: false } }));
+      return;
+    }
+    if (cur?.list) {
+      setRegistrants((m) => ({ ...m, [row.id]: { ...cur, open: true } }));
+      return;
+    }
+    setRegistrants((m) => ({ ...m, [row.id]: { open: true, loading: true } }));
+    // Query by the last-saved title/date — unsaved edits haven't reached the
+    // registration rows, which store the title as it read at checkout time.
+    const base = saved[row.id] ?? row;
+    try {
+      const qs = new URLSearchParams({ date: base.date, title: base.title });
+      const res = await fetch(`/api/admin/sessions/registrants?${qs}`);
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && Array.isArray(j.registrants)) {
+        setRegistrants((m) => ({
+          ...m,
+          [row.id]: { open: true, list: j.registrants, otherTitleCount: j.otherTitleCount ?? 0 },
+        }));
+      } else {
+        setRegistrants((m) => ({
+          ...m,
+          [row.id]: { open: true, err: j.error || "Failed to load registrants" },
+        }));
+      }
+    } catch {
+      setRegistrants((m) => ({ ...m, [row.id]: { open: true, err: "Network error" } }));
+    }
+  }
 
   useEffect(() => {
     if (!focusId) return;
@@ -125,6 +181,7 @@ export default function SessionsEditor({
     <div className="space-y-4">
       {rows.map((row) => {
         const st = state[row.id] || {};
+        const reg = registrants[row.id] || { open: false };
         const isDirty = dirty(row);
         return (
           <div
@@ -146,10 +203,79 @@ export default function SessionsEditor({
               >
                 {row.status || "—"}
               </span>
-              <span className="ml-auto text-sm text-ngpa-white/70">
-                <b className="text-ngpa-white">{row.registered}</b> registered
-              </span>
+              <button
+                onClick={() => toggleRegistrants(row)}
+                className="ml-auto min-h-12 px-3 -mr-3 text-sm text-ngpa-white/70 hover:text-ngpa-white transition-colors"
+                aria-expanded={reg.open || false}
+              >
+                <b className="text-ngpa-white">{row.registered}</b> registered{" "}
+                <span aria-hidden className="inline-block text-xs">
+                  {reg.open ? "▲" : "▼"}
+                </span>
+              </button>
             </div>
+
+            {reg.open && (
+              <div className="mb-4 rounded-xl border border-ngpa-slate/50 bg-ngpa-deep/60 p-3 sm:p-4">
+                {reg.loading && <p className="text-sm text-ngpa-white/60">Loading registrants…</p>}
+                {reg.err && <p className="text-sm text-red-400">{reg.err}</p>}
+                {reg.list && reg.list.length === 0 && (
+                  <p className="text-sm text-ngpa-white/60">No registrations yet.</p>
+                )}
+                {reg.list && reg.list.length > 0 && (
+                  <ul className="divide-y divide-ngpa-slate/40">
+                    {reg.list.map((r) => (
+                      <li key={r.id} className="py-2 first:pt-0 last:pb-0">
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+                          <b className="text-ngpa-white">{r.childFirstName || "—"}</b>
+                          {r.childBirthYear > 0 && (
+                            <span className="text-ngpa-white/50 text-xs">b. {r.childBirthYear}</span>
+                          )}
+                          {r.status !== "Confirmed" && (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full border border-amber-400/40 text-amber-300">
+                              {r.status || "—"}
+                            </span>
+                          )}
+                          {r.attendance && (
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                                r.attendance === "Present"
+                                  ? "border-emerald-400/40 text-emerald-300"
+                                  : "border-red-400/40 text-red-300"
+                              }`}
+                            >
+                              {r.attendance}
+                            </span>
+                          )}
+                          <span className="ml-auto text-ngpa-white/60 text-xs">
+                            ${r.amountPaidUsd}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ngpa-white/70 mt-0.5">
+                          <span>{r.parentName || "—"}</span>
+                          {r.parentEmail && (
+                            <a className="underline decoration-ngpa-slate hover:text-ngpa-white" href={`mailto:${r.parentEmail}`}>
+                              {r.parentEmail}
+                            </a>
+                          )}
+                          {r.parentPhone && (
+                            <a className="underline decoration-ngpa-slate hover:text-ngpa-white" href={`tel:${r.parentPhone}`}>
+                              {r.parentPhone}
+                            </a>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {reg.list && (reg.otherTitleCount ?? 0) > 0 && (
+                  <p className="text-[11px] text-ngpa-white/45 mt-2">
+                    {reg.otherTitleCount} other registration{reg.otherTitleCount === 1 ? "" : "s"} on
+                    this date under a different session title.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
