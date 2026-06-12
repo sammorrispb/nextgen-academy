@@ -1,12 +1,15 @@
 import { c, s } from "./brand";
 import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
+import { fillLabel, fillBar } from "@/lib/fill-meter";
 
 /** One open time slot within a date+location group. */
 export interface NewsletterSessionSlot {
   label: string; // "4:30–5:30 PM"
-  spotsLeft: number;
-  capacity: number;
+  /** Players signed up so far — the meter fills toward `goal`. */
+  registered: number;
+  /** Full build-out of the session (maxCourts × 4) — the meter's target. */
+  goal: number;
 }
 
 /** A date+location group with one or more open slots that week. */
@@ -89,11 +92,13 @@ export interface WeeklyNewsletterInput {
   campPriceFromUsd: number;
 }
 
-/** Honest, scannable spots phrasing. Low counts get urgency; never faked. */
-export function spotsLabel(spotsLeft: number, capacity: number): string {
-  if (spotsLeft <= 0) return "Full";
-  if (spotsLeft <= 3) return `only ${spotsLeft} spot${spotsLeft === 1 ? "" : "s"} left`;
-  return `${spotsLeft} of ${capacity} spots left`;
+/** Email-safe segmented meter: lime filled blocks, muted empty blocks. */
+function meterHtml(registered: number, goal: number): string {
+  if (goal <= 0) return "";
+  const r = Math.min(Math.max(0, registered), goal);
+  const filled = r > 0 ? `<span style="color:${c.accentLime};">${"▰".repeat(r)}</span>` : "";
+  const empty = r < goal ? `<span style="color:${c.muted};">${"▱".repeat(goal - r)}</span>` : "";
+  return `<span style="letter-spacing:2px;">${filled}${empty}</span>`;
 }
 
 function pollTimeRange(p: NewsletterOpenPoll): string {
@@ -137,7 +142,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const sessionBlock = hasSessions
     ? `
     <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">This week&rsquo;s sessions</p>
-    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">All times Eastern. Spots cap at 4 players per court and fill from the front &mdash; grab one early.</p>
+    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">All times Eastern. Every signup fills the meter &mdash; full courts make the best games. Grab a slot and move it.</p>
     ${sessions
       .map(
         (g) => `<div style="${s.card}">
@@ -147,7 +152,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       ${g.slots
         .map(
           (slot) =>
-            `<p style="margin:0 0 2px 0;color:${c.text};font-size:14px;">${escape(slot.label)} &mdash; <span style="color:${c.accentLime};font-weight:700;">${escape(spotsLabel(slot.spotsLeft, slot.capacity))}</span></p>`,
+            `<p style="margin:0 0 2px 0;color:${c.text};font-size:14px;">${escape(slot.label)} &mdash; ${meterHtml(slot.registered, slot.goal)} <span style="color:${c.accentLime};font-weight:700;">${escape(fillLabel(slot.registered, slot.goal))}</span></p>`,
         )
         .join("")}
     </div>`,
@@ -362,14 +367,16 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   if (sessions.length > 0) {
     lines.push(
       "This week's sessions (all times Eastern):",
-      "Spots cap at 4 players per court and fill from the front — grab one early.",
+      "Every signup fills the meter — full courts make the best games. Grab a slot and move it.",
       "",
     );
     for (const g of sessions) {
       lines.push(`${g.dateLong} — ${g.location}`);
       if (g.weatherNote) lines.push(`  Forecast: ${g.weatherNote}`);
       for (const slot of g.slots) {
-        lines.push(`  ${slot.label} — ${spotsLabel(slot.spotsLeft, slot.capacity)}`);
+        lines.push(
+          `  ${slot.label} — ${fillBar(slot.registered, slot.goal)} ${fillLabel(slot.registered, slot.goal)}`,
+        );
       }
       lines.push("");
     }

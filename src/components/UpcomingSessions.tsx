@@ -3,7 +3,9 @@ import type { NgaSession } from "@/lib/notion-sessions";
 import { sessionToSlug } from "@/lib/session-slug";
 import { inferCity } from "@/lib/venue-lookup";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
+import FillMeter from "@/components/FillMeter";
 import { LEVEL_COLOR } from "@/lib/level-colors";
+import { fillGoal } from "@/lib/fill-meter";
 
 interface UpcomingSessionsProps {
   sessions: NgaSession[];
@@ -59,18 +61,6 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
                 const levelClass =
                   (session.level && LEVEL_COLOR[session.level]) ??
                   "bg-ngpa-slate text-ngpa-white";
-                const spotsBadge =
-                  session.spotsLeft === 0
-                    ? { text: "Full", cls: "text-red-400" }
-                    : session.spotsLeft <= 2
-                      ? {
-                          text: `${session.spotsLeft} spot${session.spotsLeft === 1 ? "" : "s"} left`,
-                          cls: "text-ngpa-skill-orange",
-                        }
-                      : {
-                          text: `${session.spotsLeft} spots`,
-                          cls: "text-ngpa-white/60",
-                        };
 
                 const linkClass = isNext
                   ? "block h-full rounded-2xl bg-ngpa-panel border-2 border-ngpa-teal p-5 ring-1 ring-ngpa-teal/40 shadow-[0_0_32px_-12px_rgba(0,180,216,0.55)] hover:bg-ngpa-panel transition-all min-h-[48px]"
@@ -99,9 +89,10 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
                             {session.level} Ball
                           </span>
                         )}
-                        <span className={`text-xs font-bold ${spotsBadge.cls}`}>
-                          {spotsBadge.text}
-                        </span>
+                        <FillMeter
+                          registered={session.registeredCount}
+                          goal={fillGoal(session)}
+                        />
                       </div>
                       <p className="font-heading text-base font-bold text-ngpa-white mb-1">
                         <time dateTime={session.date}>

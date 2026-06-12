@@ -13,6 +13,8 @@ import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { findSessionBySlug } from "@/lib/session-slug";
 import { LEVEL_COLOR } from "@/lib/level-colors";
+import { fillGoal } from "@/lib/fill-meter";
+import FillMeter from "@/components/FillMeter";
 
 export const revalidate = 300;
 
@@ -61,7 +63,7 @@ export async function generateMetadata({
     publicLocation(session.location, session.publicArea),
   );
   const title = `${session.title} · ${dayLabel} · NGA Drop-in`;
-  const description = `$20 to reserve a 1-hour pickleball slot on ${dayLabel} at ${shortLoc}. ${session.spotsLeft}/${session.capacity} seats left.`;
+  const description = `$20 to reserve a 1-hour pickleball slot on ${dayLabel} at ${shortLoc}. ${session.registeredCount} of ${fillGoal(session)} signed up — help fill the court.`;
 
   return {
     title,
@@ -194,20 +196,6 @@ function SessionDetailCard({
     (session.level && LEVEL_COLOR[session.level]) ??
     "bg-ngpa-slate text-ngpa-white";
 
-  const seatsText =
-    session.status === "Cancelled"
-      ? "Cancelled"
-      : session.spotsLeft === 0
-        ? "Full"
-        : `${session.spotsLeft} / ${session.capacity} seats left`;
-
-  const seatsClass =
-    session.status === "Cancelled" || session.spotsLeft === 0
-      ? "text-red-400"
-      : session.spotsLeft <= 2
-        ? "text-ngpa-skill-orange"
-        : "text-ngpa-white/65";
-
   const shareUrl = `${SITE_ORIGIN}/schedule/${slug}`;
   const shareTitle = `${session.title} · ${session.startTime}`;
   const shareText = `Reserve a $20 drop-in slot at NGA — ${session.title}, ${formatLongDate(session.date)}`;
@@ -222,7 +210,14 @@ function SessionDetailCard({
             {session.level} Ball
           </span>
         )}
-        <span className={`text-xs font-bold ${seatsClass}`}>{seatsText}</span>
+        {session.status === "Cancelled" ? (
+          <span className="text-xs font-bold text-red-400">Cancelled</span>
+        ) : (
+          <FillMeter
+            registered={session.registeredCount}
+            goal={fillGoal(session)}
+          />
+        )}
       </div>
 
       <p className="font-heading text-xl sm:text-2xl font-black text-ngpa-white tracking-tight mb-1">

@@ -1,6 +1,8 @@
 import type { NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { getParkingTip } from "@/data/venue-parking";
+import { fillGoal } from "@/lib/fill-meter";
+import FillMeter from "./FillMeter";
 
 export function socialProofLine(session: NgaSession): string | null {
   const s = session.ageStats;
@@ -28,38 +30,25 @@ export default function SessionInfoBlock({ session }: Props) {
   const directionsHref = `https://www.google.com/maps/dir/?api=1&destination=${query}`;
   const parking = getParkingTip(session.location ?? session.publicArea);
 
-  const seatsText =
-    session.status === "Cancelled"
-      ? "Cancelled"
-      : session.spotsLeft === 0
-        ? "Full"
-        : `${session.spotsLeft} of ${session.capacity} spots left`;
-
-  const seatsClass =
-    session.status === "Cancelled" || session.spotsLeft === 0
-      ? "text-red-400"
-      : session.spotsLeft <= 2
-        ? "text-ngpa-skill-orange"
-        : "text-ngpa-white";
-
   return (
     <div className="space-y-6">
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal mb-1">
-          Availability
+          Fill the meter
         </p>
-        <p className={`text-base font-bold ${seatsClass}`}>{seatsText}</p>
-        <p className="text-xs text-ngpa-white/55 mt-1">
-          Each pickleball court is capped at 4 players. Courts × 4 = total
-          spots.
+        {session.status === "Cancelled" ? (
+          <p className="text-base font-bold text-red-400">Cancelled</p>
+        ) : (
+          <FillMeter
+            registered={session.registeredCount}
+            goal={fillGoal(session)}
+            size="lg"
+          />
+        )}
+        <p className="text-xs text-ngpa-white/55 mt-2">
+          Every signup fills the meter. Each pickleball court holds 4 players —
+          we open the next court as the meter fills.
         </p>
-        {session.status !== "Cancelled" &&
-          session.courtCount < session.maxCourts && (
-            <p className="text-xs text-ngpa-teal-bright mt-1">
-              These spots fill first — more open (up to {session.maxCourts * 4})
-              the moment they do.
-            </p>
-          )}
       </div>
 
       <RosterBlock session={session} />

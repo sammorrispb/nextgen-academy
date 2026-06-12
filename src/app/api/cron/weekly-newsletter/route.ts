@@ -9,6 +9,7 @@ import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
 import { fetchApprovedNewsletterDrafts } from "@/lib/notion-newsletter-drafts";
 import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
+import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
 import { CAMPS, CAMP_AGE_MIN, CAMP_OPTIONS } from "@/data/camps";
@@ -79,7 +80,7 @@ function groupSessions(
       s.startTime && s.endTime
         ? `${s.startTime}–${s.endTime}`
         : s.startTime || "";
-    const slot = { label, spotsLeft: s.spotsLeft, capacity: s.capacity };
+    const slot = { label, registered: s.registeredCount, goal: fillGoal(s) };
     const existing = groups.get(key);
     if (existing) {
       if (label) existing.slots.push(slot);
