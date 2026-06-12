@@ -7,6 +7,7 @@ import {
   type SessionPatch,
   type SessionStatus,
 } from "@/lib/notion-sessions-admin";
+import { buildRosterMailto } from "@/lib/roster-mailto";
 
 const EDITABLE: (keyof AdminSession)[] = [
   "title",
@@ -40,6 +41,7 @@ interface Registrant {
   amountPaidUsd: number;
   status: string;
   attendance: string;
+  profileKey: string;
 }
 
 interface RegistrantPanel {
@@ -263,6 +265,28 @@ export default function SessionsEditor({
                               {r.parentPhone}
                             </a>
                           )}
+                          <span className="ml-auto flex gap-3">
+                            {r.profileKey && (
+                              <a
+                                className="underline decoration-ngpa-slate hover:text-ngpa-white"
+                                href={`/coach/players/${r.profileKey}`}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Profile ↗
+                              </a>
+                            )}
+                            {r.url && (
+                              <a
+                                className="underline decoration-ngpa-slate hover:text-ngpa-white"
+                                href={r.url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Notion ↗
+                              </a>
+                            )}
+                          </span>
                         </div>
                       </li>
                     ))}
@@ -287,6 +311,29 @@ export default function SessionsEditor({
                     this date under a different session title.
                   </p>
                 )}
+                {reg.list &&
+                  (() => {
+                    const base = saved[row.id] ?? row;
+                    const mailto = buildRosterMailto({
+                      emails: (reg.list ?? [])
+                        .filter((r) => r.status === "Confirmed")
+                        .map((r) => r.parentEmail),
+                      sessionTitle: base.title,
+                      prettyDate: prettyDate(base.date),
+                      startTime: base.startTime,
+                      endTime: base.endTime,
+                      location: base.location,
+                    });
+                    if (!mailto) return null;
+                    return (
+                      <a
+                        href={mailto}
+                        className="inline-flex items-center min-h-12 mt-1 text-sm font-bold text-ngpa-teal hover:opacity-90 transition-opacity"
+                      >
+                        ✉ Email all parents
+                      </a>
+                    );
+                  })()}
               </div>
             )}
 
