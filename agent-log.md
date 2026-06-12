@@ -5,6 +5,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-06-12 — Secret split completed for referral + newsletter-unsub; all 5 token secrets live in Vercel (#181)
+
+- **Situation:** After #180, referral and newsletter-unsub tokens still verified single-secret — setting their (already-documented) env vars would have broken every unsubscribe link in past issues and every referral link in old welcome emails. Both vars were unset in Vercel.
+- **Decision:** Same `signingSecrets` dual-verify as the other three families; then ALL FIVE dedicated secrets set in Vercel (Sensitive, Production-only, mirroring NGA_ADMIN_SECRET scope) and prod redeployed. Sequencing mattered: the Vercel "Redeploy" toast targeted the pre-#181 deployment — redeploying THAT with the new vars would have run single-verify code with a dedicated secret set (the exact brick this PR prevents). Redeployed the #181 build explicitly instead.
+- **Risk:** Legacy-era links now ride the fallback path until NGA_ADMIN_SECRET rotates (intended). Pre-existing CI flake fixed in passing: coach-auth tamper tests replaced the last char with a FIXED char, silently no-op'ing ~1/64 runs (token embeds Date.now()).
+- **Change:** `src/lib/{referral-token,newsletter-token}.ts`, 5 new invariant tests, de-flaked coach-auth.spec.ts, `.env.example` comments. Secrets recorded in the operator env registry.
+
 ## 2026-06-12 — Security hardening: timing-safe gates + NGA_ADMIN_SECRET split (Sam-approved slop-free edits)
 
 - **Situation:** Risk log #1–3: all 14 route-gate secret compares were plain `!==` (timing side-channel), and NGA_ADMIN_SECRET both gated 5 admin routes (2 refund-capable) and signed all 5 HMAC token families — one leak forged everything. Sam approved both fixes ("yes do both").
