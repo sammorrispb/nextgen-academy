@@ -10,6 +10,10 @@ export interface DropInRow {
   sessionTitle: string;
   sessionDate: string;
   sessionStartTime: string;
+  /** Notion page ID of the session row this registration belongs to. Optional
+   * so legacy/backfill callers can omit it; when present it makes the
+   * registration↔session link exact instead of title-text matching. */
+  sessionRowId?: string;
   /** Exact venue (private — admin/roster only). */
   location: string;
   /** Broad area for hidden-location sessions ("Olney, MD"). Empty if not hidden. */
@@ -117,6 +121,11 @@ export async function createDropInRegistrationResult(
   if (row.source) {
     properties.Source = { select: { name: row.source } };
   }
+  if (row.sessionRowId) {
+    properties["Session Row ID"] = {
+      rich_text: [{ text: { content: row.sessionRowId } }],
+    };
+  }
 
   const res = await fetch(`${NOTION_API}/pages`, {
     method: "POST",
@@ -159,6 +168,8 @@ export interface DropInRegistration {
   sessionTitle: string;
   sessionDate: string;
   sessionStartTime: string;
+  /** Empty on rows written before 2026-06-12 (pre Session Row ID stamping). */
+  sessionRowId: string;
   location: string;
   publicArea: string;
   locationHidden: boolean;
@@ -211,6 +222,7 @@ function pageToDropIn(page: any): DropInRegistration {
     sessionTitle: readTextProp(props["Session Title"]),
     sessionDate: props["Session Date"]?.date?.start ?? "",
     sessionStartTime: readTextProp(props["Session Start Time"]),
+    sessionRowId: readTextProp(props["Session Row ID"]),
     location: readTextProp(props["Location"]),
     publicArea: readTextProp(props["Public Area"]),
     locationHidden: props["Location Hidden"]?.checkbox === true,

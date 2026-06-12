@@ -367,6 +367,7 @@ export async function POST(req: NextRequest) {
     sessionTitle: metaString(m, "session_title"),
     sessionDate: metaString(m, "session_date"),
     sessionStartTime: metaString(m, "session_start"),
+    sessionRowId: sessionId,
     location: metaString(m, "session_location"),
     publicArea: metaString(m, "session_public_area"),
     locationHidden: false, // hidden-location retired 2026-06-05 — venues are public

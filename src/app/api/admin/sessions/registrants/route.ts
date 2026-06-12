@@ -50,12 +50,13 @@ export async function GET(req: NextRequest) {
   if (!(await authed())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const date = req.nextUrl.searchParams.get("date") ?? "";
   const title = req.nextUrl.searchParams.get("title") ?? "";
+  const sessionId = req.nextUrl.searchParams.get("sessionId") ?? "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return NextResponse.json({ error: "date (YYYY-MM-DD) is required" }, { status: 400 });
   }
   try {
     const rows = await fetchAllDropInsInRange(date, date);
-    const { matched, otherTitleCount } = partitionRegistrants(rows, title);
+    const { matched, otherTitleCount } = partitionRegistrants(rows, title, sessionId);
     return NextResponse.json({
       registrants: matched.map(toRegistrant),
       otherTitleCount,
