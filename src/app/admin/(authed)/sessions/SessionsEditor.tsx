@@ -94,7 +94,7 @@ export default function SessionsEditor({
     // registration rows, which store the title as it read at checkout time.
     const base = saved[row.id] ?? row;
     try {
-      const qs = new URLSearchParams({ date: base.date, title: base.title });
+      const qs = new URLSearchParams({ date: base.date, title: base.title, sessionId: row.id });
       const res = await fetch(`/api/admin/sessions/registrants?${qs}`);
       const j = await res.json().catch(() => ({}));
       if (res.ok && Array.isArray(j.registrants)) {
@@ -268,6 +268,19 @@ export default function SessionsEditor({
                     ))}
                   </ul>
                 )}
+                {reg.list &&
+                  (() => {
+                    const confirmed = reg.list.filter((r) => r.status === "Confirmed").length;
+                    const counter = (saved[row.id] ?? row).registered;
+                    if (confirmed === counter) return null;
+                    return (
+                      <p className="text-[11px] font-bold text-amber-300 mt-2">
+                        ⚠ Counter shows {counter} but {confirmed} confirmed registration
+                        {confirmed === 1 ? "" : "s"} found — the registered counter may have
+                        drifted.
+                      </p>
+                    );
+                  })()}
                 {reg.list && (reg.otherTitleCount ?? 0) > 0 && (
                   <p className="text-[11px] text-ngpa-white/45 mt-2">
                     {reg.otherTitleCount} other registration{reg.otherTitleCount === 1 ? "" : "s"} on

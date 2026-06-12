@@ -19,6 +19,7 @@ function row(over: Partial<DropInRegistration>): DropInRegistration {
     sessionTitle: "Walter Johnson HS — Early",
     sessionDate: "2026-05-23",
     sessionStartTime: "4:30 PM",
+    sessionRowId: "",
     location: "Walter Johnson HS, Bethesda, MD",
     publicArea: "",
     locationHidden: false,

@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
-import { normalizeTitle, partitionRegistrants } from "../src/lib/registrant-match";
+import {
+  normalizePageId,
+  normalizeTitle,
+  partitionRegistrants,
+} from "../src/lib/registrant-match";
 import type { DropInRegistration } from "../src/lib/notion-dropins";
 
 function row(overrides: Partial<DropInRegistration>): DropInRegistration {
@@ -14,6 +18,7 @@ function row(overrides: Partial<DropInRegistration>): DropInRegistration {
     sessionTitle: "Redland Tuesday Evening — Orange",
     sessionDate: "2026-06-16",
     sessionStartTime: "6:00 PM",
+    sessionRowId: "",
     location: "",
     publicArea: "",
     locationHidden: false,
@@ -75,5 +80,44 @@ test.describe("partitionRegistrants", () => {
     const { matched, otherTitleCount } = partitionRegistrants([], "Anything");
     expect(matched).toEqual([]);
     expect(otherTitleCount).toBe(0);
+  });
+
+  test("stamped row ID matches even after the session title is renamed", () => {
+    const rows = [
+      row({ sessionTitle: "Old Title Before Rename", sessionRowId: "abc-123-def" }),
+    ];
+    const { matched } = partitionRegistrants(rows, "Completely New Title", "abc123def");
+    expect(matched).toHaveLength(1);
+  });
+
+  test("stamped row ID beats a coincidental title match for another session", () => {
+    const rows = [
+      row({ id: "ours", sessionTitle: "Walter Johnson HS", sessionRowId: "session-a" }),
+      row({ id: "theirs", sessionTitle: "Walter Johnson HS", sessionRowId: "session-b" }),
+    ];
+    const { matched, otherTitleCount } = partitionRegistrants(
+      rows,
+      "Walter Johnson HS",
+      "session-a",
+    );
+    expect(matched.map((r) => r.id)).toEqual(["ours"]);
+    expect(otherTitleCount).toBe(1);
+  });
+
+  test("legacy rows without a stamped ID fall back to title matching", () => {
+    const rows = [
+      row({ id: "legacy", sessionTitle: "Walter Johnson HS", sessionRowId: "" }),
+      row({ id: "stamped", sessionTitle: "Walter Johnson HS", sessionRowId: "session-a" }),
+    ];
+    const { matched } = partitionRegistrants(rows, "Walter Johnson HS", "session-a");
+    expect(matched.map((r) => r.id).sort()).toEqual(["legacy", "stamped"]);
+  });
+});
+
+test.describe("normalizePageId", () => {
+  test("dashed and undashed Notion IDs compare equal", () => {
+    expect(normalizePageId("370FA3AC-27dc-8175-94c5-c015126b5888")).toBe(
+      normalizePageId("370fa3ac27dc817594c5c015126b5888"),
+    );
   });
 });
