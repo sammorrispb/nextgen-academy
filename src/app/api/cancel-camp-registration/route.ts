@@ -1,3 +1,4 @@
+import { secretEquals } from "@/lib/secret-compare";
 import { NextRequest, NextResponse } from "next/server";
 import { cancelCampRegistration } from "@/lib/cancel-camp";
 import type { RefundOption } from "@/lib/refund-amount";
@@ -20,7 +21,7 @@ interface CancelCampBody {
 export async function POST(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get("secret");
   const expected = process.env.NGA_ADMIN_SECRET;
-  if (!expected || secret !== expected) {
+  if (!secretEquals(secret, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

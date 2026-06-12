@@ -176,9 +176,9 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 
 ## 8. Risk log
 
-1. **NGA_ADMIN_SECRET is a mega-secret**: bearer gate for 5 admin routes (incl. 2 refund-capable) AND the HMAC key for all 5 token libs. One leak = forge any token + issue refunds. Cancel-token.ts:14-21 documents the tradeoff deliberately; revisit if blast radius grows.
-2. **notion-session-webhook** (route.ts:214-217): secret accepted via `?secret=` query param (lands in access logs) and compared with plain `!==` (not timing-safe). Known, documented — fix requires separate approval (slop-free).
-3. **Plain `!==` secret compares** on route-level bearer gates (eval-confirmation:12, eval-reengagement:138, cron blocks). Token libs themselves correctly use timingSafeEqual.
+1. **NGA_ADMIN_SECRET blast radius — SPLIT (2026-06-12, Sam-approved).** Token families now sign with dedicated secrets (`CANCEL_TOKEN_SECRET`, `SESSION_CANCEL_TOKEN_SECRET`, `COMMIT_TOKEN_SECRET` — all optional, legacy fallback) with dual-verify so outstanding parent links keep working. NGA_ADMIN_SECRET remains the bearer for the 5 admin routes only. Residual: until Sam sets the new env vars in Vercel, signing still uses the legacy key; legacy-era links die only when NGA_ADMIN_SECRET rotates. Pinned by `e2e/invariant-secret-separation.spec.ts`.
+2. **notion-session-webhook**: compare is now timing-safe via `secretEquals` (2026-06-12). The `?secret=` query-param fallback REMAINS by design (Notion's webhook action can't set custom headers on some plans; exposure = server-side access logs, documented in-route).
+3. **Plain `!==` secret compares — FIXED (2026-06-12, Sam-approved).** All 14 route-gate compares (5 admin routes, notion-session-webhook, 8 crons) now use `src/lib/secret-compare.ts` `secretEquals` (constant-time, fail-closed on missing/empty).
 4. **crew-autoreserve** charges saved cards off-session daily — highest-blast-radius cron; CRON_SECRET only.
 5. **/api/analytics** unauthenticated open POST proxy (always 204, no rate limit) — spam vector, fail-open by design; must never gain PII.
 6. **Ship-dark 503 fail mode** (camp/league checkout): fail-closed for money, but a dropped price env = silent revenue-off with a polite message, no alerting.

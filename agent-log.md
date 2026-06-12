@@ -5,6 +5,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-06-12 — Security hardening: timing-safe gates + NGA_ADMIN_SECRET split (Sam-approved slop-free edits)
+
+- **Situation:** Risk log #1–3: all 14 route-gate secret compares were plain `!==` (timing side-channel), and NGA_ADMIN_SECRET both gated 5 admin routes (2 refund-capable) and signed all 5 HMAC token families — one leak forged everything. Sam approved both fixes ("yes do both").
+- **Decision:** New `src/lib/secret-compare.ts` (`secretEquals` constant-time + fail-closed; `signingSecrets` dedicated-first key resolution). All 14 gates swapped. cancel/session-cancel/commit tokens sign with dedicated secrets when set, **verify against dedicated AND legacy** — outstanding non-expiring links in parent inboxes survive the env-var flip. Tests written first (3 failed against old behavior), source-level mutation check confirmed they're load-bearing.
+- **Risk:** Until the new env vars are set in Vercel, signing still uses the legacy key (no behavior change at deploy — by design). The legacy-era same-key edge (a session-cancel token decodes as a `session:`-prefixed garbage cancel id, bounded to a no-op lookup) is pinned by test and disappears once distinct secrets are live. The `?secret=` query-param fallback on notion-session-webhook is retained deliberately (Notion header limitation).
+- **Change:** `src/lib/{secret-compare,cancel-token,session-cancel-token,commit-token}.ts`, 14 route files (compare swap + import only), `.env.example` (+3 vars), `e2e/invariant-secret-separation.spec.ts` (10 tests). Operator follow-up: set `CANCEL_TOKEN_SECRET` / `SESSION_CANCEL_TOKEN_SECRET` / `COMMIT_TOKEN_SECRET` in Vercel + both env registries when ready.
+
 ## 2026-06-12 — Verification harness pins youth-data invariants as pure specs
 
 - **Situation:** 41 page routes, 40 API routes, all child data flowing Stripe→Notion with HMAC-token/cookie gates; 41 existing pure specs covered templates and helpers but nothing pinned the auth gates, webhook idempotency, consent mapping, or child-PII egress. CI runs `test:pure` only.

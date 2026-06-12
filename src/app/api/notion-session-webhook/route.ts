@@ -1,3 +1,4 @@
+import { secretEquals } from "@/lib/secret-compare";
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { site } from "@/data/site";
@@ -213,7 +214,7 @@ export async function POST(request: NextRequest) {
   const provided =
     request.headers.get("x-nga-webhook-secret") ??
     request.nextUrl.searchParams.get("secret");
-  if (provided !== expected) {
+  if (!secretEquals(provided, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

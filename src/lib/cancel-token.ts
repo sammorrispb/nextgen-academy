@@ -1,4 +1,5 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac } from "node:crypto";
+import { secretEquals, signingSecrets } from "./secret-compare";
 
 /**
  * HMAC-signed self-serve cancel tokens.
@@ -16,17 +17,19 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * (leaked links) is bounded — the only action is "cancel my own registration"
  * which is idempotent and we already log via Notion's row-history.
  *
- * Signing key: reuses NGA_ADMIN_SECRET. Same blast radius (admin-equivalent
- * power on a single row); avoids adding a new env var. If you ever need
- * to invalidate outstanding cancel links, rotate NGA_ADMIN_SECRET.
+ * Signing key: CANCEL_TOKEN_SECRET, with verify-fallback to the legacy
+ * NGA_ADMIN_SECRET so outstanding links in parent inboxes keep working
+ * (they're non-expiring). New tokens sign with the dedicated key when set.
+ * To invalidate NEW links, rotate CANCEL_TOKEN_SECRET; legacy-era links die
+ * when NGA_ADMIN_SECRET itself rotates.
  */
 
-function getSecret(): string | null {
-  return process.env.NGA_ADMIN_SECRET || null;
+function secrets(): string[] {
+  return signingSecrets("CANCEL_TOKEN_SECRET");
 }
 
 export function signCancelToken(checkoutSessionId: string): string | null {
-  const secret = getSecret();
+  const [secret] = secrets();
   if (!secret) return null;
   const payload = Buffer.from(checkoutSessionId, "utf-8").toString("base64url");
   const mac = createHmac("sha256", secret)
@@ -36,8 +39,8 @@ export function signCancelToken(checkoutSessionId: string): string | null {
 }
 
 export function verifyCancelToken(token: string): string | null {
-  const secret = getSecret();
-  if (!secret) return null;
+  const candidates = secrets();
+  if (candidates.length === 0) return null;
   const parts = token.split(".");
   if (parts.length !== 2) return null;
   const [payload, mac] = parts;
@@ -51,12 +54,9 @@ export function verifyCancelToken(token: string): string | null {
   }
   if (!cs) return null;
 
-  const expected = createHmac("sha256", secret)
-    .update(cs)
-    .digest("base64url");
-  const a = Buffer.from(mac);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return null;
-  if (!timingSafeEqual(a, b)) return null;
-  return cs;
+  for (const secret of candidates) {
+    const expected = createHmac("sha256", secret).update(cs).digest("base64url");
+    if (secretEquals(mac, expected)) return cs;
+  }
+  return null;
 }
