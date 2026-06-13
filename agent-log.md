@@ -5,6 +5,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-06-13 — Backfill script reaches webhook parity (session count + Player CRM)
+
+- **Situation:** `scripts/backfill-dropin.mjs` only created the roster row — it skipped the webhook `after()` block's `incrementSessionRegistered` and `syncPlayerFromDropIn`. So every hand-backfill silently under-counted the session (wrong fill meter / a Full session reads Open) and left the registrant out of the Player CRM. Surfaced when the Landon backfill (same day) drifted WJHS 6/14 to 5-vs-6.
+- **Decision:** Port both side-effects into the script as best-effort, non-throwing steps that run only after a *new* roster row is created (the existing idempotency guard exits before them on re-run, so no double-count). Kept the repo's standalone-`.mjs` convention (no tsx; the libs import via `@/` alias) — raw-`fetch` ports faithful to the source functions, each commented "KEEP IN SYNC with src/lib/…". Player-CRM write is the SAME egress + SAME child fields (first name + birth-year→age) the webhook already uses — not a new PII destination.
+- **Risk:** Duplicated logic can drift from `notion-sessions.ts` / `notion-player-sync.ts` (mitigated by sync-comments + the fact the pure helpers are unit-tested in the lib). Faithful-port caveat: like the live webhook, `findPlayerRow` matches on Parent Email/Phone, so an eval-created CRM row lacking contact info won't be found and a new player row is created — pre-existing lib behavior, deliberately not "fixed" here to avoid divergence.
+- **Change:** `scripts/backfill-dropin.mjs` only (no app code, not a slop-free-zone TS file). `node --check` + eslint clean; both ported flows validated READ-ONLY against live Notion (increment math on the real session row; `findPlayerRow` query shape). No script-level test harness exists in the repo (convention); logic mirrors lib functions already covered by `e2e/notion-{sessions,player-sync}.spec.ts`.
+
 ## 2026-06-13 — Drop-in roster write is fail-soft on the optional `Source` column
 
 - **Situation:** #174 added a `Source` select write to the drop-in roster create, but the `Source` property was never created on the NGA Drop-in Registrations Notion DB. From the 6/12 deploy on, every paid drop-in `checkout.session.completed` got a deterministic Notion 400 → `"permanent"` → paid-but-unregistered + alert email. First (and only) victim: Landon Lee, 6/13, for the 6/14 WJHS session. Root cause closed separately by adding the `Source` column to the DB; this hardens the code so a missing/renamed optional column can never again strand a registration.
