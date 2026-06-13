@@ -127,18 +127,48 @@ export async function createDropInRegistrationResult(
     };
   }
 
-  const res = await fetch(`${NOTION_API}/pages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": NOTION_VERSION,
-    },
-    body: JSON.stringify({
-      parent: { database_id: dbId },
-      properties,
-    }),
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const postPage = (props: Record<string, any>) =>
+    fetch(`${NOTION_API}/pages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${notionKey}`,
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_VERSION,
+      },
+      body: JSON.stringify({ parent: { database_id: dbId }, properties: props }),
+    });
+
+  let res = await postPage(properties);
+
+  // Fail-soft on the optional `Source` attribution column. A deterministic
+  // rejection that names Source — e.g. the column doesn't exist (the 2026-06-13
+  // Landon incident: #174 shipped a Source write before the Notion property was
+  // created, so every drop-in 400'd and stranded paid parents unregistered) —
+  // must not block the core roster row, which is the source of truth for
+  // reminders, check-in, and cancel refunds. Drop Source and retry once:
+  // attribution is best-effort, the registration is not.
+  if (
+    !res.ok &&
+    "Source" in properties &&
+    classifyNotionFailure(res.status) === "permanent"
+  ) {
+    const bodyText = await res.text().catch(() => "");
+    if (bodyText.includes("Source")) {
+      console.error(
+        "[notion-dropins] create rejected on Source — retrying without attribution so the row still lands",
+        res.status,
+        bodyText,
+      );
+      const withoutSource = { ...properties };
+      delete withoutSource.Source;
+      res = await postPage(withoutSource);
+    } else {
+      console.error("[notion-dropins] create failed", res.status, bodyText);
+      return classifyNotionFailure(res.status);
+    }
+  }
+
   if (!res.ok) {
     console.error(
       "[notion-dropins] create failed",
