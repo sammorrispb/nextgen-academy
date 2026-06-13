@@ -8,7 +8,7 @@ import {
 } from "@/lib/notion-sessions";
 import { sessionToSlug } from "@/lib/session-slug";
 import { getCoachEmails } from "@/lib/coach-allowlist";
-import { fetchWeatherByDate } from "@/lib/weather";
+import { fetchWeatherForSessions } from "@/lib/weather";
 import { isWithinPreEventWindow } from "@/lib/session-time";
 import { signSessionCancelToken } from "@/lib/session-cancel-token";
 import {
@@ -63,7 +63,8 @@ async function sendOne(
   const cancelUrl = `${SITE_ORIGIN}/coach/cancel-session/${encodeURIComponent(token)}`;
   const sessionUrl = `${SITE_ORIGIN}/coach/${sessionToSlug(session)}`;
 
-  const weatherMap = await fetchWeatherByDate([session.date]);
+  // Scope the forecast to THIS session's actual hours, not the whole day.
+  const weatherMap = await fetchWeatherForSessions([session]);
   const w = weatherMap.get(session.date) ?? null;
 
   const payload = {

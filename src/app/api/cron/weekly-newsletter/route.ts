@@ -9,7 +9,7 @@ import { signReferralToken } from "@/lib/referral-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
 import { fetchApprovedNewsletterDrafts } from "@/lib/notion-newsletter-drafts";
-import { fetchWeatherByDate, type DayWeather } from "@/lib/weather";
+import { fetchWeatherForSessions, type DayWeather } from "@/lib/weather";
 import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
@@ -178,11 +178,17 @@ export async function GET(req: NextRequest) {
     const month = s.date.slice(5, 7);
     return month === "06" || month === "07" || month === "08";
   });
-  // County-level forecast per session date. Fails soft — a miss (NWS down or
-  // date beyond the ~7-day horizon) just leaves the group without a note.
-  const weather = await fetchWeatherByDate([
-    ...new Set(sessions.map((g) => g.date)),
-  ]);
+  // County-level forecast scoped to each session's actual hours, rolled up to
+  // the worst window per date. Fails soft — a miss (NWS down or date beyond the
+  // ~6.5-day hourly horizon) just leaves the group without a note.
+  const weekSessions = allSessions.filter(
+    (s) =>
+      s.status === "Open" &&
+      s.date &&
+      s.date >= todayIso &&
+      s.date <= weekEndIso,
+  );
+  const weather = await fetchWeatherForSessions(weekSessions);
   for (const g of sessions) {
     const dw = weather.get(g.date);
     if (dw) g.weatherNote = weatherNote(dw);
