@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
 
 interface RebookInput {
   parentFirst: string;
@@ -50,6 +51,8 @@ export function postSessionRebookHtml(input: RebookInput): string {
       If something came up that we should know about &mdash; scheduling, fit, anything &mdash; just reply to this email. We&rsquo;re here to help ${escape(childFirst)} keep climbing.
     </p>
 
+    ${whatsappInviteHtml()}
+
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         Better than yesterday, together.<br>
@@ -79,6 +82,8 @@ export function postSessionRebookText(input: RebookInput): string {
     `Grab the next session: ${input.scheduleUrl}`,
     "",
     `If something came up that we should know about — scheduling, fit, anything — just reply to this email. We're here to help ${input.childFirst} keep climbing.`,
+    "",
+    whatsappInviteText(),
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,

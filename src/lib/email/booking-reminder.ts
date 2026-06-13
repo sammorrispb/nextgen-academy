@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
 
 interface ReminderInput {
   parentFirst: string;
@@ -80,6 +81,8 @@ export function bookingReminderHtml(input: ReminderInput): string {
       <a href="${detailUrl}" style="${s.link}">View session details</a>
     </p>
 
+    ${whatsappInviteHtml()}
+
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
         See you on the court &mdash; better than yesterday, together.<br>
@@ -123,6 +126,8 @@ export function bookingReminderText(input: ReminderTextInput): string {
     cancelLine,
     "",
     `Session link: ${input.detailUrl}`,
+    "",
+    whatsappInviteText(),
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
