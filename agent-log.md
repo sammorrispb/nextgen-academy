@@ -5,6 +5,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-06-13 — Drop-in roster write is fail-soft on the optional `Source` column
+
+- **Situation:** #174 added a `Source` select write to the drop-in roster create, but the `Source` property was never created on the NGA Drop-in Registrations Notion DB. From the 6/12 deploy on, every paid drop-in `checkout.session.completed` got a deterministic Notion 400 → `"permanent"` → paid-but-unregistered + alert email. First (and only) victim: Landon Lee, 6/13, for the 6/14 WJHS session. Root cause closed separately by adding the `Source` column to the DB; this hardens the code so a missing/renamed optional column can never again strand a registration.
+- **Decision:** In `createDropInRegistrationResult`, if the create fails with a *permanent* status AND `Source` was in the payload AND the error body names `Source`, drop `Source` and retry the create once. The core roster row (source of truth for reminders/check-in/cancel refunds) lands; attribution degrades to blank. Happy path is unchanged (single call, Source included). Scoped tightly to Source-named errors so a real permanent failure (bad Status, etc.) is NOT masked.
+- **Risk:** Touches `notion-dropins.ts` (Minor-PII slop-free zone) — but only the create's failure path; no change to the property set on success, idempotency, child-PII flow, or refund logic. The substring match (`bodyText.includes("Source")`) could in theory match a Source-bearing parent name in an unrelated 400 → at worst one harmless retry-without-Source; it never suppresses a non-Source failure (pinned by test).
+- **Change:** `src/lib/notion-dropins.ts` (extracted `postPage`, added the one-shot Source-stripping retry). New pins in `e2e/notion-dropins.spec.ts` (4 specs: retries-without-Source-and-lands, happy-path-single-write, non-Source-permanent-not-masked, transient-not-retried). Mutation-checked both the fail-soft behavior (red before fix) and the no-mask guard (forced retry-on-any-permanent → guard fails). Full `npm run test:pure` (508) + lint + build green.
+
 ## 2026-06-12 — Secret split completed for referral + newsletter-unsub; all 5 token secrets live in Vercel (#181)
 
 - **Situation:** After #180, referral and newsletter-unsub tokens still verified single-secret — setting their (already-documented) env vars would have broken every unsubscribe link in past issues and every referral link in old welcome emails. Both vars were unset in Vercel.
