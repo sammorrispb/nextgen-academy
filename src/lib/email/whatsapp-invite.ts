@@ -3,11 +3,13 @@ import { c, s } from "./brand";
 export const WHATSAPP_PARENT_GROUP_URL =
   "https://chat.whatsapp.com/D298cbHYUZo53zdBkbafq8?mode=gi_t";
 
-// First-touch only — and rendered as a utility block, not a CTA. Keeping
-// it quieter preserves the host email's single primary CTA (per
-// BRAND_GUIDELINES.md → COMMS TEMPLATES → CTA hierarchy). Stays out of the
-// public footer on purpose; the invite should travel with a real hand-shake,
-// not be scraped from the homepage.
+// Rides along on every registrant-facing email (booking confirmation,
+// reminder, post-session recap, no-show rebook) plus the newsletter welcome —
+// so every family has a standing way to reach Coach Sam and each other.
+// Rendered as a utility block, not a CTA, so it never competes with the host
+// email's single primary CTA (per BRAND_GUIDELINES.md → COMMS TEMPLATES → CTA
+// hierarchy). Stays out of the public site footer on purpose; the invite
+// travels with a real hand-shake (a sent email), not scraped from the homepage.
 export function whatsappInviteHtml(): string {
   return `<div style="${s.card}">
     <p style="margin:0 0 6px 0;font-size:13px;color:${c.muted};text-transform:uppercase;letter-spacing:0.15em;font-weight:700;">You&rsquo;re invited &mdash; Next Gen parent WhatsApp</p>

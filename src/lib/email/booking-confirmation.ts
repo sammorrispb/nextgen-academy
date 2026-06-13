@@ -21,8 +21,6 @@ interface ConfirmationInput {
   detailUrl: string;
   /** Signed self-serve cancel URL. Optional — feature is off if secret missing. */
   cancelUrl?: string;
-  /** Append the WhatsApp parent-group invite. True only on the parent's first NGA touch. */
-  includeWhatsappInvite?: boolean;
   /** Post-signup fill count (their spot included). Omit if the count is unknown. */
   fill?: ConfirmationFill | null;
 }
@@ -40,7 +38,6 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     amountPaid,
     detailUrl,
     cancelUrl,
-    includeWhatsappInvite,
     fill,
   } = input;
 
@@ -114,7 +111,7 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
       <a href="${detailUrl}" style="${s.link}">View session details</a>
     </p>
 
-    ${includeWhatsappInvite ? whatsappInviteHtml() : ""}
+    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">

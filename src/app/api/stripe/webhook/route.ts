@@ -21,7 +21,6 @@ import { whatsappInviteText } from "@/lib/email/whatsapp-invite";
 import { sendSms, bookingConfirmationSms } from "@/lib/sms";
 import { signCancelToken } from "@/lib/cancel-token";
 import { processReferralReward } from "@/lib/referral-rewards";
-import { isFirstTimeParent } from "@/lib/notion-player-lookup";
 import { syncPlayerFromDropIn } from "@/lib/notion-player-sync";
 import {
   createClusterRegistrationResult,
@@ -116,7 +115,6 @@ async function emailAdmin(session: Stripe.Checkout.Session) {
 
 async function emailParent(
   session: Stripe.Checkout.Session,
-  isFirstTimer: boolean,
   fill: ConfirmationFill | null,
 ) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -198,7 +196,8 @@ async function emailParent(
       : `If something comes up, reply to this email or text 301-325-4731 so we can open the seat. Drop-ins are non-refundable, but the swap helps the whole community.`,
     "",
     `Session link: ${detailUrl}`,
-    ...(isFirstTimer ? ["", whatsappInviteText()] : []),
+    "",
+    whatsappInviteText(),
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
@@ -216,7 +215,6 @@ async function emailParent(
     amountPaid: amount,
     detailUrl,
     cancelUrl,
-    includeWhatsappInvite: isFirstTimer,
     fill,
   });
 
@@ -324,7 +322,6 @@ export async function POST(req: NextRequest) {
 
   const m = session.metadata ?? {};
   const sessionId = metaString(m, "session_id");
-  const parentEmailForLookup = payerEmail(session);
 
   // Only checkouts created by /api/checkout (which always stamps session_id)
   // are youth drop-ins. Other payments on this Stripe account — e.g. a Coach
@@ -339,16 +336,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, skipped: "not_a_dropin" });
   }
 
-  // Idempotency (Stripe retries delivery) + first-touch check both read Notion;
-  // run them concurrently to shave time off the response path. A first-timer
-  // miss (Notion down / env unset) defaults to "not first timer" so returning
-  // families never get re-prompted with the WhatsApp invite.
-  const [already, isFirstTimer] = await Promise.all([
-    findDropInByCheckoutId(session.id),
-    parentEmailForLookup
-      ? isFirstTimeParent(parentEmailForLookup)
-      : Promise.resolve(false),
-  ]);
+  // Idempotency: Stripe retries webhook delivery, so skip if we've already
+  // recorded this checkout.
+  const already = await findDropInByCheckoutId(session.id);
   if (already) {
     return NextResponse.json({ received: true, idempotent: true });
   }
@@ -436,7 +426,7 @@ export async function POST(req: NextRequest) {
 
     await Promise.allSettled([
       emailAdmin(session),
-      emailParent(session, isFirstTimer, fill),
+      emailParent(session, fill),
       sendConfirmationSms(session, row),
       // Referral payout: if this parent signed up to the newsletter via someone
       // else's forward link and this is their first paid drop-in, mint two
