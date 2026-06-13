@@ -97,7 +97,7 @@ export default function WeatherBar({ dates, weather }: WeatherBarProps) {
                 </span>
               ) : (
                 <span className="text-xs text-ngpa-white/40 italic">
-                  Forecast updates ~7 days out
+                  Forecast updates ~6 days out
                 </span>
               )}
             </li>

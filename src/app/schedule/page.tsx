@@ -15,7 +15,7 @@ import { groupSessions, sortByLevel } from "@/lib/schedule-grouping";
 import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 import WeatherBar from "@/components/WeatherBar";
-import { fetchWeatherByDate } from "@/lib/weather";
+import { fetchWeatherForSessions } from "@/lib/weather";
 import { breadcrumbJsonLd, courseJsonLd, SITE_URL } from "@/lib/seo";
 
 const SITE_ORIGIN =
@@ -93,7 +93,8 @@ export default async function SchedulePage() {
   const sessions = await fetchUpcomingSessions();
   const grouped = groupByDate(sessions);
   const sessionDates = Array.from(grouped.keys());
-  const weather = await fetchWeatherByDate(sessionDates);
+  // Per-session hourly windows, rolled up to the worst window per date.
+  const weather = await fetchWeatherForSessions(sessions);
 
   return (
     <>
