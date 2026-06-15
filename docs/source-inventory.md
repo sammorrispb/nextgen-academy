@@ -196,13 +196,19 @@ auth-gated, agent-callable core so an out-of-band caller gets trigger parity ins
 side-effects by writing the datastore directly. Attendance shipped this pattern (#189 + hardened
 in #191): `src/lib/attendance.ts` (`applyAttendance`) + `src/app/api/coach/attendance/route.ts`
 (Bearer `ATTENDANCE_SECRET`, fail-closed, idempotent, PII-free ack, OB awaited on the route).
-Still inlined / no agent path, each awaiting its own go:
+Each awaiting its own go:
 
-1. **`confirmCrewAction`** (`src/app/coach/(authed)/polls/[slug]/actions.ts`) — poll Status write
-   + per-parent email loop + revalidate, all inline. Minor-PII → IPAV.
+1. **`confirmCrewAction`** (`src/app/coach/(authed)/polls/[slug]/actions.ts`) — ✅ SHIPPED (this PR).
+   Core extracted to `src/lib/crew-confirm.ts` (`confirmCrew`, idempotency guard on already-
+   Confirmed/Cancelled) + Bearer `POST /api/coach/crew-confirm` (dedicated `CREW_CONFIRM_SECRET`,
+   fail-closed, PII-free ack). Action thinned to an auth+revalidate wrapper. No OB ingest (the UI
+   path doesn't ingest — parity, not scope creep). Invariants: `invariant-crew-confirm-trigger-
+   parity` + `invariant-crew-confirm-pii-egress`.
 2. **Stripe webhook camp/league branches** (`src/app/api/stripe/webhook/route.ts`) — emails fire
    with no Notion roster row, so no DB-backed idempotency (Stripe redelivery → duplicate emails).
-   Payments-class + Slop-Free → own IPAV pass, separate approval from #1.
+   Payments-class + Slop-Free → own IPAV pass, separate approval from #1. STILL DEFERRED — chosen
+   fix is a shared processed-events dedupe DB (`NOTION_PROCESSED_EVENTS_DB_ID` +
+   `src/lib/notion-processed-events.ts`), pending its payments-class go.
 
 Ready-to-run prompt for this work (collision check + IPAV + EDD guardrails baked in):
 `~/.claude/plans/deferred-trigger-parity-prompt.md`.
