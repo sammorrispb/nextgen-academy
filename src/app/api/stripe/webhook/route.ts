@@ -28,6 +28,10 @@ import {
 } from "@/lib/notion-clusters";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
+import {
+  findProcessedEvent,
+  recordProcessedEvent,
+} from "@/lib/notion-processed-events";
 
 export const runtime = "nodejs";
 // Acknowledge Stripe fast (critical row create only), then finish the
@@ -643,12 +647,29 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
   const publicArea = metaString(m, "public_area");
   const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
 
-  // v1 has no Notion camp roster, so no DB-backed idempotency. The CRM sync is
-  // an upsert (safe to repeat); emails could resend if Stripe redelivers a
-  // 200'd event (rare). A dedicated Camp Registrations DB is the planned
-  // fast-follow for a clean roster + an idempotency key. All of this is
-  // best-effort → run it after the ack so a slow Resend/Notion call can't time
-  // the webhook out into a Stripe retry.
+  // Idempotency: camp has no roster row of its own, so a redelivered 200'd event
+  // would re-fire the parent + admin emails. The shared processed-events ledger
+  // (keyed on the checkout-session id) is the dedupe key — recorded on the sync
+  // path before the best-effort comms; a redelivered event no-ops here.
+  if (await findProcessedEvent(session.id)) {
+    return NextResponse.json({ received: true, idempotent: true });
+  }
+  const recorded = await recordProcessedEvent(
+    session.id,
+    "camp",
+    new Date().toISOString(),
+  );
+  if (recorded === "transient") {
+    // 500 → Stripe redelivers; the find guard makes the retry safe.
+    return NextResponse.json(
+      { error: "processed-events write failed (transient)" },
+      { status: 500 },
+    );
+  }
+  // "ok" / "permanent" / env-unset → proceed. A permanent ledger failure must
+  // not strand a paid family's only confirmation (logged in the helper). The
+  // CRM sync is an upsert; comms are best-effort → run after the ack so a slow
+  // Resend/Notion call can't time the webhook out into a Stripe retry.
   after(async () => {
   await Promise.allSettled([
     emailCampAdmin(session),
@@ -790,12 +811,29 @@ async function handleLeagueCheckout(session: Stripe.Checkout.Session) {
   const publicArea = metaString(m, "public_area");
   const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
 
-  // v1 has no Notion league roster, so no DB-backed idempotency. The CRM sync is
-  // an upsert (safe to repeat); emails could resend if Stripe redelivers a 200'd
-  // event (rare). A dedicated League Enrollments DB is the planned fast-follow
-  // for a clean roster + an idempotency key, alongside the community-os growth app.
-  // All best-effort → run it after the ack so a slow call can't time the webhook
-  // out into a Stripe retry.
+  // Idempotency: league has no roster row of its own, so a redelivered 200'd
+  // event would re-fire the parent + admin emails. The shared processed-events
+  // ledger (keyed on the checkout-session id) is the dedupe key — recorded on
+  // the sync path before the best-effort comms; a redelivered event no-ops here.
+  if (await findProcessedEvent(session.id)) {
+    return NextResponse.json({ received: true, idempotent: true });
+  }
+  const recorded = await recordProcessedEvent(
+    session.id,
+    "league",
+    new Date().toISOString(),
+  );
+  if (recorded === "transient") {
+    // 500 → Stripe redelivers; the find guard makes the retry safe.
+    return NextResponse.json(
+      { error: "processed-events write failed (transient)" },
+      { status: 500 },
+    );
+  }
+  // "ok" / "permanent" / env-unset → proceed. A permanent ledger failure must
+  // not strand a paid family's only confirmation (logged in the helper). The
+  // CRM sync is an upsert; comms are best-effort → run after the ack so a slow
+  // call can't time the webhook out into a Stripe retry.
   after(async () => {
   await Promise.allSettled([
     emailLeagueAdmin(session),
