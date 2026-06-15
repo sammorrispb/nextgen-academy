@@ -29,7 +29,7 @@ export async function generateMetadata({
   if (!camp) return { title: "Camp not found · Next Gen Pickleball Academy" };
   return {
     title: `${camp.title} (${camp.weekLabel}) | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
-    description: `Register for Next Gen Pickleball ${camp.title} — ${camp.weekLabel}, Mon–Thu mornings in Gaithersburg, MD. Morning half-day camp for ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX}, $50/week.`,
+    description: `Register for Next Gen Pickleball ${camp.title} — ${camp.weekLabel}, Mon–Thu mornings in Gaithersburg, MD. Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} — $50 a morning, or $150 for the full week.`,
     alternates: { canonical: `${SITE_ORIGIN}/camp/${camp.slug}` },
   };
 }
@@ -80,7 +80,8 @@ export default async function CampWeekPage({ params }: PageProps) {
                 <span className="text-ngpa-white font-semibold">
                   {o.label}:
                 </span>{" "}
-                {o.hours} — ${o.priceUsd}/week
+                {o.hours} — ${o.priceUsd}
+                {o.key === "day" ? " a morning" : " for the week"}
               </li>
             ))}
             <li className="pt-1.5">

@@ -1,19 +1,20 @@
 // Summer Camp config — the single source of truth for the /camp registration
-// flow. Camps are a distinct product from the $20 drop-in scheduler: multi-day,
-// morning half-day, flat weekly price. Pricing is real (unlike the teased
-// website drop-in price) because a camp is a concrete bookable product.
+// flow. Camps are a distinct product from the $20 drop-in scheduler: a morning
+// half-day. Pricing is real (unlike the teased website drop-in price) because a
+// camp is a concrete bookable product.
 //
-// 2026-06-15: collapsed to a single morning half-day option at $50/week (the
-// standing camp price). The full-day and afternoon options were retired; their
-// Stripe prices are archived and STRIPE_CAMP_FULL/PM_PRICE_ID env vars are
-// unused. `CampOptionKey` is narrowed to "am" so any stray full/pm reference
-// fails typecheck rather than silently 503-ing at checkout.
+// 2026-06-15: per-morning pricing — two flat SKUs. "day" = a single Mon–Thu
+// morning at $50 (parent picks which day). "week" = the full Mon–Thu morning
+// week at $150 (4 mornings for the price of 3). Each SKU is one Stripe line item
+// at quantity 1 — NO multi-day cart, so there's no misleading "3 days = 4 days"
+// math. `priceUsd` is display-only; the charged amount is the Stripe price
+// object referenced by `priceEnvVar`.
 //
 // Location is HIDDEN per NGA child-safety policy: public copy shows only the
 // `publicArea` ("Gaithersburg, MD"); the exact venue is shared with registered
 // families before camp. Do not put `exactLocation` in any public surface.
 
-export type CampOptionKey = "am";
+export type CampOptionKey = "day" | "week";
 
 export interface CampOption {
   key: CampOptionKey;
@@ -53,11 +54,18 @@ export const CAMP_AGE_MAX = 16;
 
 export const CAMP_OPTIONS: CampOption[] = [
   {
-    key: "am",
-    label: "Morning half-day",
+    key: "day",
+    label: "Single morning",
     hours: "9:30 AM – 12:30 PM",
     priceUsd: 50,
-    priceEnvVar: "STRIPE_CAMP_AM_PRICE_ID",
+    priceEnvVar: "STRIPE_CAMP_DAY_PRICE_ID",
+  },
+  {
+    key: "week",
+    label: "Full week (Mon–Thu)",
+    hours: "9:30 AM – 12:30 PM",
+    priceUsd: 150,
+    priceEnvVar: "STRIPE_CAMP_WEEK_PRICE_ID",
   },
 ];
 
@@ -90,4 +98,15 @@ export function findCampBySlug(slug: string): Camp | undefined {
 
 export function findCampOption(key: string): CampOption | undefined {
   return CAMP_OPTIONS.find((o) => o.key === key);
+}
+
+// The four camp mornings as ISO date-only strings (Mon..Thu). Anchored at noon
+// UTC and stepped by whole days so it never off-by-ones on Vercel's UTC build
+// servers (see the date-only hazard). Single source of truth for both the
+// form's day picker and validateCampForm — no recomputation drift.
+export function campDays(camp: Camp): string[] {
+  const startMs = new Date(`${camp.startDate}T12:00:00Z`).getTime();
+  return Array.from({ length: 4 }, (_, i) =>
+    new Date(startMs + i * 86_400_000).toISOString().slice(0, 10),
+  );
 }

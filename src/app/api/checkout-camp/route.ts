@@ -41,6 +41,21 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SITE_URL ??
     "https://nextgenpbacademy.com";
 
+  // For the single-morning SKU, bake the chosen day into the label so the
+  // confirmation email, admin alert, Player CRM, and success page all show
+  // which morning was booked — the webhook reads option_label verbatim, so no
+  // change to that slop-free file is needed.
+  const dayLabel =
+    option.key === "day" && data.selectedDay
+      ? new Date(`${data.selectedDay}T12:00:00Z`).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          timeZone: "UTC",
+        })
+      : "";
+  const optionLabel = dayLabel ? `${option.label} — ${dayLabel}` : option.label;
+
   const stripe = getStripe();
   const checkout = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -48,7 +63,7 @@ export async function POST(req: NextRequest) {
     allow_promotion_codes: true,
     customer_email: data.email,
     payment_intent_data: {
-      description: `${camp.title} (${option.label}) — ${data.childFirstName}`,
+      description: `${camp.title} (${optionLabel}) — ${data.childFirstName}`,
     },
     metadata: {
       kind: "camp",
@@ -62,8 +77,9 @@ export async function POST(req: NextRequest) {
       // venue is shared with registered families separately.
       public_area: camp.publicArea,
       option_key: option.key,
-      option_label: option.label,
+      option_label: optionLabel,
       option_hours: option.hours,
+      selected_day: option.key === "day" ? data.selectedDay : "",
       parent_name: data.parentName,
       parent_email: data.email,
       parent_phone: data.phone,
