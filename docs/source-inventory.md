@@ -204,11 +204,13 @@ Each awaiting its own go:
    fail-closed, PII-free ack). Action thinned to an auth+revalidate wrapper. No OB ingest (the UI
    path doesn't ingest — parity, not scope creep). Invariants: `invariant-crew-confirm-trigger-
    parity` + `invariant-crew-confirm-pii-egress`.
-2. **Stripe webhook camp/league branches** (`src/app/api/stripe/webhook/route.ts`) — emails fire
-   with no Notion roster row, so no DB-backed idempotency (Stripe redelivery → duplicate emails).
-   Payments-class + Slop-Free → own IPAV pass, separate approval from #1. STILL DEFERRED — chosen
-   fix is a shared processed-events dedupe DB (`NOTION_PROCESSED_EVENTS_DB_ID` +
-   `src/lib/notion-processed-events.ts`), pending its payments-class go.
+2. **Stripe webhook camp/league branches** (`src/app/api/stripe/webhook/route.ts`) — ✅ SHIPPED.
+   Shared processed-events ledger `src/lib/notion-processed-events.ts` (`findProcessedEvent` +
+   `recordProcessedEvent`, mirrors `notion-clusters.ts`) keyed on the checkout-session id; both
+   handlers guard on it before `after()` (transient write → 500 so Stripe redelivers; permanent /
+   env-unset → proceed so a paid family is never stranded). Fail-soft until
+   `NOTION_PROCESSED_EVENTS_DB_ID` is set (inert = today's behavior). Invariant:
+   `invariant-webhook-camp-league-idempotency`.
 
 Ready-to-run prompt for this work (collision check + IPAV + EDD guardrails baked in):
 `~/.claude/plans/deferred-trigger-parity-prompt.md`.
