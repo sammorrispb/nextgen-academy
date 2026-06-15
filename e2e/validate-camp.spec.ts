@@ -1,13 +1,19 @@
 import { test, expect } from "@playwright/test";
 import { validateCampForm, type CampFormData } from "../src/lib/validate-camp";
-import { CAMPS, CAMP_OPTIONS, CAMP_AGE_MIN, CAMP_AGE_MAX } from "../src/data/camps";
+import {
+  CAMPS,
+  CAMP_OPTIONS,
+  CAMP_AGE_MIN,
+  CAMP_AGE_MAX,
+  findCampOption,
+} from "../src/data/camps";
 
 const thisYear = new Date().getFullYear();
 
 function validForm(overrides: Partial<CampFormData> = {}): CampFormData {
   return {
     campSlug: CAMPS[0].slug,
-    optionKey: "full",
+    optionKey: "am",
     parentName: "Jordan Parent",
     email: "jordan@example.com",
     phone: "301-555-0142",
@@ -39,6 +45,24 @@ test.describe("validateCampForm", () => {
 
   test("unknown option key is rejected", () => {
     expect(validateCampForm(validForm({ optionKey: "vip" })).optionKey).toBeTruthy();
+  });
+
+  test("camp offers only the morning half-day option", () => {
+    expect(CAMP_OPTIONS.map((o) => o.key)).toEqual(["am"]);
+  });
+
+  test("the retired full/pm options are no longer registrable", () => {
+    expect(findCampOption("full")).toBeUndefined();
+    expect(findCampOption("pm")).toBeUndefined();
+    // The checkout-camp route delegates to validateCampForm first, so a stale
+    // client/bookmarked form posting a removed key is cleanly rejected (400),
+    // never a confusing 503.
+    expect(validateCampForm(validForm({ optionKey: "full" })).optionKey).toBeTruthy();
+    expect(validateCampForm(validForm({ optionKey: "pm" })).optionKey).toBeTruthy();
+  });
+
+  test("the morning option is priced at $50/week", () => {
+    expect(findCampOption("am")?.priceUsd).toBe(50);
   });
 
   test("waiver must be accepted", () => {

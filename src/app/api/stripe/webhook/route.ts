@@ -610,7 +610,7 @@ async function emailCampParent(session: Stripe.Checkout.Session) {
     `What to bring each day:`,
     `- Refillable water bottle`,
     `- Court shoes (no flat-soled sneakers)`,
-    `- Lunch + snacks (full-day campers)`,
+    `- A morning snack`,
     `- A paddle if you have one — we have loaners.`,
     "",
     `Camp runs rain or shine.`,

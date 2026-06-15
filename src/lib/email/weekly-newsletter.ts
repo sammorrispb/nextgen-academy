@@ -196,7 +196,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     ? `
     <div style="${s.cardAccent}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Summer camp</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Next Gen Summer Pickleball Camp &mdash; ages ${campAgeMin}+, full- or half-day, small groups in Gaithersburg. Real reps, real coaching, a ton of fun.</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Next Gen Summer Pickleball Camp &mdash; ages ${campAgeMin}+, morning half-day, small groups in Gaithersburg. Real reps, real coaching, a ton of fun.</p>
       ${camps
         .map(
           (w) => `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;">${escape(w.weekLabel)}</p>`,
@@ -404,7 +404,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   if (camps.length > 0) {
     lines.push(
       "Summer camp:",
-      `Next Gen Summer Pickleball Camp — ages ${campAgeMin}+, full- or half-day, small groups in Gaithersburg. From $${campPriceFromUsd}/week.`,
+      `Next Gen Summer Pickleball Camp — ages ${campAgeMin}+, morning half-day, small groups in Gaithersburg. From $${campPriceFromUsd}/week.`,
       "",
     );
     for (const w of camps) {

@@ -45,7 +45,7 @@ export function validateCampForm(
     errors.campSlug = "Pick a camp week";
   }
   if (!data.optionKey?.trim() || !findCampOption(data.optionKey)) {
-    errors.optionKey = "Pick full day or a half-day";
+    errors.optionKey = "Pick a camp option";
   }
   if (!data.parentName?.trim()) errors.parentName = "Parent name is required";
   if (!data.email?.trim()) {

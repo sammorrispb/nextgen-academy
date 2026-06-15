@@ -5,6 +5,7 @@ import {
   type WeeklyNewsletterInput,
 } from "../src/lib/email/weekly-newsletter";
 import { appendUtm } from "../src/lib/email/utm";
+import { CAMP_OPTIONS } from "../src/data/camps";
 
 const tip = { title: "Soft hands win", body: "Loosen the grip." };
 const ORIGIN = "https://nextgenpbacademy.com";
@@ -35,7 +36,7 @@ const baseInput: WeeklyNewsletterInput = {
   camps: [],
   campUrl: `${ORIGIN}/camp`,
   campAgeMin: 8,
-  campPriceFromUsd: 170,
+  campPriceFromUsd: 50,
 };
 
 test.describe("appendUtm", () => {
@@ -252,6 +253,13 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(weeklyNewsletterHtml(baseInput)).not.toContain("Summer camp");
   });
 
+  test("the camp 'from' price is derived from CAMP_OPTIONS and is $50", () => {
+    // Load-bearing: the cron computes campPriceFromUsd = Math.min(CAMP_OPTIONS
+    // price). This asserts the real data, not a test-supplied input — so it
+    // fails if camps.ts ever drifts off $50.
+    expect(Math.min(...CAMP_OPTIONS.map((o) => o.priceUsd))).toBe(50);
+  });
+
   test("renders the camp block with weeks, price tease, and a UTM-stamped /camp link", () => {
     const html = weeklyNewsletterHtml({
       ...baseInput,
@@ -261,7 +269,7 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(html).toContain("ages 8+");
     expect(html).toContain("June 29 – July 2, 2026");
     expect(html).toContain("July 20 – July 23, 2026");
-    expect(html).toContain("From $170/week");
+    expect(html).toContain("From $50/week");
     // campUrl is UTM-stamped by the cron (like scheduleUrl); the template
     // renders whatever it's handed. Assert the passed-in link appears.
     expect(html).toContain(`href="${ORIGIN}/camp"`);
