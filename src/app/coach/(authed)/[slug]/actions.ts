@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { cancelDropIn } from "@/lib/cancel-dropin";
 import {
@@ -10,12 +9,9 @@ import {
 import { isAllowedCoachEmail } from "@/lib/coach-allowlist";
 import {
   findDropInPageByCheckoutId,
-  setDropInAttendance,
   type AttendanceValue,
 } from "@/lib/notion-dropins";
-import { sessionToSlug } from "@/lib/session-slug";
-import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
-import { recomputePlayerAttendance } from "@/lib/notion-player-sync";
+import { markAttendanceCore } from "@/lib/mark-attendance";
 import { resolveRefundCents, type RefundOption } from "@/lib/refund-amount";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -139,64 +135,12 @@ export async function markAttendanceAction(input: {
   const email = await requireCoach();
   if (!email) return { ok: false, message: "Unauthorized" };
 
-  if (!input.checkoutSessionId?.trim()) {
-    return { ok: false, message: "Missing checkoutSessionId" };
-  }
-  const value: AttendanceValue | null =
-    input.attended === "clear" ? null : input.attended;
-  if (value !== null && value !== "Present" && value !== "No-show") {
-    return { ok: false, message: "Invalid attendance value" };
-  }
-
-  const dropIn = await findDropInPageByCheckoutId(input.checkoutSessionId);
-  if (!dropIn) return { ok: false, message: "Registration not found" };
-
-  const ok = await setDropInAttendance(dropIn.id, value);
-  if (!ok) return { ok: false, message: "Failed to update Notion" };
-
-  // Tie the check-in to the player's Open Brain profile. Keyed on parent
-  // email/phone (OB dedups to the existing contact); fire-and-forget so a
-  // slow OB never blocks the coach. Only fires for a real Present/No-show.
-  if (value && (dropIn.parentEmail || dropIn.parentPhone)) {
-    void ingestToOpenBrain({
-      business: "nga",
-      source: "nga_attendance",
-      email: dropIn.parentEmail || undefined,
-      phone: dropIn.parentPhone || undefined,
-      name: dropIn.parentName || undefined,
-      interest: dropIn.childFirstName || undefined,
-      metadata: {
-        child_first_name: dropIn.childFirstName,
-        child_birth_year: dropIn.childBirthYear || undefined,
-        session_title: dropIn.sessionTitle,
-        session_date: dropIn.sessionDate,
-        session_start_time: dropIn.sessionStartTime,
-        location: dropIn.location,
-        attendance: value,
-      },
-    });
-  }
-
-  // Recompute the child's attendance stats on their player profile. Runs for
-  // every change (Present / No-show / clear) so the count stays exact — e.g.
-  // clearing a Present row decrements it. Reads the drop-in rows we just wrote,
-  // so it reflects this toggle. Awaited but never fatal to the check-in.
-  if (dropIn.parentEmail || dropIn.parentPhone) {
-    await recomputePlayerAttendance({
-      parentEmail: dropIn.parentEmail || null,
-      parentPhone: dropIn.parentPhone || "",
-      childFirstName: dropIn.childFirstName,
-    });
-  }
-
-  const slug = sessionToSlug({
-    title: dropIn.sessionTitle,
-    date: dropIn.sessionDate,
-  });
-  if (slug) revalidatePath(`/coach/${slug}`);
-  revalidatePath("/coach");
-
-  return { ok: true, message: value ?? "Cleared", attendance: value ?? "" };
+  // The full fan-out (Notion write + OB activity + profile recompute + cache
+  // revalidation) lives in the shared core so the secret-gated agent route
+  // (/api/attendance) gets identical side-effects. We don't await result.obIngest
+  // here — the coach UI stays non-blocking if Open Brain is slow.
+  const result = await markAttendanceCore(input);
+  return { ok: result.ok, message: result.message, attendance: result.attendance };
 }
 
 // ---------------------------------------------------------------------------

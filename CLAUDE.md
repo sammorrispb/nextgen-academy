@@ -210,6 +210,7 @@ See `.env.example`. Categories:
 - `NOTION_NEWSLETTER_DRAFTS_DB_ID` — NGA Newsletter Drafts DB (Coach-voice longform sections drafted Wednesday by the cloud drafter routine; Sam approves a row before Thu 6pm for the cron to inject as the "From Coach Sam" lead block). Optional — weekly newsletter just hides the lead block if unset. See the "Newsletter lead block — drafter pipeline" section above.
 - `REFERRAL_TOKEN_SECRET` — HMAC signing key for `/newsletter?ref=<token>` links. Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` so a leaked unsub token can't be replayed as a referral and vice versa.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
+- `ATTENDANCE_SECRET` — Bearer secret for the agent-callable attendance check-in (`POST /api/attendance`), giving an out-of-band caller the same fan-out as the coach toggle (Notion write + OB activity + profile recompute). Distinct from `NGA_ADMIN_SECRET` to isolate blast radius. Unset = the route fails closed (401).
 
 ## Testing Standards
 - **`npm run build` must pass with zero errors before every push.** Minimum bar.
@@ -230,7 +231,7 @@ Tests OBSERVE these files; they never modify them. Any change here goes through 
 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
 - **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 5 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
-- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto}.ts`, `api/admin/sessions/registrants`, coach roster/player pages, the 3 eval routes.
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,mark-attendance}.ts`, `api/admin/sessions/registrants`, `api/attendance`, coach roster/player pages, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
 
