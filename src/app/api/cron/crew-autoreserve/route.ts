@@ -2,6 +2,7 @@ import { secretEquals } from "@/lib/secret-compare";
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
+import { crewChargeIdempotencyKey } from "@/lib/crew-charge";
 import {
   fetchActiveCommits,
   updateCommit,
@@ -134,7 +135,11 @@ async function processOne(
         nga_session_id: next.id,
         nga_child_first_name: commit.childFirstName,
       },
-    });
+    },
+    // Deterministic per (commit, session) so a same-day cron re-run dedupes at
+    // Stripe instead of double-charging past the eventually-consistent roster guard.
+    { idempotencyKey: crewChargeIdempotencyKey(commit.id, next.id) },
+    );
     paymentIntentId = pi.id;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
