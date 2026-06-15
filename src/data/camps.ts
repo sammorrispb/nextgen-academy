@@ -1,13 +1,19 @@
 // Summer Camp config — the single source of truth for the /camp registration
 // flow. Camps are a distinct product from the $20 drop-in scheduler: multi-day,
-// full/half-day, flat weekly price. Pricing is real (unlike the teased website
-// drop-in price) because a camp is a concrete bookable product.
+// morning half-day, flat weekly price. Pricing is real (unlike the teased
+// website drop-in price) because a camp is a concrete bookable product.
+//
+// 2026-06-15: collapsed to a single morning half-day option at $50/week (the
+// standing camp price). The full-day and afternoon options were retired; their
+// Stripe prices are archived and STRIPE_CAMP_FULL/PM_PRICE_ID env vars are
+// unused. `CampOptionKey` is narrowed to "am" so any stray full/pm reference
+// fails typecheck rather than silently 503-ing at checkout.
 //
 // Location is HIDDEN per NGA child-safety policy: public copy shows only the
 // `publicArea` ("Gaithersburg, MD"); the exact venue is shared with registered
 // families before camp. Do not put `exactLocation` in any public surface.
 
-export type CampOptionKey = "full" | "am" | "pm";
+export type CampOptionKey = "am";
 
 export interface CampOption {
   key: CampOptionKey;
@@ -47,25 +53,11 @@ export const CAMP_AGE_MAX = 16;
 
 export const CAMP_OPTIONS: CampOption[] = [
   {
-    key: "full",
-    label: "Full day",
-    hours: "9:30 AM – 4:30 PM",
-    priceUsd: 295,
-    priceEnvVar: "STRIPE_CAMP_FULL_PRICE_ID",
-  },
-  {
     key: "am",
     label: "Morning half-day",
     hours: "9:30 AM – 12:30 PM",
-    priceUsd: 170,
+    priceUsd: 50,
     priceEnvVar: "STRIPE_CAMP_AM_PRICE_ID",
-  },
-  {
-    key: "pm",
-    label: "Afternoon half-day",
-    hours: "1:30 PM – 4:30 PM",
-    priceUsd: 170,
-    priceEnvVar: "STRIPE_CAMP_PM_PRICE_ID",
   },
 ];
 

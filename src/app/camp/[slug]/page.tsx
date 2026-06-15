@@ -29,7 +29,7 @@ export async function generateMetadata({
   if (!camp) return { title: "Camp not found · Next Gen Pickleball Academy" };
   return {
     title: `${camp.title} (${camp.weekLabel}) | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
-    description: `Register for Next Gen Pickleball ${camp.title} — ${camp.weekLabel}, Mon–Thu in Gaithersburg, MD. Full-day and half-day options for ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX}.`,
+    description: `Register for Next Gen Pickleball ${camp.title} — ${camp.weekLabel}, Mon–Thu mornings in Gaithersburg, MD. Morning half-day camp for ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX}, $50/week.`,
     alternates: { canonical: `${SITE_ORIGIN}/camp/${camp.slug}` },
   };
 }

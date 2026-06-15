@@ -5,6 +5,14 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-06-15 — Camp → morning-half-day-only @ $50/week (payments / IPAV / gauntlet)
+- **Situation:** NGA summer camp (Wk1 Jun 29, Wk2 Jul 20) had zero registrants and rented morning courts. Sam decided to collapse the product to a single **morning half-day** option at a standing **$50/week** and market it. Plan run through `/gauntlet` (GO-WITH-CHANGES): report `~/.claude/usage-data/gauntlet-nga-camp-50-am-only-2026-06-15.md`, Plan v2 `~/.claude/plans/nga-camp-50-am-only-v2.md`.
+- **Decision:** `CAMP_OPTIONS` → single `am` entry at `priceUsd:50`; `CampOptionKey` narrowed to `"am"` (dead full/pm refs fail typecheck, not silent 503). Form default `optionKey:"am"`. Parent-email lunch line (am campers leave 12:30) → "A morning snack". Metadata + newsletter copy → morning-half-day. Charge change is the Stripe price object, NOT `priceUsd` — new $50 price `price_1TidG4BpXOfTC961p6oENUML` created on `prod_UdZrVIQyygPk87`; `STRIPE_CAMP_AM_PRICE_ID` repoint + archive-old deferred to ship time (repoint-before-deploy would mismatch the live build).
+- **Risk:** Slop-free payments files touched — webhook (lunch line only; #194 idempotency ledger confirmed intact on origin/main) + checkout-camp path (validation-before-env ordering preserved → removed keys 400, not 503). Gauntlet criticals addressed by sequencing (charge-live-before-display, before Thu Jun 18 newsletter cron) + a live $50 checkout probe gate before any marketing. Marketing gated separately: ELIGIBLE+subscribers list only (DD guardrail), "Gaithersburg, MD" only (child-safety), /brand-review-nga.
+- **Change:** `camps.ts`, `CampRegisterForm.tsx`, `validate-camp.ts`, `webhook/route.ts`, `camp/page.tsx`, `camp/[slug]/page.tsx`, `weekly-newsletter.ts` + load-bearing tests (`validate-camp.spec.ts`: am-only set / full+pm undefined / $50; `weekly-newsletter.spec.ts`: `Math.min(CAMP_OPTIONS)===50`, replacing the tautological input assertion). Tests fail-before/pass-after; mutation-verified (price→170 fails 2 specs). Full suite 551 pass / 8 skip + lint + funnel + `next build` green.
+
+---
+
 ## 2026-06-14 — Webhook camp/league idempotency via shared processed-events ledger (deferred §8a, Surface 2)
 
 - **Situation:** `handleCampCheckout` / `handleLeagueCheckout` (`src/app/api/stripe/webhook/route.ts`, Slop-Free payments) had no dedupe store — unlike drop-in (`findDropInByCheckoutId`) and cluster (`findClusterRegByCheckoutId`), both keyed on the checkout-session id. Camp/league have no roster row of their own, so a Stripe redelivery of a 200'd `checkout.session.completed` re-fired the parent + admin confirmation emails. Second deferred surface in `docs/source-inventory.md §8a` (payments-class, its own IPAV go).

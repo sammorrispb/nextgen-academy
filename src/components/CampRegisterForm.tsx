@@ -17,7 +17,7 @@ interface CampRegisterFormProps {
 function emptyForm(campSlug: string): CampFormData {
   return {
     campSlug,
-    optionKey: "full",
+    optionKey: "am",
     parentName: "",
     email: "",
     phone: "",
