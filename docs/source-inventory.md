@@ -58,6 +58,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | src/app/api/commit/start-checkout/route.ts | api | 2026-05-30 | STRIPE setup-intent for crew card-on-file | high |
 | src/app/api/commit/confirm/route.ts | api | 2026-05-25 | STRIPE+Notion+email crew commit confirmation | high |
 | src/app/api/cancel-registration/route.ts | api | 2026-05-19 | refund+deregister drop-in; NGA_ADMIN_SECRET or cancel-token | high |
+| src/app/api/coach/attendance/route.ts | api | 2026-06-14 | agent attendance check-in (Notion + OB activity + profile recompute via applyAttendance); Bearer ATTENDANCE_SECRET, fail-closed, idempotent, PII-free ack | high |
 | src/app/api/cancel-camp-registration/route.ts | api | 2026-06-04 | STRIPE camp refund; NGA_ADMIN_SECRET gated | high |
 | src/app/api/lead/route.ts | api | 2026-06-12 | NOTION lead write + EMAIL welcome + OB ingest | high |
 | src/app/api/contact/route.ts | api | 2026-05-23 | NOTION + EMAIL contact form | high |
@@ -106,6 +107,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | src/lib/notion-eval.ts | 2026-06-05 | eval records | high |
 | src/lib/registrant-match.ts | 2026-06-12 | match registrants to player profiles | high |
 | src/lib/roster-mailto.ts | 2026-06-12 | email-all-parents mailto from roster | high |
+| src/lib/attendance.ts | 2026-06-14 | shared check-in core (Notion write + OB activity + profile recompute); reused by the coach action + /api/coach/attendance; idempotent | high |
 
 **Buckets (remaining):**
 
@@ -172,6 +174,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 - `src/app/api/stripe/webhook/route.ts` + all `api/checkout*` + `api/commit/*` + `api/cancel-*` + `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`
 - All 9 auth/token libs in §3 + the 4 auth-session routes + admin/coach allowlists
 - All 7 child-PII libs in §3 + `api/admin/sessions/registrants` + coach roster/player pages + eval routes
+- `src/lib/attendance.ts` + `src/app/api/coach/attendance/route.ts` (check-in core + agent route — minor-PII write + OB egress)
 - `api/cron/crew-autoreserve` (off-session charges)
 
 ## 8. Risk log
@@ -184,6 +187,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 6. **Ship-dark 503 fail mode** (camp/league checkout): fail-closed for money, but a dropped price env = silent revenue-off with a polite message, no alerting.
 7. **scripts/setup-stripe-product.mjs** references old Stripe acct `acct_1SOoW5…` (NGA live = `acct_1TU4iS…`) — stale; deletion candidate.
 8. **Child PII flow**: child name/birth-year ride Stripe metadata → webhook → Notion + admin email. Same Notion row holds parent contact + child fields (no separate child record). Any new egress destination is a hostile-review trigger.
+9. **`/api/coach/attendance` auth authority (2026-06-14, hardened).** The agent route grants attendance-write to any holder of `ATTENDANCE_SECRET`, which does NOT enforce the `COACH_ALLOWED_EMAILS` allowlist the coach UI action does — a broader authority on a minor-PII write. Hardened over the original #189 form (which used NGA_ADMIN_SECRET in a `?secret=` query param): now a **dedicated** secret over a **Bearer header** (no access-log exposure, isolated blast radius), fail-closed when unset, idempotent (no duplicate OB activity on retries), OB ingest awaited for Vercel durability, PII-free ack. Egress pinned to Notion + OB by `e2e/invariant-attendance-pii-egress.spec.ts`. Residual: until `ATTENDANCE_SECRET` is set in Vercel the route 401s every call (safe default).
 
 ## 9. DD/CourtReserve reference log (defensive only — nothing to remove)
 
