@@ -13,7 +13,7 @@ import { fetchWeatherForSessions, type DayWeather } from "@/lib/weather";
 import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
-import { CAMPS, CAMP_AGE_MIN, CAMP_OPTIONS } from "@/data/camps";
+import { CAMP_AGE_MIN, CAMP_OPTIONS } from "@/data/camps";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -248,13 +248,11 @@ export async function GET(req: NextRequest) {
   const utmCampaign = `weekly-${new Date().toISOString().slice(0, 10)}`;
   const scheduleUrl = appendUtm(`${SITE_ORIGIN}/schedule`, "schedule", utmCampaign);
   const crewInterestUrl = appendUtm(`${SITE_ORIGIN}/crew`, "crew", utmCampaign);
-  // Dedicated camp block — upcoming camp weeks from the static camp config.
-  // Date-only ISO compare in UTC is fine for a day-granularity "is it still
-  // upcoming" check. Empty list hides the block.
-  const campToday = new Date().toISOString().slice(0, 10);
-  const camps = CAMPS.filter((cmp) => cmp.endDate >= campToday).map((cmp) => ({
-    weekLabel: cmp.weekLabel,
-  }));
+  // Dedicated camp block suppressed (2026-06-15): the camp is promoted via the
+  // "From Coach Sam" lead block (NGA Newsletter Drafts DB) + the /camp page, so
+  // the auto-tease was duplicating it. Re-enable by repopulating `camps` from
+  // CAMPS.filter((c) => c.endDate >= today) and re-importing CAMPS.
+  const camps: { weekLabel: string }[] = [];
   const campUrl = appendUtm(`${SITE_ORIGIN}/camp`, "camp", utmCampaign);
   const campPriceFromUsd = Math.min(...CAMP_OPTIONS.map((o) => o.priceUsd));
 
