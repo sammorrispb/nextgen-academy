@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CAMP_OPTIONS, type CampOptionKey } from "@/data/camps";
+import {
+  CAMP_OPTIONS,
+  campDays,
+  findCampBySlug,
+  type CampOptionKey,
+} from "@/data/camps";
 import {
   validateCampForm,
   type CampFormData,
@@ -14,10 +19,20 @@ interface CampRegisterFormProps {
   campSlug: string;
 }
 
+function dayLabel(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 function emptyForm(campSlug: string): CampFormData {
   return {
     campSlug,
-    optionKey: "am",
+    optionKey: "day",
+    selectedDay: "",
     parentName: "",
     email: "",
     phone: "",
@@ -36,6 +51,9 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
   const [errors, setErrors] = useState<CampValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
+
+  const camp = findCampBySlug(campSlug);
+  const days = camp ? campDays(camp) : [];
 
   function update<K extends keyof CampFormData>(field: K, value: CampFormData[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -105,9 +123,9 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
       )}
 
       <div className="space-y-4">
-        {/* Option */}
+        {/* Registration option */}
         <div>
-          <label className={labelClass}>Choose your day</label>
+          <label className={labelClass}>Choose single morning or full week</label>
           <div className="grid grid-cols-1 gap-2 mt-1">
             {CAMP_OPTIONS.map((opt) => {
               const active = form.optionKey === opt.key;
@@ -128,19 +146,52 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
                       {opt.label}
                     </span>
                     <span className="block text-xs text-ngpa-white/60">
-                      {opt.hours}
+                      {opt.key === "week"
+                        ? "All 4 mornings · 9:30 AM – 12:30 PM"
+                        : opt.hours}
                     </span>
                   </span>
                   <span className="font-mono font-bold text-ngpa-white">
                     ${opt.priceUsd}
-                    <span className="text-ngpa-white/50 text-xs">/wk</span>
+                    <span className="text-ngpa-white/50 text-xs">
+                      {opt.key === "day" ? "/day" : ""}
+                    </span>
                   </span>
                 </button>
               );
             })}
           </div>
           {errors.optionKey && <p className={errorClass}>{errors.optionKey}</p>}
+          <p className="text-xs text-ngpa-white/55 mt-2">
+            Any morning is $50. Come all week and you&rsquo;ll never pay more than
+            $150 — the 4th morning is on us.
+          </p>
         </div>
+
+        {/* Which day (single-morning only) */}
+        {form.optionKey === "day" && (
+          <div>
+            <label htmlFor="selectedDay" className={labelClass}>
+              Which morning?
+            </label>
+            <select
+              id="selectedDay"
+              className={inputClass}
+              value={form.selectedDay}
+              onChange={(e) => update("selectedDay", e.target.value)}
+            >
+              <option value="">Pick a day…</option>
+              {days.map((d) => (
+                <option key={d} value={d}>
+                  {dayLabel(d)}
+                </option>
+              ))}
+            </select>
+            {errors.selectedDay && (
+              <p className={errorClass}>{errors.selectedDay}</p>
+            )}
+          </div>
+        )}
 
         {/* Parent */}
         <div>

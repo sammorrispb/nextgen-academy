@@ -6,6 +6,7 @@ import {
   CAMP_AGE_MIN,
   CAMP_AGE_MAX,
   findCampOption,
+  campDays,
 } from "../src/data/camps";
 
 const thisYear = new Date().getFullYear();
@@ -13,7 +14,8 @@ const thisYear = new Date().getFullYear();
 function validForm(overrides: Partial<CampFormData> = {}): CampFormData {
   return {
     campSlug: CAMPS[0].slug,
-    optionKey: "am",
+    optionKey: "day",
+    selectedDay: campDays(CAMPS[0])[0],
     parentName: "Jordan Parent",
     email: "jordan@example.com",
     phone: "301-555-0142",
@@ -47,22 +49,63 @@ test.describe("validateCampForm", () => {
     expect(validateCampForm(validForm({ optionKey: "vip" })).optionKey).toBeTruthy();
   });
 
-  test("camp offers only the morning half-day option", () => {
-    expect(CAMP_OPTIONS.map((o) => o.key)).toEqual(["am"]);
+  test("camp offers exactly the day and week SKUs", () => {
+    expect(CAMP_OPTIONS.map((o) => o.key)).toEqual(["day", "week"]);
   });
 
-  test("the retired full/pm options are no longer registrable", () => {
-    expect(findCampOption("full")).toBeUndefined();
-    expect(findCampOption("pm")).toBeUndefined();
-    // The checkout-camp route delegates to validateCampForm first, so a stale
-    // client/bookmarked form posting a removed key is cleanly rejected (400),
-    // never a confusing 503.
-    expect(validateCampForm(validForm({ optionKey: "full" })).optionKey).toBeTruthy();
-    expect(validateCampForm(validForm({ optionKey: "pm" })).optionKey).toBeTruthy();
+  test("retired option keys are no longer registrable", () => {
+    for (const dead of ["am", "full", "pm"]) {
+      expect(findCampOption(dead)).toBeUndefined();
+      // checkout-camp delegates to validateCampForm first, so a stale/bookmarked
+      // form posting a removed key is cleanly rejected (400), never a 503.
+      expect(validateCampForm(validForm({ optionKey: dead })).optionKey).toBeTruthy();
+    }
   });
 
-  test("the morning option is priced at $50/week", () => {
-    expect(findCampOption("am")?.priceUsd).toBe(50);
+  test("day SKU is $50 and week SKU is $150", () => {
+    expect(findCampOption("day")?.priceUsd).toBe(50);
+    expect(findCampOption("week")?.priceUsd).toBe(150);
+  });
+
+  test("campDays returns the 4 Mon–Thu dates ending on endDate", () => {
+    for (const camp of CAMPS) {
+      const days = campDays(camp);
+      expect(days).toHaveLength(4);
+      expect(days[0]).toBe(camp.startDate);
+      expect(days[3]).toBe(camp.endDate);
+    }
+  });
+
+  test("single-day SKU requires a selectedDay that belongs to this camp week", () => {
+    // missing day
+    expect(
+      validateCampForm(validForm({ optionKey: "day", selectedDay: "" })).selectedDay,
+    ).toBeTruthy();
+    // a real date, but from the OTHER camp week
+    const otherWeekDay = campDays(CAMPS[1])[0];
+    expect(
+      validateCampForm(
+        validForm({ campSlug: CAMPS[0].slug, optionKey: "day", selectedDay: otherWeekDay }),
+      ).selectedDay,
+    ).toBeTruthy();
+    // a garbage date
+    expect(
+      validateCampForm(validForm({ optionKey: "day", selectedDay: "2026-12-25" })).selectedDay,
+    ).toBeTruthy();
+  });
+
+  test("week SKU does not require a selectedDay", () => {
+    expect(
+      validateCampForm(validForm({ optionKey: "week", selectedDay: "" })),
+    ).toEqual({});
+  });
+
+  test("every campDays date is a valid single-day selection", () => {
+    for (const d of campDays(CAMPS[0])) {
+      expect(
+        validateCampForm(validForm({ optionKey: "day", selectedDay: d })),
+      ).toEqual({});
+    }
   });
 
   test("waiver must be accepted", () => {

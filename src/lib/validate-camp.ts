@@ -1,6 +1,7 @@
 import {
   CAMP_AGE_MIN,
   CAMP_AGE_MAX,
+  campDays,
   findCampBySlug,
   findCampOption,
 } from "@/data/camps";
@@ -8,6 +9,8 @@ import {
 export interface CampFormData {
   campSlug: string;
   optionKey: string;
+  /** ISO date (one of campDays). Required only for the single-day ("day") SKU. */
+  selectedDay: string;
   parentName: string;
   email: string;
   phone: string;
@@ -44,8 +47,18 @@ export function validateCampForm(
   if (!data.campSlug?.trim() || !findCampBySlug(data.campSlug)) {
     errors.campSlug = "Pick a camp week";
   }
-  if (!data.optionKey?.trim() || !findCampOption(data.optionKey)) {
+  const option = data.optionKey ? findCampOption(data.optionKey) : undefined;
+  if (!data.optionKey?.trim() || !option) {
     errors.optionKey = "Pick a camp option";
+  }
+  // Single-day SKU must name a real morning of THIS camp week.
+  if (option?.key === "day") {
+    const camp = findCampBySlug(data.campSlug ?? "");
+    if (!data.selectedDay?.trim()) {
+      errors.selectedDay = "Pick which day";
+    } else if (camp && !campDays(camp).includes(data.selectedDay)) {
+      errors.selectedDay = "Pick a valid camp day";
+    }
   }
   if (!data.parentName?.trim()) errors.parentName = "Parent name is required";
   if (!data.email?.trim()) {

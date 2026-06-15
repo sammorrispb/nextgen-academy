@@ -13,7 +13,7 @@ const SITE_ORIGIN =
 export const metadata: Metadata = {
   title: `Summer Pickleball Camp | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
   description:
-    "Next Gen Pickleball Academy summer day camp in Gaithersburg, MD. Two weeks this summer for ages 8 and up — morning half-day, small groups, real coaching, $50/week.",
+    "Next Gen Pickleball Academy summer morning camp in Gaithersburg, MD. Two weeks this summer for ages 8 and up — small groups, real coaching. $50 a morning, or $150 for the full week.",
   alternates: { canonical: `${SITE_ORIGIN}/camp` },
 };
 
@@ -94,7 +94,7 @@ export default function CampIndexPage() {
               and an end-of-day tournament. Grouped by age and skill so every
               camper gets real reps and real feedback.
             </p>
-            <ul className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+            <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               {CAMP_OPTIONS.map((o) => (
                 <li
                   key={o.key}
@@ -106,7 +106,9 @@ export default function CampIndexPage() {
                   <p className="text-ngpa-muted text-xs mt-0.5">{o.hours}</p>
                   <p className="font-mono font-bold text-ngpa-white mt-2">
                     ${o.priceUsd}
-                    <span className="text-ngpa-muted text-xs">/week</span>
+                    <span className="text-ngpa-muted text-xs">
+                      {o.key === "day" ? "/morning" : " · full week"}
+                    </span>
                   </p>
                 </li>
               ))}

@@ -269,7 +269,7 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(html).toContain("ages 8+");
     expect(html).toContain("June 29 – July 2, 2026");
     expect(html).toContain("July 20 – July 23, 2026");
-    expect(html).toContain("From $50/week");
+    expect(html).toContain("From $50/day");
     // campUrl is UTM-stamped by the cron (like scheduleUrl); the template
     // renders whatever it's handed. Assert the passed-in link appears.
     expect(html).toContain(`href="${ORIGIN}/camp"`);
