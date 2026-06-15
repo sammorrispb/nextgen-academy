@@ -176,7 +176,7 @@ All four per-row cancel paths run through `cancelDropIn(checkoutSessionId, statu
 The NGA Drop-in Registrations DB has three boolean idempotency columns the comms surfaces own: `Reminder Sent`, `Post Session Sent`, `Cancellation Notified`. Helper: `markDropInFlag(pageId, flag)` in `src/lib/notion-dropins.ts`. It also has an `Attendance` select (`Present`/`No-show`, blank = not recorded) set by `setDropInAttendance()`. The NGA Sessions Schedule DB owns the `Status` column flipped by `setSessionStatus()` in `src/lib/notion-sessions.ts`.
 
 ### Coach dashboard — attendance check-in + family profiles
-- **Day-of check-in** — per-row Here/No-show toggle on `/coach/[slug]` → `markAttendanceAction` writes the `Attendance` select and fires `ingestToOpenBrain({ source: "nga_attendance" })` keyed on parent email/phone, so each check-in lands as an activity on the player's Open Brain profile (the profile system of record). Tapping the active state again clears it.
+- **Day-of check-in** — per-row Here/No-show toggle on `/coach/[slug]` → `markAttendanceAction` writes the `Attendance` select and fires `ingestToOpenBrain({ source: "nga_attendance" })` keyed on parent email/phone, so each check-in lands as an activity on the player's Open Brain profile (the profile system of record). Tapping the active state again clears it. The full fan-out (Notion write + OB activity + player-stat recompute) lives in `src/lib/attendance.ts` (`applyAttendance`) so the agent-callable `POST /api/coach/attendance` (Bearer `ATTENDANCE_SECRET`, idempotent, PII-free ack) fires the identical triggers instead of a raw Notion write dropping them. The action keeps OB fire-and-forget; the route awaits it for Vercel durability.
 - **Family/player profiles** — `/coach/players` (directory) + `/coach/players/[key]` (profile). Assembled from the Notion drop-in rows (transactional source of truth for sessions/payments/refunds/attendance); OB is the semantic mirror. Keyed per family on parent email (phone fallback), with per-child sections. Pure aggregation + key encode/decode in `src/lib/player-profiles.ts` (`buildFamilyProfile`, `encodeParentKey`); Notion reads via `fetchDropInsByParent` / `fetchAllDropInsInRange`. Partial-refund caveat: a Refunded row counts as a full refund in the rollup (Notion stores only the original amount paid; Stripe is the precise ledger).
 - **`"use server"` gotcha** — action files (`actions.ts`) may only export async functions, so pure/sync helpers (`resolveRefundCents`, `buildFamilyProfile`, key codecs) live in plain libs and are unit-tested directly (`e2e/refund-amount.spec.ts`, `e2e/player-profiles.spec.ts`). Pure-function specs run without a dev server: `npx playwright test e2e/<file>.spec.ts --project=desktop`.
 
@@ -210,6 +210,7 @@ See `.env.example`. Categories:
 - `NOTION_NEWSLETTER_DRAFTS_DB_ID` — NGA Newsletter Drafts DB (Coach-voice longform sections drafted Wednesday by the cloud drafter routine; Sam approves a row before Thu 6pm for the cron to inject as the "From Coach Sam" lead block). Optional — weekly newsletter just hides the lead block if unset. See the "Newsletter lead block — drafter pipeline" section above.
 - `REFERRAL_TOKEN_SECRET` — HMAC signing key for `/newsletter?ref=<token>` links. Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` so a leaked unsub token can't be replayed as a referral and vice versa.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
+- `ATTENDANCE_SECRET` — Bearer secret for the agent-callable attendance check-in (`POST /api/coach/attendance`), giving an out-of-band caller the same fan-out as the coach toggle (Notion write + OB activity + profile recompute). Distinct from `NGA_ADMIN_SECRET` to isolate blast radius. Unset = the route fails closed (401).
 
 ## Testing Standards
 - **`npm run build` must pass with zero errors before every push.** Minimum bar.
@@ -230,7 +231,7 @@ Tests OBSERVE these files; they never modify them. Any change here goes through 
 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
 - **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 5 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
-- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto}.ts`, `api/admin/sessions/registrants`, coach roster/player pages, the 3 eval routes.
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
 

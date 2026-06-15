@@ -10,8 +10,16 @@ export interface ApplyAttendanceResult {
   ok: boolean;
   message: string;
   attendance?: AttendanceValue | "";
+  /** True when the row already held the requested value — a no-op (no write, no
+   *  OB activity, no recompute). Lets retry-happy agent callers be idempotent. */
+  idempotent?: boolean;
   /** Present on success so a request-scoped caller can revalidate the slug. */
   session?: { title: string; date: string };
+  /** The (always-resolving) Open Brain ingest promise when one was fired, else
+   *  null. A caller that needs the activity durable (the agent route — it can
+   *  freeze on Vercel before a floating promise flushes) awaits it; the coach
+   *  action ignores it to stay non-blocking. */
+  obIngest?: Promise<void> | null;
 }
 
 /**
@@ -43,14 +51,30 @@ export async function applyAttendance(input: {
   const dropIn = await findDropInPageByCheckoutId(input.checkoutSessionId);
   if (!dropIn) return { ok: false, message: "Registration not found" };
 
+  // Idempotency: a re-fire with the value already on the row is a no-op — skip
+  // the write AND the OB activity append so agent retries don't pile duplicate
+  // check-ins onto the player's profile. The coach UI never sends a same-value
+  // repeat (it toggles to "clear"), so this never alters the click path.
+  if ((dropIn.attendance || "") === (value ?? "")) {
+    return {
+      ok: true,
+      message: value ?? "Cleared",
+      attendance: value ?? "",
+      idempotent: true,
+      session: { title: dropIn.sessionTitle, date: dropIn.sessionDate },
+      obIngest: null,
+    };
+  }
+
   const ok = await setDropInAttendance(dropIn.id, value);
   if (!ok) return { ok: false, message: "Failed to update Notion" };
 
   // Tie the check-in to the player's Open Brain profile. Keyed on parent
-  // email/phone (OB dedups to the existing contact); fire-and-forget so a slow
-  // OB never blocks the caller. Only fires for a real Present/No-show.
+  // email/phone (OB dedups to the existing contact). Returned (not voided) so
+  // the agent route can await durability; only fires for a real Present/No-show.
+  let obIngest: Promise<void> | null = null;
   if (value && (dropIn.parentEmail || dropIn.parentPhone)) {
-    void ingestToOpenBrain({
+    obIngest = ingestToOpenBrain({
       business: "nga",
       source: "nga_attendance",
       email: dropIn.parentEmail || undefined,
@@ -85,6 +109,8 @@ export async function applyAttendance(input: {
     ok: true,
     message: value ?? "Cleared",
     attendance: value ?? "",
+    idempotent: false,
     session: { title: dropIn.sessionTitle, date: dropIn.sessionDate },
+    obIngest,
   };
 }
