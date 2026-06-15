@@ -10,12 +10,10 @@ import {
 import { isAllowedCoachEmail } from "@/lib/coach-allowlist";
 import {
   findDropInPageByCheckoutId,
-  setDropInAttendance,
   type AttendanceValue,
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
-import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
-import { recomputePlayerAttendance } from "@/lib/notion-player-sync";
+import { applyAttendance } from "@/lib/attendance";
 import { resolveRefundCents, type RefundOption } from "@/lib/refund-amount";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -142,61 +140,23 @@ export async function markAttendanceAction(input: {
   if (!input.checkoutSessionId?.trim()) {
     return { ok: false, message: "Missing checkoutSessionId" };
   }
-  const value: AttendanceValue | null =
-    input.attended === "clear" ? null : input.attended;
-  if (value !== null && value !== "Present" && value !== "No-show") {
-    return { ok: false, message: "Invalid attendance value" };
-  }
+  // Shared fan-out (Notion write + Open Brain ingest + player-stat recompute)
+  // lives in applyAttendance so the agent-callable /api/coach/attendance route
+  // fires the exact same triggers. This action only adds coach auth (above) and
+  // request-scoped cache revalidation (below).
+  const result = await applyAttendance(input);
+  if (!result.ok) return { ok: false, message: result.message };
 
-  const dropIn = await findDropInPageByCheckoutId(input.checkoutSessionId);
-  if (!dropIn) return { ok: false, message: "Registration not found" };
-
-  const ok = await setDropInAttendance(dropIn.id, value);
-  if (!ok) return { ok: false, message: "Failed to update Notion" };
-
-  // Tie the check-in to the player's Open Brain profile. Keyed on parent
-  // email/phone (OB dedups to the existing contact); fire-and-forget so a
-  // slow OB never blocks the coach. Only fires for a real Present/No-show.
-  if (value && (dropIn.parentEmail || dropIn.parentPhone)) {
-    void ingestToOpenBrain({
-      business: "nga",
-      source: "nga_attendance",
-      email: dropIn.parentEmail || undefined,
-      phone: dropIn.parentPhone || undefined,
-      name: dropIn.parentName || undefined,
-      interest: dropIn.childFirstName || undefined,
-      metadata: {
-        child_first_name: dropIn.childFirstName,
-        child_birth_year: dropIn.childBirthYear || undefined,
-        session_title: dropIn.sessionTitle,
-        session_date: dropIn.sessionDate,
-        session_start_time: dropIn.sessionStartTime,
-        location: dropIn.location,
-        attendance: value,
-      },
+  if (result.session) {
+    const slug = sessionToSlug({
+      title: result.session.title,
+      date: result.session.date,
     });
+    if (slug) revalidatePath(`/coach/${slug}`);
   }
-
-  // Recompute the child's attendance stats on their player profile. Runs for
-  // every change (Present / No-show / clear) so the count stays exact — e.g.
-  // clearing a Present row decrements it. Reads the drop-in rows we just wrote,
-  // so it reflects this toggle. Awaited but never fatal to the check-in.
-  if (dropIn.parentEmail || dropIn.parentPhone) {
-    await recomputePlayerAttendance({
-      parentEmail: dropIn.parentEmail || null,
-      parentPhone: dropIn.parentPhone || "",
-      childFirstName: dropIn.childFirstName,
-    });
-  }
-
-  const slug = sessionToSlug({
-    title: dropIn.sessionTitle,
-    date: dropIn.sessionDate,
-  });
-  if (slug) revalidatePath(`/coach/${slug}`);
   revalidatePath("/coach");
 
-  return { ok: true, message: value ?? "Cleared", attendance: value ?? "" };
+  return { ok: true, message: result.message, attendance: result.attendance };
 }
 
 // ---------------------------------------------------------------------------
