@@ -189,6 +189,24 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 8. **Child PII flow**: child name/birth-year ride Stripe metadata → webhook → Notion + admin email. Same Notion row holds parent contact + child fields (no separate child record). Any new egress destination is a hostile-review trigger.
 9. **`/api/coach/attendance` auth authority (2026-06-14, hardened).** The agent route grants attendance-write to any holder of `ATTENDANCE_SECRET`, which does NOT enforce the `COACH_ALLOWED_EMAILS` allowlist the coach UI action does — a broader authority on a minor-PII write. Hardened over the original #189 form (which used NGA_ADMIN_SECRET in a `?secret=` query param): now a **dedicated** secret over a **Bearer header** (no access-log exposure, isolated blast radius), fail-closed when unset, idempotent (no duplicate OB activity on retries), OB ingest awaited for Vercel durability, PII-free ack. Egress pinned to Notion + OB by `e2e/invariant-attendance-pii-egress.spec.ts`. Residual: until `ATTENDANCE_SECRET` is set in Vercel the route 401s every call (safe default).
 
+## 8a. Agent-action trigger parity — deferred surfaces (per-surface IPAV go required)
+
+Principle: an operational UI action with a multi-trigger fan-out must expose a single shared,
+auth-gated, agent-callable core so an out-of-band caller gets trigger parity instead of dropping
+side-effects by writing the datastore directly. Attendance shipped this pattern (#189 + hardened
+in #191): `src/lib/attendance.ts` (`applyAttendance`) + `src/app/api/coach/attendance/route.ts`
+(Bearer `ATTENDANCE_SECRET`, fail-closed, idempotent, PII-free ack, OB awaited on the route).
+Still inlined / no agent path, each awaiting its own go:
+
+1. **`confirmCrewAction`** (`src/app/coach/(authed)/polls/[slug]/actions.ts`) — poll Status write
+   + per-parent email loop + revalidate, all inline. Minor-PII → IPAV.
+2. **Stripe webhook camp/league branches** (`src/app/api/stripe/webhook/route.ts`) — emails fire
+   with no Notion roster row, so no DB-backed idempotency (Stripe redelivery → duplicate emails).
+   Payments-class + Slop-Free → own IPAV pass, separate approval from #1.
+
+Ready-to-run prompt for this work (collision check + IPAV + EDD guardrails baked in):
+`~/.claude/plans/deferred-trigger-parity-prompt.md`.
+
 ## 9. DD/CourtReserve reference log (defensive only — nothing to remove)
 
 - `src/lib/lead-segmentation.ts` — legacy-lead classifier marking DD/CR-provenance leads `off_limits` (enforces the no-DD-derived-sales rule).
