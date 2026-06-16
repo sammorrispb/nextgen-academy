@@ -7,7 +7,27 @@ import {
   type SessionPatch,
   type SessionStatus,
 } from "@/lib/notion-sessions-admin";
+import type { CancelReason } from "@/lib/email/session-cancelled";
 import { buildRosterMailto } from "@/lib/roster-mailto";
+
+const CANCEL_REASONS: { value: CancelReason; label: string }[] = [
+  { value: "weather", label: "Weather" },
+  { value: "venue", label: "Venue issue" },
+  { value: "low-enrollment", label: "Low enrollment" },
+  { value: "other", label: "Other" },
+];
+
+interface ActionPanel {
+  kind?: "cancel" | "reschedule";
+  busy?: boolean;
+  msg?: string;
+  err?: boolean;
+  reason?: CancelReason;
+  note?: string;
+  newDate?: string;
+  newStart?: string;
+  newEnd?: string;
+}
 
 const EDITABLE: (keyof AdminSession)[] = [
   "title",
@@ -80,6 +100,81 @@ export default function SessionsEditor({
     {},
   );
   const [registrants, setRegistrants] = useState<Record<string, RegistrantPanel>>({});
+  const [action, setAction] = useState<Record<string, ActionPanel>>({});
+
+  function setAct(id: string, patch: Partial<ActionPanel>) {
+    setAction((m) => ({ ...m, [id]: { ...m[id], ...patch } }));
+  }
+
+  async function doCancel(row: AdminSession) {
+    const a = action[row.id] || {};
+    const base = saved[row.id] ?? row;
+    if (!a.reason) {
+      setAct(row.id, { msg: "Pick a reason first.", err: true });
+      return;
+    }
+    setAct(row.id, { busy: true, msg: undefined, err: false });
+    try {
+      const res = await fetch("/api/admin/sessions/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionRowId: row.id,
+          sessionTitle: base.title,
+          sessionDate: base.date,
+          sessionStartTime: base.startTime,
+          reason: a.reason,
+          note: a.note?.trim() || undefined,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.ok) {
+        setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: "Cancelled" } : r)));
+        setSaved((m) => ({ ...m, [row.id]: { ...(m[row.id] ?? row), status: "Cancelled" } }));
+        setAct(row.id, { busy: false, kind: undefined, msg: j.message || "Cancelled ✓", err: false });
+      } else {
+        setAct(row.id, { busy: false, msg: j.message || j.error || "Cancel failed", err: true });
+      }
+    } catch {
+      setAct(row.id, { busy: false, msg: "Network error", err: true });
+    }
+  }
+
+  async function doReschedule(row: AdminSession) {
+    const a = action[row.id] || {};
+    const base = saved[row.id] ?? row;
+    if (!a.newDate || !a.newStart) {
+      setAct(row.id, { msg: "New date and start time are required.", err: true });
+      return;
+    }
+    setAct(row.id, { busy: true, msg: undefined, err: false });
+    try {
+      const res = await fetch("/api/admin/sessions/reschedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionRowId: row.id,
+          sessionTitle: base.title,
+          oldDate: base.date,
+          oldStartTime: base.startTime,
+          newDate: a.newDate,
+          newStartTime: a.newStart,
+          newEndTime: a.newEnd?.trim() || base.endTime,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.ok) {
+        const next = { date: a.newDate!, startTime: a.newStart!, endTime: a.newEnd?.trim() || base.endTime };
+        setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, ...next } : r)));
+        setSaved((m) => ({ ...m, [row.id]: { ...(m[row.id] ?? row), ...next } }));
+        setAct(row.id, { busy: false, kind: undefined, msg: j.message || "Rescheduled ✓", err: false });
+      } else {
+        setAct(row.id, { busy: false, msg: j.message || j.error || "Reschedule failed", err: true });
+      }
+    } catch {
+      setAct(row.id, { busy: false, msg: "Network error", err: true });
+    }
+  }
 
   async function toggleRegistrants(row: AdminSession) {
     const cur = registrants[row.id];
@@ -151,6 +246,17 @@ export default function SessionsEditor({
   async function save(row: AdminSession) {
     const p = buildPatch(row);
     if (Object.keys(p).length === 0) return;
+    // Footgun guard: a plain Save to Cancelled skips refunds + parent comms.
+    // Route any cancel of a session that has registrants through the proper
+    // refund+notify engine instead.
+    if (p.status === "Cancelled" && (saved[row.id]?.registered ?? row.registered) > 0) {
+      setState((s) => ({
+        ...s,
+        [row.id]: { msg: "Use “Cancel & notify all” to refund + notify parents.", err: true },
+      }));
+      setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, status: saved[row.id]?.status ?? r.status } : r)));
+      return;
+    }
     setState((s) => ({ ...s, [row.id]: { busy: true } }));
     try {
       const res = await fetch("/api/admin/sessions", {
@@ -184,7 +290,9 @@ export default function SessionsEditor({
       {rows.map((row) => {
         const st = state[row.id] || {};
         const reg = registrants[row.id] || { open: false };
+        const act = action[row.id] || {};
         const isDirty = dirty(row);
+        const isCancelled = row.status === "Cancelled";
         return (
           <div
             key={row.id}
@@ -444,7 +552,7 @@ export default function SessionsEditor({
               </div>
             </div>
 
-            <div className="flex items-center gap-3 mt-4">
+            <div className="flex flex-wrap items-center gap-3 mt-4">
               <button
                 onClick={() => save(row)}
                 disabled={!isDirty || st.busy}
@@ -457,7 +565,139 @@ export default function SessionsEditor({
                   {st.msg}
                 </span>
               )}
+              <span className="ml-auto flex gap-2">
+                <button
+                  onClick={() =>
+                    setAct(row.id, {
+                      kind: act.kind === "reschedule" ? undefined : "reschedule",
+                      msg: undefined,
+                      err: false,
+                      newDate: act.newDate ?? "",
+                      newStart: act.newStart ?? row.startTime,
+                      newEnd: act.newEnd ?? row.endTime,
+                    })
+                  }
+                  disabled={isCancelled}
+                  className="rounded-full border border-ngpa-slate/60 text-ngpa-white/80 font-bold px-4 py-2 text-sm disabled:opacity-30 hover:text-ngpa-white hover:border-ngpa-white/40 transition-colors"
+                >
+                  Reschedule
+                </button>
+                <button
+                  onClick={() =>
+                    setAct(row.id, {
+                      kind: act.kind === "cancel" ? undefined : "cancel",
+                      msg: undefined,
+                      err: false,
+                    })
+                  }
+                  disabled={isCancelled}
+                  className="rounded-full border border-red-400/40 text-red-300 font-bold px-4 py-2 text-sm disabled:opacity-30 hover:bg-red-400/10 transition-colors"
+                >
+                  {isCancelled ? "Cancelled" : "Cancel…"}
+                </button>
+              </span>
             </div>
+
+            {act.kind === "cancel" && (
+              <div className="mt-3 rounded-xl border border-red-400/30 bg-red-400/5 p-3 sm:p-4">
+                <p className="text-sm font-bold text-red-300 mb-2">
+                  Cancel &amp; notify all — refunds every confirmed registrant and emails/texts them.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Reason</label>
+                    <select
+                      className={inputCls}
+                      value={act.reason ?? ""}
+                      onChange={(e) => setAct(row.id, { reason: e.target.value as CancelReason })}
+                    >
+                      <option value="" disabled>
+                        Pick a reason…
+                      </option>
+                      {CANCEL_REASONS.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Note (optional)</label>
+                    <input
+                      className={inputCls}
+                      value={act.note ?? ""}
+                      placeholder="Shown to parents, verbatim"
+                      onChange={(e) => setAct(row.id, { note: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-3">
+                  <button
+                    onClick={() => doCancel(row)}
+                    disabled={act.busy}
+                    className="rounded-full bg-red-500 text-white font-black px-5 py-2 text-sm disabled:opacity-40 hover:opacity-90 transition-opacity"
+                  >
+                    {act.busy ? "Cancelling…" : "Confirm cancel + refund all"}
+                  </button>
+                  {act.msg && (
+                    <span className={`text-sm ${act.err ? "text-red-400" : "text-emerald-300"}`}>
+                      {act.msg}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {act.kind === "reschedule" && (
+              <div className="mt-3 rounded-xl border border-ngpa-teal/30 bg-ngpa-teal/5 p-3 sm:p-4">
+                <p className="text-sm font-bold text-ngpa-teal mb-2">
+                  Reschedule &amp; notify — paid spots carry over (no refund); registered parents are emailed the new date.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className={labelCls}>New date</label>
+                    <input
+                      type="date"
+                      className={inputCls}
+                      value={act.newDate ?? ""}
+                      onChange={(e) => setAct(row.id, { newDate: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>New start time</label>
+                    <input
+                      className={inputCls}
+                      value={act.newStart ?? ""}
+                      placeholder="6:00 PM"
+                      onChange={(e) => setAct(row.id, { newStart: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>New end time</label>
+                    <input
+                      className={inputCls}
+                      value={act.newEnd ?? ""}
+                      placeholder="7:00 PM"
+                      onChange={(e) => setAct(row.id, { newEnd: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 mt-3">
+                  <button
+                    onClick={() => doReschedule(row)}
+                    disabled={act.busy}
+                    className="rounded-full bg-ngpa-teal text-ngpa-deep font-black px-5 py-2 text-sm disabled:opacity-40 hover:opacity-90 transition-opacity"
+                  >
+                    {act.busy ? "Rescheduling…" : "Confirm reschedule + notify"}
+                  </button>
+                  {act.msg && (
+                    <span className={`text-sm ${act.err ? "text-red-400" : "text-emerald-300"}`}>
+                      {act.msg}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
