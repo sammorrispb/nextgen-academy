@@ -144,11 +144,11 @@ test.describe("cancel-registration route — cancelDropIn trigger fan-out", () =
       .on("api.resend.com", { id: "email_test" })
       .on("api.notion.com/v1/pages", { id: "patched" });
 
-    const { ok, res } = await settle(POST(req("test-admin-secret")));
-    expect(ok, "idempotent path does not throw (no revalidate reached)").toBe(true);
-    if (ok) {
-      expect(res.status).toBe(200);
-      expect(JSON.stringify(await res.json())).toContain('"idempotent":true');
+    const outcome = await settle(POST(req("test-admin-secret")));
+    expect(outcome.ok, "idempotent path does not throw (no revalidate reached)").toBe(true);
+    if (outcome.ok) {
+      expect(outcome.res.status).toBe(200);
+      expect(JSON.stringify(await outcome.res.json())).toContain('"idempotent":true');
     }
     expect(stub.calls.find((c) => c.method === "PATCH"), "no PATCH on no-op").toBeFalsy();
     expect(stub.callsTo("api.resend.com").length, "no email on no-op").toBe(0);
