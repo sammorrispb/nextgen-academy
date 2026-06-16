@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE, verifyAdminSessionEmail } from "@/lib/admin-auth";
-import { isAllowedAdminEmail } from "@/lib/admin-allowlist";
+import { authorizeSessionOps } from "@/lib/session-ops-auth";
 import {
   executeSessionCancel,
   type SessionCancelInput,
@@ -13,18 +12,10 @@ export const dynamic = "force-dynamic";
 const REASONS: CancelReason[] = ["weather", "venue", "low-enrollment", "other"];
 
 /** Admin cancel: refund every confirmed registrant + notify, then flip status.
- * Auth gate runs BEFORE the cancel engine (which moves money) — fails closed. */
-function adminEmail(req: NextRequest): string | null {
-  try {
-    const e = verifyAdminSessionEmail(req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
-    return e && isAllowedAdminEmail(e) ? e : null;
-  } catch {
-    return null; // unset signing secret / malformed token → fail closed
-  }
-}
-
+ * Authorized by admin cookie (UI) OR Bearer SESSION_OPS_SECRET (agent); both
+ * fail closed and run BEFORE the cancel engine (which moves money). */
 export async function POST(req: NextRequest) {
-  if (!adminEmail(req)) {
+  if (!authorizeSessionOps(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
