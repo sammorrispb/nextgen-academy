@@ -211,6 +211,7 @@ See `.env.example`. Categories:
 - `REFERRAL_TOKEN_SECRET` — HMAC signing key for `/newsletter?ref=<token>` links. Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` so a leaked unsub token can't be replayed as a referral and vice versa.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.
 - `ATTENDANCE_SECRET` — Bearer secret for the agent-callable attendance check-in (`POST /api/coach/attendance`), giving an out-of-band caller the same fan-out as the coach toggle (Notion write + OB activity + profile recompute). Distinct from `NGA_ADMIN_SECRET` to isolate blast radius. Unset = the route fails closed (401).
+- `SESSION_OPS_SECRET` — Bearer secret for agent-callable session ops. `POST /api/admin/sessions/{cancel,reschedule}` accept EITHER the admin `nga_admin` cookie (UI) OR `Authorization: Bearer SESSION_OPS_SECRET` (agent/cron) via `authorizeSessionOps()` (`src/lib/session-ops-auth.ts`). Both paths hit the same route → same engine (`executeSessionCancel` / `executeSessionReschedule`), so an agent fires the identical trigger fan-out (refunds / parent comms / Notion re-date + flag resets) the editor does — pinned by `e2e/invariant-admin-session-ops-parity.spec.ts`. Distinct from `NGA_ADMIN_SECRET` to isolate this refund-capable surface. Unset = the Bearer path fails closed (401); the cookie/UI path still works.
 
 ## Testing Standards
 - **`npm run build` must pass with zero errors before every push.** Minimum bar.
