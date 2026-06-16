@@ -32,6 +32,7 @@ function row(overrides: Partial<DropInRegistration>): DropInRegistration {
     reminderSent: false,
     postSessionSent: false,
     cancellationNotified: false,
+    rescheduleNotified: false,
     locationRevealed: false,
     attendance: "",
     ...overrides,

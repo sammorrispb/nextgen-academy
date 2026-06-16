@@ -213,6 +213,7 @@ export interface DropInRegistration {
   reminderSent: boolean;
   postSessionSent: boolean;
   cancellationNotified: boolean;
+  rescheduleNotified: boolean;
   locationRevealed: boolean;
   /** "Present" | "No-show" | "" (not yet recorded). */
   attendance: AttendanceValue | "";
@@ -266,6 +267,7 @@ function pageToDropIn(page: any): DropInRegistration {
     reminderSent: props["Reminder Sent"]?.checkbox === true,
     postSessionSent: props["Post Session Sent"]?.checkbox === true,
     cancellationNotified: props["Cancellation Notified"]?.checkbox === true,
+    rescheduleNotified: props["Reschedule Notified"]?.checkbox === true,
     locationRevealed: props["Location Revealed"]?.checkbox === true,
     attendance: (readSelectProp(props["Attendance"]) as AttendanceValue | "") || "",
   };
@@ -489,6 +491,7 @@ export type DropInFlag =
   | "Reminder Sent"
   | "Post Session Sent"
   | "Cancellation Notified"
+  | "Reschedule Notified"
   | "Location Revealed";
 
 export async function markDropInFlag(
@@ -513,6 +516,57 @@ export async function markDropInFlag(
     console.error(
       "[notion-dropins] markDropInFlag failed",
       flag,
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Reschedule a drop-in row onto a new session date/time. Rewrites the
+ * date-scoped join fields the crons + queries key on (Session Date, Session
+ * Start Time) AND resets the date-scoped idempotency flags — `Reminder Sent`
+ * and `Post Session Sent` were true for the OLD date, so the new date would
+ * silently lose its 24h reminder + post-session recap if they weren't cleared.
+ * `Reschedule Notified` is cleared too so the notify pass can fire for the new
+ * move. Touches NO child-PII field. Session Row ID is the durable attachment
+ * key and is intentionally left unchanged.
+ */
+export async function updateDropInSchedule(
+  pageId: string,
+  fields: { sessionDate: string; sessionStartTime: string },
+): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fields.sessionDate)) {
+    console.error("[notion-dropins] updateDropInSchedule bad date", fields.sessionDate);
+    return false;
+  }
+
+  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: {
+        "Session Date": { date: { start: fields.sessionDate } },
+        "Session Start Time": {
+          rich_text: [{ text: { content: fields.sessionStartTime } }],
+        },
+        "Reminder Sent": { checkbox: false },
+        "Post Session Sent": { checkbox: false },
+        "Reschedule Notified": { checkbox: false },
+      },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-dropins] updateDropInSchedule failed",
       res.status,
       await res.text().catch(() => ""),
     );
