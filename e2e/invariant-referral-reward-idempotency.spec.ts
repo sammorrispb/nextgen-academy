@@ -76,19 +76,26 @@ test.describe("processReferralReward — double-mint idempotency gate", () => {
     stub.on(QUERY, {
       results: [subscriberPage({ referredBy: "ref@example.com", rewarded: false })],
     });
-    // RESEND set, STRIPE unset → once past the gate the function reaches
-    // getStripe() (referral-rewards.ts:111), which throws without a key. That
-    // throw is the proof it did NOT no-op like the rewarded path above.
+    // RESEND set, STRIPE unset → once past the gate the function reaches the
+    // referrer lookup and then the mint. The load-bearing proof that it did NOT
+    // no-op like the rewarded path above is the SECOND (referrer) lookup, which
+    // only fires once the not-yet-rewarded gate is passed.
+    //
+    // We deliberately do NOT assert on the mint throwing about STRIPE_SECRET_KEY:
+    // getStripe() caches a module-level Stripe singleton (src/lib/stripe.ts), so
+    // if any other spec in this Playwright worker initialized it first (the
+    // webhook fixtures set a dummy key), the env delete here is moot and the
+    // mint error is swallowed by design — making a throw assertion depend on
+    // worker sharding. The second lookup is downstream of the gate either way.
     const origStripe = process.env.STRIPE_SECRET_KEY;
     const origResend = process.env.RESEND_API_KEY;
     try {
       delete process.env.STRIPE_SECRET_KEY;
       process.env.RESEND_API_KEY = "re_test";
 
-      await expect(
-        processReferralReward(SESSION),
-        "must proceed to the payout (not no-op) when the friend isn't yet rewarded",
-      ).rejects.toThrow(/STRIPE_SECRET_KEY/);
+      // Outcome (throw vs. swallowed) is sharding-dependent; both are past the
+      // gate, so tolerate either and assert on the gate proof below.
+      await processReferralReward(SESSION).catch(() => undefined);
 
       expect(
         stub.callsTo(QUERY).length,
