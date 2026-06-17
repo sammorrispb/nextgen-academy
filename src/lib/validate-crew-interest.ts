@@ -26,6 +26,24 @@ export const CREW_TIMES_OF_DAY: readonly CrewTimeOfDay[] = [
   "Evening",
 ] as const;
 
+// Skill sub-level within a ball color — splits each level into low/mid/high so
+// crew matching can pair kids of genuinely similar ability (a high-Green plays
+// up; a low-Green needs reps). Optional everywhere: parents who skip it still
+// match on color + age + day. Approved as a child field 2026-06-17 (Sam).
+export type CrewSubLevel = "Low" | "Mid" | "High";
+
+export const CREW_SUB_LEVELS: readonly CrewSubLevel[] = [
+  "Low",
+  "Mid",
+  "High",
+] as const;
+
+export const CREW_SUB_LEVEL_HINTS: Record<CrewSubLevel, string> = {
+  Low: "New to this level",
+  Mid: "Comfortable here",
+  High: "Ready to play up",
+};
+
 export interface CrewInterestFormData {
   parentName: string;
   email: string;
@@ -33,6 +51,8 @@ export interface CrewInterestFormData {
   childFirstName: string;
   childAge: string;
   childLevel: string;
+  /** Optional low/mid/high split within the ball color — refines crew matching. */
+  childSubLevel?: CrewSubLevel | "";
   preferredDays: CrewDay[];
   /** Coarse time-of-day buckets — drives cohort matching. */
   preferredTimeOfDay: CrewTimeOfDay[];
@@ -57,6 +77,7 @@ export type CrewInterestErrors = Partial<
     | "childFirstName"
     | "childAge"
     | "childLevel"
+    | "childSubLevel"
     | "preferredDays"
     | "preferredTimeOfDay"
     | "preferredTime",
@@ -102,6 +123,14 @@ export function validateCrewInterestForm(
 
   if (!data.childLevel || !CREW_LEVELS.includes(data.childLevel as CrewLevel)) {
     errors.childLevel = "Pick a level";
+  }
+
+  // Sub-level is optional — only flag a value that isn't one of the three.
+  if (
+    data.childSubLevel &&
+    !CREW_SUB_LEVELS.includes(data.childSubLevel as CrewSubLevel)
+  ) {
+    errors.childSubLevel = "Pick low, mid, or high";
   }
 
   if (!data.preferredDays || data.preferredDays.length === 0) {

@@ -8,9 +8,16 @@ import {
   type CrewLevel,
   type CrewDay,
   type CrewTimeOfDay,
+  type CrewSubLevel,
 } from "@/lib/validate-crew-interest";
 import { forwardToCohortPool } from "@/lib/forward-to-cohort-pool";
 import { createCrewInterest } from "@/lib/notion-crew-interest";
+import { fetchUpcomingSessions } from "@/lib/notion-sessions";
+import { matchSessionsForPreferences } from "@/lib/crew-matching";
+import {
+  formatCrewSessionLines,
+  type CrewSessionLine,
+} from "@/lib/email/crew-session-lines";
 import {
   crewInterestWelcomeHtml,
   crewInterestWelcomeSubject,
@@ -22,6 +29,8 @@ const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const NEWSLETTER_URL = "https://nextgenpbacademy.com/newsletter";
+const SITE_ORIGIN =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
@@ -86,6 +95,7 @@ export async function POST(request: NextRequest) {
   const childAge = Number(body.childAge);
   const childBirthYear = new Date().getFullYear() - childAge;
   const childLevel = body.childLevel as CrewLevel;
+  const childSubLevel = (body.childSubLevel || "") as CrewSubLevel | "";
   const preferredDays = (body.preferredDays ?? []) as CrewDay[];
   const preferredTimeOfDay = (body.preferredTimeOfDay ?? []) as CrewTimeOfDay[];
   const preferredTime = body.preferredTime!.trim().slice(0, 200);
@@ -122,6 +132,7 @@ export async function POST(request: NextRequest) {
         childFirstName,
         childBirthYear,
         childLevel,
+        childSubLevel,
         preferredDays,
         preferredTime,
         preferredLocation,
@@ -136,6 +147,21 @@ export async function POST(request: NextRequest) {
       notionStatus = "error";
       console.error("[crew-interest] notion error:", err);
     }
+  }
+
+  // Open sessions that already fit this family — surfaced in the welcome email
+  // so they can drop in this week while the crew forms. Fail-soft: a Notion
+  // hiccup just means the email shows the generic schedule CTA instead.
+  let matchedSessions: CrewSessionLine[] = [];
+  try {
+    const sessions = await fetchUpcomingSessions();
+    const matched = matchSessionsForPreferences(
+      { level: childLevel, days: preferredDays, area: preferredLocation },
+      sessions,
+    );
+    matchedSessions = formatCrewSessionLines(matched, SITE_ORIGIN);
+  } catch (err) {
+    console.error("[crew-interest] session match failed:", err);
   }
 
   if (!process.env.RESEND_API_KEY) {
@@ -183,6 +209,7 @@ export async function POST(request: NextRequest) {
             childFirst: childFirstName,
             preferredSummary,
             newsletterUrl: NEWSLETTER_URL,
+            matchedSessions,
             cluster,
           }),
           text: crewInterestWelcomeText({
@@ -190,6 +217,7 @@ export async function POST(request: NextRequest) {
             childFirst: childFirstName,
             preferredSummary,
             newsletterUrl: NEWSLETTER_URL,
+            matchedSessions,
             cluster,
           }),
         }),
@@ -215,6 +243,7 @@ export async function POST(request: NextRequest) {
       child_first_name: childFirstName,
       child_age: childAge,
       child_level: childLevel,
+      child_sub_level: childSubLevel || null,
       preferred_days: preferredDays,
       preferred_time: preferredTime,
       preferred_location: preferredLocation || null,

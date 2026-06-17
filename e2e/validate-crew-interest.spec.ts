@@ -75,6 +75,30 @@ test.describe("validateCrewInterestForm", () => {
     ).toBeTruthy();
   });
 
+  test("sub-level is optional and absent by default", () => {
+    expect(validateCrewInterestForm(validForm).childSubLevel).toBeUndefined();
+    expect(
+      validateCrewInterestForm({ ...validForm, childSubLevel: "" })
+        .childSubLevel,
+    ).toBeUndefined();
+  });
+
+  test("sub-level accepts Low/Mid/High and rejects anything else", () => {
+    for (const lvl of ["Low", "Mid", "High"] as const) {
+      expect(
+        validateCrewInterestForm({ ...validForm, childSubLevel: lvl })
+          .childSubLevel,
+      ).toBeUndefined();
+    }
+    expect(
+      validateCrewInterestForm({
+        ...validForm,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        childSubLevel: "Elite" as any,
+      }).childSubLevel,
+    ).toBeTruthy();
+  });
+
   test("at least one preferred day required", () => {
     expect(
       validateCrewInterestForm({ ...validForm, preferredDays: [] }).preferredDays,
