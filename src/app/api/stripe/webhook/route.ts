@@ -10,7 +10,7 @@ import {
   type DropInRow,
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
-import { cancelDropIn } from "@/lib/cancel-dropin";
+import { cancelDropInByPaymentIntent } from "@/lib/cancel-dropin";
 import { buildDropInIcs } from "@/lib/email/ics";
 import {
   bookingConfirmationHtml,
@@ -883,18 +883,12 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
       : (charge.payment_intent?.id ?? null);
   if (!piId) return NextResponse.json({ received: true, skipped: "no_pi" });
 
-  // Find the Checkout Session that produced this PI — that's our idempotency key.
-  const stripe = getStripe();
-  const list = await stripe.checkout.sessions.list({
-    payment_intent: piId,
-    limit: 1,
-  });
-  const checkoutSession = list.data[0];
-  if (!checkoutSession) {
-    return NextResponse.json({ received: true, skipped: "no_checkout" });
-  }
-
-  const result = await cancelDropIn(checkoutSession.id, "Refunded");
+  // Map the refund straight to its roster row via the Payment Intent we persist
+  // on every row. This replaces an earlier Checkout-Session re-lookup that could
+  // come back empty and silently skip the flip — leaving an out-of-band refund
+  // (Dashboard / MCP / admin API) with the row stuck on Confirmed and the parent
+  // un-emailed. cancelDropIn(...) is idempotent, so webhook redelivery is safe.
+  const result = await cancelDropInByPaymentIntent(piId, "Refunded");
   if (!result.ok) {
     return NextResponse.json({ received: true, skipped: result.reason });
   }
