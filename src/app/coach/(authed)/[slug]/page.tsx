@@ -6,7 +6,12 @@ import { findSessionBySlug, sessionToSlug } from "@/lib/session-slug";
 import { encodeParentKey } from "@/lib/player-profiles";
 import CancelButton from "./CancelButton";
 import CancelSessionButton from "./CancelSessionButton";
+import CancelAllLevelsButton from "./CancelAllLevelsButton";
 import AttendanceToggle from "./AttendanceToggle";
+
+// Title shape for the per-level rows of a multi-row day, e.g.
+// "Redland Tuesday Evening — Red" or "Ridgeview Monday Evening — Green".
+const LEVEL_SUFFIX = /\s[—–-]\s(Red|Orange|Green|Yellow)\s*$/;
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +93,25 @@ export default async function CoachSessionPage({ params }: PageProps) {
   const presentCount = roster.filter((r) => r.attendance === "Present").length;
   const recordedCount = roster.filter((r) => r.attendance !== "").length;
 
+  // Multi-level day detection: if this session's title carries a " — <Level>"
+  // suffix, find its sibling level rows on the same date so we can offer a
+  // single "cancel ALL levels" action (the 2026-06-16 half-cancel guard).
+  const isLevelRow = LEVEL_SUFFIX.test(session.title);
+  const groupBaseTitle = session.title.replace(LEVEL_SUFFIX, "").trim();
+  const levelSiblings = isLevelRow
+    ? sessions.filter(
+        (s) =>
+          s.date === session.date &&
+          s.title.replace(LEVEL_SUFFIX, "").trim() === groupBaseTitle &&
+          s.status !== "Cancelled",
+      )
+    : [];
+  const showAllLevels = isLevelRow && levelSiblings.length > 1;
+  const siblingTitles = new Set(levelSiblings.map((s) => s.title));
+  const groupRosterTotal = drops.filter(
+    (d) => d.sessionDate === session.date && siblingTitles.has(d.sessionTitle),
+  ).length;
+
   return (
     <>
       <Link
@@ -142,6 +166,14 @@ export default async function CoachSessionPage({ params }: PageProps) {
           sessionStartTime={session.startTime}
           rosterSize={roster.length}
         />
+        {showAllLevels && (
+          <CancelAllLevelsButton
+            date={session.date}
+            baseTitle={groupBaseTitle}
+            levelCount={levelSiblings.length}
+            rosterTotal={groupRosterTotal}
+          />
+        )}
       </div>
 
       {roster.length === 0 ? (

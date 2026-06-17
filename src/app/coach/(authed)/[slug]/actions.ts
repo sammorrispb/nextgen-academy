@@ -21,6 +21,11 @@ import {
   type SessionCancelInput,
   type SessionCancelResult,
 } from "@/lib/session-cancel";
+import {
+  cancelAllLevelsForDate,
+  type GroupCancelResult,
+} from "@/lib/session-cancel-group";
+import type { CancelReason } from "@/lib/email/session-cancelled";
 
 async function requireCoach(): Promise<string | null> {
   const c = await cookies();
@@ -171,4 +176,34 @@ export async function cancelSessionAction(
   const email = await requireCoach();
   if (!email) return { ok: false, message: "Unauthorized" };
   return executeSessionCancel(input);
+}
+
+// All-levels cancel — for the recurring Tuesday / cluster days that are one row
+// per level. Scoped to the exact base title (everything before " — <Level>")
+// on a single date, so it can only ever sweep that day's level siblings.
+export async function cancelAllLevelsAction(input: {
+  date: string;
+  baseTitle: string;
+  reason: CancelReason;
+  note?: string;
+}): Promise<GroupCancelResult> {
+  const email = await requireCoach();
+  if (!email) {
+    return {
+      ok: false,
+      date: input.date,
+      message: "Unauthorized",
+      matched: 0,
+      cancelled: 0,
+      skipped: 0,
+      failed: 0,
+      outcomes: [],
+    };
+  }
+  return cancelAllLevelsForDate({
+    date: input.date,
+    reason: input.reason,
+    note: input.note,
+    titlePrefixes: [input.baseTitle],
+  });
 }
