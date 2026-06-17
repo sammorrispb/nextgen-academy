@@ -32,6 +32,10 @@
     {
       "path": "/api/cron/seed-tuesday-sessions",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/crew-followup",
+      "schedule": "0 15 * * *"
     }
   ]
 }

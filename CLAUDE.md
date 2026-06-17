@@ -90,7 +90,7 @@ Note: the endpoint does NOT create the coach's Google Calendar event — that's 
 ### Crew Interest (`/crew` + `/api/crew-interest`)
 **The no-active-poll fallback.** If a parent's preferred slot doesn't match any Crew Poll Sam is currently running, they fill out the Crew Interest form instead. Sam reviews the Notion DB and decides whether to spin up a new poll for the day/level mix coming through. Surfaces: a dedicated `/crew` landing page (`src/app/crew/page.tsx`) rendering `src/components/CrewInterestForm.tsx`, plus a "None of these fit? / Want a regular crew?" callout in every weekly newsletter.
 
-Fields: parent name, email, optional phone, child first name + age + level (Red/Orange/Green/Yellow), preferred days (multi-select Mon–Sun), preferred time (free-form), optional location + friends-wanted + notes. Validated by `src/lib/validate-crew-interest.ts`.
+Fields: parent name, email, optional phone, child first name + age + level (Red/Orange/Green/Yellow), optional **skill sub-level** (Low/Mid/High — refines matching only, never a gate), preferred days (multi-select Mon–Sun), preferred time (free-form), optional location + friends-wanted + notes. Validated by `src/lib/validate-crew-interest.ts`.
 
 `POST /api/crew-interest`:
 1. Validate → 400; rate-limit by IP (5/hr) → 429.
@@ -98,7 +98,11 @@ Fields: parent name, email, optional phone, child first name + age + level (Red/
 3. **Resend**: admin notification (`sam.morris2131@gmail.com`, CC `nextgenacademypb@gmail.com`) + parent confirmation (`src/lib/email/crew-interest-welcome.ts`, BCC admin).
 4. **Open Brain** ingest (`source: "nga_crew_interest"`).
 
+The welcome email (and the 7-day follow-up below) surface **matching open sessions** — `matchSessionsForPreferences()` in `src/lib/crew-matching.ts` filters the Sessions DB to Open-with-a-seat rows at the kid's level on a preferred weekday in an overlapping area. Fail-soft: a Notion miss just shows the generic `/schedule` CTA.
+
 Never publishes anything publicly — Sam owns whether the submission becomes a Crew Poll.
+
+**Follow-up automation — `GET /api/cron/crew-followup`** (Bearer `CRON_SECRET`, schedule `0 15 * * *` UTC). Reads still-actionable rows (Status New/Reviewed; routed families — Polled/Closed — are never re-touched) via `fetchActionableCrewInterest()`. Stage logic is pure (`src/lib/crew-followup.ts`): **day 3+** → one internal digest to Sam (`sam.morris2131@gmail.com`, CC admin) listing each waiting family with its strongest candidate crew (`findCandidateMatches`: same color + age ±3 + ≥1 shared day + area overlap; sub-level only ranks) and the count of open sessions that fit — flips `Nudge Sent`. **Day 7+** → a parent re-engagement email (`src/lib/email/crew-followup-parent.ts`, BCC admin) with the matching open sessions — flips `Reengagement Sent` + `Nudge Sent`. Re-engage wins when both are due (cron-gap first touch). Egresses only to Notion + Resend; recipients are parent/admin only. Idempotency columns `Nudge Sent` / `Reengagement Sent` live on the Crew Interest DB. Pinned by `e2e/invariant-crew-followup-egress.spec.ts` (+ `e2e/invariant-crew-interest-pii-egress.spec.ts` for the sub-level field's egress).
 
 ### Newsletter referral payout (Stripe webhook branch)
 Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src/lib/referral-token.ts`, signing key `REFERRAL_TOKEN_SECRET` → falls back to `NGA_ADMIN_SECRET`). Both the weekly newsletter and the welcome email surface it as a personalized `?ref=<token>` link on `/newsletter`. When a friend signs up via that link, their row gets `Referred By` set to the referrer's email.

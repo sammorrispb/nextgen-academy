@@ -1,11 +1,15 @@
 import { c, s } from "./brand";
 import type { Cluster } from "@/data/clusters";
+import type { CrewSessionLine } from "./crew-session-lines";
 
 interface CrewInterestWelcomeInput {
   parentFirst: string;
   childFirst: string;
   preferredSummary: string;
   newsletterUrl: string;
+  /** Open sessions that already fit this family's level/day/area — surfaced so
+   * they can drop in this week while the crew forms. Empty = generic CTA. */
+  matchedSessions?: CrewSessionLine[];
   /** When set, the email is themed for that cluster instead of the generic crew flow. */
   cluster?: Cluster;
 }
@@ -26,7 +30,31 @@ export function crewInterestWelcomeSubject(input: {
  * for your slot goes live.
  */
 export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string {
-  const { parentFirst, childFirst, preferredSummary, newsletterUrl, cluster } = input;
+  const {
+    parentFirst,
+    childFirst,
+    preferredSummary,
+    newsletterUrl,
+    matchedSessions = [],
+    cluster,
+  } = input;
+
+  // Cluster emails keep their Fall-2026 framing; matched open sessions only
+  // surface on the generic crew flow.
+  const matchedBlock =
+    !cluster && matchedSessions.length
+      ? `<div style="${s.cardAccent}">
+      <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Fits ${escape(childFirst)} &mdash; open now</p>
+      ${matchedSessions
+        .map(
+          (m) => `<p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.5;">
+        <a href="${m.url}" style="color:${c.link};font-weight:700;text-decoration:none;">${escape(m.title || "Open session")}</a><br>
+        <span style="color:${c.muted};font-size:13px;">${escape([m.dateLabel, m.timeLabel, m.location].filter(Boolean).join(" · "))}</span>
+      </p>`,
+        )
+        .join("")}
+    </div>`
+      : "";
 
   const accentColor = cluster?.hex ?? c.accentLime;
   const eyebrow = cluster ? cluster.name.toUpperCase() : "Got it";
@@ -69,6 +97,8 @@ export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string
       ${nextSteps}
     </ul>
 
+    ${matchedBlock}
+
     <div style="${s.cardAccent}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Want to play this week?</p>
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">
@@ -98,7 +128,28 @@ export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string
 }
 
 export function crewInterestWelcomeText(input: CrewInterestWelcomeInput): string {
-  const { parentFirst, childFirst, preferredSummary, newsletterUrl, cluster } = input;
+  const {
+    parentFirst,
+    childFirst,
+    preferredSummary,
+    newsletterUrl,
+    matchedSessions = [],
+    cluster,
+  } = input;
+
+  const matchedLines =
+    !cluster && matchedSessions.length
+      ? [
+          "",
+          `Fits ${childFirst} — open now:`,
+          ...matchedSessions.map(
+            (m) =>
+              `- ${[m.title, m.dateLabel, m.timeLabel, m.location]
+                .filter(Boolean)
+                .join(" · ")} — ${m.url}`,
+          ),
+        ]
+      : [];
 
   const headline = cluster
     ? `${childFirst} is on the ${cluster.name} list, ${parentFirst}.`
@@ -128,6 +179,7 @@ export function crewInterestWelcomeText(input: CrewInterestWelcomeInput): string
     "",
     `What happens next:`,
     ...nextSteps,
+    ...matchedLines,
     "",
     `Want to play this week? While we're locking in cluster details, ${childFirst} can drop in on any open session — the weekly newsletter shows everything that's open.`,
     "",

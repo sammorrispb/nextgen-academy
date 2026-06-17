@@ -6,6 +6,8 @@ import {
   validateCrewInterestForm,
   CREW_DAYS,
   CREW_LEVELS,
+  CREW_SUB_LEVELS,
+  CREW_SUB_LEVEL_HINTS,
   CREW_TIMES_OF_DAY,
   type CrewInterestFormData,
   type CrewInterestErrors,
@@ -32,6 +34,7 @@ const emptyForm: CrewInterestFormData = {
   childFirstName: "",
   childAge: "",
   childLevel: "",
+  childSubLevel: "",
   preferredDays: [],
   preferredTimeOfDay: [],
   preferredTime: "",
@@ -93,6 +96,7 @@ export default function CrewInterestForm({
     | "childFirstName"
     | "childAge"
     | "childLevel"
+    | "childSubLevel"
     | "preferredTime"
     | "preferredLocation"
     | "friendsWanted"
@@ -387,6 +391,33 @@ export default function CrewInterestForm({
           </select>
           {errors.childLevel && (
             <p className={errorClass}>{errors.childLevel}</p>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="childSubLevel" className={labelClass}>
+            Where in that level?{" "}
+            <span className="text-ngpa-white/50 font-normal">(optional)</span>
+          </label>
+          <span className={hintClass}>
+            Helps us pair kids of similar ability. Skip if you&rsquo;re not sure.
+          </span>
+          <select
+            id="childSubLevel"
+            className={selectClass}
+            value={form.childSubLevel ?? ""}
+            onChange={(e) => updateField("childSubLevel", e.target.value)}
+            onBlur={() => handleBlur("childSubLevel")}
+          >
+            <option value="">No preference</option>
+            {CREW_SUB_LEVELS.map((lvl) => (
+              <option key={lvl} value={lvl}>
+                {lvl} — {CREW_SUB_LEVEL_HINTS[lvl]}
+              </option>
+            ))}
+          </select>
+          {errors.childSubLevel && (
+            <p className={errorClass}>{errors.childSubLevel}</p>
           )}
         </div>
 
