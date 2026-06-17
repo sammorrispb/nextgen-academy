@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import {
   findDropInPageByCheckoutId,
+  findDropInPageByPaymentIntentId,
   markDropInFlag,
   updateDropInStatus,
   type DropInRegistration,
@@ -171,7 +172,31 @@ export async function cancelDropIn(
 ): Promise<CancelResult> {
   const dropIn = await findDropInPageByCheckoutId(checkoutSessionId);
   if (!dropIn) return { ok: false, reason: "not_found" };
+  return cancelDropInRow(dropIn, newStatus, refundedAmountUsd);
+}
 
+/**
+ * Same flip+comms as cancelDropIn, but located by Stripe Payment Intent ID.
+ * This is the resilient path for the charge.refunded webhook: a refund posted
+ * out-of-band (Stripe Dashboard, MCP, admin API) maps straight to the row via
+ * the PI we already store — no Checkout-Session re-lookup to fail on.
+ */
+export async function cancelDropInByPaymentIntent(
+  paymentIntentId: string,
+  newStatus: CancelStatus,
+  refundedAmountUsd?: number,
+): Promise<CancelResult> {
+  const dropIn = await findDropInPageByPaymentIntentId(paymentIntentId);
+  if (!dropIn) return { ok: false, reason: "not_found" };
+  return cancelDropInRow(dropIn, newStatus, refundedAmountUsd);
+}
+
+/** Core flip+decrement+comms, shared by both entrypoints once the row is found. */
+async function cancelDropInRow(
+  dropIn: DropInRegistration,
+  newStatus: CancelStatus,
+  refundedAmountUsd?: number,
+): Promise<CancelResult> {
   if (dropIn.status === newStatus) {
     return { ok: true, idempotent: true, decremented: false, pageId: dropIn.id };
   }

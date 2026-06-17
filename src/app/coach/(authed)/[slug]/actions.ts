@@ -14,7 +14,11 @@ import {
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
 import { applyAttendance } from "@/lib/attendance";
-import { resolveRefundCents, type RefundOption } from "@/lib/refund-amount";
+import {
+  resolveRefundCents,
+  isAlreadyRefundedError,
+  type RefundOption,
+} from "@/lib/refund-amount";
 import { getStripe } from "@/lib/stripe";
 import {
   executeSessionCancel,
@@ -99,10 +103,12 @@ export async function cancelRegistrationAction(
       ...(resolved.amountCents ? { amount: resolved.amountCents } : {}),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
     // A prior refund means the money's already back — fall through to flip
-    // the row's status rather than erroring the coach out.
-    if (!/already.*refund/i.test(message)) {
+    // the row's status rather than erroring the coach out. Stripe phrases an
+    // already-refunded charge several ways (code + message variants), so defer
+    // to isAlreadyRefundedError rather than a single message regex.
+    if (!isAlreadyRefundedError(err)) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error("[cancel-registration] refund failed", dropIn.id, message);
       return { ok: false, message: "Stripe refund failed — nothing changed" };
     }

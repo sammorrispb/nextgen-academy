@@ -449,6 +449,42 @@ export async function findDropInPageByCheckoutId(
   return pageToDropIn(data.results[0]);
 }
 
+/**
+ * Look up a drop-in row by its Stripe Payment Intent ID. Used by the
+ * charge.refunded webhook to flip a row to Refunded without round-tripping
+ * through Checkout Sessions — every row already persists its PI, so this is a
+ * single direct query with one fewer failure point.
+ */
+export async function findDropInPageByPaymentIntentId(
+  paymentIntentId: string,
+): Promise<DropInRegistration | null> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_DROPINS_DB_ID;
+  if (!notionKey || !dbId || !paymentIntentId) return null;
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: {
+        property: "Stripe Payment Intent ID",
+        rich_text: { equals: paymentIntentId },
+      },
+      page_size: 1,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  if (data.results.length === 0) return null;
+  return pageToDropIn(data.results[0]);
+}
+
 export async function updateDropInStatus(
   pageId: string,
   status: "Confirmed" | "Cancelled" | "Refunded",
