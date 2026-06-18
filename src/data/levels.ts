@@ -13,20 +13,20 @@ export interface Level {
 export const levels: Level[] = [
   {
     key: "red",
-    label: "Private Lessons",
+    label: "Red Ball",
     ages: "6+",
-    tag: "Pre-Rally Bridge",
-    focus: "Can't rally yet? Start here.",
-    detail: "1:1 coaching to build the rally, footwork, and consistency a child needs before joining a group. Bridge to Orange Ball when they're ready.",
+    tag: "Pre-Rally",
+    focus: "New to the court? Start here.",
+    detail: "Foam-ball group sessions that build the rally, footwork, and consistency from day one — your own court at your level. Private lessons are available to fast-track kids who want extra 1:1 reps.",
     color: "#FF4040",
   },
   {
     key: "orange",
-    label: "Private Lessons",
+    label: "Orange Ball",
     ages: "6+",
-    tag: "Group Bridge",
-    focus: "Rallying but not group-ready? Private path.",
-    detail: "1:1 coaching on rules mastery, sustained rallying, and full-court movement. Bridge to Green Ball when ready for group play.",
+    tag: "Building",
+    focus: "Rallying and ready to grow.",
+    detail: "Group sessions on rules mastery, sustained rallying, and full-court movement — the bridge to Green Ball. Private lessons available anytime a child wants extra 1:1 time.",
     color: "#FF8C00",
   },
   {

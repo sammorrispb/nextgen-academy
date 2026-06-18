@@ -8,17 +8,17 @@ export const faq: FaqItem[] = [
   {
     question: "What ages do you accept?",
     answer:
-      "We coach kids ages 6–16. Group sessions run at Green Ball (10+) or Yellow Ball (12+, tournament track). Any child not yet at Green-Ball level — Red Ball (pre-rally) and Orange Ball (rallying but not group-ready) — starts with private lessons until they're group-ready.",
+      "We coach kids ages 6–16. Group sessions run at every ball color — Red Ball (pre-rally), Orange Ball (building), Green Ball (10+), and Yellow Ball (12+, tournament track) — each on its own court. Private lessons are available at any level for kids who want to fast-track with 1:1 coaching.",
   },
   {
     question: "My child can't rally yet — can they still join?",
     answer:
-      "Yes — they start with private lessons. Group sessions are paced for Green Ball and Yellow Ball, so we use 1:1 coaching to build the basics — paddle control, footwork, sustained back-and-forth, rules mastery, and full-court movement — before joining a group. Schedule a free 30-minute evaluation and we'll lay out a plan.",
+      "Yes. Our Red Ball court is built exactly for kids who are new to the game — a foam-ball group where they learn paddle control, footwork, and the rally from day one. Prefer to fast-track with 1:1 coaching first? Private lessons are available too. Schedule a free 30-minute evaluation and we'll lay out a plan.",
   },
   {
     question: "Does my child need experience?",
     answer:
-      "Yes. Group sessions start at Green Ball — your child is rallying consistently and ready for shot selection and doubles play. If they're not there yet, we'll start with private lessons to get them group-ready. Schedule a free evaluation and we'll tell you which path fits.",
+      "No. Group sessions run at every level — including Red Ball for kids brand-new to the court and Orange Ball for kids still building the rally. We place your child by skill so they're with peers at their level. Want to fast-track? Private lessons are available too. Schedule a free evaluation and we'll tell you which path fits.",
   },
   {
     question: "How do I sign up?",
@@ -38,7 +38,7 @@ export const faq: FaqItem[] = [
   {
     question: "How do free evaluations work?",
     answer:
-      "Fill out the form below or email us at nextgenacademypb@gmail.com to schedule a 30-minute evaluation. Our coaches will assess your child’s current level and recommend the right path — a Green or Yellow Ball group session, or private lessons (Red or Orange Ball) if they're not yet group-ready. There’s no cost and no commitment.",
+      "Fill out the form below or email us at nextgenacademypb@gmail.com to schedule a 30-minute evaluation. Our coaches will assess your child’s current level and place them on the right court — Red, Orange, Green, or Yellow Ball — with private lessons available if you'd like to fast-track. There’s no cost and no commitment.",
   },
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
@@ -58,7 +58,7 @@ export const faq: FaqItem[] = [
   {
     question: "What’s the difference between Red, Orange, Green, and Yellow Ball?",
     answer:
-      "Each color follows USA Pickleball’s youth progression — placement is by skill, not age. Red Ball (pre-rally) and Orange Ball (rallying but not yet group-ready) are both delivered 1:1 as private lessons — Red builds paddle control, footwork, and sustained back-and-forth; Orange layers in rules mastery and full-court movement. Green Ball (10+) is our first group level — shot selection, court positioning, and doubles teamwork. Yellow Ball (12+) is our coach-curated competitive track — small groups of 3–5 athletes with custom scheduling and focused tournament prep. Every child is placed during a free evaluation, never on age alone.",
+      "Each color follows USA Pickleball’s youth progression — placement is by skill, not age — and each runs as its own group court. Red Ball (pre-rally) builds paddle control, footwork, and sustained back-and-forth on a foam ball. Orange Ball layers in rules mastery and full-court movement. Green Ball (10+) adds shot selection, court positioning, and doubles teamwork. Yellow Ball (12+) is our coach-curated competitive track — small groups of 3–5 athletes with custom scheduling and focused tournament prep. Private lessons are available at any level for kids who want to fast-track with 1:1 coaching. Every child is placed during a free evaluation, never on age alone.",
     cta: { label: "See the four levels in detail", href: "#levels" },
   },
   {
@@ -69,7 +69,7 @@ export const faq: FaqItem[] = [
   {
     question: "Can my child join mid-season?",
     answer:
-      "Yes. We accept new players throughout the season. Start with a free 30-minute evaluation and our coaches will place your child into the current session that fits their level and schedule — or recommend a private-lesson bridge if they’re not yet group-ready.",
+      "Yes. We accept new players throughout the season. Start with a free 30-minute evaluation and our coaches will place your child into the current session that fits their level and schedule — at any ball color — with a private-lesson option if you'd like to fast-track.",
   },
   {
     question: "Which Montgomery County towns do you serve?",

@@ -12,9 +12,10 @@ const steps: Step[] = [
     title: "Free evaluation",
     body: (
       <>
-        30 minutes on court. Your coach watches your child play, then recommends
-        the right next step &mdash; private lessons (Red or Orange Ball) or a
-        group session (Green or Yellow Ball).
+        30 minutes on court. Your coach watches your child play, then places
+        them at the right ball color &mdash; Red, Orange, Green, or Yellow &mdash;
+        each with its own group court. Private lessons available to fast-track
+        any level.
       </>
     ),
   },

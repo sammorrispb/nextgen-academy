@@ -210,7 +210,7 @@ const faq = [
   },
   {
     q: "What ages do you work with?",
-    a: "We coach kids ages 6–16. Group sessions are for kids who can rally; anyone still learning the rally starts with private lessons. We also run intro clinics for high schoolers and faculty PD sessions for K–12 teachers.",
+    a: "We coach kids ages 6–16. Group sessions run at every level — from Red Ball for kids brand-new to the court up through Yellow Ball — with private lessons available to fast-track. We also run intro clinics for high schoolers and faculty PD sessions for K–12 teachers.",
   },
   {
     q: "What's the typical group size?",
