@@ -19,8 +19,8 @@ function args(level: Level, sessionLines: string[]): PostEvalEmailArgs {
   };
 }
 
-test.describe("isPrivateBridgeLevel — Red AND Orange are private-only", () => {
-  test("Red and Orange bridge to private; Green and Yellow are group-ready", () => {
+test.describe("isPrivateBridgeLevel — Red/Orange are foundation levels", () => {
+  test("Red/Orange are foundation (own-level match + private fast-track); Green/Yellow are open-group", () => {
     expect(isPrivateBridgeLevel("Red")).toBe(true);
     expect(isPrivateBridgeLevel("Orange")).toBe(true);
     expect(isPrivateBridgeLevel("Green")).toBe(false);
@@ -52,27 +52,32 @@ test.describe("formatSessionLine", () => {
   });
 });
 
-test.describe("buildPostEvalFollowupHtml — private bridge (Red/Orange)", () => {
+test.describe("buildPostEvalFollowupHtml — foundation levels (Red/Orange)", () => {
   for (const level of ["Red", "Orange"] as Level[]) {
-    test(`${level} with no open sessions: private lessons only, no price/CTA`, () => {
+    test(`${level} leads with its own group court, labelled "${level} Ball"`, () => {
       const html = buildPostEvalFollowupHtml(args(level, []));
+      // Card shows the ball color, not the retired "Private Lessons" label.
+      expect(html).toContain(`${level} Ball`);
+      expect(html).not.toContain("Private Lessons (pre-rally bridge)");
+      // Group play is the lead recommendation — Reserve CTA always routes to
+      // /schedule, even with no live lines yet.
+      expect(html).toContain("Reserve a slot");
+      // Private lessons remain offered as an optional fast-track.
       expect(html).toContain("private lessons");
-      expect(html).toContain("Private Lessons (pre-rally bridge)");
-      expect(html).not.toContain("$20");
-      expect(html).not.toContain("Reserve a slot");
+      expect(html).toContain("fast-track");
     });
 
-    test(`${level} with a Tuesday all-levels court: private PLUS group on-ramp`, () => {
+    test(`${level} with an open court: lists the session + Reserve CTA + private fast-track`, () => {
       const html = buildPostEvalFollowupHtml(
         args(level, ["Tue, Jun 9 — Olney, MD · 6:00 PM"]),
       );
-      // Private bridge stays the primary recommendation.
-      expect(html).toContain("private lessons");
-      // ...and the all-levels Tuesday session is surfaced as an on-ramp.
-      expect(html).toContain("Want to get started sooner?");
-      expect(html).toContain("all-levels Tuesday night");
+      // Group drop-in is primary: the live line, price, and CTA all render.
       expect(html).toContain("Tue, Jun 9 — Olney, MD · 6:00 PM");
+      expect(html).toContain("$20");
       expect(html).toContain("Reserve a slot");
+      // ...with private lessons still offered underneath as a fast-track.
+      expect(html).toContain("Want to fast-track?");
+      expect(html).toContain("private lessons");
     });
   }
 });

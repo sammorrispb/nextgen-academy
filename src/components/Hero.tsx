@@ -42,15 +42,17 @@ export default function Hero() {
             </h1>
 
             <p className="mt-7 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-              Small groups for kids who can rally, and private lessons for
-              anyone still learning. A clear pathway to tournament play
-              &mdash; across Montgomery County, MD.
+              Small-group sessions at every level &mdash; Red, Orange, Green,
+              and Yellow Ball &mdash; with private lessons to fast-track anyone
+              who wants them. A clear pathway to tournament play across
+              Montgomery County, MD.
             </p>
 
             <p className="mt-5 text-base sm:text-lg text-ngpa-white/95 leading-relaxed max-w-xl">
               <span className="font-bold text-ngpa-teal">Meet a coach on the court for 30 minutes &mdash; free.</span>{" "}
-              We&rsquo;ll see where your child is at and recommend a group &mdash;
-              or a private-lesson plan to get them group-ready. No commitment.
+              We&rsquo;ll see where your child is at and place them on the right
+              court &mdash; with a private-lesson plan too, if they want to
+              fast-track. No commitment.
             </p>
 
             <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">

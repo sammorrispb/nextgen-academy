@@ -263,12 +263,12 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       .join("")}`
     : "";
 
-  // Private lessons card — Red and Orange Ball are private-lesson-only per
-  // CLAUDE.md. Routes to the lead form on the home page (#contact-form).
+  // "Brand new to a court?" card — surfaces the Red Ball group court plus the
+  // optional private-lesson fast-track. Routes to the lead form (#contact-form).
   const privateBlock = `
     <div style="${s.card}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.muted};font-weight:700;">Brand new to a court?</p>
-      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">If your kid hasn&rsquo;t held a paddle yet, a private one-on-one with Coach Sam is the right first step &mdash; we&rsquo;ll get them rallying before they join a group. Book a free evaluation to see where they fit.</p>
+      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">No problem &mdash; our Red Ball court is built for kids just starting out, so they can jump in and play right away. Prefer to fast-track? A private one-on-one with Coach Sam is there too. Book a free evaluation to see where they fit.</p>
       <p style="margin:0;"><a href="${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}" style="${s.link}font-weight:700;text-decoration:none;">Get a free evaluation &rarr;</a></p>
     </div>`;
 

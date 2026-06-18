@@ -13,7 +13,7 @@ export const seo = {
   freeEvaluation: {
     title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
     description:
-      "Book a free 30-minute evaluation for your child (ages 6–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Orange/Green/Yellow Ball pathway — or whether private lessons are the right starting point. No cost. No commitment.",
+      "Book a free 30-minute evaluation for your child (ages 6–16) in Montgomery County, MD. Meet a coach, see where your child fits in our Red/Orange/Green/Yellow Ball pathway — each with its own group court, plus private lessons to fast-track. No cost. No commitment.",
   },
   montgomeryCounty: {
     title: "Youth Pickleball in Montgomery County, MD — Ages 6–16",

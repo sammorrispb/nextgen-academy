@@ -37,17 +37,17 @@ const heroSeason = seasons[seasons.length - 1];
 // here too so the schedule page can answer "what's the tier ladder" for AI.
 const SCHEDULE_COURSE_TIERS = [
   {
-    name: "NGA Red Ball — Private Pickleball Lessons (Pre-Rally)",
+    name: "NGA Red Ball — Youth Pickleball Group Lessons (Pre-Rally)",
     description:
-      "1:1 private pickleball lessons for kids ages 6–16 still learning the rally. Builds paddle control, footwork, and sustained back-and-forth.",
+      "Foam-ball group sessions for kids ages 6–16 new to the court — its own court at the Red level. Builds paddle control, footwork, and sustained back-and-forth. Private lessons available to fast-track.",
     educationalLevel: "Beginner / Rookie",
     minAge: 6,
     ballColor: "Red" as const,
   },
   {
-    name: "NGA Orange Ball — Private Pickleball Lessons (Group Bridge)",
+    name: "NGA Orange Ball — Youth Pickleball Group Lessons (Building)",
     description:
-      "1:1 private pickleball lessons that layer in rules mastery and full-court movement so a child rallying — but not yet group-ready — can bridge into a Green Ball group.",
+      "Group pickleball sessions that layer in rules mastery and full-court movement — the bridge from rallying into Green Ball play. Its own court at the Orange level; private lessons available to fast-track.",
     educationalLevel: "Pro",
     minAge: 8,
     ballColor: "Orange" as const,

@@ -19,8 +19,8 @@ export const CONTACT_INTEREST_OPTIONS: ReadonlyArray<{
   label: string;
 }> = [
   { value: "free-evaluation", label: "Free evaluation" },
-  { value: "drop-in", label: "Drop-in group sessions (Green / Yellow Ball)" },
-  { value: "private-lessons", label: "Private lessons (Red / Orange Ball)" },
+  { value: "drop-in", label: "Drop-in group sessions (all ball colors)" },
+  { value: "private-lessons", label: "Private lessons (1:1 coaching)" },
   { value: "yellow-ball", label: "Yellow Ball tournament track (invite-only)" },
   { value: "partnership", label: "Partnership / school program" },
   { value: "general", label: "General question or feedback" },

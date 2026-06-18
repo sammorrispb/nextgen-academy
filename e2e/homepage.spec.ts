@@ -121,9 +121,10 @@ test.describe("Ball Pathway", () => {
     const desktopPathway = page.locator("#levels >> css=.hidden.sm\\:flex");
     await expect(desktopPathway).toBeVisible();
     const pathwayText = await desktopPathway.textContent();
-    // Post-2026-05-13 repositioning: Red & Orange are private-lessons-only.
-    // The pathway shows program labels next to each colored ball.
-    expect(pathwayText).toContain("Private Lessons"); // red + orange both use this
+    // Post-2026-06-18: all four ball colors run their own group court, so the
+    // pathway shows a ball-color label next to each colored ball.
+    expect(pathwayText).toContain("Red Ball");
+    expect(pathwayText).toContain("Orange Ball");
     expect(pathwayText).toContain("Green Ball");
     expect(pathwayText).toContain("Yellow Ball");
     // PR #94 (2026-05-24) realigned the floor from 8+ back to 6+.
@@ -138,7 +139,8 @@ test.describe("Ball Pathway", () => {
     const mobilePathway = page.locator("#levels >> css=.sm\\:hidden");
     await expect(mobilePathway).toBeVisible();
     const pathwayText = await mobilePathway.textContent();
-    expect(pathwayText).toContain("Private Lessons");
+    expect(pathwayText).toContain("Red Ball");
+    expect(pathwayText).toContain("Orange Ball");
     expect(pathwayText).toContain("Green Ball");
     expect(pathwayText).toContain("Yellow Ball");
     // PR #94 (2026-05-24) realigned the floor from 8+ back to 6+.

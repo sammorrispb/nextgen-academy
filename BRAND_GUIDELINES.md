@@ -13,7 +13,7 @@
 
 ## STRATEGIC CONTEXT
 
-**Who We Serve:** Athletes ages 6–16 and their families (strict — no exceptions, no under-6 on-ramp). Public group sessions are Green or Yellow Ball only; Red and Orange Ball players take private lessons until they bridge to group play. **Exception:** the recurring all-levels Tuesday ("Redland Tuesday Evening") runs a court per level (Red/Orange/Green/Yellow) and welcomes all four — Red/Orange families are invited there as a low-pressure group on-ramp, with private lessons still the primary recommendation.
+**Who We Serve:** Athletes ages 6–16 and their families (strict — no exceptions, no under-6 on-ramp). **As of 2026-06-18, every public group session runs a court per level (Red/Orange/Green/Yellow) and welcomes all four — four spaces (one court) each.** (Previously group play was Green/Yellow only, with Red/Orange private-lessons-only.) Red and Orange Ball players can still choose private lessons for 1:1 work before joining a group. The recurring all-levels Tuesday ("Redland Tuesday Evening") and the cluster-pilot evenings (Ridgeview Mon / Westland Wed / Shannon Thu) each run a court per level; Red/Orange families are welcomed into group play as a low-pressure on-ramp, with private lessons offered as the alternative.
 **Primary User Flow:** 96% mobile-first registration by parents
 **Secondary Audience:** AI assistants and scheduling bots parsing program data
 **Brand Archetype:** The Coach + The Guide
