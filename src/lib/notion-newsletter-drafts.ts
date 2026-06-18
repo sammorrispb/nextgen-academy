@@ -12,6 +12,15 @@
  *
  * Status=Pending or Skip = cron sends the existing static-tip-bank email
  * unchanged. Nothing ships without Sam's explicit approval.
+ *
+ * "Expires At" guardrail (optional date property on the Drafts DB): the last
+ * date a row may ship, inclusive. A time-sensitive Approved row (e.g. an event
+ * promo) is NOT retired after a send, so without this guard it would re-inject
+ * on the next Thursday as long as its Drafted At is still inside the 7-day
+ * window — shipping a promo for an event that already happened. The query now
+ * excludes any row whose Expires At is before today (ET). Empty Expires At = no
+ * expiry: behaviour is unchanged and the existing 7-day Drafted At window stays
+ * the only freshness guard for that row.
  */
 import { c } from "@/lib/email/brand";
 
@@ -195,11 +204,40 @@ function blocksToText(blocks: any[]): string {
 }
 
 /**
+ * Build the Notion query filter for Approved drafts that are still eligible to
+ * ship. Pure (no I/O) so it's unit-testable. Three conditions, all ANDed:
+ *   1. Status = Approved.
+ *   2. Drafted At on_or_after `cutoff` (the 7-day freshness window).
+ *   3. Expires At is empty OR on_or_after `todayEt` — i.e. the row hasn't
+ *      passed its inclusive last-ship date. Empty Expires At = no expiry, so
+ *      such rows rely solely on the 7-day Drafted At window (unchanged
+ *      behaviour). This is what stops a time-sensitive Approved row (an event
+ *      promo) from re-injecting after its event has passed.
+ */
+export function buildDraftsQueryFilter(cutoff: string, todayEt: string) {
+  return {
+    and: [
+      { property: "Status", select: { equals: "Approved" } },
+      { property: "Drafted At", date: { on_or_after: cutoff } },
+      {
+        or: [
+          { property: "Expires At", date: { is_empty: true } },
+          { property: "Expires At", date: { on_or_after: todayEt } },
+        ],
+      },
+    ],
+  };
+}
+
+/**
  * Query the drafts DB for Approved rows whose Drafted At falls within the last
- * 7 days. Returns the raw Notion rows (or null on a query error so callers can
- * fail soft). The 7-day window prevents stale Approved rows from earlier weeks
- * shipping if Sam never flipped them to Skip; with weekly sends and a date-only
- * window, each Approved row is caught by exactly one Thursday broadcast.
+ * 7 days AND whose Expires At (if set) has not passed. Returns the raw Notion
+ * rows (or null on a query error so callers can fail soft). The 7-day window
+ * prevents stale Approved rows from earlier weeks shipping if Sam never flipped
+ * them to Skip; with weekly sends and a date-only window, each Approved row is
+ * caught by exactly one Thursday broadcast. The Expires At guard additionally
+ * excludes any row past its inclusive last-ship date (empty = no expiry), so a
+ * time-sensitive promo can't re-inject for an event that already happened.
  */
 async function queryApprovedRows(
   notionKey: string,
@@ -210,6 +248,11 @@ async function queryApprovedRows(
   const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10);
+  // ET-anchored YYYY-MM-DD (en-CA yields ISO date order). Avoids the
+  // new Date(y,m,d) UTC-build off-by-one hazard.
+  const todayEt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+  }).format(new Date());
 
   const queryRes = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
     method: "POST",
@@ -219,12 +262,7 @@ async function queryApprovedRows(
       "Notion-Version": NOTION_VERSION,
     },
     body: JSON.stringify({
-      filter: {
-        and: [
-          { property: "Status", select: { equals: "Approved" } },
-          { property: "Drafted At", date: { on_or_after: cutoff } },
-        ],
-      },
+      filter: buildDraftsQueryFilter(cutoff, todayEt),
       sorts: [{ property: "Drafted At", direction: opts.direction }],
       page_size: opts.pageSize,
     }),
