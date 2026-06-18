@@ -84,7 +84,7 @@ Created **once**, reused every week (the weekend is a field, so you never make a
 **Form name:** `NGA — Vote the Next Session`
 **Fields:**
 1. *Which weekend are you voting for?* — short answer or dropdown (the routine tells families which weekend in the newsletter copy; a dropdown of upcoming weekends is cleaner).
-2. *Venue preference* — multiple choice: `Walter Johnson HS (Bethesda)` / `Gaithersburg HS` / `Sherwood HS (Sandy Spring)` / `Either works`. **(FOLLOW-UP: the live Form still lists only WJHS/GHS — add Sherwood.)**
+2. *Venue preference* — multiple choice: `Walter Johnson HS (Bethesda)` / `Gaithersburg HS` / `Sherwood HS (Sandy Spring)` / `Either works`. (All three venues are live on the Form as of 2026-05-30 — verified 2026-06-18.)
 3. ~~*Day preference*~~ — **removed.** Sessions are Saturday-only (10:00–11:00 AM); the day question is obsolete in v2.
 4. *Player age* — short answer (sanity-check the 5–16 band + group sizing).
 5. *Name / contact (optional)* — short answer (lets you follow up with voters when registration opens).
