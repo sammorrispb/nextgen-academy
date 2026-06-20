@@ -45,8 +45,11 @@ export default function Footer() {
               alt="Next Gen Pickleball Academy"
               width={160}
               height={46}
-              className="h-10 w-auto mb-5"
+              className="h-10 w-auto mb-4"
             />
+            <p className="font-heading text-base font-bold text-ngpa-teal mb-4">
+              Better than yesterday&mdash;together.
+            </p>
             <p className="text-base text-ngpa-white/65 leading-relaxed max-w-md">
               {site.boilerplate25}
             </p>
