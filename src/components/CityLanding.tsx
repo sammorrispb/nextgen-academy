@@ -269,10 +269,12 @@ export default function CityLanding({
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
             We follow USA Pickleball&rsquo;s official youth progression &mdash;
-            a proven system of color-coded balls with reduced bounce and
-            compression. Every child is placed by skill during a free
-            evaluation, not age alone. Group sessions start at Green Ball;
-            private lessons cover Red and Orange.
+            a proven system of color-coded balls with reduced bounce that
+            meet a child where they are. Every child is placed by skill during a free
+            evaluation, not age alone. Group sessions welcome all four levels
+            &mdash; Red, Orange, Green, and Yellow &mdash; each on its own
+            court, with private lessons available at any level for kids who
+            want to fast-track with 1:1 coaching.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

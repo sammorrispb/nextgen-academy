@@ -29,6 +29,11 @@ export default function Hero() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pt-12 sm:pt-20 pb-20 sm:pb-28 lg:py-32">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7 max-w-2xl">
+            {/* Brand promise kicker — lead with the tagline, then the offer */}
+            <p className="font-heading text-sm sm:text-base font-bold text-ngpa-teal tracking-tight mb-3">
+              Better than yesterday&mdash;together.
+            </p>
+
             {/* Offer pill */}
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ngpa-teal/15 ring-1 ring-ngpa-teal/40 backdrop-blur-sm text-ngpa-teal text-xs font-bold tracking-[0.18em] uppercase mb-5">
               <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-ngpa-teal animate-pulse" />
