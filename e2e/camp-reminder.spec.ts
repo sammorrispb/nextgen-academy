@@ -194,4 +194,26 @@ test.describe("collectPaidCampSessions", () => {
     const { entries } = await collectPaidCampSessions("june-29", stub(sessions));
     expect(entries.map((e) => e.stripeSessionId)).toEqual(["a"]);
   });
+
+  test("excludes camp sessions whose charge was fully refunded", async () => {
+    // A refunded Checkout Session still reports payment_status:"paid" (the
+    // refund lands on the charge). The roster read-model must drop it, or a
+    // cancelled camper reappears on the next Friday sync.
+    const sessions = [
+      {
+        id: "keep",
+        payment_status: "paid",
+        metadata: { kind: "camp", camp_slug: "july-20", child_first_name: "Keep" },
+        payment_intent: { latest_charge: { refunded: false } },
+      },
+      {
+        id: "refunded",
+        payment_status: "paid",
+        metadata: { kind: "camp", camp_slug: "july-20", child_first_name: "Bear" },
+        payment_intent: { latest_charge: { refunded: true } },
+      },
+    ] as unknown as Stripe.Checkout.Session[];
+    const { entries } = await collectPaidCampSessions("july-20", stub(sessions));
+    expect(entries.map((e) => e.stripeSessionId)).toEqual(["keep"]);
+  });
 });
