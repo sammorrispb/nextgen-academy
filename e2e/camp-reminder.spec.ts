@@ -13,6 +13,11 @@ import {
   resolveCampWhere,
 } from "../src/lib/camp-reminder-schedule";
 import { CAMPS, findCampBySlug } from "../src/data/camps";
+import {
+  collectPaidCampSessions,
+  type CampSessionSource,
+} from "../src/lib/notion-camp-roster";
+import type Stripe from "stripe";
 
 const input: CampReminderInput = {
   parentFirst: "Hun",
@@ -143,5 +148,50 @@ test.describe("camp-reminder schedule helpers", () => {
     expect(where).toContain("314 South Frederick Ave");
     // Exact venue comes from camps.ts, never Stripe metadata.
     expect(where).not.toContain("undefined");
+  });
+});
+
+test.describe("collectPaidCampSessions", () => {
+  function stub(sessions: Stripe.Checkout.Session[]): CampSessionSource {
+    return {
+      checkout: {
+        sessions: { list: () => (async function* () { yield* sessions; })() },
+      },
+    };
+  }
+
+  test("trims stray whitespace on parent/child free-text fields", async () => {
+    const session = {
+      id: "cs_trim_1",
+      payment_status: "paid",
+      created: 1_750_000_000,
+      customer_email: "  parent@example.com ",
+      customer_details: { email: "  parent@example.com " },
+      metadata: {
+        kind: "camp",
+        camp_slug: "june-29",
+        parent_name: " Smruti ",
+        parent_phone: " 3015550100 ",
+        child_first_name: "Krishav ",
+      },
+    } as unknown as Stripe.Checkout.Session;
+
+    const { entries } = await collectPaidCampSessions("june-29", stub([session]));
+    expect(entries).toHaveLength(1);
+    expect(entries[0].childFirstName).toBe("Krishav");
+    expect(entries[0].parentName).toBe("Smruti");
+    expect(entries[0].parentEmail).toBe("parent@example.com");
+    expect(entries[0].parentPhone).toBe("3015550100");
+  });
+
+  test("only collects paid camp sessions matching the slug", async () => {
+    const sessions = [
+      { id: "a", payment_status: "paid", metadata: { kind: "camp", camp_slug: "june-29", child_first_name: "A" } },
+      { id: "b", payment_status: "unpaid", metadata: { kind: "camp", camp_slug: "june-29", child_first_name: "B" } },
+      { id: "c", payment_status: "paid", metadata: { kind: "camp", camp_slug: "july-20", child_first_name: "C" } },
+      { id: "d", payment_status: "paid", metadata: { kind: "dropin", child_first_name: "D" } },
+    ] as unknown as Stripe.Checkout.Session[];
+    const { entries } = await collectPaidCampSessions("june-29", stub(sessions));
+    expect(entries.map((e) => e.stripeSessionId)).toEqual(["a"]);
   });
 });

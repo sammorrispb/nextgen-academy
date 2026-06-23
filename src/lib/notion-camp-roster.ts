@@ -101,11 +101,12 @@ export async function collectPaidCampSessions(
       m?.kind === "camp" &&
       m?.camp_slug === slug
     ) {
-      const parentEmail =
+      const parentEmail = (
         session.customer_details?.email ??
         session.customer_email ??
         metaString(m, "parent_email") ??
-        "";
+        ""
+      ).trim();
       const birthYearRaw = metaString(m, "child_birth_year");
       const birthYear = /^\d{4}$/.test(birthYearRaw)
         ? Number(birthYearRaw)
@@ -113,12 +114,15 @@ export async function collectPaidCampSessions(
       const registeredAt = session.created
         ? new Date(session.created * 1000).toISOString().slice(0, 10)
         : "";
+      // Trim free-text parent/child fields — Stripe carries them verbatim from
+      // the checkout form, so a stray leading/trailing space ("Krishav ") would
+      // otherwise land in the roster + render in the greeting.
       entries.push({
         stripeSessionId: session.id,
-        parentName: metaString(m, "parent_name"),
+        parentName: metaString(m, "parent_name").trim(),
         parentEmail,
-        parentPhone: metaString(m, "parent_phone"),
-        childFirstName: metaString(m, "child_first_name"),
+        parentPhone: metaString(m, "parent_phone").trim(),
+        childFirstName: metaString(m, "child_first_name").trim(),
         childBirthYear: birthYear,
         campSlug: slug,
         campTitle: metaString(m, "camp_title"),
