@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
+import { findCampBySlug } from "@/data/camps";
 
 export const metadata: Metadata = {
   title: "Camp Confirmed · Next Gen Pickleball Academy",
@@ -22,6 +23,7 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
   let campWeek = "";
   let optionLabel = "";
   let amountPaid = "";
+  let exactLocation = "";
 
   if (cs && process.env.STRIPE_SECRET_KEY) {
     try {
@@ -33,6 +35,9 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
       campWeek = String(m.camp_week ?? "");
       optionLabel = String(m.option_label ?? "");
       amountPaid = ((checkout.amount_total ?? 0) / 100).toFixed(2);
+      // Closed, post-payment surface (robots: noindex) — safe to reveal the
+      // exact venue, looked up from camps.ts (never from Stripe metadata).
+      exactLocation = findCampBySlug(String(m.camp_slug ?? ""))?.exactLocation ?? "";
     } catch (err) {
       console.error("[camp/success] failed to load checkout", err);
     }
@@ -65,7 +70,9 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
             )}
             <p className="text-sm text-ngpa-muted mt-1">
               <span className="text-ngpa-white font-semibold">Where: </span>
-              Gaithersburg, MD — we&rsquo;ll email the exact site before camp.
+              {exactLocation
+                ? "Gaithersburg High School — outdoor courts, 314 South Frederick Ave, Gaithersburg, MD 20877. We're outdoors — there's shade and a water cooler, and we play rain or shine."
+                : "Gaithersburg, MD — we'll email the exact site before camp."}
             </p>
             {amountPaid && amountPaid !== "0.00" && (
               <p className="text-sm text-ngpa-muted mt-1">
@@ -78,8 +85,8 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
 
         <div className="mt-6 text-sm text-ngpa-muted leading-relaxed max-w-md mx-auto">
           <p>
-            A confirmation email is on its way with everything you need. Camp
-            runs rain or shine. Questions? Text Coach Sam at 301-325-4731.
+            A confirmation email is on its way with everything you need.
+            Questions? Text Coach Sam at 301-325-4731.
           </p>
         </div>
 

@@ -28,6 +28,8 @@ import {
 } from "@/lib/notion-clusters";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
+import { findCampBySlug } from "@/data/camps";
+import { buildCampConfirmationEmail } from "@/lib/email/camp-confirmation";
 import {
   findProcessedEvent,
   recordProcessedEvent,
@@ -587,39 +589,27 @@ async function emailCampParent(session: Stripe.Checkout.Session) {
   const resend = new Resend(apiKey);
   const m = session.metadata ?? {};
   const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
-  const parentFirst = metaString(m, "parent_name").split(/\s+/)[0] || "there";
-  const childFirst = metaString(m, "child_first_name") || "your camper";
-  const campTitle = metaString(m, "camp_title");
-  const campWeek = metaString(m, "camp_week");
-  const optionLabel = metaString(m, "option_label");
-  const optionHours = metaString(m, "option_hours");
 
-  const subject = `You're registered — ${campTitle}`;
-  const text = [
-    `Hi ${parentFirst},`,
-    "",
-    `${childFirst} is registered for Next Gen Summer Camp!`,
-    "",
-    `${campTitle}`,
-    `${campWeek} (Mon–Thu)`,
-    `${optionLabel} · ${optionHours}`,
-    `Location: Gaithersburg, MD — we'll email the exact site before camp starts.`,
-    "",
-    `Paid: $${amount}.`,
-    "",
-    `What to bring each day:`,
-    `- Refillable water bottle`,
-    `- Court shoes (no flat-soled sneakers)`,
-    `- A morning snack`,
-    `- A paddle if you have one — we have loaners.`,
-    "",
-    `Camp runs rain or shine.`,
-    "",
-    `Questions? Just reply to this email or text Coach Sam at 301-325-4731.`,
-    "",
-    `See you on the court — better than yesterday, together.`,
-    `Coach Sam · Next Gen Pickleball Academy`,
-  ].join("\n");
+  // Resolve the exact venue from camps.ts (keyed on the slug that rode through
+  // checkout metadata) so this confirmation — a closed, post-payment surface —
+  // names where to go. The exact address never travels through Stripe metadata;
+  // it's looked up here. Falls back to the broad area if a camp's exactLocation
+  // isn't set yet ("until booked"), preserving the old "we'll email it" line.
+  const camp = findCampBySlug(metaString(m, "camp_slug"));
+  const location = camp?.exactLocation
+    ? `Gaithersburg High School — outdoor courts\n${camp.exactLocation.replace(/^Gaithersburg HS,\s*/, "")}`
+    : `${metaString(m, "public_area") || "Gaithersburg, MD"} — we'll email the exact site before camp starts.`;
+
+  const { subject, text } = buildCampConfirmationEmail({
+    parentFirst: metaString(m, "parent_name").split(/\s+/)[0] || "there",
+    childFirst: metaString(m, "child_first_name") || "your camper",
+    campTitle: metaString(m, "camp_title"),
+    campWeek: metaString(m, "camp_week"),
+    optionLabel: metaString(m, "option_label"),
+    optionHours: metaString(m, "option_hours"),
+    amountUsd: amount,
+    location,
+  });
 
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
