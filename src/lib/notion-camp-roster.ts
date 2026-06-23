@@ -60,7 +60,10 @@ export interface SyncCampRosterResult {
 export interface CampSessionSource {
   checkout: {
     sessions: {
-      list(params: { limit: number }): AsyncIterable<Stripe.Checkout.Session>;
+      list(params: {
+        limit: number;
+        expand?: string[];
+      }): AsyncIterable<Stripe.Checkout.Session>;
     };
   };
 }
@@ -82,6 +85,23 @@ function notionHeaders(notionKey: string): Record<string, string> {
 }
 
 /**
+ * A camp registration drops off the roster once its charge is fully refunded —
+ * a refunded Checkout Session still reports payment_status:"paid" (the refund
+ * lands on the charge, not the session), so without this the read-model would
+ * re-add a cancelled camper on the next sync. We expand
+ * payment_intent.latest_charge in the list call; if it isn't expanded (e.g. a
+ * test stub omits it) default to "not refunded" so a real paid registration is
+ * never dropped on missing data.
+ */
+function isFullyRefunded(session: Stripe.Checkout.Session): boolean {
+  const pi = session.payment_intent;
+  if (!pi || typeof pi === "string") return false;
+  const charge = pi.latest_charge;
+  if (!charge || typeof charge === "string") return false;
+  return charge.refunded === true;
+}
+
+/**
  * Page paid camp Checkout Sessions for a slug into roster entries. Checkout
  * Sessions can't be server-filtered by metadata, so page newest-first and match
  * client-side; cap the scan so a never-matching slug can't run away on a large
@@ -93,13 +113,17 @@ export async function collectPaidCampSessions(
 ): Promise<{ entries: CampRosterEntry[]; scanned: number }> {
   const entries: CampRosterEntry[] = [];
   let scanned = 0;
-  for await (const session of stripe.checkout.sessions.list({ limit: 100 })) {
+  for await (const session of stripe.checkout.sessions.list({
+    limit: 100,
+    expand: ["data.payment_intent.latest_charge"],
+  })) {
     scanned += 1;
     const m = session.metadata;
     if (
       session.payment_status === "paid" &&
       m?.kind === "camp" &&
-      m?.camp_slug === slug
+      m?.camp_slug === slug &&
+      !isFullyRefunded(session)
     ) {
       const parentEmail = (
         session.customer_details?.email ??
