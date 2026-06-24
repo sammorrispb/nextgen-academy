@@ -1,4 +1,13 @@
 #!/usr/bin/env node
+// ⚠ NOT the live MACKID source. This script provisions a FUTURE expanded-schedule
+//   camp model (Full $295 / AM $170 / PM $170) on a NEW "NGA Summer Camp" product
+//   and restricts its MACKID coupon to THAT product. The site currently charges
+//   STRIPE_CAMP_DAY_PRICE_ID ($50) / STRIPE_CAMP_WEEK_PRICE_ID ($150) on a
+//   DIFFERENT product, so the coupon below would NOT apply to today's checkout.
+//   To make MACKID work on the CURRENT $50/$150 camps, run
+//   scripts/setup-mackid-promo.mjs instead (it scopes the coupon to the live
+//   prices). Only run THIS script when the $295 full-day schedule actually ships.
+//
 // Idempotently provision the NGA Summer Camp Stripe objects on the NGA account
 // (acct_1TU4iSBpXOfTC961):
 //   1. one "NGA Summer Camp" product
