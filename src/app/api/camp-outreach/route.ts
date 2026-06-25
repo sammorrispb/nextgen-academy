@@ -47,8 +47,14 @@ interface Recipient {
   name: string;
 }
 
-/** Query the lead CRM and return the deduped, DD-clean (eligible) recipients. */
-async function fetchEligibleRecipients(): Promise<{
+/**
+ * Query the lead CRM and return deduped, DD-clean recipients. By default only
+ * the "eligible" bucket (clean own-marketing source) is mailed. When
+ * `includeAmbiguous` is true, the "ambiguous" bucket (own leads whose Source is
+ * blank/Evaluation/Referral — i.e. unverified marketing source, but NOT
+ * DD-derived) is ALSO mailed. Off-limits (DD-derived) is never mailed either way.
+ */
+async function fetchEligibleRecipients(includeAmbiguous: boolean): Promise<{
   recipients: Recipient[];
   scanned: number;
   eligible: number;
@@ -115,18 +121,24 @@ async function fetchEligibleRecipients(): Promise<{
       // in classifyLead. Defense in depth: even if an `only` allow-list passes a
       // DD email, it never makes it past this gate.
       const { bucket } = classifyLead(row);
-      if (bucket === "off_limits") offLimits++;
-      else if (bucket === "ambiguous") ambiguous++;
-      else {
+      if (bucket === "off_limits") {
+        offLimits++;
+        continue;
+      }
+      if (bucket === "ambiguous") {
+        ambiguous++;
+        if (!includeAmbiguous) continue;
+      } else {
         eligible++;
-        const key = email.toLowerCase();
-        if (!byEmail.has(key)) {
-          byEmail.set(key, {
-            email,
-            name,
-            parentFirst: name.split(/\s+/)[0] || "there",
-          });
-        }
+      }
+      // Reached here = eligible, or (ambiguous && includeAmbiguous). Mail it.
+      const key = email.toLowerCase();
+      if (!byEmail.has(key)) {
+        byEmail.set(key, {
+          email,
+          name,
+          parentFirst: name.split(/\s+/)[0] || "there",
+        });
       }
     }
     cursor = data.has_more ? data.next_cursor : undefined;
@@ -148,7 +160,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let body: { subject?: string; dryRun?: boolean; only?: string[] } = {};
+  let body: {
+    subject?: string;
+    dryRun?: boolean;
+    only?: string[];
+    includeAmbiguous?: boolean;
+  } = {};
   try {
     body = await req.json();
   } catch {
@@ -156,6 +173,11 @@ export async function POST(req: NextRequest) {
   }
   const dryRun =
     req.nextUrl.searchParams.get("dryRun") === "1" || body.dryRun === true;
+  // Opt in to the ambiguous bucket (own leads, unverified marketing source, NOT
+  // DD-derived). Off by default so the conservative on-policy send stays default.
+  const includeAmbiguous =
+    req.nextUrl.searchParams.get("includeAmbiguous") === "1" ||
+    body.includeAmbiguous === true;
   const subject = body.subject?.trim() || CAMP_OUTREACH_SUBJECT;
   // Optional allow-list: restrict the send to these emails. The canonical camp
   // send passes the vetted, age-filtered warm-list.csv here so only that exact
@@ -167,7 +189,7 @@ export async function POST(req: NextRequest) {
 
   let seg;
   try {
-    seg = await fetchEligibleRecipients();
+    seg = await fetchEligibleRecipients(includeAmbiguous);
   } catch (err) {
     console.error("[camp-outreach] CRM query failed:", err);
     return NextResponse.json(
@@ -184,12 +206,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       dryRun: true,
+      includeAmbiguous,
       scanned: seg.scanned,
       eligible_unique: seg.recipients.length,
       to_send: recipients.length,
       eligible_rows: seg.eligible,
+      ambiguous_rows: seg.ambiguous,
+      ambiguous_mailed: includeAmbiguous,
       off_limits: seg.offLimits,
-      ambiguous: seg.ambiguous,
       test_excluded: seg.test,
       subject,
       recipients: recipients.map((r) => ({ name: r.name, email: r.email })),
@@ -234,11 +258,12 @@ export async function POST(req: NextRequest) {
 
   const summary = {
     ok: true,
+    includeAmbiguous,
     to_send: recipients.length,
     sent,
     failed,
     off_limits_excluded: seg.offLimits,
-    ambiguous_excluded: seg.ambiguous,
+    ambiguous_excluded: includeAmbiguous ? 0 : seg.ambiguous,
     subject,
     sent_emails: sentEmails,
     failed_emails: failedEmails,
