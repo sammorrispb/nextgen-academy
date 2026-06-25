@@ -115,6 +115,7 @@ async function fetchEligibleRecipients(includeAmbiguous: boolean): Promise<{
         lastCrEvent: readText(p["Last CR Event"]),
         season: readSelect(p["Season"]),
         notes: readText(p["Notes"]),
+        quarantine: p["Quarantine"]?.checkbox ?? false,
       };
 
       // DD-derived rows are excluded here — the no-DD-derived-sales rule lives
