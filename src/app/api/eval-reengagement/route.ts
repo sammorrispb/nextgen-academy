@@ -104,6 +104,7 @@ async function fetchEligibleRecipients(): Promise<{
         lastCrEvent: readText(p["Last CR Event"]),
         season: readSelect(p["Season"]),
         notes: readText(p["Notes"]),
+        quarantine: p["Quarantine"]?.checkbox ?? false,
       };
 
       const { bucket } = classifyLead(row);

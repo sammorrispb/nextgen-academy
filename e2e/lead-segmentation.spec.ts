@@ -55,6 +55,17 @@ test.describe("classifyLead — DD provenance", () => {
       classifyLead({ ...clean, source: "Website", crEventsAttended: 2 }).bucket,
     ).toBe("off_limits");
   });
+
+  test("off_limits: quarantine (opt-out) beats an otherwise-eligible source", () => {
+    const c = classifyLead({ ...clean, source: "Website", quarantine: true });
+    expect(c.bucket).toBe("off_limits");
+    expect(c.reason).toContain("opted out");
+  });
+
+  test("quarantine false/undefined leaves the lead eligible", () => {
+    expect(classifyLead({ ...clean, quarantine: false }).bucket).toBe("eligible");
+    expect(classifyLead({ ...clean }).bucket).toBe("eligible");
+  });
 });
 
 test.describe("isTestOrInternal", () => {

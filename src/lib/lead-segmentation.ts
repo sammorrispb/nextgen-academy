@@ -18,6 +18,10 @@ export interface LeadRow {
   lastCrEvent: string;
   season: string; // "" if unset
   notes: string;
+  // Operator-set "do not market" flag on the CRM (the Quarantine checkbox).
+  // Set when a parent opts out (e.g. replies "skip" to an outreach blast). Wins
+  // over every provenance check so an opt-out is honored regardless of Source.
+  quarantine?: boolean;
 }
 
 export interface LeadClassification {
@@ -69,6 +73,13 @@ export function isTestOrInternal(name: string, email: string): boolean {
 }
 
 export function classifyLead(row: LeadRow): LeadClassification {
+  // Honored opt-out — off-limits for any outreach, before any provenance check.
+  // A parent who asked to be removed must never be mailed again, whatever their
+  // Source bucket (e.g. a clean "Website" lead who replied "skip").
+  if (row.quarantine) {
+    return { bucket: "off_limits", reason: "Quarantined (opted out)" };
+  }
+
   // DD-derived — off-limits for any outreach.
   if (DD_SOURCES.has(row.source)) {
     return { bucket: "off_limits", reason: `Source=${row.source}` };
