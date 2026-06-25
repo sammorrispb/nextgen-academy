@@ -27,6 +27,30 @@ function formatLongDate(date: string): string {
   });
 }
 
+// Day before camp starts, as an ISO date-only string. Noon-UTC anchored and
+// stepped by whole days so it never off-by-ones on Vercel's UTC build servers.
+// Static (derived from the camp's own start date), so it's correct whenever the
+// page renders — no live countdown to go stale under static generation.
+function registerByDate(startDate: string): string {
+  const ms = new Date(`${startDate}T12:00:00Z`).getTime() - 86_400_000;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+function weekdayLong(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return d.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+}
+
+function formatShortDate(date: string): string {
+  const d = new Date(`${date}T12:00:00Z`);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 export default function CampIndexPage() {
   const jsonLd = {
     "@context": "https://schema.org",
@@ -80,7 +104,8 @@ export default function CampIndexPage() {
             <p className="mt-4 text-lg text-ngpa-muted max-w-2xl mx-auto leading-relaxed">
               Two weeks of high-energy pickleball for ages {CAMP_AGE_MIN}–
               {CAMP_AGE_MAX} in Gaithersburg. Small groups, real coaching, and a
-              ton of fun — campers leave more confident than they arrived.
+              ton of fun — campers leave more confident than they arrived. Just
+              two weeks left this summer — register before each week begins.
             </p>
           </div>
 
@@ -138,6 +163,12 @@ export default function CampIndexPage() {
                 </p>
                 <p className="text-sm text-ngpa-muted mt-1">
                   Mon–Thu · Gaithersburg, MD
+                </p>
+                <p className="text-xs font-semibold text-ngpa-teal-bright mt-2">
+                  Starts {weekdayLong(camp.startDate)} · register by{" "}
+                  <time dateTime={registerByDate(camp.startDate)}>
+                    {formatShortDate(registerByDate(camp.startDate))}
+                  </time>
                 </p>
                 <span className="inline-flex items-center gap-1 mt-4 font-heading font-bold text-ngpa-teal group-hover:text-ngpa-teal-bright">
                   Register →
