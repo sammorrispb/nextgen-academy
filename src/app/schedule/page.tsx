@@ -15,7 +15,7 @@ import { groupSessions, sortByLevel } from "@/lib/schedule-grouping";
 import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 import WeatherBar from "@/components/WeatherBar";
-import { fetchWeatherForSessions } from "@/lib/weather";
+import { fetchWeatherForDates, upcomingDates } from "@/lib/weather";
 import { breadcrumbJsonLd, courseJsonLd, SITE_URL } from "@/lib/seo";
 
 const SITE_ORIGIN =
@@ -92,9 +92,11 @@ function formatDayHeading(date: string): string {
 export default async function SchedulePage() {
   const sessions = await fetchUpcomingSessions();
   const grouped = groupByDate(sessions);
-  const sessionDates = Array.from(grouped.keys());
-  // Per-session hourly windows, rolled up to the worst window per date.
-  const weather = await fetchWeatherForSessions(sessions);
+  // Always show today + the next seven days, regardless of which days have
+  // sessions. Days with sessions are windowed to the worst session; other days
+  // use the daylight outdoor-play window.
+  const weatherDates = upcomingDates(8);
+  const weather = await fetchWeatherForDates(sessions, weatherDates);
 
   return (
     <>
@@ -194,10 +196,10 @@ export default async function SchedulePage() {
 
           <RegistrationNotice />
 
-          {sessions.length === 0 ? (
+          <WeatherBar dates={weatherDates} weather={weather} />
+
+          {sessions.length === 0 && (
             <EmptyStateWaitlist source="schedule_empty" />
-          ) : (
-            <WeatherBar dates={sessionDates} weather={weather} />
           )}
 
           {sessions.length > 0 && (

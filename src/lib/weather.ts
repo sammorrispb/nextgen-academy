@@ -126,6 +126,84 @@ export function assessSessions(
   return out;
 }
 
+// Calendar-strip default: on a date with NO session, window the regional
+// daylight outdoor-play hours (9 AM–8 PM ET) so the Weather Watch strip still
+// shows a forecast for today/tomorrow/the weekend, not just session dates.
+const DEFAULT_WINDOW_START = "9:00 AM";
+const DEFAULT_WINDOW_END = "8:00 PM";
+
+/** PURE. Today's calendar date (YYYY-MM-DD) in America/New_York. */
+export function etDateString(now: Date = new Date()): string {
+  // en-CA renders as YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York",
+  }).format(now);
+}
+
+/**
+ * PURE. `count` consecutive ET calendar dates starting at today, e.g.
+ * count=8 → today + the next seven days. Each step adds 24h to a noon-UTC
+ * anchor, which never crosses a date boundary even across a DST shift.
+ */
+export function upcomingDates(count: number, now: Date = new Date()): string[] {
+  const [y, mo, d] = etDateString(now).split("-").map(Number);
+  const base = Date.UTC(y, mo - 1, d, 12);
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) {
+    out.push(new Date(base + i * 24 * HOUR_MS).toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+/**
+ * PURE. Weather for an explicit list of calendar dates (a fixed strip, not just
+ * session dates). A date WITH sessions uses the worst (max-rain) session window;
+ * a date WITHOUT sessions falls back to the daylight outdoor-play window so the
+ * strip never has a gap for today/tomorrow/the weekend. A date whose window has
+ * no overlapping forecast (beyond the hourly horizon) is absent — the caller
+ * renders "forecast updates ~6 days out".
+ */
+export function assessDates(
+  periods: NwsPeriod[],
+  sessions: SessionLike[],
+  dates: string[],
+): Map<string, DayWeather> {
+  const sessionsByDate = new Map<string, SessionLike[]>();
+  for (const s of sessions) {
+    const arr = sessionsByDate.get(s.date) ?? [];
+    arr.push(s);
+    sessionsByDate.set(s.date, arr);
+  }
+
+  const out = new Map<string, DayWeather>();
+  for (const date of dates) {
+    const daySessions = sessionsByDate.get(date) ?? [];
+    const windows: Array<{ start: number; end: number }> =
+      daySessions.length > 0
+        ? daySessions
+            .map((s) => {
+              const start = sessionStartUtcMs(s.date, s.startTime);
+              if (start == null) return null;
+              const end = sessionEndUtcMs(s.date, s.endTime) ?? start + 2 * HOUR_MS;
+              return { start, end };
+            })
+            .filter((w): w is { start: number; end: number } => w !== null)
+        : (() => {
+            const start = sessionStartUtcMs(date, DEFAULT_WINDOW_START);
+            const end = sessionEndUtcMs(date, DEFAULT_WINDOW_END);
+            return start != null && end != null ? [{ start, end }] : [];
+          })();
+
+    let worst: WindowWeather | null = null;
+    for (const { start, end } of windows) {
+      const w = assessWindow(periods, start, end);
+      if (w && (!worst || w.maxRain > worst.maxRain)) worst = w;
+    }
+    if (worst) out.set(date, { date, ...worst });
+  }
+  return out;
+}
+
 async function fetchHourlyPeriods(): Promise<NwsPeriod[] | null> {
   const points = (await nwsFetch(
     `https://api.weather.gov/points/${NWS_LAT},${NWS_LNG}`,
@@ -152,4 +230,21 @@ export async function fetchWeatherForSessions(
   const periods = await fetchHourlyPeriods();
   if (!periods) return new Map();
   return assessSessions(periods, sessions);
+}
+
+/**
+ * Fetch the regional hourly forecast ONCE and window it to an explicit list of
+ * calendar dates (today + the next N days), keyed by date. Days with sessions
+ * use the worst session window; days without use the daylight default window.
+ * Fails soft: NWS down → empty map (the strip shows "forecast updates ~6 days
+ * out" per date).
+ */
+export async function fetchWeatherForDates(
+  sessions: SessionLike[],
+  dates: string[],
+): Promise<Map<string, DayWeather>> {
+  if (dates.length === 0) return new Map();
+  const periods = await fetchHourlyPeriods();
+  if (!periods) return new Map();
+  return assessDates(periods, sessions, dates);
 }
