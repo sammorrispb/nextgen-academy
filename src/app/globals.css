@@ -131,3 +131,16 @@ h1, h2, h3, h4, h5, h6 {
     transparent 65%
   );
 }
+
+/* Print support — first introduced for the coach camp checklist. Force a
+   white, ink-friendly canvas and keep each checklist group from splitting
+   across a page break. `print:` Tailwind utilities handle per-element colors. */
+@media print {
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+  .checklist-group {
+    break-inside: avoid;
+  }
+}
