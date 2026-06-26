@@ -108,12 +108,13 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | src/lib/registrant-match.ts | 2026-06-12 | match registrants to player profiles | high |
 | src/lib/roster-mailto.ts | 2026-06-12 | email-all-parents mailto from roster | high |
 | src/lib/attendance.ts | 2026-06-14 | shared check-in core (Notion write + OB activity + profile recompute); reused by the coach action + /api/coach/attendance; idempotent | high |
+| src/lib/notion-camp-roster.ts | 2026-06-26 | camp roster read-model from Stripe + Friday reminder sync; reads child first name + birth year + **allergies/medical + emergency contact** (camp-safety exception, CLAUDE.md); surfaced auth-gated at /coach/camps/* (print-only, no file export) | high |
 
 **Buckets (remaining):**
 
 | bucket | last-commit | purpose | conf |
 |---|---|---|---|
-| src/lib/notion-* (12 more) | 2026-06-10 | Notion DB clients, one per database | high |
+| src/lib/notion-* (11 more) | 2026-06-10 | Notion DB clients, one per database | high |
 | src/lib/email/ (22) | 2026-06-11 | Resend HTML templates + brand/ics/utm helpers | high |
 | src/lib/validate-* (11) | 2026-06-12 | per-form input validation | high |
 | payments: stripe, refund-amount, cancel-camp, cancel-dropin, cluster-refund | 2026-06-10 | Stripe client, refund math, cancel flows (SLOP-FREE) | high |
@@ -188,6 +189,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 7. **scripts/setup-stripe-product.mjs** references old Stripe acct `acct_1SOoW5…` (NGA live = `acct_1TU4iS…`) — stale; deletion candidate.
 8. **Child PII flow**: child name/birth-year ride Stripe metadata → webhook → Notion + admin email. Same Notion row holds parent contact + child fields (no separate child record). Any new egress destination is a hostile-review trigger.
 9. **`/api/coach/attendance` auth authority (2026-06-14, hardened).** The agent route grants attendance-write to any holder of `ATTENDANCE_SECRET`, which does NOT enforce the `COACH_ALLOWED_EMAILS` allowlist the coach UI action does — a broader authority on a minor-PII write. Hardened over the original #189 form (which used NGA_ADMIN_SECRET in a `?secret=` query param): now a **dedicated** secret over a **Bearer header** (no access-log exposure, isolated blast radius), fail-closed when unset, idempotent (no duplicate OB activity on retries), OB ingest awaited for Vercel durability, PII-free ack. Egress pinned to Notion + OB by `e2e/invariant-attendance-pii-egress.spec.ts`. Residual: until `ATTENDANCE_SECRET` is set in Vercel the route 401s every call (safe default).
+10. **Camp roster surfaces allergies + emergency contact (2026-06-26, Sam-approved camp-safety exception).** The coach camp-roster view (`/coach/camps/*`) displays already-collected child medical (allergies) + emergency contact, read live from Stripe (NOT newly persisted), behind the coach `(authed)` gate. **Print-only — no CSV/file export in v1** (a file export would be a child-medical egress to a device that the fetch-host invariant class cannot pin; deferred deliberately). The read path makes zero outbound fetches (Stripe rides its own SDK transport); pinned by `e2e/invariant-camp-roster-pii-egress.spec.ts` (no OB/Resend/analytics host, no PII sentinel in any fetch body) and `e2e/notion-camp-roster.spec.ts`. Allergies are capped at 480 chars upstream; the roster flags possible truncation ("verify with parent"). Governance exception documented in CLAUDE.md Minor-Data Governance. Residual: a coach printing the roster takes child medical onto paper (same as the prior external packet) — operational control, not a code control.
 
 ## 8a. Agent-action trigger parity — deferred surfaces (per-surface IPAV go required)
 

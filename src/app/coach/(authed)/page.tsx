@@ -113,6 +113,12 @@ export default async function CoachDashboard() {
         >
           Camp checklist →
         </Link>
+        <Link
+          href="/coach/camps"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
+        >
+          Camps →
+        </Link>
       </div>
 
       {endedSessions.length > 0 && (
