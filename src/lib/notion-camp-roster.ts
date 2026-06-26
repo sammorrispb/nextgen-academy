@@ -31,6 +31,14 @@ export interface CampRosterEntry {
   campTitle: string;
   campWeek: string;
   optionLabel: string;
+  /** Canonical SKU key ("day" | "week"), read from option_key metadata. */
+  optionKey: string;
+  /** ISO date-only of the chosen morning for a "day" SKU (empty for "week"). */
+  selectedDay: string;
+  /** Free-text allergies/medical, capped at 480 chars upstream. */
+  allergies: string;
+  emergencyName: string;
+  emergencyPhone: string;
   /** ISO date-only, from the Stripe session's created timestamp. */
   registeredAt: string;
 }
@@ -152,6 +160,11 @@ export async function collectPaidCampSessions(
         campTitle: metaString(m, "camp_title"),
         campWeek: metaString(m, "camp_week"),
         optionLabel: metaString(m, "option_label"),
+        optionKey: metaString(m, "option_key"),
+        selectedDay: metaString(m, "selected_day"),
+        allergies: metaString(m, "allergies"),
+        emergencyName: metaString(m, "emergency_name").trim(),
+        emergencyPhone: metaString(m, "emergency_phone").trim(),
         registeredAt,
       });
     }
