@@ -107,6 +107,12 @@ export default async function CoachDashboard() {
         >
           Crew polls →
         </Link>
+        <Link
+          href="/coach/camp-checklist"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
+        >
+          Camp checklist →
+        </Link>
       </div>
 
       {endedSessions.length > 0 && (
