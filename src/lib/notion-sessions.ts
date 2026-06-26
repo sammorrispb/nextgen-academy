@@ -485,6 +485,60 @@ export async function fetchActiveSessionsOnOrBefore(
   });
 }
 
+export interface SessionStatusRow {
+  id: string;
+  title: string;
+  startTime: string;
+  status: string;
+}
+
+/**
+ * Every session row on a single date with its Status — INCLUDING Cancelled
+ * (unlike fetchUpcomingSessions, which hides them). Used by the comms crons to
+ * suppress reminders/recaps for a session that has been pulled. Returns [] on
+ * any error so a Notion blip never crashes a cron mid-broadcast.
+ */
+export async function fetchSessionStatusByDate(
+  dateIso: string,
+): Promise<SessionStatusRow[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_SESSIONS_DB_ID;
+  if (!notionKey || !dbId || !/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return [];
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: { property: "Date", date: { equals: dateIso } },
+      page_size: 100,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] fetchSessionStatusByDate failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  return data.results.map((page) => {
+    const props = page.properties;
+    return {
+      id: page.id as string,
+      title: readPlainText(props["Session"]),
+      startTime: readPlainText(props["Start time"]),
+      status: readSelect(props["Status"]) ?? "Open",
+    };
+  });
+}
+
 /** Flip the session row's "Coach Reminder Sent" checkbox (pre-event cron dedup). */
 export async function markSessionCoachReminderSent(id: string): Promise<boolean> {
   const notionKey = process.env.NOTION_API_KEY;
