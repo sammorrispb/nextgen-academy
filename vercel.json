@@ -40,6 +40,10 @@
     {
       "path": "/api/cron/camp-reminder",
       "schedule": "0 13 * * 5"
+    },
+    {
+      "path": "/api/cron/reconcile-cancelled-sessions",
+      "schedule": "0 */2 * * *"
     }
   ]
 }

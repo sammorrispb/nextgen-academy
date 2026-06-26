@@ -6,6 +6,8 @@ import {
   markDropInFlag,
   type DropInRegistration,
 } from "@/lib/notion-dropins";
+import { fetchSessionStatusByDate } from "@/lib/notion-sessions";
+import { partitionByCancelledSession } from "@/lib/reminder-suppression";
 import { sessionToSlug } from "@/lib/session-slug";
 import { signCancelToken } from "@/lib/cancel-token";
 import {
@@ -227,7 +229,27 @@ export async function GET(req: NextRequest) {
 
   // fetchUpcomingDropIns already filters Status === Confirmed. Drop rows
   // we've already sent a reminder for (idempotency).
-  const toSend = candidates.filter((r) => !r.reminderSent);
+  const notSent = candidates.filter((r) => !r.reminderSent);
+
+  // A Confirmed drop-in can still point at a Cancelled session: cancelling a
+  // session flips the SESSION row to Cancelled but the per-drop-in rows only
+  // become Refunded later (async charge.refunded webhook) — or never, if the
+  // session was cancelled by hand in Notion for weather. Cross-reference the
+  // day's session statuses and never remind for a pulled session.
+  const sessions = await fetchSessionStatusByDate(targetIso);
+  const { send: toSend, suppressed } = partitionByCancelledSession(
+    notSent,
+    sessions,
+  );
+  if (suppressed.length > 0) {
+    console.log(
+      "[cron/dropin-reminder] suppressed reminders for cancelled session(s)",
+      JSON.stringify({
+        target_date_et: targetIso,
+        suppressed: suppressed.map((r) => r.id),
+      }),
+    );
+  }
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -243,7 +265,8 @@ export async function GET(req: NextRequest) {
   const summary = {
     target_date_et: targetIso,
     candidates: candidates.length,
-    skipped_already_sent: candidates.length - toSend.length,
+    skipped_already_sent: candidates.length - notSent.length,
+    suppressed_cancelled: suppressed.length,
     attempted: toSend.length,
     email_sent: outcomes.filter((o) => o.emailSent).length,
     sms_sent: outcomes.filter((o) => o.smsResult === "sent").length,

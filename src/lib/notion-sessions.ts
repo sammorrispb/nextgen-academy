@@ -485,6 +485,139 @@ export async function fetchActiveSessionsOnOrBefore(
   });
 }
 
+export interface SessionStatusRow {
+  id: string;
+  title: string;
+  startTime: string;
+  status: string;
+}
+
+/**
+ * Every session row on a single date with its Status — INCLUDING Cancelled
+ * (unlike fetchUpcomingSessions, which hides them). Used by the comms crons to
+ * suppress reminders/recaps for a session that has been pulled. Returns [] on
+ * any error so a Notion blip never crashes a cron mid-broadcast.
+ */
+export async function fetchSessionStatusByDate(
+  dateIso: string,
+): Promise<SessionStatusRow[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_SESSIONS_DB_ID;
+  if (!notionKey || !dbId || !/^\d{4}-\d{2}-\d{2}$/.test(dateIso)) return [];
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: { property: "Date", date: { equals: dateIso } },
+      page_size: 100,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] fetchSessionStatusByDate failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  return data.results.map((page) => {
+    const props = page.properties;
+    return {
+      id: page.id as string,
+      title: readPlainText(props["Session"]),
+      startTime: readPlainText(props["Start time"]),
+      status: readSelect(props["Status"]) ?? "Open",
+    };
+  });
+}
+
+export interface CancelledSessionRow {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  /** Optional Notion `Cancel Reason` select (weather/venue/low-enrollment/
+   * other). Empty when the property is absent or unset — caller defaults it. */
+  cancelReason: string;
+  /** Optional Notion `Cancel Note` rich-text — Coach-voice context for the
+   * parent email. Empty when absent. */
+  cancelNote: string;
+}
+
+/**
+ * Cancelled session rows dated within [fromIso, toIso] (inclusive). Used by the
+ * reconcile-cancelled-sessions cron to refund + notify registrants of a session
+ * that was marked Cancelled by hand in Notion. Bounded to the caller's window
+ * (upcoming only) so it never retroactively refunds long-past sessions. Reads
+ * the optional Cancel Reason / Cancel Note properties fail-soft. Returns [] on
+ * any error so a Notion blip never crashes the cron.
+ */
+export async function fetchCancelledSessionsInWindow(
+  fromIso: string,
+  toIso: string,
+): Promise<CancelledSessionRow[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_SESSIONS_DB_ID;
+  if (
+    !notionKey ||
+    !dbId ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(fromIso) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(toIso)
+  ) {
+    return [];
+  }
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: {
+        and: [
+          { property: "Date", date: { on_or_after: fromIso } },
+          { property: "Date", date: { on_or_before: toIso } },
+          { property: "Status", select: { equals: "Cancelled" } },
+        ],
+      },
+      sorts: [{ property: "Date", direction: "ascending" }],
+      page_size: 100,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-sessions] fetchCancelledSessionsInWindow failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  return data.results.map((page) => {
+    const props = page.properties;
+    return {
+      id: page.id as string,
+      title: readPlainText(props["Session"]),
+      date: props["Date"]?.date?.start ?? "",
+      startTime: readPlainText(props["Start time"]),
+      cancelReason: readSelect(props["Cancel Reason"]) ?? "",
+      cancelNote: readPlainText(props["Cancel Note"]),
+    };
+  });
+}
+
 /** Flip the session row's "Coach Reminder Sent" checkbox (pre-event cron dedup). */
 export async function markSessionCoachReminderSent(id: string): Promise<boolean> {
   const notionKey = process.env.NOTION_API_KEY;
