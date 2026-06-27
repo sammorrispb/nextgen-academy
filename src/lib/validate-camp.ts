@@ -20,8 +20,6 @@ export interface CampFormData {
   emergencyPhone: string;
   /** Optional allergies / medical notes. */
   allergies: string;
-  /** Required — parent accepts the liability waiver. */
-  waiverAccepted: boolean;
   /** TCPA opt-in for SMS notifications. Default false. */
   smsConsent: boolean;
 }
@@ -91,9 +89,8 @@ export function validateCampForm(
   } else if (data.emergencyPhone.replace(/\D/g, "").length < 10) {
     errors.emergencyPhone = "Please enter a 10-digit phone number";
   }
-  if (!data.waiverAccepted) {
-    errors.waiverAccepted = "Please accept the waiver to register";
-  }
+  // The liability waiver is now a one-time e-signature on file (gated at
+  // checkout by /api/checkout-camp), not a per-registration checkbox.
 
   return errors;
 }

@@ -16,7 +16,6 @@ function validForm(overrides: Partial<LeagueFormData> = {}): LeagueFormData {
     emergencyName: "Sam Backup",
     emergencyPhone: "240-555-0199",
     allergies: "",
-    waiverAccepted: true,
     smsConsent: false,
     ...overrides,
   };
@@ -39,10 +38,6 @@ test.describe("validateLeagueForm", () => {
 
   test("unknown price key is rejected", () => {
     expect(validateLeagueForm(validForm({ priceKey: "vip" })).priceKey).toBeTruthy();
-  });
-
-  test("waiver + season terms must be accepted", () => {
-    expect(validateLeagueForm(validForm({ waiverAccepted: false })).waiverAccepted).toBeTruthy();
   });
 
   test("emergency contact name + phone are required", () => {

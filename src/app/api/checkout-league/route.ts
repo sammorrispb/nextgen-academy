@@ -3,6 +3,12 @@ import { getStripe } from "@/lib/stripe";
 import { findSeasonBySlug, findPriceOption, findBand } from "@/data/leagues";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import { validateLeagueForm, type LeagueFormData } from "@/lib/validate-league";
+import {
+  hasWaiverOnFile,
+  buildWaiverSignUrl,
+  WAIVER_REQUIRED_CODE,
+  WAIVER_REQUIRED_MESSAGE,
+} from "@/lib/waiver-gate";
 
 // Season enrollment checkout — full-pay only, ENV-GATED. When the season's
 // Stripe price env var is unset (the default until the P0 launch gate clears),
@@ -40,6 +46,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       { error: "League enrollment isn't open yet — please check back soon." },
       { status: 503 },
+    );
+  }
+
+  // One-time waiver gate — must be on file before the player's first event.
+  if (!(await hasWaiverOnFile(data.email, data.phone))) {
+    return NextResponse.json(
+      {
+        error: WAIVER_REQUIRED_MESSAGE,
+        code: WAIVER_REQUIRED_CODE,
+        signUrl: buildWaiverSignUrl({
+          email: data.email,
+          parentName: data.parentName,
+          next: "/league",
+        }),
+      },
+      { status: 409 },
     );
   }
 
@@ -82,7 +104,8 @@ export async function POST(req: NextRequest) {
       emergency_phone: data.emergencyPhone,
       // Stripe metadata values cap at 500 chars; trim defensively.
       allergies: (data.allergies ?? "").slice(0, 480),
-      waiver_accepted: data.waiverAccepted ? "true" : "false",
+      // Gate above guarantees a signed one-time waiver is on file for this parent.
+      waiver_accepted: "true",
       sms_consent: data.smsConsent ? "true" : "false",
       sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
     },

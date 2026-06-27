@@ -36,7 +36,6 @@ function emptyForm(seasonSlug: string): LeagueFormData {
     emergencyName: "",
     emergencyPhone: "",
     allergies: "",
-    waiverAccepted: false,
     smsConsent: false,
   };
 }
@@ -89,6 +88,11 @@ export default function LeagueSeasonForm({ seasonSlug }: LeagueSeasonFormProps) 
         return;
       }
       const data = await res.json();
+      // One-time waiver gate: bounce to the prefilled sign page, then back here.
+      if (res.status === 409 && data.code === "waiver_required" && data.signUrl) {
+        window.location.href = data.signUrl as string;
+        return;
+      }
       if (!res.ok) {
         if (data.errors) {
           setErrors(data.errors);
@@ -297,34 +301,21 @@ export default function LeagueSeasonForm({ seasonSlug }: LeagueSeasonFormProps) 
           />
         </div>
 
-        {/* Waiver */}
-        <div>
-          <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              id="waiverAccepted"
-              type="checkbox"
-              className="mt-1 h-5 w-5 shrink-0 accent-ngpa-teal"
-              checked={form.waiverAccepted}
-              onChange={(e) => update("waiverAccepted", e.target.checked)}
-            />
-            <span className="text-sm text-ngpa-white/80">
-              I&rsquo;m this player&rsquo;s parent/guardian and I accept the{" "}
-              <a
-                href="/waiver"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
-              >
-                liability waiver and photo release
-              </a>{" "}
-              and the season terms. I understand the season runs rain or shine
-              with built-in make-up dates.
-            </span>
-          </label>
-          {errors.waiverAccepted && (
-            <p className={errorClass}>{errors.waiverAccepted}</p>
-          )}
-        </div>
+        {/* Waiver — one-time e-signature, gated at checkout (no per-season checkbox) */}
+        <p className="text-sm text-ngpa-white/70">
+          A one-time{" "}
+          <a
+            href="/waiver"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+          >
+            liability waiver and photo release
+          </a>{" "}
+          covers your player for every NGA program. If you haven&rsquo;t signed
+          yet, we&rsquo;ll ask you to before checkout. The season runs rain or
+          shine with built-in make-up dates.
+        </p>
 
         {/* SMS consent */}
         <div>

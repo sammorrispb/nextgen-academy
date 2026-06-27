@@ -24,7 +24,6 @@ function validForm(overrides: Partial<CampFormData> = {}): CampFormData {
     emergencyName: "Sam Backup",
     emergencyPhone: "240-555-0199",
     allergies: "",
-    waiverAccepted: true,
     smsConsent: false,
     ...overrides,
   };
@@ -108,10 +107,6 @@ test.describe("validateCampForm", () => {
     }
   });
 
-  test("waiver must be accepted", () => {
-    expect(validateCampForm(validForm({ waiverAccepted: false })).waiverAccepted).toBeTruthy();
-  });
-
   test("emergency contact name + phone are required", () => {
     const e = validateCampForm(validForm({ emergencyName: "", emergencyPhone: "" }));
     expect(e.emergencyName).toBeTruthy();
@@ -166,6 +161,5 @@ test.describe("validateCampForm", () => {
     expect(e.childBirthYear).toBeTruthy();
     expect(e.emergencyName).toBeTruthy();
     expect(e.emergencyPhone).toBeTruthy();
-    expect(e.waiverAccepted).toBeTruthy();
   });
 });
