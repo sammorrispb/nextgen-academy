@@ -63,7 +63,6 @@ export function bookingReminderHtml(input: ReminderInput): string {
       <li>Water bottle, packed</li>
       <li>Court shoes &mdash; no flat-soled sneakers</li>
       <li>Paddle if you have one. We have loaners.</li>
-      <li>Eat ~90 minutes before the start &mdash; nothing heavy</li>
     </ul>
 
     <div style="${s.actionCallout}">
@@ -121,7 +120,6 @@ export function bookingReminderText(input: ReminderTextInput): string {
     `- Water bottle, packed`,
     `- Court shoes (no flat-soled sneakers)`,
     `- Paddle if you have one. We have loaners.`,
-    `- Eat ~90 minutes before the start — nothing heavy`,
     "",
     cancelLine,
     "",
