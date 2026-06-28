@@ -68,7 +68,14 @@ export function waiverConfirmationHtml(input: WaiverConfirmationInput): string {
   ${sections}
 
   <div style="${s.footer}">
-    <p style="margin: 0; font-size: 12px; color: ${c.muted};">
+    <p style="margin: 0 0 14px; font-size: 14px; line-height: 1.6; color: ${c.text};">
+      That's the paperwork handled — now the fun part. See you on the court, ready
+      to work: better than yesterday, together.
+    </p>
+    <p style="margin: 0; font-size: 14px; font-weight: 700; color: ${c.text};">
+      Coach Sam · Next Gen Pickleball Academy
+    </p>
+    <p style="margin: 10px 0 0; font-size: 12px; color: ${c.muted};">
       Questions about this waiver? Just reply to this email.
     </p>
   </div>
@@ -92,6 +99,10 @@ export function waiverConfirmationText(input: WaiverConfirmationInput): string {
     WAIVER_INTRO,
     ``,
     sections,
+    ``,
+    `That's the paperwork handled — now the fun part. See you on the court, ready to work: better than yesterday, together.`,
+    ``,
+    `Coach Sam · Next Gen Pickleball Academy`,
     ``,
     `Questions about this waiver? Just reply to this email.`,
   ].join("\n");
