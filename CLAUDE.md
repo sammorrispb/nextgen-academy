@@ -143,6 +143,14 @@ User flow:
 
 The pre-2026-05-05 monthly subscription / blocks-cron model has been retired. Do not reintroduce per-month "blocks", `remindersSent[]`, or the `/api/cron/block-reminders` route.
 
+### One-time waiver (`/waiver` + `/waiver/sign` + pre-checkout gate)
+**Replaced the old per-event waiver checkbox (2026-06).** A parent now e-signs ONE liability/media waiver — it's stored to their profile (a dedicated Notion DB) and emailed to them, and is required before their child's first **paid** event.
+
+- **Waiver text** is a single source of truth in `src/data/waiver.ts` (`WAIVER_VERSION`, `WAIVER_SECTIONS`); the static `/waiver` page, the `/waiver/sign` page, and the confirmation email all render from it. Bump `WAIVER_VERSION` whenever the copy changes — it's stamped on every signed row.
+- **Signing**: `/waiver/sign` → `WaiverSignForm` → `POST /api/waiver-sign` (validate → rate-limit → guard `RESEND_API_KEY` → Notion dedup-by-email then create → Resend confirmation carrying the FULL waiver text, BCC admin → Open Brain `nga_waiver_signed`). Typed-legal-name signature + "I agree"; records name, signed-at, version, and signer IP. Idempotent: a re-sign no-ops (dedup by email). The waiver is **parent-scoped — no child fields are ever written**, so it stays off the minor-PII egress surface.
+- **Storage**: NGA Waivers Notion DB (`NOTION_WAIVERS_DB_ID`), one row per parent keyed on Parent Email (phone fallback). Helpers in `src/lib/notion-waivers.ts` (`findWaiverByEmail`, `createWaiver`, `hasWaiverOnFile`).
+- **The gate**: all four paid checkout routes (`/api/checkout`, `/api/checkout-camp`, `/api/checkout-league`, `/api/checkout-cluster`) call `hasWaiverOnFile(email, phone)` BEFORE creating the Stripe session. No waiver → `409 { code: "waiver_required", signUrl }`; the register forms catch this and redirect to `/waiver/sign` (prefilled), then the parent returns to re-register. `src/lib/waiver-gate.ts` standardizes the 409 contract. **Fail-open when `NOTION_WAIVERS_DB_ID` is unset or on a transient Notion error** (never blocks revenue); fail-closed once configured. Pinned by `e2e/invariant-waiver-gate.spec.ts` + `e2e/invariant-waiver-egress.spec.ts`. Existing-family policy: required at next registration (no backfill).
+
 ### Drop-in comms — scheduled jobs
 
 Vercel crons live in `vercel.json`. Auth = `Authorization: Bearer $CRON_SECRET` (Vercel auto-injects when invoking the scheduled job; manual `curl` needs the same header). All cron endpoints live under `/api/cron/*`. Per-template copy rules live in `BRAND_GUIDELINES.md` → `COMMS TEMPLATES`.
@@ -210,6 +218,7 @@ See `.env.example`. Categories:
 - `NOTION_API_KEY` — required for the public schedule and webhook DB writes.
 - `NOTION_SESSIONS_DB_ID` — NGA Sessions Schedule database ID (`3eed8a91-f328-4b63-a4aa-b890f133a80a`).
 - `NOTION_DROPINS_DB_ID` — NGA Drop-in Registrations database ID (`557f01d8-e4c6-47d9-a67b-f0817dd8724f`).
+- `NOTION_WAIVERS_DB_ID` — NGA Waivers DB (`8ff69033-db0b-4d96-a8df-ead6b6ac7682`); one signed one-time waiver per parent. Read by the pre-checkout waiver gate. UNSET = gate fails open (checkout never blocked); set it to enforce.
 - `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1TU4iSBpXOfTC961`.
 - `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret.
 - `STRIPE_DROPIN_PRICE_ID` — price ID for the single $20 NGA Drop-in slot product.
@@ -249,7 +258,7 @@ Full inventory + risk log: `docs/source-inventory.md`.
 **production** (full invariant-test coverage, fail-closed, alerting): drop-in funnel (schedule/checkout/webhook/cancel/crons), camps, crew autoreserve, weekly newsletter, coach + admin portals.
 **hardened** (gated + observed, lighter coverage): eval endpoints, notion-session-webhook, referral rewards.
 **prototype** (deliberately dark or staged; don't gold-plate): league (ships 503 until price env), clusters (staged pilot), coach polls/crew machinery.
-**show pony** (static; zero test investment): SEO city pages, schools/yellowball lead forms, waiver page.
+**show pony** (static; zero test investment): SEO city pages, schools/yellowball lead forms. (The waiver is no longer a static show-pony — the one-time e-sign flow + pre-checkout gate are invariant-tested; see "One-time waiver".)
 Promotion up the ladder requires: invariant tests first, then the hostile-review checklist, then Sam's sign-off.
 
 ## Working Loop: Investigate → Propose → Approve → Validate (IPAV)

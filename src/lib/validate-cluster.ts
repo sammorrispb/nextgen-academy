@@ -19,7 +19,6 @@ export interface ClusterFormData {
   emergencyName: string;
   emergencyPhone: string;
   allergies: string;
-  waiverAccepted: boolean;
   smsConsent: boolean;
   /** Opt-IN to public first-name display. Omitted/false = never shown. */
   displayConsent?: boolean;
@@ -73,9 +72,8 @@ export function validateClusterForm(
   if (!data.emergencyPhone?.trim()) {
     errors.emergencyPhone = "Emergency contact phone is required";
   }
-  if (data.waiverAccepted !== true) {
-    errors.waiverAccepted = "Please accept the waiver to register";
-  }
+  // The liability waiver is now a one-time e-signature on file (gated at
+  // checkout by /api/checkout-cluster), not a per-registration checkbox.
 
   return errors;
 }

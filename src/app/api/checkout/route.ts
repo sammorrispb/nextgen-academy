@@ -8,6 +8,12 @@ import {
   validateRsvpForm,
   type RsvpFormData,
 } from "@/lib/validate-rsvp";
+import {
+  hasWaiverOnFile,
+  buildWaiverSignUrl,
+  WAIVER_REQUIRED_CODE,
+  WAIVER_REQUIRED_MESSAGE,
+} from "@/lib/waiver-gate";
 
 const REGISTRATION_WINDOW_MS = REGISTRATION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
@@ -73,6 +79,24 @@ export async function POST(req: NextRequest) {
   if (sessionDate.getTime() < now - 24 * 60 * 60 * 1000) {
     return NextResponse.json(
       { error: "Session has already passed" },
+      { status: 409 },
+    );
+  }
+
+  // One-time waiver gate: a signed waiver must be on file before a child's
+  // first paid event. Parents without one are bounced to /waiver/sign (prefilled)
+  // and return to re-register. Fail-open when the waivers DB isn't configured.
+  if (!(await hasWaiverOnFile(data.email, data.phone))) {
+    return NextResponse.json(
+      {
+        error: WAIVER_REQUIRED_MESSAGE,
+        code: WAIVER_REQUIRED_CODE,
+        signUrl: buildWaiverSignUrl({
+          email: data.email,
+          parentName: data.parentName,
+          next: "/schedule",
+        }),
+      },
       { status: 409 },
     );
   }

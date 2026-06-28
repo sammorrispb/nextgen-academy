@@ -32,7 +32,11 @@
 | src/app/free-evaluation/page.tsx | page | 2026-05-30 | free eval funnel entry | high |
 | src/app/newsletter/page.tsx | page | 2026-05-24 | newsletter signup | high |
 | src/app/schools/page.tsx | page | 2026-05-24 | school-program lead capture | high |
-| src/app/waiver/page.tsx | page | 2026-06-03 | — (DOWNGRADE candidate: verify inbound links vs checkout-time consent) | med |
+| src/app/waiver/page.tsx | page | 2026-06-27 | static waiver text (renders src/data/waiver.ts) + sign CTA | low |
+| src/app/waiver/sign/page.tsx | page | 2026-06-27 | one-time waiver e-sign page | med |
+| src/app/api/waiver-sign/route.ts | route | 2026-06-27 | writes signed waiver → Notion + emails parent copy (parent-scoped, no child PII) | high |
+| src/lib/notion-waivers.ts | lib | 2026-06-27 | NGA Waivers DB read/write + hasWaiverOnFile gate read | high |
+| src/lib/waiver-gate.ts | lib | 2026-06-27 | standardizes the pre-checkout waiver 409 contract | med |
 | src/app/yellowball/inquiry/page.tsx | page | 2026-05-30 | Yellow Ball tournament-track inquiry (invite-only, 12+, 3.0+) | high |
 | src/app/admin/login/page.tsx | page | 2026-06-11 | admin magic-link login | high |
 | src/app/admin/(authed)/sessions/page.tsx | page | 2026-06-09 | admin sessions editor — writes Notion Sessions DB | high |
@@ -167,7 +171,8 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | coach portal + admin portal | MOUSE-CATCHER (internal) | only authed child-data readers; active through 06-12 |
 | clusters | PROTOTYPE→MOUSE-CATCHER | pilot live 06-11; staged rollout |
 | league | PROTOTYPE | ships dark by design (503 until price env) |
-| SEO city pages, schools, yellowball, waiver | SHOW PONY | static/lead-form only; waiver = downgrade candidate |
+| SEO city pages, schools, yellowball | SHOW PONY | static/lead-form only |
+| one-time waiver (sign flow + pre-checkout gate) | HARDENED | invariant-tested gate + egress; parent-scoped, fail-open-on-unconfigured |
 | api/analytics, open-brain-ingest | DOWNGRADE (best-effort) | telemetry; must never block payments |
 
 ## 7. SLOP-FREE ZONE (no edits without separate explicit approval; tests observe, never modify)

@@ -31,7 +31,6 @@ const VALID_FORM: ClusterFormData = {
   emergencyName: "Alex Backup",
   emergencyPhone: "301-555-0101",
   allergies: "",
-  waiverAccepted: true,
   smsConsent: false,
   displayConsent: false,
 };
@@ -183,8 +182,7 @@ test.describe("cluster form validation", () => {
     expect(validateClusterForm({ ...VALID_FORM, ballLevel: "Yellow" }).ballLevel).toBeUndefined();
   });
 
-  test("waiver is required; missing contact fields are each named", () => {
-    expect(validateClusterForm({ ...VALID_FORM, waiverAccepted: false }).waiverAccepted).toBeTruthy();
+  test("missing contact fields are each named", () => {
     const empty = validateClusterForm({});
     for (const key of [
       "clusterSlug",

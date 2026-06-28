@@ -79,7 +79,17 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      const json = (await res.json()) as { url?: string; error?: string };
+      const json = (await res.json()) as {
+        url?: string;
+        error?: string;
+        code?: string;
+        signUrl?: string;
+      };
+      // One-time waiver gate: bounce to the prefilled sign page, then back here.
+      if (res.status === 409 && json.code === "waiver_required" && json.signUrl) {
+        window.location.href = json.signUrl;
+        return;
+      }
       if (!res.ok || !json.url) {
         setServerError(json.error ?? "Something went wrong. Please try again.");
         setSubmitting(false);
