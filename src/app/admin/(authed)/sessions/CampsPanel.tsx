@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AdminCampCamper } from "@/lib/admin-camp-roster";
+import type { RefundOption } from "@/lib/refund-amount";
 
 export interface CampSummary {
   slug: string;
@@ -17,11 +18,9 @@ interface CampPanel {
   campers?: AdminCampCamper[];
 }
 
-type RefundMode = "full" | "none" | "partial";
-
 interface CancelState {
   open?: boolean;
-  mode?: RefundMode;
+  mode?: RefundOption;
   amount?: string;
   busy?: boolean;
   msg?: string;
@@ -78,7 +77,7 @@ export default function CampsPanel({ camps }: { camps: CampSummary[] }) {
   async function doCancel(slug: string, camper: AdminCampCamper) {
     const id = camper.stripeSessionId;
     const c = cancel[id] || {};
-    const mode: RefundMode = c.mode ?? "full";
+    const mode: RefundOption = c.mode ?? "full";
     let amountCents: number | undefined;
     if (mode === "partial") {
       const dollars = Number(c.amount);
@@ -153,7 +152,7 @@ export default function CampsPanel({ camps }: { camps: CampSummary[] }) {
                     <ul className="divide-y divide-ngpa-slate/40">
                       {p.campers.map((r) => {
                         const c = cancel[r.stripeSessionId] || {};
-                        const mode: RefundMode = c.mode ?? "full";
+                        const mode: RefundOption = c.mode ?? "full";
                         return (
                           <li key={r.stripeSessionId} className="py-3 first:pt-0 last:pb-0">
                             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
@@ -195,7 +194,7 @@ export default function CampsPanel({ camps }: { camps: CampSummary[] }) {
                                   <select
                                     className={`${inputCls} max-w-[10rem]`}
                                     value={mode}
-                                    onChange={(e) => setCancelState(r.stripeSessionId, { mode: e.target.value as RefundMode })}
+                                    onChange={(e) => setCancelState(r.stripeSessionId, { mode: e.target.value as RefundOption })}
                                   >
                                     <option value="full">Full refund</option>
                                     <option value="none">No refund</option>
@@ -213,7 +212,7 @@ export default function CampsPanel({ camps }: { camps: CampSummary[] }) {
                                   <button
                                     onClick={() => doCancel(camp.slug, r)}
                                     disabled={c.busy}
-                                    className="rounded-full bg-red-500 text-white font-black px-4 py-2 text-sm disabled:opacity-40 hover:opacity-90 transition-opacity"
+                                    className="rounded-full bg-red-500 text-white font-black min-h-12 px-4 py-2 text-sm disabled:opacity-40 hover:opacity-90 transition-opacity"
                                   >
                                     {c.busy ? "Cancelling…" : "Confirm"}
                                   </button>

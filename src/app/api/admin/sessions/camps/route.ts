@@ -32,22 +32,18 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // The client renders title/week from its own static CAMPS props and keys on
+  // slug, so the response carries only slug + the live roster (+ a soft error
+  // flag), not the static camp metadata.
   const camps = await Promise.all(
     targets.map(async (camp) => {
-      const base = {
-        slug: camp.slug,
-        title: camp.title,
-        weekLabel: camp.weekLabel,
-        startDate: camp.startDate,
-        endDate: camp.endDate,
-      };
       try {
         const { entries } = await collectPaidCampSessions(camp.slug, stripe);
         const campers = entries.map(toAdminCampCamper);
-        return { ...base, registered: campers.length, campers };
+        return { slug: camp.slug, registered: campers.length, campers };
       } catch {
         // One camp's Stripe read failing shouldn't blank the whole section.
-        return { ...base, registered: 0, campers: [], error: true as const };
+        return { slug: camp.slug, registered: 0, campers: [], error: true as const };
       }
     }),
   );
