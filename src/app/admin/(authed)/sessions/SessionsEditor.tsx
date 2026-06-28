@@ -50,6 +50,53 @@ const STATUS_COLOR: Record<string, string> = {
   Passed: "text-amber-300 border-amber-400/40 bg-amber-400/10",
 };
 
+const LEVEL_ORDER = ["Red", "Orange", "Green", "Yellow"] as const;
+
+const LEVEL_DOT: Record<string, string> = {
+  Red: "bg-ngpa-skill-red",
+  Orange: "bg-ngpa-skill-orange",
+  Green: "bg-ngpa-skill-green",
+  Yellow: "bg-ngpa-skill-yellow",
+};
+
+/** Bucket date-ascending rows into ordered day groups (encounter order kept). */
+function groupByDate(
+  rows: AdminSession[],
+): { date: string; rows: AdminSession[] }[] {
+  const groups: { date: string; rows: AdminSession[] }[] = [];
+  const index = new Map<string, number>();
+  for (const r of rows) {
+    let i = index.get(r.date);
+    if (i === undefined) {
+      i = groups.length;
+      index.set(r.date, i);
+      groups.push({ date: r.date, rows: [] });
+    }
+    groups[i].rows.push(r);
+  }
+  return groups;
+}
+
+/** Per-level registered totals for a day, canonical levels first. */
+function levelSummary(
+  dayRows: AdminSession[],
+): { level: string; registered: number }[] {
+  const totals = new Map<string, number>();
+  for (const r of dayRows) {
+    const key = r.level || "No level";
+    totals.set(key, (totals.get(key) ?? 0) + (r.registered || 0));
+  }
+  const ordered: { level: string; registered: number }[] = [];
+  for (const lvl of LEVEL_ORDER) {
+    if (totals.has(lvl)) {
+      ordered.push({ level: lvl, registered: totals.get(lvl)! });
+      totals.delete(lvl);
+    }
+  }
+  for (const [level, registered] of totals) ordered.push({ level, registered });
+  return ordered;
+}
+
 interface Registrant {
   id: string;
   url: string;
@@ -101,6 +148,12 @@ export default function SessionsEditor({
   );
   const [registrants, setRegistrants] = useState<Record<string, RegistrantPanel>>({});
   const [action, setAction] = useState<Record<string, ActionPanel>>({});
+  // Day groups collapse by default; the day holding the ?focus=<id> row opens so
+  // the existing scroll-to-row deep link still lands.
+  const [openDays, setOpenDays] = useState<Record<string, boolean>>(() => {
+    const f = focusId ? initial.find((s) => s.id === focusId) : undefined;
+    return f ? { [f.date]: true } : {};
+  });
 
   function setAct(id: string, patch: Partial<ActionPanel>) {
     setAction((m) => ({ ...m, [id]: { ...m[id], ...patch } }));
@@ -285,9 +338,7 @@ export default function SessionsEditor({
 
   if (!count) return <p className="text-ngpa-white/60 text-sm">No upcoming sessions found.</p>;
 
-  return (
-    <div className="space-y-4">
-      {rows.map((row) => {
+  const renderRow = (row: AdminSession) => {
         const st = state[row.id] || {};
         const reg = registrants[row.id] || { open: false };
         const act = action[row.id] || {};
@@ -696,6 +747,62 @@ export default function SessionsEditor({
                     </span>
                   )}
                 </div>
+              </div>
+            )}
+          </div>
+        );
+  };
+
+  const groups = groupByDate(rows);
+
+  return (
+    <div className="space-y-3">
+      {groups.map(({ date, rows: dayRows }) => {
+        const open = openDays[date] ?? false;
+        const summary = levelSummary(dayRows);
+        const total = dayRows.reduce((n, r) => n + (r.registered || 0), 0);
+        return (
+          <div
+            key={date}
+            className="rounded-2xl border border-ngpa-slate/50 bg-ngpa-panel/30"
+          >
+            <button
+              onClick={() => setOpenDays((m) => ({ ...m, [date]: !open }))}
+              aria-expanded={open}
+              className="w-full flex flex-wrap items-center gap-x-3 gap-y-2 px-4 sm:px-5 py-3 text-left min-h-12"
+            >
+              <span className="font-heading font-black text-ngpa-teal">
+                {prettyDate(date)}
+              </span>
+              <span className="text-[11px] text-ngpa-white/45">
+                {dayRows.length} session{dayRows.length === 1 ? "" : "s"}
+              </span>
+              <span className="flex flex-wrap items-center gap-2">
+                {summary.map((s) => (
+                  <span
+                    key={s.level}
+                    className="inline-flex items-center gap-1 text-[11px] font-bold text-ngpa-white/70"
+                  >
+                    <span
+                      aria-hidden
+                      className={`h-2 w-2 rounded-full ${LEVEL_DOT[s.level] ?? "bg-ngpa-slate"}`}
+                    />
+                    {s.level} {s.registered}
+                  </span>
+                ))}
+              </span>
+              <span className="ml-auto flex items-center gap-2 text-sm text-ngpa-white/70">
+                <span>
+                  <b className="text-ngpa-white">{total}</b> registered
+                </span>
+                <span aria-hidden className="text-xs">
+                  {open ? "▲" : "▼"}
+                </span>
+              </span>
+            </button>
+            {open && (
+              <div className="space-y-4 px-3 sm:px-4 pb-4">
+                {dayRows.map((row) => renderRow(row))}
               </div>
             )}
           </div>
