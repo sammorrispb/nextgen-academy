@@ -8,7 +8,7 @@ import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { signReferralToken } from "@/lib/referral-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
-import { fetchApprovedNewsletterDrafts } from "@/lib/notion-newsletter-drafts";
+import { fetchApprovedNewsletterDrafts, stampDraftsSentAt } from "@/lib/notion-newsletter-drafts";
 import { fetchWeatherForSessions, type DayWeather } from "@/lib/weather";
 import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
@@ -376,6 +376,17 @@ export async function GET(req: NextRequest) {
     for (const row of newsRows) {
       const ok = await setNewsStatus(row.pageId, "Used");
       if (ok) newsMarkedUsed++;
+    }
+    // Stamp "Sent At" on every draft row that shipped so the Notion DB shows
+    // exactly when each issue went out (fire-and-forget, never throws).
+    if (newsletterDrafts.length > 0) {
+      const sentDate = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/New_York",
+      }).format(new Date());
+      await stampDraftsSentAt(
+        newsletterDrafts.map((d) => d.pageId),
+        sentDate,
+      );
     }
   }
 

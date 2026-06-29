@@ -361,6 +361,40 @@ export async function fetchApprovedNewsletterDrafts(): Promise<
 }
 
 /**
+ * Stamp "Sent At" on each draft row that shipped in this broadcast. Fire-and-
+ * forget: a Notion write failure is logged but never throws so the cron's
+ * response is unaffected. Date is YYYY-MM-DD (ET-anchored by the caller).
+ */
+export async function stampDraftsSentAt(
+  pageIds: string[],
+  sentDate: string,
+): Promise<void> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey || !pageIds.length) return;
+  await Promise.allSettled(
+    pageIds.map((id) =>
+      fetch(`${NOTION_API}/pages/${id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${notionKey}`,
+          "Content-Type": "application/json",
+          "Notion-Version": NOTION_VERSION,
+        },
+        body: JSON.stringify({
+          properties: { "Sent At": { date: { start: sentDate } } },
+        }),
+      }).then((r) => {
+        if (!r.ok)
+          console.warn(
+            `[notion-newsletter-drafts] stampSentAt failed for ${id}`,
+            r.status,
+          );
+      }),
+    ),
+  );
+}
+
+/**
  * Return the most recent Approved newsletter draft within the last 7 days, or
  * null if none. Retained for callers/tests that want a single row; the cron
  * uses fetchApprovedNewsletterDrafts (plural) so all approved rows ship. Fails
