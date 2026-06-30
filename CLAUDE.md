@@ -2,6 +2,38 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Values & Growth Mindset (read first — these drive every decision)
+
+Next Gen exists to grow young players, so a **growth mindset** isn't just our coaching
+philosophy — it's how we build the site too. Kids develop through effort, encouragement,
+and getting another rep, not through being labeled; the product follows the same rule.
+Every level (Red/Orange/Green/Yellow) is a step on one ladder, never a ceiling, and the
+"welcomes all four" group-session policy is that belief in code. When something misses —
+a broken funnel, a low-converting page, a cron that didn't fire — treat it as the next
+rep, not a verdict: default to "not yet," ship a slice, measure, improve. The long-term
+vision is judged the same way: does this help kids and families *grow* over time?
+
+Five values steer the judgment calls the rules below can't make for us:
+
+- **Inclusion** — Every kid 6–16 of every level is welcome; pricing is teased gently so
+  cost never gates the door, and the all-levels on-ramp means no child is turned away for
+  being "not ready." Copy invites, never intimidates.
+- **Ethics** — These are minors. The COPPA-aligned minor-data governance below is
+  non-negotiable: parents control everything, comms go to parents (never kids), collect
+  the minimum, honest pricing (no quoting a price that doesn't exist yet), no dark
+  patterns, no DD/CR re-introduction.
+- **Skills** — The whole point is real skill development for kids — and for this codebase:
+  prefer the durable approach, leave the tree more maintainable than you found it.
+- **Excellence** — `npm run build` green is the floor, not the bar. Invariant tests
+  first on payments / auth / minor-PII; protect the Slop-Free Zones; ship correct, not
+  just shippable (EASE = Excellence).
+- **Attitude** — Coach-voice everywhere: warm, encouraging, generous, low-ego. Assume
+  good faith, document the *why*, and leave the next session better off.
+
+When a decision isn't covered by a rule below, choose the path that best honors these
+values and the growth-mindset lens — and for anything touching payments, auth, or minor
+PII, run it through the IPAV loop.
+
 ## What This Is
 **NOTE (2026-05-01):** This site was decoupled from Dill Dinkers / CourtReserve on 2026-05-01. No DD/CR references should be re-introduced.
 **2026-05-02:** Hub coupling fully removed (funnel POSTs, inbound_leads forward, the legacy Hub URL helper, and the /api/funnel-track proxy are all gone).
