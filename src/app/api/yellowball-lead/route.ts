@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { c, s } from "@/lib/email/brand";
 import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
+import { evalQuestionsCardHtml } from "@/lib/email/eval-questions";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { isFirstTimeParent } from "@/lib/notion-player-lookup";
 import { site } from "@/data/site";
@@ -152,8 +153,10 @@ export async function POST(request: NextRequest) {
   </h1>
   <p style="font-size: 15px; line-height: 1.6;">
     Thanks for the Yellow Ball inquiry. A coach will reach out within 24 hours
-    to set up ${childName.split(" ")[0]}&rsquo;s eval.
+    to set up ${childName.split(" ")[0]}&rsquo;s eval &mdash; and a couple of
+    quick details will help us move faster.
   </p>
+  ${evalQuestionsCardHtml(childName.split(" ")[0])}
   <div style="${s.card}">
     <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">About Yellow Ball</p>
     <p style="margin: 0; font-size: 14px; line-height: 1.6;">
