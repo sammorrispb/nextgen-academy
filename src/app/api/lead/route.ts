@@ -7,6 +7,7 @@ import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import { c, s } from "@/lib/email/brand";
 import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
+import { evalQuestionsCardHtml } from "@/lib/email/eval-questions";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -327,8 +328,9 @@ export async function POST(request: NextRequest) {
   </h1>
   <p style="font-size: 15px; line-height: 1.6;">Hi ${body.parentName},</p>
   <p style="font-size: 15px; line-height: 1.6;">
-    Thanks for your interest in Next Gen Pickleball Academy! We\u2019ll be in touch within 24 hours to help find the right group for your child.
+    Thanks for your interest in Next Gen Pickleball Academy! We\u2019ll be in touch within 24 hours to help find the right group for your child &mdash; and a couple of quick details will help us move faster.
   </p>
+  ${evalQuestionsCardHtml(kids.length === 1 ? kids[0].name.split(" ")[0] : undefined)}
   <div style="${s.card}">
     <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">In the meantime</p>
     <p style="margin: 0; font-size: 15px; line-height: 1.6;">
