@@ -3,6 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { CAMPS, CAMP_OPTIONS, findCampBySlug, type Camp } from "@/data/camps";
 import {
   upcomingCampForReminder,
+  campsNeedingRosterSync,
   formatCampDayLong,
   formatCampWeekday,
   resolveCampWhere,
@@ -86,15 +87,35 @@ function todayET(): string {
   }).format(new Date());
 }
 
-function resolveCamp(opts: RunCampReminderOpts): Camp | null {
+function resolveCamp(today: string, opts: RunCampReminderOpts): Camp | null {
   if (opts.slug?.trim()) return findCampBySlug(opts.slug.trim()) ?? null;
-  return upcomingCampForReminder(opts.today ?? todayET(), CAMPS);
+  return upcomingCampForReminder(today, CAMPS);
 }
 
 export async function runCampReminder(
   opts: RunCampReminderOpts = {},
 ): Promise<RunCampReminderResult> {
-  const camp = resolveCamp(opts);
+  const today = opts.today ?? todayET();
+  const stripe = opts.stripe ?? getStripe();
+
+  // Backstop roster sync: independent of the exact-day reminder match below and
+  // of RESEND_API_KEY (roster sync has nothing to do with email — that gate used
+  // to sit in front of the sync too, which meant a misconfigured Resend key
+  // silently stopped roster sync as well). Runs for every camp whose
+  // registration window is still live, so a daily cron tick catches anything
+  // the webhook write-through (handleCampCheckout → syncCampRoster) missed.
+  // Skipped on dryRun to honor its "no Notion writes" contract.
+  if (!opts.dryRun) {
+    for (const c of campsNeedingRosterSync(today, CAMPS)) {
+      try {
+        await syncCampRoster(c.slug, stripe);
+      } catch (err) {
+        console.error("[camp-reminder] backstop roster sync threw", c.slug, err);
+      }
+    }
+  }
+
+  const camp = resolveCamp(today, opts);
   if (!camp) {
     return {
       ok: true,
@@ -106,7 +127,6 @@ export async function runCampReminder(
     };
   }
 
-  const stripe = opts.stripe ?? getStripe();
   const where = resolveCampWhere(camp);
   const startDayLong = formatCampDayLong(camp.startDate);
   const weekday = formatCampWeekday(camp.startDate);
