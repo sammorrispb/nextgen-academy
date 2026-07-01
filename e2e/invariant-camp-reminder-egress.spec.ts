@@ -126,10 +126,10 @@ test.describe("camp reminder — child PII egress (Friday-before-camp path)", ()
       stripe: stripeStub([campSession({ id: "cs_camp_backstop_1" })]),
     });
 
-    expect(result.ok).toBe(true);
-    if (result.ok && "skipped" in result) {
-      expect(result.skipped).toBe(true); // no exact-day reminder match today
-    }
+    // Asserted unconditionally (not gated behind an `if`) so this test fails
+    // loudly, rather than silently passing, if camps.ts data ever drifts such
+    // that 2026-06-30 becomes an exact reminder-day match.
+    expect(result).toMatchObject({ ok: true, skipped: true });
     const created = stub
       .callsTo("api.notion.com/v1/pages")
       .filter((c) => c.body.includes("cs_camp_backstop_1"));
@@ -179,6 +179,54 @@ test.describe("camp reminder — child PII egress (Friday-before-camp path)", ()
       expect(stub.callsTo("api.notion.com")).not.toHaveLength(0);
     } finally {
       process.env.RESEND_API_KEY = saved;
+    }
+  });
+
+  test("the exact-day reminder match does not re-scan Stripe for the same slug twice", async () => {
+    // june-29 is always inside its own campsNeedingRosterSync window on the one
+    // day upcomingCampForReminder matches it (startDate-3 >= startDate-7), so
+    // the backstop loop and the live-send path used to both call syncCampRoster
+    // for the identical slug — two full Stripe checkout-session scans back to
+    // back. The live path must reuse the backstop's result instead.
+    let listCalls = 0;
+    const countingStripe: CampSessionSource = {
+      checkout: {
+        sessions: {
+          list: () => {
+            listCalls += 1;
+            return (async function* () {
+              yield campSession();
+            })();
+          },
+        },
+      },
+    };
+    stub
+      .on("databases/db-camp-roster-test/query", { results: [] })
+      .on("api.notion.com/v1/pages", { id: "notion-ok" })
+      .on("api.resend.com", { id: "email_test" })
+      .install();
+
+    await runCampReminder({ slug: "june-29", today: "2026-06-26", stripe: countingStripe });
+
+    expect(listCalls).toBe(1);
+  });
+
+  test("a missing STRIPE_SECRET_KEY degrades to a clean refusal, not an uncaught throw", async () => {
+    // getStripe() throws synchronously when STRIPE_SECRET_KEY is unset. The
+    // backstop roster-sync loop now runs on every invocation (not just the one
+    // Friday-before-camp day), so this must stay a graceful {ok:false} result —
+    // not a hard crash on every single daily cron tick. No `stripe` override is
+    // passed here on purpose, so the real (unconfigured) getStripe() runs.
+    const saved = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+    stub.install(); // any fetch at all would throw — proves nothing egresses
+    try {
+      const result = await runCampReminder({ today: "2026-06-30" });
+      expect(result).toMatchObject({ ok: false, reason: "stripe_unconfigured" });
+      expect(stub.calls).toHaveLength(0);
+    } finally {
+      process.env.STRIPE_SECRET_KEY = saved;
     }
   });
 });

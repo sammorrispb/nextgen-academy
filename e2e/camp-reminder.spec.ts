@@ -138,19 +138,22 @@ test.describe("camp-reminder schedule helpers", () => {
 
   // Backstop for the Notion Camp Roster read-model — unlike
   // upcomingCampForReminder's single-day match, this covers a whole window
-  // (startDate - 7 days through endDate) so a daily cron catches a checkout
-  // completed after the one-shot Friday reminder already ran (the bug that
-  // dropped Logan/Louis from the june-29 roster on 2026-06-30).
-  test("campsNeedingRosterSync includes a camp from a week before it starts through its last day", () => {
-    // june-29: startDate 2026-06-29, endDate 2026-07-02 → window [06-22, 07-02].
+  // (startDate - 7 days through the rain/makeup day) so a daily cron catches a
+  // checkout completed after the one-shot Friday reminder already ran (the bug
+  // that dropped Logan/Louis from the june-29 roster on 2026-06-30) — including
+  // a checkout completed on the makeup day itself.
+  test("campsNeedingRosterSync includes a camp from a week before it starts through its makeup day", () => {
+    // june-29: startDate 2026-06-29, endDate 2026-07-02, makeupDate 2026-07-03
+    // → window [06-22, 07-03].
     expect(campsNeedingRosterSync("2026-06-22", CAMPS).map((c) => c.slug)).toEqual(["june-29"]);
     expect(campsNeedingRosterSync("2026-06-30", CAMPS).map((c) => c.slug)).toEqual(["june-29"]);
     expect(campsNeedingRosterSync("2026-07-02", CAMPS).map((c) => c.slug)).toEqual(["june-29"]);
+    expect(campsNeedingRosterSync("2026-07-03", CAMPS).map((c) => c.slug)).toEqual(["june-29"]);
   });
 
   test("campsNeedingRosterSync excludes a camp just outside its window on either edge", () => {
     expect(campsNeedingRosterSync("2026-06-21", CAMPS).map((c) => c.slug)).not.toContain("june-29");
-    expect(campsNeedingRosterSync("2026-07-03", CAMPS).map((c) => c.slug)).not.toContain("june-29");
+    expect(campsNeedingRosterSync("2026-07-04", CAMPS).map((c) => c.slug)).not.toContain("june-29");
   });
 
   test("campsNeedingRosterSync returns [] when no camp's window is live", () => {

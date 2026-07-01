@@ -682,8 +682,12 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
     // so a checkout completed after that day would otherwise never get a roster
     // row. syncCampRoster re-scans all currently-paid sessions for the slug and
     // is idempotent on Stripe Session ID, so this is safe to call on every
-    // checkout regardless of cron timing.
-    syncCampRoster(campSlug, getStripe()),
+    // checkout regardless of cron timing. Notion-response failures already
+    // self-log inside syncCampRoster; this catch only covers a lower-level
+    // throw (network/DNS/parse) that would otherwise settle silently here.
+    syncCampRoster(campSlug, getStripe()).catch((err) => {
+      console.error("[stripe-webhook] camp roster sync threw", campSlug, err);
+    }),
     ingestToOpenBrain({
       business: "nga",
       source: "nga_summer_camp",

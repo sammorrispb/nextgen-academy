@@ -35,15 +35,16 @@ export function upcomingCampForReminder(
  * if that write ever fails silently (Notion outage, dropped webhook delivery),
  * nothing else re-syncs it — upcomingCampForReminder only matches one exact
  * calendar day per camp. This returns every camp whose registration window is
- * still "live" (from a week before it starts through its last day), so a daily
- * cron tick gets a real chance to catch anything the webhook missed. Deliberately
+ * still "live" (from a week before it starts through its rain/makeup day), so a
+ * daily cron tick gets a real chance to catch anything the webhook missed —
+ * including a checkout completed on the makeup day itself. Deliberately
  * decoupled from the reminder EMAIL gate above — this only widens roster-sync
  * coverage, it never triggers a new email send.
  */
 export function campsNeedingRosterSync(todayIso: string, camps: Camp[]): Camp[] {
   return camps.filter((camp) => {
     const windowStart = addDaysIso(camp.startDate, -7);
-    return todayIso >= windowStart && todayIso <= camp.endDate;
+    return todayIso >= windowStart && todayIso <= camp.makeupDate;
   });
 }
 
