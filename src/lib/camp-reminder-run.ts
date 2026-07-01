@@ -3,6 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { CAMPS, CAMP_OPTIONS, findCampBySlug, type Camp } from "@/data/camps";
 import {
   upcomingCampForReminder,
+  campsNeedingRosterSync,
   formatCampDayLong,
   formatCampWeekday,
   resolveCampWhere,
@@ -13,6 +14,7 @@ import {
   fetchCampRosterForReminder,
   markCampReminderSent,
   type CampSessionSource,
+  type SyncCampRosterResult,
 } from "@/lib/notion-camp-roster";
 import {
   campReminderHtml,
@@ -78,7 +80,7 @@ export type RunCampReminderResult =
       sent: number;
       failed: number;
     }
-  | { ok: false; reason: "resend_unconfigured"; message: string };
+  | { ok: false; reason: "resend_unconfigured" | "stripe_unconfigured"; message: string };
 
 function todayET(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -86,15 +88,52 @@ function todayET(): string {
   }).format(new Date());
 }
 
-function resolveCamp(opts: RunCampReminderOpts): Camp | null {
+function resolveCamp(today: string, opts: RunCampReminderOpts): Camp | null {
   if (opts.slug?.trim()) return findCampBySlug(opts.slug.trim()) ?? null;
-  return upcomingCampForReminder(opts.today ?? todayET(), CAMPS);
+  return upcomingCampForReminder(today, CAMPS);
 }
 
 export async function runCampReminder(
   opts: RunCampReminderOpts = {},
 ): Promise<RunCampReminderResult> {
-  const camp = resolveCamp(opts);
+  const today = opts.today ?? todayET();
+  let stripe: CampSessionSource;
+  try {
+    stripe = opts.stripe ?? getStripe();
+  } catch (err) {
+    // getStripe() throws if STRIPE_SECRET_KEY is unset. That used to only
+    // matter on the one Friday-before-camp day; now the backstop loop below
+    // runs on every invocation, so a misconfigured key must still degrade to
+    // a clean refusal rather than an uncaught throw on every single cron tick.
+    console.error("[camp-reminder] Stripe client unavailable", err);
+    return {
+      ok: false,
+      reason: "stripe_unconfigured",
+      message: "STRIPE_SECRET_KEY is not configured — refusing to run",
+    };
+  }
+
+  // Backstop roster sync: independent of the exact-day reminder match below and
+  // of RESEND_API_KEY (roster sync has nothing to do with email — that gate used
+  // to sit in front of the sync too, which meant a misconfigured Resend key
+  // silently stopped roster sync as well). Runs for every camp whose
+  // registration window is still live, so a daily cron tick catches anything
+  // the webhook write-through (handleCampCheckout → syncCampRoster) missed.
+  // Skipped on dryRun to honor its "no Notion writes" contract. Results are
+  // kept per-slug so the live-send path below reuses today's Friday-match sync
+  // instead of re-scanning the same slug a second time.
+  const backstopSynced = new Map<string, SyncCampRosterResult>();
+  if (!opts.dryRun) {
+    for (const c of campsNeedingRosterSync(today, CAMPS)) {
+      try {
+        backstopSynced.set(c.slug, await syncCampRoster(c.slug, stripe));
+      } catch (err) {
+        console.error("[camp-reminder] backstop roster sync threw", c.slug, err);
+      }
+    }
+  }
+
+  const camp = resolveCamp(today, opts);
   if (!camp) {
     return {
       ok: true,
@@ -106,7 +145,6 @@ export async function runCampReminder(
     };
   }
 
-  const stripe = opts.stripe ?? getStripe();
   const where = resolveCampWhere(camp);
   const startDayLong = formatCampDayLong(camp.startDate);
   const weekday = formatCampWeekday(camp.startDate);
@@ -172,7 +210,11 @@ export async function runCampReminder(
   }
 
   // LIVE: sync the roster from Stripe, then send to rows not yet reminded.
-  const synced = await syncCampRoster(camp.slug, stripe);
+  // The backstop loop above already synced this slug (it's always inside its
+  // own window on this exact-day-match run) — reuse that result instead of
+  // re-scanning the same slug a second time; only sync fresh if the backstop
+  // somehow skipped/failed it.
+  const synced = backstopSynced.get(camp.slug) ?? (await syncCampRoster(camp.slug, stripe));
   let recipients = await fetchCampRosterForReminder(camp.slug);
   if (opts.only?.length) {
     const allow = new Set(opts.only.map((e) => e.trim().toLowerCase()));

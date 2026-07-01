@@ -30,6 +30,7 @@ import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import { findCampBySlug } from "@/data/camps";
 import { buildCampConfirmationEmail } from "@/lib/email/camp-confirmation";
+import { syncCampRoster } from "@/lib/notion-camp-roster";
 import {
   findProcessedEvent,
   recordProcessedEvent,
@@ -635,6 +636,7 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
   const optionHours = metaString(m, "option_hours");
   const campStart = metaString(m, "camp_start");
   const publicArea = metaString(m, "public_area");
+  const campSlug = metaString(m, "camp_slug");
   const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
 
   // Idempotency: camp has no roster row of its own, so a redelivered 200'd event
@@ -674,6 +676,17 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
       childBirthYear,
       sessionDate: campStart,
       location: metaString(m, "session_location") || publicArea,
+    }),
+    // Write-through the Notion Camp Roster row here too — the Friday-before-camp
+    // cron (camp-reminder-run.ts) only ever targets a slug on ONE calendar day,
+    // so a checkout completed after that day would otherwise never get a roster
+    // row. syncCampRoster re-scans all currently-paid sessions for the slug and
+    // is idempotent on Stripe Session ID, so this is safe to call on every
+    // checkout regardless of cron timing. Notion-response failures already
+    // self-log inside syncCampRoster; this catch only covers a lower-level
+    // throw (network/DNS/parse) that would otherwise settle silently here.
+    syncCampRoster(campSlug, getStripe()).catch((err) => {
+      console.error("[stripe-webhook] camp roster sync threw", campSlug, err);
     }),
     ingestToOpenBrain({
       business: "nga",
