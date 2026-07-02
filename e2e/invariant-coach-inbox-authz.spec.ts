@@ -163,6 +163,22 @@ test.describe("F2/F6 — shared-basis wiring pins", () => {
   });
 });
 
+test.describe("verification residues — wiring pins", () => {
+  test("deadline copy is rendered FROM the fire (DST-correct), never hardcoded", () => {
+    const page = pageSrc();
+    expect(page).toContain("formatNewsletterDeadline(nextNewsletterFire(");
+    // The stale hardcoded wall time must not resurface anywhere on the page.
+    expect(page).not.toMatch(/6:00\s?PM|6pm/i);
+  });
+
+  test("news triage anchors go through the scheme check (newsLinkHref)", () => {
+    const page = pageSrc();
+    expect(page).toContain("newsLinkHref(");
+    // No bare scraper-URL anchor: every href on the news rows is the checked one.
+    expect(page).not.toContain("href={n.url}");
+  });
+});
+
 // Behavioral (offline, FetchStub): the approve gate must actually STOP the
 // status write, not just exist in the source — a neutered guard (e.g.
 // `if (false && …)`) passes a source pin but fails these.

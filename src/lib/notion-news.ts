@@ -6,11 +6,22 @@
  */
 
 import type { RawNewsItem } from "@/lib/news-scraper";
+import { isSafeHref } from "@/lib/notion-newsletter-drafts";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
 export type NewsStatus = "New" | "Approved" | "Used" | "Rejected";
+
+/**
+ * Scraper-sourced URLs are untrusted input rendered as anchors in the inbox
+ * triage queue — same scheme-allowlist posture as the draft renderer
+ * (isSafeHref: http/https/mailto only). Null = render plain text, no anchor.
+ * Pinned by e2e/coach-inbox.spec.ts.
+ */
+export function newsLinkHref(url: string): string | null {
+  return url && isSafeHref(url) ? url : null;
+}
 
 export interface NewsRow {
   pageId: string;

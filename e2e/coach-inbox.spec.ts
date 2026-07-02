@@ -29,7 +29,11 @@ import {
   CREW_DECISION_TO_STATUS,
   type InboxQueues,
 } from "../src/lib/coach-inbox";
-import { buildNewNewsQuery, fetchNewNews } from "../src/lib/notion-news";
+import {
+  buildNewNewsQuery,
+  fetchNewNews,
+  newsLinkHref,
+} from "../src/lib/notion-news";
 import {
   blocksToHtml,
   blocksToText,
@@ -38,6 +42,7 @@ import {
   isDraftBodyApprovable,
   isSafeHref,
   nextNewsletterFire,
+  formatNewsletterDeadline,
   shipWindowBounds,
   draftPassesShipFilter,
   willRideThursdaySend,
@@ -375,6 +380,60 @@ test.describe("F2 — willRideThursdaySend uses the FIRE as the basis, not `now`
         );
       }
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Residue 1 — deadline copy must be DST-correct. The cron is UTC-fixed
+// ("0 22 * * 4"), so the ET wall time is 6:00 PM EDT in summer but
+// 5:00 PM EST Nov–Mar: a hardcoded "6:00 PM ET" string lies half the year
+// (a 5:30 PM EST approval would miss the fire while the copy says OK).
+// Helpers are Intl-explicit → TZ-independent; dates fixed under TZ=UTC.
+// ---------------------------------------------------------------------------
+test.describe("residue 1 — formatNewsletterDeadline renders the fire in ET, DST-aware", () => {
+  test("summer fire (2026-07-02 22:00 UTC) reads Thursday 6:00 PM EDT", () => {
+    const s = formatNewsletterDeadline(
+      nextNewsletterFire(new Date("2026-06-30T12:00:00.000Z")),
+    );
+    expect(s).toContain("Thursday");
+    expect(s).toContain("6:00 PM");
+    expect(s).toContain("EDT");
+    expect(s).not.toContain("EST");
+  });
+
+  test("November fire (2026-11-12 22:00 UTC, after DST ends) reads Thursday 5:00 PM EST", () => {
+    // 2026-11-10 is a Tuesday; next fire is Thu 2026-11-12 22:00 UTC.
+    // US DST ended Sun 2026-11-01, so 22:00 UTC = 17:00 EST.
+    const s = formatNewsletterDeadline(
+      nextNewsletterFire(new Date("2026-11-10T12:00:00.000Z")),
+    );
+    expect(s).toContain("Thursday");
+    expect(s).toContain("5:00 PM");
+    expect(s).toContain("EST");
+    expect(s).not.toContain("EDT");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Residue 2 — scraper-sourced news URLs are untrusted input rendered as
+// anchors in the triage queue: same scheme-allowlist posture as the draft
+// renderer. null = the page renders plain text, no anchor.
+// ---------------------------------------------------------------------------
+test.describe("residue 2 — newsLinkHref scheme-checks scraper URLs", () => {
+  test("unsafe or empty URL → null (no anchor)", () => {
+    expect(newsLinkHref("javascript:alert(1)")).toBeNull();
+    expect(newsLinkHref("  JAVASCRIPT:alert(1)")).toBeNull();
+    expect(newsLinkHref("data:text/html,x")).toBeNull();
+    expect(newsLinkHref("")).toBeNull();
+  });
+
+  test("http(s) URLs pass through unchanged", () => {
+    expect(newsLinkHref("https://example.com/story")).toBe(
+      "https://example.com/story",
+    );
+    expect(newsLinkHref("http://example.com/story")).toBe(
+      "http://example.com/story",
+    );
   });
 });
 

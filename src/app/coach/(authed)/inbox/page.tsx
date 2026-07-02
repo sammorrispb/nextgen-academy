@@ -4,7 +4,12 @@ import {
   inboxPendingCount,
   pendingBadgeLabel,
 } from "@/lib/coach-inbox";
-import { willRideThursdaySend } from "@/lib/notion-newsletter-drafts";
+import {
+  willRideThursdaySend,
+  nextNewsletterFire,
+  formatNewsletterDeadline,
+} from "@/lib/notion-newsletter-drafts";
+import { newsLinkHref } from "@/lib/notion-news";
 import { formatLongDate } from "@/lib/format-date";
 import {
   NewsRowActions,
@@ -51,6 +56,10 @@ export default async function CoachInboxPage() {
   const queues = await fetchInboxQueues();
   const pending = inboxPendingCount(queues);
   const now = new Date();
+  // DST-correct deadline copy, rendered FROM the next cron fire in ET — the
+  // cron is UTC-fixed, so the ET wall time is an hour earlier Nov–Mar and a
+  // hardcoded string would lie half the year.
+  const deadline = formatNewsletterDeadline(nextNewsletterFire(now));
 
   return (
     <>
@@ -71,7 +80,7 @@ export default async function CoachInboxPage() {
         <SectionHeader
           title="Newsletter drafts"
           count={queues.drafts.length}
-          hint="Approve before Thursday 6:00 PM ET to ride this week's parent newsletter. Only drafts from the last 7 days ship; Skip suppresses a row for good."
+          hint={`Approve before ${deadline} to ride this week's parent newsletter. Only drafts from the last 7 days ship; Skip suppresses a row for good.`}
         />
         {queues.drafts.length === 0 ? (
           <EmptyQueue label="No drafts awaiting review. The Wednesday drafter writes the next one." />
@@ -103,37 +112,43 @@ export default async function CoachInboxPage() {
           <EmptyQueue label="No new stories. The scraper runs every morning." />
         ) : (
           <div className="space-y-3">
-            {queues.news.map((n) => (
-              <div
-                key={n.pageId}
-                className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 px-5 py-5 sm:px-6"
-              >
-                <p className="text-xs font-bold uppercase tracking-wider text-ngpa-white/55 mb-1">
-                  {n.source || "Unknown source"}
-                  {n.published ? ` · ${formatLongDate(n.published)}` : ""}
-                </p>
-                <p className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-1">
-                  {n.url ? (
-                    <a
-                      href={n.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-ngpa-teal transition-colors underline decoration-ngpa-slate/60 underline-offset-4"
-                    >
-                      {n.title || n.url}
-                    </a>
-                  ) : (
-                    n.title
-                  )}
-                </p>
-                {n.summary && (
-                  <p className="text-sm text-ngpa-white/70 leading-relaxed mb-3">
-                    {n.summary}
+            {queues.news.map((n) => {
+              // Scraper-sourced URL: scheme-checked before it becomes an
+              // anchor (same allowlist as the draft renderer). Unsafe or
+              // empty → plain text, no link.
+              const href = newsLinkHref(n.url);
+              return (
+                <div
+                  key={n.pageId}
+                  className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 px-5 py-5 sm:px-6"
+                >
+                  <p className="text-xs font-bold uppercase tracking-wider text-ngpa-white/55 mb-1">
+                    {n.source || "Unknown source"}
+                    {n.published ? ` · ${formatLongDate(n.published)}` : ""}
                   </p>
-                )}
-                <NewsRowActions pageId={n.pageId} />
-              </div>
-            ))}
+                  <p className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-1">
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-ngpa-teal transition-colors underline decoration-ngpa-slate/60 underline-offset-4"
+                      >
+                        {n.title || href}
+                      </a>
+                    ) : (
+                      n.title || n.url
+                    )}
+                  </p>
+                  {n.summary && (
+                    <p className="text-sm text-ngpa-white/70 leading-relaxed mb-3">
+                      {n.summary}
+                    </p>
+                  )}
+                  <NewsRowActions pageId={n.pageId} />
+                </div>
+              );
+            })}
             {queues.newsHasMore && (
               <p className="text-sm text-ngpa-white/55 pt-1">
                 Showing the {queues.news.length} newest — more stories are

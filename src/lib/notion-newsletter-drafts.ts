@@ -290,6 +290,24 @@ export function nextNewsletterFire(now: Date): Date {
 }
 
 /**
+ * Human deadline copy for a fire moment, rendered in America/New_York WITH
+ * the zone name. The cron is UTC-fixed ("0 22 * * 4"), so the ET wall time
+ * is 6:00 PM EDT in summer but 5:00 PM EST Nov–Mar — a hardcoded "6:00 PM
+ * ET" string lies half the year (a 5:30 PM EST approval would miss the fire
+ * while the copy says it's fine). Never hardcode the hour; render it from
+ * the fire. Pinned by e2e/coach-inbox.spec.ts (DST cases).
+ */
+export function formatNewsletterDeadline(fire: Date): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "long",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(fire);
+}
+
+/**
  * Pure mirror of buildDraftsQueryFilter's date conditions for a single row
  * (Status=Approved is what the caller is about to write, so only the date
  * legs matter here):
