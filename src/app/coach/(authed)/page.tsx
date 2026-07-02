@@ -9,6 +9,7 @@ import {
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
 import { isSessionEnded } from "@/lib/session-time";
+import { fetchInboxQueues, inboxPendingCount } from "@/lib/coach-inbox";
 
 export const dynamic = "force-dynamic";
 
@@ -54,14 +55,18 @@ export default async function CoachDashboard() {
   const end = new Date(now);
   end.setDate(end.getDate() + 60); // 60-day window — wider than /schedule
 
-  const [allSessions, drops] = await Promise.all([
+  const [allSessions, drops, inboxQueues] = await Promise.all([
     fetchUpcomingSessions(now, {
       lookbackDays: CHECKIN_LOOKBACK_DAYS,
       includeTerminal: true,
       includeEnded: true,
     }),
     fetchUpcomingDropIns(isoDate(start), isoDate(end)),
+    // Fail-soft by construction (every queue fetcher returns [] on error),
+    // so the badge can only ever under-count — never break the dashboard.
+    fetchInboxQueues(),
   ]);
+  const inboxPending = inboxPendingCount(inboxQueues);
 
   const dropsByKey = groupBySessionKey(drops);
 
@@ -89,6 +94,22 @@ export default async function CoachDashboard() {
         {drops.length === 1 ? "" : "s"} total.
       </p>
       <div className="flex flex-wrap gap-3 mb-8">
+        <Link
+          href="/coach/inbox"
+          className={
+            inboxPending > 0
+              ? "inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-400/15 border border-amber-400/50 text-amber-300 hover:bg-amber-400/25 text-sm font-bold transition-colors"
+              : "inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
+          }
+        >
+          Inbox
+          {inboxPending > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[1.375rem] h-[1.375rem] px-1 rounded-full bg-amber-400 text-ngpa-navy text-xs font-black">
+              {inboxPending}
+            </span>
+          )}
+          →
+        </Link>
         <Link
           href="/coach/eval"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ngpa-teal/15 border border-ngpa-teal/50 text-ngpa-teal hover:bg-ngpa-teal/25 text-sm font-bold transition-colors"

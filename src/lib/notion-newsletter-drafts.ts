@@ -95,8 +95,10 @@ function renderRichText(rich: NotionRichText[]): string {
  * means the drafter went off-pattern, and silently skipping is preferable to
  * shipping unstyled content).
  */
+// Exported (2026-07 Phase 1b) so the coach inbox renders a pending draft's
+// body with the EXACT renderer the Thursday cron ships with — never a rewrite.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function blocksToHtml(blocks: any[]): string {
+export function blocksToHtml(blocks: any[]): string {
   const out: string[] = [];
   let listBuffer: { type: "ul" | "ol"; items: string[] } | null = null;
 
@@ -164,8 +166,9 @@ function richToText(rich: NotionRichText[]): string {
  * Same supported subset (headings, paragraphs, dividers, bullet/numbered
  * lists). Blank line between blocks for readability.
  */
+// Exported (2026-07 Phase 1b) — same reasoning as blocksToHtml.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function blocksToText(blocks: any[]): string {
+export function blocksToText(blocks: any[]): string {
   const lines: string[] = [];
   let numberedIndex = 0;
   let prevType: string | null = null;
@@ -392,6 +395,151 @@ export async function stampDraftsSentAt(
       }),
     ),
   );
+}
+
+/**
+ * The Drafts DB Status vocabulary (see the drafter-pipeline doc in CLAUDE.md):
+ * the Wednesday cloud drafter writes Pending; Sam flips to Approved (ships
+ * Thursday) or Skip (suppressed). The inbox may write ONLY Approved | Skip —
+ * it never resets a row to Pending and there is no other value to invent.
+ */
+export type NewsletterDraftStatus = "Pending" | "Approved" | "Skip";
+
+/** A Pending draft awaiting Sam's review in the coach inbox. */
+export interface PendingNewsletterDraft extends NewsletterDraft {
+  /** Drafted At (YYYY-MM-DD or ISO). Empty when the property is unset. */
+  draftedAt: string;
+}
+
+/** Pure filter for the pending-review queue; pinned by e2e/coach-inbox.spec.ts. */
+export function buildPendingDraftsQueryFilter() {
+  return {
+    property: "Status",
+    select: { equals: "Pending" satisfies NewsletterDraftStatus },
+  };
+}
+
+/**
+ * A draft is approvable only when its RENDERED body has real content —
+ * approval is approval of read content, and an empty render means there is
+ * nothing to have read. Pure; setDraftStatus enforces it server-side.
+ */
+export function isDraftBodyApprovable(renderedText: string): boolean {
+  return renderedText.trim().length > 0;
+}
+
+/**
+ * Return Pending drafts for the coach inbox, newest first, each with its
+ * body rendered by the same blocksToHtml/blocksToText the cron uses. Rows
+ * whose body renders empty are dropped (nothing to review → nothing to
+ * approve). Fails soft to [] on any Notion error.
+ */
+export async function fetchPendingDrafts(): Promise<PendingNewsletterDraft[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID;
+  if (!notionKey || !dbId) return [];
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: buildPendingDraftsQueryFilter(),
+      sorts: [{ property: "Drafted At", direction: "descending" }],
+      page_size: 25,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-newsletter-drafts] fetchPendingDrafts failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+
+  const pending: PendingNewsletterDraft[] = [];
+  for (const row of data.results) {
+    const draft = await buildDraftFromRow(row, notionKey);
+    if (!draft) continue;
+    pending.push({
+      ...draft,
+      draftedAt: row.properties?.["Drafted At"]?.date?.start ?? "",
+    });
+  }
+  return pending;
+}
+
+/**
+ * Flip a draft row's Status from the coach inbox. The inbox may only write
+ * Approved | Skip (never Pending — that's the drafter's state).
+ *
+ * Approve gate: before PATCHing to Approved, the row's body is re-fetched
+ * and re-rendered; an empty render REFUSES the approval. This keeps the
+ * "nothing ships un-reviewed" guarantee server-side — hiding the button in
+ * the UI is convenience, not the gate. Pinned by
+ * e2e/invariant-coach-inbox-authz.spec.ts.
+ */
+export async function setDraftStatus(
+  pageId: string,
+  status: Extract<NewsletterDraftStatus, "Approved" | "Skip">,
+): Promise<{ ok: boolean; error?: string }> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return { ok: false, error: "NOTION_API_KEY not configured" };
+
+  if (status === "Approved") {
+    const blocksRes = await fetch(
+      `${NOTION_API}/blocks/${pageId}/children?page_size=100`,
+      {
+        headers: {
+          Authorization: `Bearer ${notionKey}`,
+          "Notion-Version": NOTION_VERSION,
+        },
+        cache: "no-store",
+      },
+    );
+    if (!blocksRes.ok) {
+      return {
+        ok: false,
+        error: `Could not read the draft body (${blocksRes.status}) — not approving unread content.`,
+      };
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const blocksData = (await blocksRes.json()) as { results: any[] };
+    if (!isDraftBodyApprovable(blocksToText(blocksData.results))) {
+      return {
+        ok: false,
+        error: "Draft body is empty — there is nothing to approve.",
+      };
+    }
+  }
+
+  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: { Status: { select: { name: status } } },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-newsletter-drafts] setDraftStatus failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return { ok: false, error: `Notion update failed (${res.status})` };
+  }
+  return { ok: true };
 }
 
 /**

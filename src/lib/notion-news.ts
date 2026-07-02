@@ -171,6 +171,66 @@ export async function fetchApprovedNews(limit: number = 4): Promise<NewsRow[]> {
   });
 }
 
+/**
+ * Query body for the coach-inbox triage queue: Status=New rows, newest
+ * discovered first. Pure so the filter/sort/limit are pinned by
+ * e2e/coach-inbox.spec.ts (buildDraftsQueryFilter precedent).
+ */
+export function buildNewNewsQuery(limit: number) {
+  return {
+    filter: {
+      property: "Status",
+      select: { equals: "New" satisfies NewsStatus },
+    },
+    sorts: [{ property: "Discovered At", direction: "descending" }],
+    page_size: Math.max(1, limit),
+  };
+}
+
+/**
+ * Return Status=New rows for the coach-inbox triage queue (the rows Sam
+ * currently flips by hand in Notion). Modeled on fetchApprovedNews; fails
+ * soft to [] so the inbox renders its other queues on a Notion blip.
+ */
+export async function fetchNewNews(limit: number = 20): Promise<NewsRow[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_NEWS_DB_ID;
+  if (!notionKey || !dbId) return [];
+
+  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify(buildNewNewsQuery(limit)),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-news] fetchNewNews failed",
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return [];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = (await res.json()) as { results: any[] };
+  return data.results.map((page) => {
+    const props = page.properties ?? {};
+    return {
+      pageId: page.id as string,
+      title: readTitle(props["Title"]),
+      url: props["URL"]?.url ?? "",
+      source: readRichText(props["Source"]),
+      summary: readRichText(props["Summary"]),
+      published: props["Published"]?.date?.start ?? "",
+      status: (props["Status"]?.select?.name as NewsStatus) ?? "New",
+    };
+  });
+}
+
 /** Flip a single row's Status select. Idempotent. */
 export async function setNewsStatus(
   pageId: string,
