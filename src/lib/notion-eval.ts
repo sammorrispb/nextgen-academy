@@ -3,10 +3,12 @@
 // missing key, no matching row, or a Notion error never blocks the send — the
 // caller logs the result and moves on (the email is the core value).
 
+import { playerCrmDbId } from "./notion-utils";
+
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
-const LEAD_DB_ID =
-  process.env.NOTION_DB_ID || "1e5e34c258384c6cb5f3e846543ecfc7";
+// Player CRM id resolves through the shared env-backed constant
+// (NOTION_PLAYER_CRM_DB_ID → legacy NOTION_DB_ID → literal fallback).
 
 export interface SetEvalDateResult {
   updated: boolean;
@@ -31,7 +33,7 @@ export async function setEvalDate(
   if (!email) return { updated: false, reason: "no parent email" };
 
   try {
-    const q = await fetch(`${NOTION_API}/databases/${LEAD_DB_ID}/query`, {
+    const q = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${notionKey}`,

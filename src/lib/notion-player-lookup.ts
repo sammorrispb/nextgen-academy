@@ -3,10 +3,9 @@
 // parent-group invite. Defaults to `false` if Notion is unavailable so we
 // don't re-prompt returning families when the lookup fails.
 
-const NOTION_API = "https://api.notion.com/v1";
-const NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7";
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_RE, playerCrmDbId } from "./notion-utils";
 
+const NOTION_API = "https://api.notion.com/v1";
 export async function isFirstTimeParent(contact: string): Promise<boolean> {
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return false;
@@ -19,7 +18,7 @@ export async function isFirstTimeParent(contact: string): Promise<boolean> {
     : { property: "Parent Phone", phone_number: { equals: trimmed } };
 
   try {
-    const res = await fetch(`${NOTION_API}/databases/${NOTION_DB_ID}/query`, {
+    const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${notionKey}`,

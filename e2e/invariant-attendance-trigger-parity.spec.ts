@@ -3,7 +3,8 @@ import { NextRequest } from "next/server";
 import { FetchStub } from "./fixtures/fetch-stub";
 
 // Env BEFORE importing the route under test (the module reads these at load /
-// call time). Player DB id is hard-coded in notion-player-sync.
+// call time). The Player DB id resolves through playerCrmDbId() at call time
+// (NOTION_PLAYER_CRM_DB_ID → legacy NOTION_DB_ID → literal fallback).
 process.env.ATTENDANCE_SECRET = "test-attendance-secret";
 process.env.NOTION_API_KEY = "ntn_test";
 process.env.NOTION_DROPINS_DB_ID = "dropins-db";
@@ -11,6 +12,10 @@ process.env.OPEN_BRAIN_INGEST_URL = "https://ob.test/ingest";
 process.env.LEAD_INGEST_TOKEN = "ob-token";
 
 const PLAYER_DB = "1e5e34c258384c6cb5f3e846543ecfc7";
+// Clear BOTH env overrides (don't set them — that would leak forward into the
+// next spec file this worker loads) so resolution falls to the literal above.
+delete process.env.NOTION_PLAYER_CRM_DB_ID;
+delete process.env.NOTION_DB_ID;
 
 import { POST } from "../src/app/api/coach/attendance/route";
 

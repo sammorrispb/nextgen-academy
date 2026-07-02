@@ -1,5 +1,5 @@
 // Mirrors a paid drop-in registration into the NGA Player CRM (the Player
-// Database, NOTION_DB_ID). The drop-in row (NOTION_DROPINS_DB_ID) stays the
+// Database, playerCrmDbId()). The drop-in row (NOTION_DROPINS_DB_ID) stays the
 // transactional source of truth; this keeps the Player DB current so a website
 // registration shows up there too — historically only the lead form path
 // (/api/lead) wrote to the Player DB, so paid registrations never landed a
@@ -7,10 +7,10 @@
 // blip never triggers a webhook retry / double-charge replay.
 
 import { fetchDropInsByParent } from "./notion-dropins";
+import { playerCrmDbId } from "./notion-utils";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
-const NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Player DB "Site" select options. The drop-in's free-form session location is
@@ -98,7 +98,7 @@ export async function findPlayerRow(
     ? { and: [contactFilter, { property: "Player Name", title: { contains: child } }] }
     : contactFilter;
 
-  const res = await fetch(`${NOTION_API}/databases/${NOTION_DB_ID}/query`, {
+  const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
     method: "POST",
     headers: notionHeaders(notionKey),
     body: JSON.stringify({ filter, page_size: 1 }),
@@ -164,7 +164,7 @@ export async function syncPlayerFromDropIn(d: DropInPlayerSync): Promise<PlayerS
     const res = await fetch(`${NOTION_API}/pages`, {
       method: "POST",
       headers: notionHeaders(notionKey),
-      body: JSON.stringify({ parent: { database_id: NOTION_DB_ID }, properties }),
+      body: JSON.stringify({ parent: { database_id: playerCrmDbId() }, properties }),
     });
     if (!res.ok) throw new Error(`player create failed (${res.status})`);
     return "created";
