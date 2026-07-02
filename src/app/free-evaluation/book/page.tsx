@@ -9,7 +9,7 @@ import { site } from "@/data/site";
 
 const PAGE_TITLE = "Book Your Free Evaluation — Next Gen Pickleball Academy";
 const PAGE_DESCRIPTION =
-  "Pick an open time for your child's free 30-minute pickleball evaluation in Montgomery County, MD. Instant confirmation with a calendar invite — no phone tag.";
+  "Request an open time for your child's free 30-minute pickleball evaluation in Montgomery County, MD. Coach Sam confirms within 24 hours — no phone tag.";
 
 export const metadata: Metadata = {
   title: { absolute: PAGE_TITLE },
@@ -29,7 +29,9 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function EvalBookPage() {
-  const slots = await fetchOpenEvalSlots();
+  // Page render stays fail-soft on a Notion error (no-open-slots state); the
+  // client's GET refetch is the path that distinguishes error from empty.
+  const { slots } = await fetchOpenEvalSlots();
   const displaySlots: DisplaySlot[] = slots.map((s) => ({
     id: s.id,
     date: s.date,
@@ -58,12 +60,12 @@ export default async function EvalBookPage() {
           <h1 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white leading-[1.05] tracking-tight">
             Pick your time.
             <br />
-            <span className="text-ngpa-teal">We&rsquo;ll see you on the court.</span>
+            <span className="text-ngpa-teal">We&rsquo;ll take it from there.</span>
           </h1>
           <p className="mt-5 text-lg text-ngpa-white/85 leading-relaxed max-w-xl">
-            30 minutes with a real coach, ages 6&ndash;16, no cost. Choose any
-            open time below — you&rsquo;ll get an instant email confirmation
-            with a calendar invite.
+            30 minutes with a real coach, ages 6&ndash;16, no cost. Request
+            any open time below — Coach Sam confirms within 24 hours, then
+            your confirmation email and calendar invite arrive.
           </p>
 
           <div className="mt-10">

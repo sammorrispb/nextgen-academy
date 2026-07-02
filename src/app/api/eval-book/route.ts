@@ -1,15 +1,18 @@
-// POST /api/eval-book — parent self-serve eval booking (admin-reduction
-// roadmap Phase 1a). Minor-PII surface, full IPAV — the egress contract is
-// pinned by e2e/invariant-eval-book-egress.spec.ts (Notion + Resend only;
-// recipients = booking parent + admin inboxes only; child data = first name +
-// level only; rate-limited) and third-caller parity by
-// e2e/invariant-eval-confirmation-trigger-parity.spec.ts.
+// POST /api/eval-book — parent self-serve eval REQUEST (admin-reduction
+// roadmap Phase 1a; flow change 2026-07-02: bookings are requests until Sam
+// confirms). Minor-PII surface, full IPAV — the egress contract is pinned by
+// e2e/invariant-eval-book-egress.spec.ts (Notion + Resend only; recipients =
+// booking parent + admin inboxes only; parent gets the REQUEST-RECEIVED email
+// — no .ics, no confirmation, Player CRM untouched; child data = first name +
+// level only; rate-limited). The real confirmation fires from Sam's
+// /coach/eval-requests confirm step (confirmEvalRequest — trigger parity
+// pinned by e2e/invariant-eval-confirmation-trigger-parity.spec.ts).
 //
-// Flow: validate → rate limit → claimEvalSlot (claim-then-verify) →
-// sendEvalConfirmation() UNCHANGED as its third caller (template + parent
-// .ics + admin BCC + fail-soft CRM Eval-Date stamp) → coach booking
-// notification with a METHOD:REQUEST .ics. On a lost claim race → 409 and the
-// client refetches open slots (GET).
+// Flow: validate → rate limit → claimEvalSlot (claim-then-verify, Status →
+// Requested) → parent request-received email → admin notification with a
+// METHOD:REQUEST .ics + slot/booking ids (ACTION NEEDED: confirm or release
+// in the coach portal). On a lost claim race → 409 and the client refetches
+// open slots (GET).
 
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
@@ -19,11 +22,14 @@ import {
   claimEvalSlot,
   fetchOpenEvalSlots,
   releaseEvalSlot,
+  type OpenEvalSlot,
 } from "@/lib/notion-eval-slots";
+import { formatLongDate } from "@/lib/eval-confirmation-send";
 import {
-  sendEvalConfirmation,
-  formatLongDate,
-} from "@/lib/eval-confirmation-send";
+  evalRequestReceivedHtml,
+  evalRequestReceivedText,
+  evalRequestReceivedSubject,
+} from "@/lib/email/eval-request-received";
 import {
   buildEvalBookingRequestIcs,
   evalBookingNotifyHtml,
@@ -34,16 +40,54 @@ import {
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
+const REPLY_TO = "nextgenacademypb@gmail.com";
 
 const SLOT_TAKEN_MESSAGE =
-  "That time was just booked by another family. Pick another open time below.";
+  "That time was just taken by another family. Pick another open time below.";
 
 // Per-route in-memory rate limit (5/hr, resets on deploy) — shared impl in
 // src/lib/rate-limit.ts; same posture as the other public form routes.
 const { isRateLimited } = createRateLimiter();
 
-// Coach booking notification — fail-soft: the parent confirmation is the core
-// value; a notify miss is logged (and the Booked Notion row still surfaces it).
+// Parent request-received email — the claim's core value: if THIS fails the
+// slot is conditionally released and the parent sees a clean failure. No .ics
+// and no confirmation language — Sam hasn't confirmed yet.
+async function sendRequestReceived(
+  booking: { parentName: string; parentEmail: string; childFirst: string },
+  slot: OpenEvalSlot,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const input = {
+      parentFirst: booking.parentName.split(/\s+/)[0],
+      childFirst: booking.childFirst,
+      dateLong: formatLongDate(slot.date),
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      location: slot.location,
+    };
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: booking.parentEmail,
+      bcc: CC_EMAIL,
+      replyTo: REPLY_TO,
+      subject: evalRequestReceivedSubject(booking.childFirst),
+      html: evalRequestReceivedHtml(input),
+      text: evalRequestReceivedText(input),
+    });
+    if (error) return { ok: false, error: error.message ?? String(error) };
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "unknown error",
+    };
+  }
+}
+
+// Coach notification — fail-soft: the parent request-received email is the
+// core value; a notify miss is logged (and the Requested Notion row + the
+// /coach/eval-requests queue still surface it).
 async function sendCoachNotification(input: EvalBookingNotifyInput): Promise<void> {
   try {
     const ics = buildEvalBookingRequestIcs(input, [ADMIN_EMAIL, CC_EMAIL]);
@@ -138,27 +182,20 @@ export async function POST(request: NextRequest) {
   }
   const { slot, bookingId } = claim;
 
-  // ── Parent confirmation — the shared engine, UNCHANGED (third caller) ──
-  const confirmation = await sendEvalConfirmation({
-    parentEmail: booking.parentEmail,
-    parentFirst: booking.parentName.split(/\s+/)[0],
-    childFirst: booking.childFirst,
-    date: slot.date,
-    startTime: slot.startTime,
-    endTime: slot.endTime,
-    location: slot.location,
-  });
-  if (!confirmation.ok) {
-    // The claim landed but the parent never got confirmed — CONDITIONALLY
+  // ── Parent request-received email (NOT the confirmation — that's Sam's
+  // /coach/eval-requests step) ──
+  const received = await sendRequestReceived(booking, slot);
+  if (!received.ok) {
+    // The claim landed but the parent never heard back — CONDITIONALLY
     // release the slot (only while it still holds OUR bookingId) so they
     // aren't silently holding a time they think failed. If a residual-race
     // winner owns the row by now ("kept_foreign"), their booking stands
     // untouched and their family hears nothing from this request.
-    console.error("[eval-book] confirmation failed after claim:", confirmation.error);
+    console.error("[eval-book] request-received email failed after claim:", received.error);
     const released = await releaseEvalSlot(slot.id, bookingId);
     if (released === "failed") {
       console.error(
-        `[eval-book] release ALSO failed — slot ${slot.id} (booking ${bookingId}) left Booked; check the Eval Slots db`,
+        `[eval-book] release ALSO failed — slot ${slot.id} (booking ${bookingId}) left Requested; check the Eval Slots db`,
       );
     } else if (released === "kept_foreign") {
       console.log(
@@ -166,13 +203,14 @@ export async function POST(request: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: "Couldn't send your confirmation. The time was not booked — please try again." },
+      { error: "Couldn't send your request confirmation. The time was not reserved — please try again." },
       { status: 502 },
     );
   }
 
   // ── Coach notification (fail-soft; carries slot id + booking id — the
-  // reconciliation record for any residual claim race) ──
+  // reconciliation record for any residual claim race — and the ACTION
+  // NEEDED pointer to the /coach/eval-requests queue) ──
   await sendCoachNotification({ ...booking, bookingId, slot });
 
   console.log(
@@ -181,7 +219,7 @@ export async function POST(request: NextRequest) {
       slot: slot.id,
       booking: bookingId,
       date: slot.date,
-      crm_updated: confirmation.dryRun ? false : confirmation.crm.updated,
+      status: "requested",
     }),
   );
 
@@ -195,13 +233,19 @@ export async function POST(request: NextRequest) {
 // Fresh open slots for the client's re-pick after a 409 (the page itself is
 // 5-min ISR; this read skips the cache). Public, non-PII (Open rows carry no
 // booking fields). Separate, looser limiter than the booking POST.
+// A Notion failure answers 503 { slots: [], error: true } — distinguishable
+// from a genuine 200-[] empty list, so the client shows its retry banner
+// instead of a lying "no open times".
 const slotsLimiter = createRateLimiter({ limit: 30 });
 
 export async function GET(request: NextRequest) {
   if (slotsLimiter.isRateLimited(getClientIp(request))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
-  const slots = await fetchOpenEvalSlots();
+  const { slots, error } = await fetchOpenEvalSlots();
+  if (error) {
+    return NextResponse.json({ slots: [], error: true }, { status: 503 });
+  }
   return NextResponse.json({
     slots: slots.map((s) => ({
       id: s.id,

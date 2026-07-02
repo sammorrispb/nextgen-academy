@@ -1,8 +1,10 @@
-// Coach-side notification for a parent self-booked eval (Phase 1a). Admin-only
+// Coach-side notification for a parent self-REQUESTED eval (Phase 1a; flow
+// change 2026-07-02 — the request awaits Sam's confirmation). Admin-only
 // recipients (Sam + academy inbox) — this email intentionally carries the full
-// booking (parent contact + child first name + level) so Sam can prep, and a
-// METHOD:REQUEST .ics so his mail client offers add-to-calendar without any
-// Google API integration.
+// booking (parent contact + child first name + level) so Sam can decide, plus
+// a METHOD:REQUEST .ics so his mail client offers add-to-calendar without any
+// Google API integration. ACTION NEEDED: confirm or release the request in
+// the /coach/eval-requests queue.
 
 import { buildDropInIcs } from "./ics";
 import { c, s } from "./brand";
@@ -23,7 +25,7 @@ export interface EvalBookingNotifyInput {
 }
 
 export function evalBookingNotifySubject(input: EvalBookingNotifyInput): string {
-  return `Eval booked — ${input.childFirst} (${input.level}) · ${formatShortDate(input.slot.date)} ${input.slot.startTime}`;
+  return `Eval requested — ${input.childFirst} (${input.level}) · ${formatShortDate(input.slot.date)} ${input.slot.startTime}`;
 }
 
 /** METHOD:REQUEST invite for the coach's mailbox (Gmail + Apple Calendar). */
@@ -43,7 +45,7 @@ export function buildEvalBookingRequestIcs(
     endTime: slot.endTime,
     title: `Eval: ${input.childFirst} (${input.level}) — ${slot.location}`,
     location: slot.location,
-    description: `Free evaluation (self-booked). Parent: ${input.parentName}, ${input.parentEmail}, ${input.parentPhone}. Child: ${input.childFirst}, level ${input.level}.`,
+    description: `Free evaluation (parent-requested; confirm in /coach/eval-requests). Parent: ${input.parentName}, ${input.parentEmail}, ${input.parentPhone}. Child: ${input.childFirst}, level ${input.level}.`,
     method: "REQUEST",
     organizer: {
       name: "Next Gen PB Academy",
@@ -59,7 +61,7 @@ export function evalBookingNotifyHtml(input: EvalBookingNotifyInput): string {
   return `
 <div style="${s.wrapper}">
   <h1 style="${s.heading} margin-bottom: 24px;">
-    Eval Self-Booked
+    Eval Requested
   </h1>
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
     <tr style="${s.tableRow}">
@@ -88,11 +90,14 @@ export function evalBookingNotifyHtml(input: EvalBookingNotifyInput): string {
     </tr>
   </table>
   <div style="${s.actionCallout}">
-    <p style="${s.actionLabel}">NO ACTION NEEDED</p>
+    <p style="${s.actionLabel}">ACTION NEEDED — AWAITING YOUR CONFIRMATION</p>
     <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
-      The parent already got their confirmation + calendar invite. Accept the
-      attached invite to put it on your calendar. The slot is marked Booked in
-      the NGA Eval Slots db.
+      The parent got a request-received email (confirmation promised within 24
+      hours) — their real confirmation + calendar invite go out when you
+      confirm. <a href="https://nextgenpbacademy.com/coach/eval-requests" style="${s.link}">Confirm
+      or release this request in the coach portal</a>. The slot is marked
+      Requested in the NGA Eval Slots db; the attached invite is for your own
+      calendar.
     </p>
   </div>
   <p style="margin: 16px 0 0; font-size: 11px; color: ${c.muted};">

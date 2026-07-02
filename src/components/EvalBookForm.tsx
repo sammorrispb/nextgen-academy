@@ -129,7 +129,7 @@ export default function EvalBookForm({
           setForm((prev) => ({ ...prev, slotId: "" }));
           setServerError(
             data.error ||
-              "That time was just booked by another family. Pick another open time below.",
+              "That time was just taken by another family. Pick another open time below.",
           );
           setStatus("error");
           await refetchSlots();
@@ -171,7 +171,7 @@ export default function EvalBookForm({
           </svg>
         </div>
         <h3 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white mb-3 tracking-tight">
-          You&rsquo;re booked!
+          Request received!
         </h3>
         {bookedSlot && (
           <p className="text-ngpa-white text-lg mb-2 font-bold">
@@ -180,8 +180,9 @@ export default function EvalBookForm({
           </p>
         )}
         <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
-          A confirmation with a calendar invite is on its way to your inbox.
-          Wear athletic clothes and court shoes — paddles are on us.
+          Coach Sam will confirm within 24 hours — your confirmation email
+          and calendar invite will arrive once your time is locked in. We
+          just sent you a request-received email with the details.
         </p>
         <Link
           href="/schedule"
@@ -412,10 +413,10 @@ export default function EvalBookForm({
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
               />
             </svg>
-            Booking...
+            Sending request...
           </span>
         ) : (
-          "Book my free evaluation"
+          "Request my free evaluation"
         )}
       </button>
 

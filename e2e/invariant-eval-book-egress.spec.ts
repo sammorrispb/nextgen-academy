@@ -19,12 +19,18 @@ process.env.RESEND_API_KEY = "re_test";
 delete process.env.OPEN_BRAIN_INGEST_URL;
 delete process.env.LEAD_INGEST_TOKEN;
 
-import { POST } from "../src/app/api/eval-book/route";
+import { POST, GET } from "../src/app/api/eval-book/route";
 
 // Eval self-scheduling egress invariant (admin-reduction roadmap Phase 1a —
-// minor-PII surface, full IPAV). The booking path may reach ONLY:
-//   - api.notion.com (slot claim + verify, CRM Eval-Date stamp), and
-//   - api.resend.com (parent confirmation + admin booking notification).
+// minor-PII surface, full IPAV). Bookings are REQUESTS pending Sam's
+// confirmation (flow change 2026-07-02): the public booking path claims the
+// slot as Status=Requested and may reach ONLY:
+//   - api.notion.com (slot claim + verify — NEVER the Player CRM), and
+//   - api.resend.com (parent REQUEST-RECEIVED email — no .ics, NOT the
+//     confirmation — plus the admin notification).
+// The real confirmation (+ .ics + CRM Eval-Date stamp) fires ONLY from the
+// coach-authed confirm step (pinned by
+// invariant-eval-confirmation-trigger-parity.spec.ts).
 // Recipients may be ONLY the booking parent + the two admin inboxes — never
 // another parent's address (the claim-race loser path must go dark, not
 // mis-mail). Child data crossing the wire is FIRST NAME + LEVEL only — any
@@ -36,11 +42,12 @@ import { POST } from "../src/app/api/eval-book/route";
 // Hardening additions (code-review findings on PR #244):
 //  - F1: the slotId page must live IN the Eval Slots db — a page from any
 //    other database the integration can read returns the SAME generic
-//    slot_taken 409 (no existence oracle), and a non-UUID slotId never
-//    reaches Notion at all.
+//    slot_taken 409 (no existence oracle), a nonexistent/unreadable page id
+//    returns that same 409 too (no readability oracle), and a non-UUID
+//    slotId never reaches Notion at all.
 //  - F3/F4: claim ownership is verified via a per-claim Booking Id token
-//    (not email), and release-after-failed-confirmation is CONDITIONAL on
-//    the row still holding OUR Booking Id.
+//    (not email), and release-after-failed-send is CONDITIONAL on the row
+//    still holding OUR Booking Id.
 //  - F5: a past slot can never be claimed (generic 409).
 const ALLOWED_HOSTS = ["api.notion.com", "api.resend.com"];
 const PARENT_EMAIL = "egress-eval-parent@example.com";
@@ -58,7 +65,7 @@ const SLOT_PATH = `/v1/pages/${SLOT_ID}`;
 
 const SLOT_TAKEN_BODY = {
   error:
-    "That time was just booked by another family. Pick another open time below.",
+    "That time was just taken by another family. Pick another open time below.",
 };
 
 function bookingBody(over: Record<string, unknown> = {}): string {
@@ -205,11 +212,44 @@ test.describe("eval-book route — egress invariants", () => {
         "legacy-db",
       );
     }
-    // The Eval-Date stamp hit the CANONICAL CRM db.
+  });
+
+  test("(a2) booking sends the REQUEST-RECEIVED email ONLY — no .ics, no confirmation, Player CRM untouched", async () => {
+    // The flow-change pin: the public booking path must NOT fire the
+    // confirmation engine. The confirmation (+ parent .ics + CRM Eval-Date
+    // stamp) is reserved for Sam's coach-authed confirm step.
+    stubHappyPath();
+    const res = await POST(req(bookingBody()));
+    expect(res.status).toBe(200);
+
     expect(
       stub.callsTo("/databases/lead-db/query").length,
-      "CRM stamp queries the canonical db",
-    ).toBeGreaterThan(0);
+      "the Player CRM is never queried at booking time",
+    ).toBe(0);
+
+    const emails = stub.callsTo("api.resend.com");
+    expect(emails.length).toBe(2);
+    const parent = emails.find((c) => {
+      const body = JSON.parse(c.body) as { to?: unknown };
+      const to = Array.isArray(body.to) ? body.to : [body.to];
+      return to.includes(PARENT_EMAIL);
+    });
+    expect(parent, "parent request-received email sent").toBeTruthy();
+    expect(
+      parent!.body,
+      "no calendar invite before Sam confirms",
+    ).not.toContain("text/calendar");
+    const subject = (JSON.parse(parent!.body) as { subject?: string }).subject ?? "";
+    expect(subject, "request-received subject, not a confirmation").toContain(
+      "Request received",
+    );
+
+    // The claim marks the row Requested — NOT Booked (that's Sam's call).
+    const props = (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      JSON.parse(slotPatches()[0].body) as { properties: Record<string, any> }
+    ).properties;
+    expect(props.Status?.select?.name).toBe("Requested");
   });
 
   test("(b) email recipients = the booking parent + admin inboxes ONLY", async () => {
@@ -218,7 +258,7 @@ test.describe("eval-book route — egress invariants", () => {
     expect(res.status).toBe(200);
 
     const emails = stub.callsTo("api.resend.com");
-    // Exactly two sends: parent confirmation + admin booking notification.
+    // Exactly two sends: parent request-received + admin notification.
     expect(emails.length).toBe(2);
 
     const allowedRecipients = [PARENT_EMAIL, ...ADMIN_INBOXES];
@@ -240,7 +280,7 @@ test.describe("eval-book route — egress invariants", () => {
       if (to.includes(PARENT_EMAIL)) parentToCounts.push(call.url);
     }
     // The parent is the direct recipient of exactly ONE email (their
-    // confirmation); the notification goes to the admin inboxes.
+    // request-received note); the notification goes to the admin inboxes.
     expect(parentToCounts.length).toBe(1);
   });
 
@@ -294,13 +334,22 @@ test.describe("eval-book route — egress invariants", () => {
     expect(stub.calls.length, "no egress after the limiter trips").toBe(before);
   });
 
-  test("already-Booked slot (ISR staleness) → 409, NO overwrite PATCH, NO emails", async () => {
-    stubHappyPath({ Status: { select: { name: "Booked" } } });
-    const res = await POST(req(bookingBody()));
-    expect(res.status).toBe(409);
-
-    expect(slotPatches().length, "a Booked slot is never overwritten").toBe(0);
-    expect(stub.callsTo("api.resend.com").length, "no emails on slot_taken").toBe(0);
+  test("already-claimed slot (Booked OR Requested — the ISR staleness case) → 409, NO overwrite PATCH, NO emails", async () => {
+    for (const status of ["Booked", "Requested"]) {
+      stub.reset();
+      stub.install();
+      stubHappyPath({ Status: { select: { name: status } } });
+      const res = await POST(req(bookingBody()));
+      expect(res.status, `${status} row must 409`).toBe(409);
+      expect(
+        slotPatches().length,
+        `a ${status} slot is never overwritten`,
+      ).toBe(0);
+      expect(
+        stub.callsTo("api.resend.com").length,
+        "no emails on slot_taken",
+      ).toBe(0);
+    }
   });
 
   test("validation failure → 400, zero downstream calls", async () => {
@@ -367,6 +416,22 @@ test.describe("eval-book — slotId hardening (F1)", () => {
     const taken = await POST(req(bookingBody()));
     expect(taken.status).toBe(409);
     expect(await taken.json()).toEqual(SLOT_TAKEN_BODY);
+  });
+
+  test("nonexistent/unreadable page id → the SAME generic 409 as taken (no readability oracle), zero writes, zero emails", async () => {
+    // Notion answers 404 for a page the integration can't see (deleted, never
+    // existed, or unshared). A 502 here would let a prober distinguish
+    // "unreadable" from "readable but foreign/taken" — unify on the 409.
+    stub.on(SLOT_PATH, { object: "error", status: 404 }, 404);
+    stubDownstream();
+
+    const res = await POST(req(bookingBody()));
+    expect(res.status).toBe(409);
+    expect(await res.json(), "response is byte-identical to the taken path").toEqual(
+      SLOT_TAKEN_BODY,
+    );
+    expect(slotPatches().length).toBe(0);
+    expect(stub.callsTo("api.resend.com").length).toBe(0);
   });
 
   test("db-membership compare is dash-insensitive (Notion mixes both forms)", async () => {
@@ -543,5 +608,48 @@ test.describe("eval-book — booking-token race protocol (F3/F4)", () => {
     for (const call of stub.callsTo("api.resend.com")) {
       expect(call.body).not.toContain(INTRUDER_EMAIL);
     }
+  });
+});
+
+// ── GET /api/eval-book: fetch error ≠ genuinely empty ────────────────────
+
+test.describe("eval-book GET — error vs empty (verification residual)", () => {
+  let getIp = 0;
+  function getReq(): NextRequest {
+    return new NextRequest("http://localhost/api/eval-book", {
+      method: "GET",
+      headers: { "x-forwarded-for": `10.7.7.${++getIp}` },
+    });
+  }
+
+  test("Notion query failure → 503 with { slots: [], error: true } (client shows retry, not empty picker)", async () => {
+    stub.on("/databases/eval-slots-db/query", { object: "error" }, 500);
+    const res = await GET(getReq());
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { slots: unknown[]; error?: boolean };
+    expect(body.slots).toEqual([]);
+    expect(body.error).toBe(true);
+  });
+
+  test("genuinely no open slots → 200 with { slots: [] } and NO error flag", async () => {
+    stub.on("/databases/eval-slots-db/query", { results: [] });
+    const res = await GET(getReq());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { slots: unknown[]; error?: boolean };
+    expect(body.slots).toEqual([]);
+    expect(body.error, "no error flag on a real empty list").toBeFalsy();
+  });
+
+  test("open slots present → 200 with the mapped list", async () => {
+    stub.on("/databases/eval-slots-db/query", { results: [slotPage()] });
+    const res = await GET(getReq());
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      slots: { id: string; startTime: string }[];
+      error?: boolean;
+    };
+    expect(body.slots.length).toBe(1);
+    expect(body.slots[0].id).toBe(SLOT_ID);
+    expect(body.error).toBeFalsy();
   });
 });

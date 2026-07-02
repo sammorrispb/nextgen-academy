@@ -13,14 +13,16 @@ process.env.NOTION_EVAL_SLOTS_DB_ID = "eval-slots-db";
 process.env.RESEND_API_KEY = "re_test";
 
 import { POST } from "../src/app/api/eval-confirmation/route";
-import { POST as evalBookPOST } from "../src/app/api/eval-book/route";
 import { sendEvalConfirmation } from "../src/lib/eval-confirmation-send";
+import { confirmEvalRequest } from "../src/lib/notion-eval-slots";
 
 // The free-eval confirmation has THREE equal-trust entry points that must fire
 // the IDENTICAL fan-out — the coach-dashboard server action `confirmEvalAction`
 // (src/app/coach/(authed)/eval/actions.ts), the secret-gated agent route
-// POST /api/eval-confirmation, and (Phase 1a) the public parent self-booking
-// route POST /api/eval-book. All funnel through the one shared engine
+// POST /api/eval-confirmation, and (flow change 2026-07-02) the coach-authed
+// eval-requests queue confirm (`confirmEvalRequest` core; the PUBLIC booking
+// route no longer confirms — it files a Requested claim, pinned by
+// invariant-eval-book-egress). All funnel through the one shared engine
 // `sendEvalConfirmation` (src/lib/eval-confirmation-send.ts), whose fan-out is:
 //   1. a Resend parent email,
 //   2. carrying the .ics calendar attachment,
@@ -191,38 +193,29 @@ test.describe("eval-confirmation — UI action ↔ agent route parity", () => {
   });
 });
 
-test.describe("eval-book (parent self-booking) — third-caller parity", () => {
-  // Phase 1a: POST /api/eval-book claims a slot then reuses sendEvalConfirmation
-  // UNCHANGED. Its confirmation fan-out (parent email + .ics METHOD:PUBLISH,
-  // CRM lead query, Eval-Date stamp) must be byte-for-byte the same trigger set
-  // as the shared engine. The route's ADDITIONAL fan-out — slot claim/verify on
-  // the slots db + the admin booking-notification email (its .ics is the
-  // METHOD:REQUEST variant) — is excluded from the signature by construction:
-  // slot writes never touch "Eval Date"/lead-db, and the admin email is the
-  // only Resend call carrying method=REQUEST.
-  function confirmationCalls(calls: RecordedFetch[]): RecordedFetch[] {
-    return calls.filter(
-      (c) => !(c.url.includes("api.resend.com") && c.body.includes("method=REQUEST")),
-    );
-  }
-
-  // Notion page ids are UUIDs — the eval-book route now format-gates slotId
-  // (F1) before any Notion call.
+test.describe("eval-requests confirm (coach queue core) — third-caller parity", () => {
+  // Flow change 2026-07-02: the public booking files a Status=Requested claim
+  // (no confirmation — pinned by invariant-eval-book-egress). Sam's
+  // coach-authed queue action confirms via `confirmEvalRequest`, which reuses
+  // sendEvalConfirmation UNCHANGED — its confirmation fan-out (parent email +
+  // .ics METHOD:PUBLISH, CRM lead query, Eval-Date stamp) must be
+  // byte-for-byte the same trigger set as the shared engine. Its ADDITIONAL
+  // fan-out — the Status→Booked PATCH on the slots row — is excluded from the
+  // signature by construction: slot writes never touch "Eval Date"/lead-db.
   const SLOT_ID = "22222222-2222-4222-8222-222222222222";
   const SLOT_PATH = `/v1/pages/${SLOT_ID}`;
+  const BOOKING_ID = "99999999-9999-4999-8999-999999999999";
 
-  function slotPage() {
+  function requestedSlotPage(over: Record<string, unknown> = {}) {
     return {
       id: SLOT_ID,
       object: "page",
       archived: false,
       in_trash: false,
-      // The claim path verifies db membership (F1) against
-      // NOTION_EVAL_SLOTS_DB_ID.
       parent: { type: "database_id", database_id: "eval-slots-db" },
       properties: {
         Slot: { title: [{ plain_text: "2036-07-01 10:00 AM — Olney area" }] },
-        Status: { select: { name: "Open" } },
+        Status: { select: { name: "Requested" } },
         Date: {
           date: {
             start: "2036-07-01T10:00:00.000-04:00",
@@ -230,66 +223,23 @@ test.describe("eval-book (parent self-booking) — third-caller parity", () => {
           },
         },
         Location: { select: { name: "Olney area" } },
+        "Booking Id": { rich_text: [{ plain_text: BOOKING_ID }] },
+        "Parent Name": { rich_text: [{ plain_text: "Pat Parity" }] },
         "Parent Email": { email: VALID_BODY.parentEmail },
+        "Parent Phone": { phone_number: "301-555-0100" },
+        "Child First Name": { rich_text: [{ plain_text: VALID_BODY.childFirst }] },
+        Level: { select: { name: "Green" } },
+        ...over,
       },
     };
   }
 
-  // Reflect the claim PATCH back on subsequent reads so the Booking-Id verify
-  // (F3) sees its own token — a faithful single-row Notion.
-  function reflectingSlotRule() {
-    return () => {
-      const patches = stub
-        .callsTo(SLOT_PATH)
-        .filter((c) => c.method === "PATCH");
-      const base = slotPage();
-      if (patches.length === 0) return base;
-      const written = (
-        JSON.parse(patches[patches.length - 1].body) as {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          properties: Record<string, any>;
-        }
-      ).properties;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const read: Record<string, any> = {};
-      for (const [key, value] of Object.entries(written)) {
-        if (value && Array.isArray(value.rich_text)) {
-          read[key] = {
-            rich_text: value.rich_text.map(
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (r: any) => ({ plain_text: r?.text?.content ?? "" }),
-            ),
-          };
-        } else {
-          read[key] = value;
-        }
-      }
-      return { ...base, properties: { ...base.properties, ...read } };
-    };
-  }
-
-  test("booking fan-out === shared-engine fan-out (email+ics + CRM stamp)", async () => {
-    stub.on(SLOT_PATH, reflectingSlotRule());
+  test("confirm fan-out === shared-engine fan-out (email+ics + CRM stamp), plus Status→Booked", async () => {
+    stub.on(SLOT_PATH, requestedSlotPage());
     stubHappyPath(stub);
 
-    const res = await evalBookPOST(
-      new NextRequest("http://localhost/api/eval-book", {
-        method: "POST",
-        body: JSON.stringify({
-          slotId: SLOT_ID,
-          parentName: "Pat Parity",
-          email: VALID_BODY.parentEmail,
-          phone: "301-555-0100",
-          childFirstName: VALID_BODY.childFirst,
-          level: "Green",
-        }),
-        headers: {
-          "content-type": "application/json",
-          "x-forwarded-for": "10.42.42.1",
-        },
-      }),
-    );
-    expect(res.status).toBe(200);
+    const result = await confirmEvalRequest(SLOT_ID, BOOKING_ID);
+    expect(result.ok, !result.ok ? result.error : "").toBe(true);
 
     // Exactly one parent-facing confirmation email, carrying the same
     // METHOD:PUBLISH .ics attachment naming as the other two callers.
@@ -300,7 +250,20 @@ test.describe("eval-book (parent self-booking) — third-caller parity", () => {
     expect(parentEmails[0].body).toContain("text/calendar");
     expect(parentEmails[0].body).toContain("-eval-2036-07-01.ics");
 
-    const bookSig = fanoutSignature(confirmationCalls(stub.calls));
+    // The slot row is promoted Requested → Booked.
+    const slotPatches = stub
+      .callsTo(SLOT_PATH)
+      .filter((c) => c.method === "PATCH");
+    expect(slotPatches.length, "one Status promotion PATCH").toBe(1);
+    const props = (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      JSON.parse(slotPatches[0].body) as { properties: Record<string, any> }
+    ).properties;
+    expect(props.Status?.select?.name).toBe("Booked");
+
+    // Fan-out parity vs the shared engine (slot GET/PATCH excluded by
+    // construction — they never match the signature's patterns).
+    const confirmSig = fanoutSignature(stub.calls);
 
     stub.reset();
     stub.install();
@@ -310,8 +273,36 @@ test.describe("eval-book (parent self-booking) — third-caller parity", () => {
     const engineSig = fanoutSignature(stub.calls);
 
     expect(
-      bookSig,
-      "parent self-booking fires the identical confirmation triggers as the shared engine",
+      confirmSig,
+      "coach confirm fires the identical confirmation triggers as the shared engine",
     ).toEqual(engineSig);
+  });
+
+  test("booking-id mismatch (stale queue row) → NO email, NO status change", async () => {
+    stub.on(SLOT_PATH, requestedSlotPage());
+    stubHappyPath(stub);
+
+    const result = await confirmEvalRequest(SLOT_ID, "00000000-0000-4000-8000-000000000000");
+    expect(result.ok).toBe(false);
+    expect(stub.callsTo("api.resend.com").length, "nothing emailed").toBe(0);
+    expect(
+      stub.callsTo(SLOT_PATH).filter((c) => c.method === "PATCH").length,
+      "row untouched",
+    ).toBe(0);
+  });
+
+  test("row no longer Requested (already confirmed or released) → NO email, NO status change", async () => {
+    stub.on(
+      SLOT_PATH,
+      requestedSlotPage({ Status: { select: { name: "Booked" } } }),
+    );
+    stubHappyPath(stub);
+
+    const result = await confirmEvalRequest(SLOT_ID, BOOKING_ID);
+    expect(result.ok).toBe(false);
+    expect(stub.callsTo("api.resend.com").length).toBe(0);
+    expect(
+      stub.callsTo(SLOT_PATH).filter((c) => c.method === "PATCH").length,
+    ).toBe(0);
   });
 });

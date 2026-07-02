@@ -3,11 +3,17 @@
 // /free-evaluation/book page lists them (5-min ISR) and POST /api/eval-book
 // claims one.
 //
+// STATUS LIFECYCLE (flow change 2026-07-02 — Sam's call): a parent booking is
+// a REQUEST, not a booking. Open → (public claim) → Requested → (Sam's
+// coach-portal confirm at /coach/eval-requests) → Booked, or → (release) →
+// Open. The parent gets a request-received email at claim time; the REAL
+// confirmation (+ .ics + CRM Eval-Date stamp) fires only when Sam confirms.
+//
 // Notion has no transactions (no CAS), so claiming is CLAIM-THEN-VERIFY with
 // a per-claim BOOKING TOKEN: pre-check the row is still Open, in OUR Eval
-// Slots db, and in the future (never overwrite a Booked row — this is what
+// Slots db, and in the future (never overwrite a claimed row — this is what
 // makes the page's 5-min ISR staleness safe); write the booking fields +
-// Status=Booked + a fresh random "Booking Id"; wait ~500ms; then RE-READ the
+// Status=Requested + a fresh random "Booking Id"; wait ~500ms; then RE-READ the
 // row and verify Booking Id is OURS (email is deliberately NOT the identity
 // check — two families can share an inbox, and an attacker-controlled page
 // could echo any email). If a concurrent claimer won the write race, the
@@ -141,14 +147,23 @@ function readStartMs(page: NotionSlotPage): number {
 
 // ── Reads ───────────────────────────────────────────────────────────
 
+export interface FetchOpenEvalSlotsResult {
+  slots: OpenEvalSlot[];
+  /** TRUE only on a real fetch failure (env missing is fail-soft empty, not
+   * an error) — lets callers distinguish "couldn't load times" (show retry)
+   * from "genuinely no open times" (show the contact fallback). */
+  error: boolean;
+}
+
 /**
- * Future Open slots, soonest first. Fail-soft: missing env / Notion error →
- * empty list (the page renders its no-open-slots state).
+ * Future Open slots, soonest first. Fail-soft on missing env (empty list, no
+ * error — the page renders its no-open-slots state); a Notion failure sets
+ * `error: true` so the GET route can answer 503 instead of a lying 200-[].
  */
-export async function fetchOpenEvalSlots(): Promise<OpenEvalSlot[]> {
+export async function fetchOpenEvalSlots(): Promise<FetchOpenEvalSlotsResult> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = slotsDbId();
-  if (!notionKey || !dbId) return [];
+  if (!notionKey || !dbId) return { slots: [], error: false };
 
   try {
     const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
@@ -167,15 +182,18 @@ export async function fetchOpenEvalSlots(): Promise<OpenEvalSlot[]> {
     });
     if (!res.ok) {
       console.error(`[eval-slots] query failed (${res.status})`);
-      return [];
+      return { slots: [], error: true };
     }
     const data = (await res.json()) as { results?: NotionSlotPage[] };
-    return (data.results ?? [])
-      .map(readSlot)
-      .filter((s): s is OpenEvalSlot => s !== null);
+    return {
+      slots: (data.results ?? [])
+        .map(readSlot)
+        .filter((s): s is OpenEvalSlot => s !== null),
+      error: false,
+    };
   } catch (err) {
     console.error("[eval-slots] query error:", err);
-    return [];
+    return { slots: [], error: true };
   }
 }
 
@@ -214,11 +232,14 @@ export async function claimEvalSlot(
   }
 
   try {
-    // 1. Pre-check: the row must still be Open. A Booked row (the common
-    //    ISR-staleness case) is NEVER overwritten.
+    // 1. Pre-check: the row must still be Open. A Requested/Booked row (the
+    //    common ISR-staleness case) is NEVER overwritten.
     const before = await getSlotPage(notionKey, slotId);
     if (!before) {
-      return { ok: false, reason: "error", detail: "slot read failed" };
+      // Nonexistent / unreadable / unshared page — the SAME generic
+      // slot_taken as every other unbookable case (no readability oracle:
+      // a prober can't distinguish "can't read" from "readable but taken").
+      return { ok: false, reason: "slot_taken" };
     }
     // Fail-safe gates — ALL of them answer with the same generic slot_taken
     // the genuinely-taken path returns, so a probing caller can't distinguish
@@ -249,7 +270,7 @@ export async function claimEvalSlot(
       headers: headers(notionKey),
       body: JSON.stringify({
         properties: {
-          Status: { select: { name: "Booked" } },
+          Status: { select: { name: "Requested" } },
           "Booking Id": {
             rich_text: [{ text: { content: bookingId } }],
           },
@@ -300,10 +321,11 @@ export async function claimEvalSlot(
 export type ReleaseEvalSlotResult = "released" | "kept_foreign" | "failed";
 
 /**
- * Best-effort CONDITIONAL rollback when the confirmation email fails AFTER a
- * successful claim: re-read the row, and ONLY when it still holds OUR
- * bookingId re-open it and clear the booking fields, so the parent (who saw
- * an error) isn't silently holding a slot.
+ * Best-effort CONDITIONAL release, used two ways: (a) rollback when the
+ * request-received email fails AFTER a successful claim, and (b) Sam's
+ * release/reschedule action in the /coach/eval-requests queue. Re-reads the
+ * row, and ONLY when it still holds OUR bookingId re-opens it and clears the
+ * booking fields.
  *
  * If the re-read shows a DIFFERENT Booking Id, a residual-race winner now
  * owns the row — leave it exactly as-is ("kept_foreign"): clearing it would
@@ -344,5 +366,169 @@ export async function releaseEvalSlot(
     return res.ok ? "released" : "failed";
   } catch {
     return "failed";
+  }
+}
+
+// ── Coach queue: Requested rows + Sam's confirm step ────────────────
+
+/** A Requested row with its booking fields — COACH-AUTHED surfaces only
+ * (parent contact is PII; never render on a public page). */
+export interface RequestedEvalSlot extends OpenEvalSlot {
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  childFirst: string;
+  level: string;
+  bookingId: string;
+}
+
+/**
+ * All Requested rows, soonest first — the /coach/eval-requests queue.
+ * Fail-soft: missing env / Notion error → empty list (the queue page says so
+ * and the Notion db remains the source of truth).
+ */
+export async function fetchRequestedEvalSlots(): Promise<RequestedEvalSlot[]> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = slotsDbId();
+  if (!notionKey || !dbId) return [];
+
+  try {
+    const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+      method: "POST",
+      headers: headers(notionKey),
+      body: JSON.stringify({
+        filter: { property: "Status", select: { equals: "Requested" } },
+        sorts: [{ property: "Date", direction: "ascending" }],
+        page_size: 100,
+      }),
+    });
+    if (!res.ok) {
+      console.error(`[eval-slots] requested query failed (${res.status})`);
+      return [];
+    }
+    const data = (await res.json()) as { results?: NotionSlotPage[] };
+    const out: RequestedEvalSlot[] = [];
+    for (const page of data.results ?? []) {
+      const slot = readSlot(page);
+      if (!slot) continue;
+      const props = page.properties ?? {};
+      out.push({
+        ...slot,
+        parentName: readPlainText(props["Parent Name"]).trim(),
+        parentEmail: (props["Parent Email"]?.email ?? "").trim(),
+        parentPhone: (props["Parent Phone"]?.phone_number ?? "").trim(),
+        childFirst: readPlainText(props["Child First Name"]).trim(),
+        level: props["Level"]?.select?.name ?? "",
+        bookingId: readBookingId(page),
+      });
+    }
+    return out;
+  } catch (err) {
+    console.error("[eval-slots] requested query error:", err);
+    return [];
+  }
+}
+
+export type ConfirmEvalRequestResult =
+  | { ok: true; to: string; crmUpdated: boolean; statusPatched: boolean }
+  | { ok: false; error: string };
+
+/**
+ * Sam's confirm step (the /coach/eval-requests queue action; auth lives in
+ * the server action wrapper — this is the shared core so trigger-parity specs
+ * can pin the fan-out). Verifies the row is still a Requested slot in OUR db
+ * holding the EXPECTED bookingId (a stale queue tab must not confirm a row
+ * that was since released and re-claimed by a different family), then fires
+ * the shared confirmation engine UNCHANGED — parent email + .ics + fail-soft
+ * CRM Eval-Date stamp — and promotes Status → Booked. The status PATCH runs
+ * AFTER the send (email is the core value; a missed promotion leaves the row
+ * in the queue where a re-confirm is idempotent-safe for the parent).
+ */
+export async function confirmEvalRequest(
+  slotId: string,
+  bookingId: string,
+): Promise<ConfirmEvalRequestResult> {
+  // Dynamic import keeps module init one-directional at runtime; this module
+  // is already imported BY eval callers at boot, and eval-confirmation-send
+  // never imports us back at top level beyond to12Hour (value-only).
+  const { sendEvalConfirmation } = await import("./eval-confirmation-send");
+
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = slotsDbId();
+  if (!notionKey || !dbId) {
+    return { ok: false, error: "eval-slots env not configured" };
+  }
+
+  try {
+    const page = await getSlotPage(notionKey, slotId);
+    if (!page) return { ok: false, error: "Couldn't read the slot row." };
+    const parentDb = page.parent?.database_id ?? "";
+    if (!parentDb || normalizeNotionId(parentDb) !== normalizeNotionId(dbId)) {
+      return { ok: false, error: "That page is not an eval slot." };
+    }
+    if (readStatus(page) !== "Requested") {
+      return {
+        ok: false,
+        error:
+          "This request was already handled (row is no longer Requested) — refresh the queue.",
+      };
+    }
+    if (!bookingId || readBookingId(page) !== bookingId) {
+      return {
+        ok: false,
+        error: "Booking changed since this page loaded — refresh the queue.",
+      };
+    }
+
+    const slot = readSlot(page);
+    if (!slot) return { ok: false, error: "Slot is missing date/time/location." };
+    const props = page.properties ?? {};
+    const parentEmail = (props["Parent Email"]?.email ?? "").trim();
+    const parentName = readPlainText(props["Parent Name"]).trim();
+    const childFirst = readPlainText(props["Child First Name"]).trim();
+    if (!parentEmail || !childFirst) {
+      return { ok: false, error: "Row is missing the parent email or child name." };
+    }
+
+    const send = await sendEvalConfirmation({
+      parentEmail,
+      parentFirst: parentName.split(/\s+/)[0],
+      childFirst,
+      date: slot.date,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+      location: slot.location,
+    });
+    if (!send.ok) {
+      const detail = send.errors?.length ? `: ${send.errors.join(", ")}` : "";
+      return { ok: false, error: `${send.error}${detail}` };
+    }
+
+    // Promote Requested → Booked (fail-soft: the email is already delivered;
+    // a missed PATCH just leaves the row visible in the queue).
+    const patch = await fetch(`${NOTION_API}/pages/${slotId}`, {
+      method: "PATCH",
+      headers: headers(notionKey),
+      body: JSON.stringify({
+        properties: { Status: { select: { name: "Booked" } } },
+      }),
+    });
+    if (!patch.ok) {
+      console.error(
+        `[eval-slots] confirm sent but Status PATCH failed (${patch.status}) — slot ${slotId} still Requested`,
+      );
+    }
+
+    return {
+      ok: true,
+      to: send.to,
+      crmUpdated: send.dryRun ? false : send.crm.updated,
+      statusPatched: patch.ok,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "unknown error",
+    };
   }
 }

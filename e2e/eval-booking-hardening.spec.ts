@@ -7,6 +7,11 @@ import {
   evalBookingNotifyHtml,
   type EvalBookingNotifyInput,
 } from "../src/lib/email/eval-booking-notify";
+import {
+  evalRequestReceivedHtml,
+  evalRequestReceivedText,
+  evalRequestReceivedSubject,
+} from "../src/lib/email/eval-request-received";
 import type { OpenEvalSlot } from "../src/lib/notion-eval-slots";
 
 // Unit-level pins for the PR #244 code-review fixes that don't need the full
@@ -63,6 +68,39 @@ test.describe("lead-confirmation template escapes user values (F2)", () => {
     // inert text is fine — the tag + quotes cannot re-form).
     expect(html).not.toContain('onerror="');
     expect(html).toContain("&lt;img");
+  });
+});
+
+test.describe("eval-request-received template (flow change) — escaped + no premature booking language", () => {
+  const input = {
+    parentFirst: "Pat",
+    childFirst: "Kiddo",
+    dateLong: "Friday, July 10, 2036",
+    startTime: "5:30 PM",
+    endTime: "6:00 PM",
+    location: "Cabin John MS",
+  };
+
+  test("user values are escaped", () => {
+    const html = evalRequestReceivedHtml({
+      ...input,
+      parentFirst: XSS,
+      childFirst: "<b>Kid</b>",
+    });
+    expect(html).not.toContain("<img");
+    expect(html).not.toContain("<b>Kid</b>");
+    expect(html).toContain("&lt;img");
+  });
+
+  test("copy promises a confirmation LATER (24 hours), never claims the time is booked", () => {
+    const html = evalRequestReceivedHtml(input);
+    const text = evalRequestReceivedText(input);
+    for (const body of [html, text]) {
+      expect(body).toContain("24 hours");
+      expect(body.toLowerCase()).not.toContain("you're booked");
+      expect(body.toLowerCase()).not.toContain("is booked");
+    }
+    expect(evalRequestReceivedSubject("Kiddo")).toContain("Request received");
   });
 });
 
