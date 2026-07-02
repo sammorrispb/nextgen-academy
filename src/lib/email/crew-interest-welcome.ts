@@ -1,6 +1,7 @@
 import { c, s } from "./brand";
 import type { Cluster } from "@/data/clusters";
 import type { CrewSessionLine } from "./crew-session-lines";
+import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
 
 interface CrewInterestWelcomeInput {
   parentFirst: string;
@@ -113,6 +114,8 @@ export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string
       </p>
     </div>
 
+    ${whatsappInviteHtml()}
+
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         Better than yesterday, together.<br>
@@ -184,6 +187,8 @@ export function crewInterestWelcomeText(input: CrewInterestWelcomeInput): string
     `Want to play this week? While we're locking in cluster details, ${childFirst} can drop in on any open session — the weekly newsletter shows everything that's open.`,
     "",
     `See open sessions: ${newsletterUrl}`,
+    "",
+    whatsappInviteText(),
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
