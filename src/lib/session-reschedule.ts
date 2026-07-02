@@ -7,7 +7,7 @@ import {
 } from "@/lib/notion-dropins";
 import { partitionRegistrants } from "@/lib/registrant-match";
 import { updateSession } from "@/lib/notion-sessions-admin";
-import { RECURRING_TITLE_PREFIXES } from "@/lib/recurring-sessions";
+import { isSeederManagedRow } from "@/lib/recurring-sessions";
 import {
   sessionRescheduledHtml,
   sessionRescheduledText,
@@ -29,9 +29,12 @@ import {
  *    The roster is captured across [min..max of old/new date] and matched by
  *    Session Row ID so a re-run finds rows whether or not they already moved;
  *    `Reschedule Notified` gates the email so a re-run never double-sends.
- *  - Seeded recurring evenings (Mon–Thu templates) are blocked — moving one
- *    makes the seed cron re-create a ghost at the original date. Cancel it
- *    instead.
+ *  - Rows the seeder ACTUALLY manages are blocked — moving one makes the seed
+ *    cron re-create a ghost at the original date. Cancel it instead. "Managed"
+ *    is narrow (F5): title matches an ACTIVE template's prefix AND the row's
+ *    level is one that template seeds AND the row's date falls on the
+ *    template's weekday (isSeederManagedRow). A hand-moved row, a level a
+ *    template doesn't seed, or a deactivated template reschedules normally.
  */
 
 const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
@@ -77,10 +80,6 @@ export function todayET(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-export function isSeededRecurring(title: string): boolean {
-  const t = (title || "").trim();
-  return RECURRING_TITLE_PREFIXES.some((p) => t.startsWith(p));
-}
 
 function formatLongDate(isoDate: string): string {
   if (!isoDate) return "";
@@ -129,11 +128,11 @@ export async function executeSessionReschedule(
   if (input.newDate <= todayET()) {
     return { ok: false, message: "New date must be in the future" };
   }
-  if (isSeededRecurring(input.sessionTitle)) {
+  if (isSeederManagedRow({ title: input.sessionTitle, date: input.oldDate })) {
     return {
       ok: false,
       message:
-        "This is an auto-seeded recurring session — cancel it instead (the weekly seeder manages its dates).",
+        "This is an auto-seeded recurring session — cancel it instead (the weekly seeder manages this weekday/level).",
     };
   }
 

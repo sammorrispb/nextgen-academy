@@ -16,8 +16,10 @@ export const ALL_LEVELS = ["Red", "Orange", "Green", "Yellow"] as const;
 export type SessionLevel = (typeof ALL_LEVELS)[number];
 
 export interface RecurringTemplate {
-  /** Day of week the session runs, 0=Sun … 6=Sat (matches Date#getUTCDay). */
-  weekday: number;
+  /** Day of week the session runs, 0=Sun … 6=Sat (matches Date#getUTCDay).
+   * Union type so a typo'd weekday fails at compile time; validateTemplate
+   * re-checks at runtime for templates injected via options. */
+  weekday: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   /** Current row-title prefix; rows are titled `${titleBase} — ${level}`. */
   titleBase: string;
   /** EVERY title prefix this evening's rows have ever carried (including the

@@ -4,7 +4,7 @@ import {
   type SessionCancelResult,
 } from "@/lib/session-cancel";
 import type { CancelReason } from "@/lib/email/session-cancelled";
-import { RECURRING_TITLE_PREFIXES } from "@/lib/recurring-sessions";
+import { recurringPrefixesForDate } from "@/lib/recurring-sessions";
 
 /**
  * One-call cancel for a multi-row session day.
@@ -41,17 +41,24 @@ interface GroupRow {
  * Every Sessions-DB row on `date` whose title starts with one of
  * `titlePrefixes`. The prefix match is the blast-radius guard: an unrelated
  * same-date session (e.g. a Saturday HS clinic) is never returned, so it can
- * never be swept into a group cancel. Defaults to the union of all
- * recurring-template prefixes (Mon–Thu, Phase 2a); the coach button passes
- * the specific base title instead.
+ * never be swept into a group cancel. The DEFAULT prefixes are derived from
+ * the DATE's weekday (only that weekday's template family, incl. its legacy
+ * prefixes — F1): a wrong-date call is a safe no-op, never a wrong-date
+ * refund — a Wednesday date can never sweep Tuesday rows. The coach button
+ * passes the specific base title instead, which still overrides.
  */
 export async function fetchGroupRowsForDate(
   date: string,
-  titlePrefixes: readonly string[] = RECURRING_TITLE_PREFIXES,
+  titlePrefixes?: readonly string[],
 ): Promise<GroupRow[]> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_SESSIONS_DB_ID;
   if (!notionKey || !dbId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
+
+  const prefixes = titlePrefixes ?? recurringPrefixesForDate(date);
+  // No template family runs on this weekday → nothing can match; skip the
+  // Notion round-trip entirely.
+  if (prefixes.length === 0) return [];
 
   const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
     method: "POST",
@@ -81,7 +88,7 @@ export async function fetchGroupRowsForDate(
   for (const page of data.results ?? []) {
     const props = page.properties ?? {};
     const title = readPlainText(props["Session"]);
-    if (!title || !titlePrefixes.some((p) => title.startsWith(p))) continue;
+    if (!title || !prefixes.some((p) => title.startsWith(p))) continue;
     rows.push({
       id: page.id as string,
       title,
@@ -97,7 +104,8 @@ export interface GroupCancelInput {
   date: string; // ISO YYYY-MM-DD
   reason: CancelReason;
   note?: string;
-  /** Title prefixes that define the group. Defaults to the Tuesday prefixes. */
+  /** Title prefixes that define the group. Defaults to the template family
+   * that runs on `date`'s weekday (see fetchGroupRowsForDate). */
   titlePrefixes?: readonly string[];
 }
 
@@ -141,7 +149,9 @@ export async function cancelAllLevelsForDate(
     return { ...base, message: "A valid date (YYYY-MM-DD) is required" };
   }
 
-  const rows = await fetchGroupRowsForDate(date, titlePrefixes ?? RECURRING_TITLE_PREFIXES);
+  // undefined titlePrefixes → fetchGroupRowsForDate derives them from the
+  // date's weekday (F1): the wrong-date failure mode is a no-op, not a sweep.
+  const rows = await fetchGroupRowsForDate(date, titlePrefixes);
   base.matched = rows.length;
   if (rows.length === 0) {
     return { ...base, message: `No multi-level sessions found on ${date}` };
