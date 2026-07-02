@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { Resend } from "resend";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { fetchActiveSubscribers } from "@/lib/notion-newsletter";
@@ -149,19 +148,8 @@ function weatherNote(dw: DayWeather): string {
   return `${dw.summary}${temp}`;
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("weekly-newsletter", async () => {
+  const failures: CronFailure[] = [];
   const tip = pickWeeklyTip();
   const todayIso = isoEtPlusDays(0);
   const weekEndIso = isoEtPlusDays(WINDOW_DAYS);
@@ -260,10 +248,12 @@ export async function GET(req: NextRequest) {
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
   if (!resend) {
     console.warn("[cron/weekly-newsletter] RESEND_API_KEY missing — nothing sent");
-    return NextResponse.json(
-      { ok: false, error: "RESEND_API_KEY missing", subscribers: subscribers.length },
-      { status: 500 },
-    );
+    return {
+      attempted: subscribers.length,
+      succeeded: 0,
+      failures: [{ signature: "resend_not_configured" }],
+      body: { error: "RESEND_API_KEY missing", subscribers: subscribers.length },
+    };
   }
 
   const subject = sessions.length
@@ -324,7 +314,14 @@ export async function GET(req: NextRequest) {
     });
     if (error) {
       failed++;
+      // Keep the subscriber's email in LOGS only — the alert failure ref is a
+      // positional index so no parent PII rides the alert email.
       console.error(`[cron/weekly-newsletter] send failed for ${sub.email}:`, error);
+      failures.push({
+        signature: "subscriber_send_failed",
+        ref: `subscriber#${i}`,
+        detail: error.message ?? String(error),
+      });
     } else {
       sent++;
     }
@@ -366,6 +363,11 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("[cron/weekly-newsletter] admin copy failed:", err);
+    // Class name only — raw exception text stays in the log line above.
+    failures.push({
+      signature: "admin_copy_failed",
+      detail: err instanceof Error ? err.constructor.name : typeof err,
+    });
   }
 
   // Flip the rows we actually included to Used so they don't reappear in
@@ -374,8 +376,17 @@ export async function GET(req: NextRequest) {
   let newsMarkedUsed = 0;
   if (sent > 0) {
     for (const row of newsRows) {
-      const ok = await setNewsStatus(row.pageId, "Used");
-      if (ok) newsMarkedUsed++;
+      // A false return = the Used flip didn't stick → the same news item
+      // repeats in next week's issue. Surface it instead of dropping it.
+      const marked = await setNewsStatus(row.pageId, "Used");
+      if (marked) newsMarkedUsed++;
+      else
+        failures.push({
+          signature: "news_status_write_failed",
+          ref: row.pageId,
+          detail:
+            "news row not flipped to Used; it will repeat in next week's issue",
+        });
     }
     // Stamp "Sent At" on every draft row that shipped so the Notion DB shows
     // exactly when each issue went out (fire-and-forget, never throws).
@@ -391,7 +402,6 @@ export async function GET(req: NextRequest) {
   }
 
   const summary = {
-    ok: true,
     has_sessions: sessions.length > 0,
     session_groups: sessions.length,
     summer_groups: summerSessions.length,
@@ -407,5 +417,10 @@ export async function GET(req: NextRequest) {
     tip: tip.title,
   };
   console.log("[cron/weekly-newsletter]", JSON.stringify(summary));
-  return NextResponse.json(summary);
-}
+  return {
+    attempted: subscribers.length,
+    succeeded: sent,
+    failures,
+    body: summary,
+  };
+});

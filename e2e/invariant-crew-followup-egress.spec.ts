@@ -101,4 +101,63 @@ test.describe("crew-followup cron — PII egress", () => {
     expect(ack).not.toContain(PARENT_EMAIL);
     expect(ack).toContain('"reengaged":1');
   });
+
+  // F1: markCrewInterestFlag's boolean return used to be ignored after the
+  // re-engagement send — a Notion write that didn't stick meant the same
+  // parent got the same email EVERY day with no alert. A false flag write
+  // must surface as a flag_write_failed failure (500 + alert email), and the
+  // alert must stay PII-free.
+  test("flag write returns false → 500 + flag_write_failed alert (no silent daily duplicates)", async () => {
+    stub
+      .on("/databases/crew-interest-db/query", { results: [crewRow(10)] })
+      .on("/databases/sessions-db/query", { results: [] })
+      // The idempotency-flag PATCH fails → markCrewInterestFlag returns false.
+      .on("api.notion.com/v1/pages", { message: "boom" }, 500)
+      .on("api.resend.com", { id: "email_test" });
+
+    const res = await GET(req("test-cron-secret"));
+    expect(res.status).toBe(500);
+
+    const emails = stub.callsTo("api.resend.com");
+    // Parent re-engagement email + the cron alert to Sam.
+    expect(emails.length, "re-engagement send + one alert email").toBe(2);
+    const alert = emails[1].body;
+    expect(alert).toContain("flag_write_failed");
+    expect(alert).toContain("crew-1"); // page-id ref rides the alert…
+    expect(alert).not.toContain(CHILD_NAME); // …child/parent data never does
+    expect(alert).not.toContain(PARENT_EMAIL);
+
+    // Generic 500 ack — no PII, no exception text.
+    const ack = JSON.stringify(await res.json());
+    expect(ack).not.toContain(CHILD_NAME);
+    expect(ack).not.toContain(PARENT_EMAIL);
+  });
+
+  // F6: a reengage-stage row with a malformed parent email used to fall
+  // through BOTH send branches (resend truthy but EMAIL_RE fails) — never
+  // sent, never flagged, never counted — so with a valid RESEND_API_KEY the
+  // row was silently skipped every daily run forever while the route
+  // reported success. Same posture as the dropin routes: ONE rolled-up
+  // invalid_parent_email failure entry per run (count + page-id refs).
+  test("reengage row with a malformed parent email → rolled-up invalid_parent_email alert, not a silent skip", async () => {
+    const row = crewRow(10);
+    row.properties["Parent Email"].email = "not-an-email";
+    stub
+      .on("/databases/crew-interest-db/query", { results: [row] })
+      .on("/databases/sessions-db/query", { results: [] })
+      .on("api.notion.com/v1/pages", { id: "patched" })
+      .on("api.resend.com", { id: "email_test" });
+
+    const res = await GET(req("test-cron-secret"));
+    expect(res.status).toBe(500);
+
+    const emails = stub.callsTo("api.resend.com");
+    // No parent send is attempted (nothing valid to send to) — the ONLY
+    // Resend call is the cron alert itself.
+    expect(emails.length, "alert email only").toBe(1);
+    expect(emails[0].body).toContain("invalid_parent_email");
+    expect(emails[0].body).toContain("crew-1"); // page-id ref rides the alert
+    expect(emails[0].body).not.toContain(CHILD_NAME);
+    expect(emails[0].body).not.toContain("not-an-email");
+  });
 });

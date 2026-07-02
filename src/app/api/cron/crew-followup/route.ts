@@ -1,5 +1,5 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { rollupFailure, withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { EMAIL_RE } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
   fetchActionableCrewInterest,
@@ -35,8 +35,6 @@ const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function toCandidate(row: ActionableCrewInterest): CrewCandidate {
   return {
@@ -105,28 +103,25 @@ function buildDigestHtml(entries: NudgeEntry[], now: Date): string {
 </body></html>`;
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("crew-followup", async () => {
+  const failures: CronFailure[] = [];
   const now = new Date();
   const rows = await fetchActionableCrewInterest();
 
-  // One sessions read, shared across every row's match.
+  // One sessions read, shared across every row's match. A miss used to be
+  // console.error'd and swallowed — every match silently came back empty, so
+  // parents got a "no matching sessions" email off broken data. Fail soft the
+  // same way (still send) but alert.
   let sessions: Awaited<ReturnType<typeof fetchUpcomingSessions>> = [];
   try {
     sessions = await fetchUpcomingSessions();
   } catch (err) {
     console.error("[cron/crew-followup] sessions fetch failed:", err);
+    // Class name only — raw exception text stays in the log line above.
+    failures.push({
+      signature: "sessions_fetch_failed",
+      detail: err instanceof Error ? err.constructor.name : typeof err,
+    });
   }
 
   const pool = rows.map(toCandidate);
@@ -139,8 +134,10 @@ export async function GET(req: NextRequest) {
   }
 
   const nudges: NudgeEntry[] = [];
+  const invalidEmailIds: string[] = [];
   let reengaged = 0;
   let reengageErrors = 0;
+  let reengageSkippedNoResend = 0;
 
   for (const row of rows) {
     const stage = crewFollowupStage(
@@ -179,7 +176,21 @@ export async function GET(req: NextRequest) {
     }
 
     // stage === "reengage": parent email with matching open sessions.
-    if (resend && EMAIL_RE.test(row.parentEmail)) {
+    // A missing/malformed parent email can never get this send — it used to
+    // fall through BOTH branches below (resend truthy but EMAIL_RE fails):
+    // never sent, never flagged, never counted, reported as success every
+    // daily run forever. Same posture as the dropin routes: collect, then
+    // roll into ONE invalid_parent_email entry (count + refs) after the loop.
+    // (The nudge/digest path has no such fall-through — the digest goes to
+    // the fixed admin inbox, not to row.parentEmail.)
+    if (!row.parentEmail || !EMAIL_RE.test(row.parentEmail)) {
+      invalidEmailIds.push(row.id);
+      continue;
+    }
+    if (!resend) {
+      reengageSkippedNoResend++;
+    }
+    if (resend) {
       const parentFirst = (row.parentName || "").split(/\s+/)[0] || "there";
       const childFirst = row.childFirstName || "your player";
       const input = {
@@ -202,12 +213,27 @@ export async function GET(req: NextRequest) {
       if (error) {
         reengageErrors++;
         console.error("[cron/crew-followup] reengage send failed", error);
+        failures.push({
+          signature: "reengage_send_failed",
+          ref: row.id,
+          detail: error.message ?? String(error),
+        });
         continue; // Don't flag — retry next tick.
       }
       reengaged++;
       // Flip both flags so a stale nudge never fires after the bigger touch.
-      await markCrewInterestFlag(row.id, "Reengagement Sent");
-      await markCrewInterestFlag(row.id, "Nudge Sent");
+      // A false return = the write didn't stick → this parent gets the SAME
+      // email again tomorrow. Surface it instead of silently duplicating.
+      const reengFlagged = await markCrewInterestFlag(row.id, "Reengagement Sent");
+      const nudgeFlagged = await markCrewInterestFlag(row.id, "Nudge Sent");
+      if (!reengFlagged || !nudgeFlagged) {
+        failures.push({
+          signature: "flag_write_failed",
+          ref: row.id,
+          detail:
+            "Reengagement/Nudge Sent flag did not stick; parent will be re-emailed next tick",
+        });
+      }
     }
   }
 
@@ -225,13 +251,39 @@ export async function GET(req: NextRequest) {
     });
     if (error) {
       console.error("[cron/crew-followup] digest send failed", error);
+      failures.push({
+        signature: "digest_send_failed",
+        detail: error.message ?? String(error),
+      });
     } else {
       digestSent = true;
       for (const n of nudges) {
-        await markCrewInterestFlag(n.row.id, "Nudge Sent");
+        const flagged = await markCrewInterestFlag(n.row.id, "Nudge Sent");
+        if (!flagged) {
+          failures.push({
+            signature: "flag_write_failed",
+            ref: n.row.id,
+            detail:
+              "Nudge Sent flag did not stick; row repeats in tomorrow's digest",
+          });
+        }
       }
     }
   }
+
+  // Due sends with no Resend key used to skip silently behind a 200.
+  if (!resend && (nudges.length > 0 || reengageSkippedNoResend > 0)) {
+    failures.push({
+      signature: "resend_not_configured",
+      detail: `${nudges.length} nudge(s) + ${reengageSkippedNoResend} re-engagement(s) due but RESEND_API_KEY is unset`,
+    });
+  }
+  const invalidEmail = rollupFailure(
+    "invalid_parent_email",
+    invalidEmailIds,
+    "re-engagement row(s) with a missing/malformed parent email",
+  );
+  if (invalidEmail) failures.push(invalidEmail);
 
   const summary = {
     actionable: rows.length,
@@ -239,7 +291,13 @@ export async function GET(req: NextRequest) {
     digest_sent: digestSent,
     reengaged,
     reengage_errors: reengageErrors,
+    invalid_email: invalidEmailIds.length,
   };
   console.log("[cron/crew-followup]", JSON.stringify(summary));
-  return NextResponse.json({ ok: true, ...summary });
-}
+  return {
+    attempted: reengaged + reengageErrors + (nudges.length > 0 ? 1 : 0),
+    succeeded: reengaged + (digestSent ? 1 : 0),
+    failures,
+    body: summary,
+  };
+});

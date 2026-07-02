@@ -3,6 +3,8 @@
 // patch the editable fields. `Registered count` is owned by the Stripe webhook
 // and is intentionally NOT writable here (read-only display only).
 
+import { readPlainText } from "@/lib/notion-utils";
+
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
@@ -53,14 +55,6 @@ function headers(key: string) {
     "Content-Type": "application/json",
     "Notion-Version": NOTION_VERSION,
   };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readPlainText(prop: any): string {
-  const arr = prop?.rich_text ?? prop?.title ?? [];
-  return Array.isArray(arr)
-    ? arr.map((r: { plain_text?: string }) => r.plain_text ?? "").join("")
-    : "";
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -1,5 +1,5 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { rollupFailure, withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { EMAIL_RE } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
   fetchUpcomingDropIns,
@@ -113,7 +113,7 @@ async function buildCommitUrl(
 // follow-up branches on the attendance the coach submitted at check-in; rows
 // with no attendance recorded are handled separately (held + admin nudge).
 async function sendOne(
-  resend: Resend | null,
+  resend: Resend,
   row: DropInRegistration,
   kind: "present" | "noshow",
 ): Promise<SendOutcome> {
@@ -129,15 +129,6 @@ async function sendOne(
     emailSent: false,
     flagged: false,
   };
-
-  if (
-    !resend ||
-    !row.parentEmail ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.parentEmail)
-  ) {
-    outcome.error = "no_resend_or_email";
-    return outcome;
-  }
 
   let subject: string;
   let html: string;
@@ -265,19 +256,7 @@ async function sendAttendanceNudge(
   return true;
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("dropin-post-session", async () => {
   const targetIso = yesterdayEtIso();
   // Confirmed-only window. We don't email post-session recaps to rows that
   // ended up Cancelled or Refunded — those parents already got a Coach-
@@ -302,14 +281,65 @@ export async function GET(req: NextRequest) {
     console.warn("[cron/dropin-post-session] RESEND_API_KEY missing — skipping sends");
   }
 
+  // One consistent posture with dropin-reminder: a due row with a missing or
+  // malformed parent email can never get its follow-up — roll those into ONE
+  // failure entry per run (count + page-id refs) instead of one hard failure
+  // per row, and roll a missing RESEND_API_KEY into one entry too.
+  const dueRows: Array<{ row: DropInRegistration; kind: "present" | "noshow" }> = [
+    ...present.map((row) => ({ row, kind: "present" as const })),
+    ...noShow.map((row) => ({ row, kind: "noshow" as const })),
+  ];
+  const hasValidEmail = ({ row }: { row: DropInRegistration }) =>
+    Boolean(row.parentEmail) && EMAIL_RE.test(row.parentEmail);
+  const invalidEmailRows = dueRows.filter((r) => !hasValidEmail(r));
+  const sendable = dueRows.filter(hasValidEmail);
+
   const outcomes: SendOutcome[] = [];
-  for (const row of present) {
-    outcomes.push(await sendOne(resend, row, "present"));
-  }
-  for (const row of noShow) {
-    outcomes.push(await sendOne(resend, row, "noshow"));
+  if (resend) {
+    for (const { row, kind } of sendable) {
+      outcomes.push(await sendOne(resend, row, kind));
+    }
   }
   const adminNudged = await sendAttendanceNudge(resend, blank);
+
+  // Per-item failures the old version console.error'd behind a 200. A held
+  // roster with a failed admin nudge means the "attendance missing" signal
+  // never reached Sam — that's a failure too.
+  const failures: CronFailure[] = [];
+  if (!resend && (sendable.length > 0 || blank.length > 0)) {
+    failures.push({
+      signature: "resend_not_configured",
+      detail: `${sendable.length} follow-up(s) + ${blank.length} held-roster nudge(s) due but RESEND_API_KEY is unset`,
+    });
+  }
+  const invalidEmail = rollupFailure(
+    "invalid_parent_email",
+    invalidEmailRows.map(({ row }) => row.id),
+    "follow-up row(s) with a missing/malformed parent email",
+  );
+  if (invalidEmail) failures.push(invalidEmail);
+  for (const o of outcomes) {
+    if (o.error) {
+      failures.push({
+        signature: "resend_rejected",
+        ref: o.pageId,
+        detail: o.error,
+      });
+    }
+    if (o.emailSent && !o.flagged) {
+      failures.push({
+        signature: "flag_write_failed",
+        ref: o.pageId,
+        detail: "Post Session Sent flag did not stick; row will re-send next tick",
+      });
+    }
+  }
+  if (blank.length > 0 && resend && !adminNudged) {
+    failures.push({
+      signature: "attendance_nudge_failed",
+      detail: `${blank.length} held drop-in(s), admin nudge did not send`,
+    });
+  }
 
   const summary = {
     target_date_et: targetIso,
@@ -318,21 +348,26 @@ export async function GET(req: NextRequest) {
     present_sent: outcomes.filter((o) => o.emailSent && present.some((p) => p.id === o.pageId)).length,
     noshow_sent: outcomes.filter((o) => o.emailSent && noShow.some((n) => n.id === o.pageId)).length,
     held_no_attendance: blank.length,
+    invalid_email: invalidEmailRows.length,
     admin_nudged: adminNudged,
     errors: outcomes.filter((o) => o.error).length,
   };
   console.log("[cron/dropin-post-session]", JSON.stringify(summary));
 
-  return NextResponse.json({
-    ok: true,
-    ...summary,
-    outcomes: outcomes.map((o) => ({
-      pageId: o.pageId,
-      childFirst: o.childFirst,
-      emailSent: o.emailSent,
-      flagged: o.flagged,
-      ...(o.error ? { error: o.error } : {}),
-    })),
-    held: blank.map((r) => ({ pageId: r.id, childFirst: r.childFirstName })),
-  });
-}
+  return {
+    attempted: sendable.length,
+    succeeded: outcomes.filter((o) => o.emailSent).length,
+    failures,
+    body: {
+      ...summary,
+      outcomes: outcomes.map((o) => ({
+        pageId: o.pageId,
+        childFirst: o.childFirst,
+        emailSent: o.emailSent,
+        flagged: o.flagged,
+        ...(o.error ? { error: o.error } : {}),
+      })),
+      held: blank.map((r) => ({ pageId: r.id, childFirst: r.childFirstName })),
+    },
+  };
+});

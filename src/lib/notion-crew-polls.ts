@@ -1,4 +1,5 @@
 import type { Level, Vote } from "@/lib/validate-poll-vote";
+import { readPlainText } from "@/lib/notion-utils";
 
 /**
  * Read/write helpers for the NGA Crew Polls Notion DB
@@ -42,14 +43,6 @@ export interface PollResponse {
   vote: Vote | "";
   note: string;
   createdTime: string;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readPlainText(prop: any): string {
-  if (!prop) return "";
-  const arr = prop.rich_text ?? prop.title ?? [];
-  if (!Array.isArray(arr)) return "";
-  return arr.map((r: { plain_text?: string }) => r.plain_text ?? "").join("");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

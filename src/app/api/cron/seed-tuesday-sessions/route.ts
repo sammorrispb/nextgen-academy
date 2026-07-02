@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert } from "@/lib/cron-alert";
 import { ensureAllLevelsTuesdays } from "@/lib/recurring-sessions";
 
 export const runtime = "nodejs";
@@ -9,42 +8,33 @@ export const dynamic = "force-dynamic";
 // weekly run never leaves a Tuesday un-seeded inside the bookable horizon.
 const WEEKS_AHEAD = 8;
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("seed-tuesday-sessions", async () => {
   // ET calendar "today" (en-CA → YYYY-MM-DD) so the next-Tuesday math anchors
   // to the operator's timezone, not the server's UTC.
   const todayEt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
   }).format(new Date());
 
-  try {
-    const result = await ensureAllLevelsTuesdays(todayEt, WEEKS_AHEAD);
-    console.log(
-      "[cron/seed-tuesday-sessions]",
-      JSON.stringify({
-        today: todayEt,
-        created: result.created.length,
-        skipped: result.skipped,
-        failed: result.failed.length,
-      }),
-    );
-    return NextResponse.json({ ok: true, today: todayEt, ...result });
-  } catch (err) {
-    console.error("[cron/seed-tuesday-sessions] failed:", err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal error" },
-      { status: 500 },
-    );
-  }
-}
+  // A thrown error is caught by the wrapper (alert + 500), matching the old
+  // catch block. Per-row failures used to ride back as 200 — now they alert.
+  const result = await ensureAllLevelsTuesdays(todayEt, WEEKS_AHEAD);
+  console.log(
+    "[cron/seed-tuesday-sessions]",
+    JSON.stringify({
+      today: todayEt,
+      created: result.created.length,
+      skipped: result.skipped,
+      failed: result.failed.length,
+    }),
+  );
+  return {
+    attempted: result.created.length + result.failed.length,
+    succeeded: result.created.length,
+    // failed entries are "YYYY-MM-DD Level" strings — no PII.
+    failures: result.failed.map((f) => ({
+      signature: "seed_row_failed",
+      ref: f,
+    })),
+    body: { today: todayEt, ...result },
+  };
+});

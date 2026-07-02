@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { runCampChecklistReminder } from "@/lib/camp-checklist-reminder";
 
 export const runtime = "nodejs";
@@ -17,32 +16,35 @@ export const dynamic = "force-dynamic";
  *
  * No parent/child data is involved — recipients are coaches only.
  */
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("camp-checklist-reminder", async (req) => {
   const params = req.nextUrl.searchParams;
   const dryRun = params.get("dryRun") === "1";
   const today = params.get("date") ?? undefined;
 
-  try {
-    const result = await runCampChecklistReminder({ today, dryRun });
-    const status = result.ok ? 200 : 500;
-    return NextResponse.json(result, { status });
-  } catch (err) {
-    console.error("[camp-checklist-reminder] run threw", err);
-    return NextResponse.json(
-      { ok: false, error: "camp checklist reminder run failed" },
-      { status: 500 },
-    );
+  const result = await runCampChecklistReminder({ today, dryRun });
+
+  // A live run that Resend rejected comes back ok:true + sent:false — the one
+  // swallowed shape here. Config refusal (ok:false) already 500'd; now alerts.
+  const failures: CronFailure[] = [];
+  let attempted = 0;
+  let succeeded = 0;
+  if (!result.ok) {
+    failures.push({ signature: result.reason, detail: result.message });
+  } else if ("sent" in result) {
+    attempted = 1;
+    succeeded = result.sent ? 1 : 0;
+    if (!result.sent) {
+      failures.push({
+        signature: "resend_rejected",
+        detail: `checklist nudge to ${result.recipientCount} coach(es) was rejected by Resend`,
+      });
+    }
   }
-}
+
+  return {
+    attempted,
+    succeeded,
+    failures,
+    body: { ...result },
+  };
+});
