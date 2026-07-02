@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { Resend } from "resend";
 import {
   fetchUpcomingDropIns,
@@ -265,19 +264,7 @@ async function sendAttendanceNudge(
   return true;
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("dropin-post-session", async () => {
   const targetIso = yesterdayEtIso();
   // Confirmed-only window. We don't email post-session recaps to rows that
   // ended up Cancelled or Refunded — those parents already got a Coach-
@@ -311,6 +298,34 @@ export async function GET(req: NextRequest) {
   }
   const adminNudged = await sendAttendanceNudge(resend, blank);
 
+  // Per-item failures the old version console.error'd behind a 200. A held
+  // roster with a failed admin nudge means the "attendance missing" signal
+  // never reached Sam — that's a failure too.
+  const failures: CronFailure[] = [];
+  for (const o of outcomes) {
+    if (o.error) {
+      failures.push({
+        signature:
+          o.error === "no_resend_or_email" ? "no_resend_or_email" : "resend_rejected",
+        ref: o.pageId,
+        detail: o.error,
+      });
+    }
+    if (o.emailSent && !o.flagged) {
+      failures.push({
+        signature: "flag_write_failed",
+        ref: o.pageId,
+        detail: "Post Session Sent flag did not stick; row will re-send next tick",
+      });
+    }
+  }
+  if (blank.length > 0 && resend && !adminNudged) {
+    failures.push({
+      signature: "attendance_nudge_failed",
+      detail: `${blank.length} held drop-in(s), admin nudge did not send`,
+    });
+  }
+
   const summary = {
     target_date_et: targetIso,
     candidates: candidates.length,
@@ -323,16 +338,21 @@ export async function GET(req: NextRequest) {
   };
   console.log("[cron/dropin-post-session]", JSON.stringify(summary));
 
-  return NextResponse.json({
-    ok: true,
-    ...summary,
-    outcomes: outcomes.map((o) => ({
-      pageId: o.pageId,
-      childFirst: o.childFirst,
-      emailSent: o.emailSent,
-      flagged: o.flagged,
-      ...(o.error ? { error: o.error } : {}),
-    })),
-    held: blank.map((r) => ({ pageId: r.id, childFirst: r.childFirstName })),
-  });
-}
+  return {
+    ok: failures.length === 0,
+    attempted: outcomes.length,
+    succeeded: outcomes.filter((o) => o.emailSent).length,
+    failures,
+    body: {
+      ...summary,
+      outcomes: outcomes.map((o) => ({
+        pageId: o.pageId,
+        childFirst: o.childFirst,
+        emailSent: o.emailSent,
+        flagged: o.flagged,
+        ...(o.error ? { error: o.error } : {}),
+      })),
+      held: blank.map((r) => ({ pageId: r.id, childFirst: r.childFirstName })),
+    },
+  };
+});

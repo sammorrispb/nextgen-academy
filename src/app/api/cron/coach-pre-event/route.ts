@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { Resend } from "resend";
 import {
   fetchUpcomingSessions,
@@ -99,23 +98,19 @@ async function sendOne(
   return outcome;
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("coach-pre-event", async () => {
   const coachEmails = getCoachEmails();
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey || coachEmails.length === 0) {
-    return NextResponse.json({
+    return {
       ok: true,
-      skipped: !resendApiKey ? "RESEND_API_KEY missing" : "no coach emails configured",
-    });
+      attempted: 0,
+      succeeded: 0,
+      failures: [],
+      body: {
+        skipped: !resendApiKey ? "RESEND_API_KEY missing" : "no coach emails configured",
+      },
+    };
   }
   const resend = new Resend(resendApiKey);
 
@@ -135,8 +130,28 @@ export async function GET(req: NextRequest) {
     outcomes.push(await sendOne(resend, coachEmails, session));
   }
 
+  // Previously a Resend reject was console.error'd and the route still
+  // returned 200 with ok:false buried in the body — nothing reached Sam.
+  const failures: CronFailure[] = outcomes
+    .filter((o) => o.error)
+    .map((o) => ({
+      signature: o.error?.startsWith("resend:")
+        ? "resend_rejected"
+        : "cancel_token_unavailable",
+      ref: o.sessionId,
+      detail: o.error,
+    }));
+  for (const o of outcomes) {
+    if (o.emailSent && !o.flagged) {
+      failures.push({
+        signature: "flag_write_failed",
+        ref: o.sessionId,
+        detail: "Coach Reminder Sent flag did not stick; brief will re-send next tick",
+      });
+    }
+  }
+
   const summary = {
-    ok: outcomes.every((o) => !o.error),
     upcoming: sessions.length,
     due: due.length,
     email_sent: outcomes.filter((o) => o.emailSent).length,
@@ -144,5 +159,11 @@ export async function GET(req: NextRequest) {
     outcomes,
   };
   console.log("[cron/coach-pre-event]", JSON.stringify(summary));
-  return NextResponse.json(summary);
-}
+  return {
+    ok: failures.length === 0,
+    attempted: due.length,
+    succeeded: outcomes.filter((o) => o.emailSent).length,
+    failures,
+    body: summary,
+  };
+});

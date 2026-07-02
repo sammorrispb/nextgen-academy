@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { Resend } from "resend";
 import {
   fetchUpcomingDropIns,
@@ -209,19 +208,7 @@ async function sendOne(
   return outcome;
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("dropin-reminder", async () => {
   const targetIso = tomorrowEtIso();
   const candidates = await fetchUpcomingDropIns(targetIso, targetIso, {
     revalidate: 0,
@@ -262,6 +249,33 @@ export async function GET(req: NextRequest) {
     outcomes.push(await sendOne(resend, row));
   }
 
+  // Surface the per-row failures the old version console.error'd and returned
+  // 200 for. A due reminder with no Resend key is itself a failure — the exact
+  // "misconfigured key, nothing reached Sam" incident class.
+  const failures: CronFailure[] = [];
+  if (!resend && toSend.length > 0) {
+    failures.push({
+      signature: "resend_not_configured",
+      detail: `${toSend.length} reminder(s) due but RESEND_API_KEY is unset`,
+    });
+  }
+  for (const o of outcomes) {
+    if (o.error) {
+      failures.push({
+        signature: o.error.includes("resend:") ? "resend_rejected" : "sms_send_failed",
+        ref: o.pageId,
+        detail: o.error,
+      });
+    }
+    if (o.emailSent && !o.flagged) {
+      failures.push({
+        signature: "flag_write_failed",
+        ref: o.pageId,
+        detail: "Reminder Sent flag did not stick; row will re-send next tick",
+      });
+    }
+  }
+
   const summary = {
     target_date_et: targetIso,
     candidates: candidates.length,
@@ -277,16 +291,21 @@ export async function GET(req: NextRequest) {
   };
   console.log("[cron/dropin-reminder]", JSON.stringify(summary));
 
-  return NextResponse.json({
-    ok: true,
-    ...summary,
-    outcomes: outcomes.map((o) => ({
-      pageId: o.pageId,
-      childFirst: o.childFirst,
-      emailSent: o.emailSent,
-      smsResult: o.smsResult,
-      flagged: o.flagged,
-      ...(o.error ? { error: o.error } : {}),
-    })),
-  });
-}
+  return {
+    ok: failures.length === 0,
+    attempted: toSend.length,
+    succeeded: outcomes.filter((o) => o.emailSent).length,
+    failures,
+    body: {
+      ...summary,
+      outcomes: outcomes.map((o) => ({
+        pageId: o.pageId,
+        childFirst: o.childFirst,
+        emailSent: o.emailSent,
+        smsResult: o.smsResult,
+        flagged: o.flagged,
+        ...(o.error ? { error: o.error } : {}),
+      })),
+    },
+  };
+});

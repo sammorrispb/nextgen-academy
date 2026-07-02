@@ -1,0 +1,239 @@
+import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
+import { secretEquals } from "@/lib/secret-compare";
+import { sendSms } from "@/lib/sms";
+
+/**
+ * Cron-failure alerting wrapper (admin-reduction roadmap Phase 0.1).
+ *
+ * The incident class this exists for is a SWALLOWED domain failure returned as
+ * 200 — a Resend reject console.error'd and forgotten, a Notion flag write that
+ * silently didn't stick. Every non-payment cron route wraps its body in
+ * `withCronAlert(name, handler)`; the handler reports `{ ok, attempted,
+ * succeeded, failures[] }` so PARTIAL failures alert too. On any failure the
+ * wrapper emails Sam (CC admin inbox), falls back to SMS if that email itself
+ * fails (the "Resend key is dead" case), and returns HTTP 500 so the Vercel
+ * cron dashboard shows red.
+ *
+ * Alert-storm posture (documented in docs/admin-reduction-roadmap.md): there is
+ * deliberately NO "already alerted" state store — a persistently failing
+ * dependency re-alerts every run. The failure signature lives in the SUBJECT so
+ * Gmail threads the repeats; SMS escalates ONLY when the alert email fails,
+ * never per-run.
+ *
+ * NO PII in alert bodies: page IDs + counts + error strings only. The builder
+ * renders only signature/ref/detail and scrubs anything email- or phone-shaped
+ * from those strings as a backstop.
+ */
+
+export interface CronFailure {
+  /** Stable machine class ("resend_rejected", "flag_write_failed", …). Goes in
+   * the subject so Gmail threads repeat alerts for the same failure. */
+  signature: string;
+  /** PII-free reference — a Notion page/session row ID, "subscriber#3", … */
+  ref?: string;
+  /** PII-free error detail. Scrubbed again at render time as a backstop. */
+  detail?: string;
+}
+
+export interface CronRunResult {
+  ok: boolean;
+  attempted: number;
+  succeeded: number;
+  failures: CronFailure[];
+  /** Extra JSON merged into the HTTP response body (the route's summary). */
+  body?: Record<string, unknown>;
+}
+
+const ALERT_TO = "sam.morris2131@gmail.com";
+const ALERT_CC = "nextgenacademypb@gmail.com";
+const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
+const REPLY_TO = "nextgenacademypb@gmail.com";
+
+// Keep a persistently-failing weekly-newsletter run from producing a 950-line
+// email — list the first N failures, then a count. Full detail is in the logs.
+const MAX_LISTED_FAILURES = 20;
+
+// Fallback SMS target — Sam's ops number (already public in site signatures).
+// Override with CRON_ALERT_SMS_TO.
+const DEFAULT_SMS_TO = "3013254731";
+
+const EMAILISH_RE = /[^\s@<>,;:"'()[\]]+@[^\s@<>,;:"'()[\]]+\.[A-Za-z]{2,}/g;
+// US phone shapes (3-3-4 with optional +1/parens/separators). Deliberately NOT
+// a generic long-digit-run match so ISO dates and numeric IDs survive.
+const PHONEISH_RE = /(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g;
+
+/** Redact anything email- or phone-shaped. Backstop only — call sites must
+ * still pass page IDs + counts + error strings, never parent/child data. */
+export function scrubPii(text: string): string {
+  return text
+    .replace(EMAILISH_RE, "[email redacted]")
+    .replace(PHONEISH_RE, "[phone redacted]");
+}
+
+function signatureSummary(failures: CronFailure[]): string {
+  const sigs = [...new Set(failures.map((f) => f.signature || "unspecified_failure"))].sort();
+  return sigs.join("+") || "unspecified_failure";
+}
+
+export function buildCronAlertEmail(
+  name: string,
+  result: Pick<CronRunResult, "attempted" | "succeeded" | "failures">,
+): { subject: string; text: string } {
+  const failures = result.failures.length
+    ? result.failures
+    : [{ signature: "unspecified_failure" }];
+  const subject = scrubPii(`[cron-alert] ${name}: ${signatureSummary(failures)}`);
+
+  const listed = failures.slice(0, MAX_LISTED_FAILURES).map((f) => {
+    const parts = [f.signature || "unspecified_failure"];
+    if (f.ref) parts.push(`ref ${f.ref}`);
+    if (f.detail) parts.push(f.detail);
+    return scrubPii(`- ${parts.join(" · ")}`);
+  });
+  const more = failures.length - listed.length;
+
+  const logsUrl =
+    process.env.CRON_ALERT_LOGS_URL ??
+    "https://vercel.com/dashboard → project nextgen-academy → Logs";
+
+  const text = [
+    `NGA cron failure — ${name}`,
+    ``,
+    `Attempted: ${result.attempted}`,
+    `Succeeded: ${result.succeeded}`,
+    `Failed: ${failures.length}`,
+    ``,
+    `Failures:`,
+    ...listed,
+    ...(more > 0 ? [`…and ${more} more — see the function logs for the full list.`] : []),
+    ``,
+    `Logs: ${logsUrl}`,
+    `Log filter: [cron/${name}]`,
+    ``,
+    `This alert repeats on every failing run (no alert-state store; accepted v1 posture).`,
+    `Gmail threads repeats via the subject's failure signature.`,
+  ].join("\n");
+
+  return { subject, text };
+}
+
+export interface DeliverOutcome {
+  emailed: boolean;
+  sms: "not_attempted" | "sent" | "skipped_not_configured" | "failed";
+}
+
+/** Email the alert; if that fails for ANY reason, fall back to a short PII-free
+ * SMS. Never throws — alerting must not turn a failing cron into a crash. */
+export async function deliverCronAlert(
+  name: string,
+  result: Pick<CronRunResult, "attempted" | "succeeded" | "failures">,
+): Promise<DeliverOutcome> {
+  const outcome: DeliverOutcome = { emailed: false, sms: "not_attempted" };
+  const { subject, text } = buildCronAlertEmail(name, result);
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    try {
+      const resend = new Resend(apiKey);
+      const { error } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: ALERT_TO,
+        cc: ALERT_CC,
+        replyTo: REPLY_TO,
+        subject,
+        text,
+      });
+      if (error) {
+        console.error(`[cron-alert] ${name}: alert email rejected`, error.message ?? String(error));
+      } else {
+        outcome.emailed = true;
+      }
+    } catch (err) {
+      console.error(`[cron-alert] ${name}: alert email threw`, err);
+    }
+  } else {
+    console.error(`[cron-alert] ${name}: RESEND_API_KEY missing — cannot email alert`);
+  }
+
+  if (!outcome.emailed) {
+    try {
+      const sig = signatureSummary(result.failures);
+      const res = await sendSms({
+        to: process.env.CRON_ALERT_SMS_TO || DEFAULT_SMS_TO,
+        // Ops alert to Sam's own number, not a marketing text to a parent —
+        // consent is inherent. GSM-7-safe copy (no em-dash) per the SMS cost rule.
+        consent: true,
+        body: `NGA cron alert: ${name} failed (${sig}) and the alert email also failed. Check Vercel logs.`,
+        tag: `cron-alert:${name}`,
+      });
+      if (res.ok) outcome.sms = "sent";
+      else if ("skipped" in res) outcome.sms = "skipped_not_configured";
+      else outcome.sms = "failed";
+      if (!res.ok) {
+        console.error(`[cron-alert] ${name}: SMS fallback did not send`, res);
+      }
+    } catch (err) {
+      outcome.sms = "failed";
+      console.error(`[cron-alert] ${name}: SMS fallback threw`, err);
+    }
+  }
+
+  return outcome;
+}
+
+type CronHandler = (req: NextRequest) => Promise<CronRunResult>;
+
+/**
+ * Wrap a cron route body. Owns the (previously copy-pasted) Bearer-CRON_SECRET
+ * gate — byte-identical responses to the inlined version it replaces — then:
+ *   clean run    → 200 { ok:true, ...body }
+ *   any failure  → alert (email → SMS fallback) + 500 { ok:false, ...body, failures }
+ *   handler throw → treated as a failure with signature "unhandled_exception"
+ */
+export function withCronAlert(name: string, handler: CronHandler) {
+  return async function GET(req: NextRequest): Promise<NextResponse> {
+    const expected = process.env.CRON_SECRET;
+    if (!expected) {
+      return NextResponse.json(
+        { error: "CRON_SECRET not configured" },
+        { status: 500 },
+      );
+    }
+    const auth = req.headers.get("authorization") ?? "";
+    if (!secretEquals(auth, `Bearer ${expected}`)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    let result: CronRunResult;
+    try {
+      result = await handler(req);
+    } catch (err) {
+      console.error(`[cron/${name}] unhandled exception:`, err);
+      result = {
+        ok: false,
+        attempted: 0,
+        succeeded: 0,
+        failures: [
+          {
+            signature: "unhandled_exception",
+            detail: err instanceof Error ? err.message : String(err),
+          },
+        ],
+      };
+    }
+
+    if (result.ok && result.failures.length === 0) {
+      return NextResponse.json({ ...(result.body ?? {}), ok: true });
+    }
+
+    if (result.failures.length === 0) {
+      result.failures = [{ signature: "unspecified_failure" }];
+    }
+    await deliverCronAlert(name, result);
+    return NextResponse.json(
+      { ...(result.body ?? {}), ok: false, failures: result.failures },
+      { status: 500 },
+    );
+  };
+}

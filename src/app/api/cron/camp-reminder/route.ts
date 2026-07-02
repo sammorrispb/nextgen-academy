@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { runCampReminder } from "@/lib/camp-reminder-run";
 
 export const runtime = "nodejs";
@@ -18,19 +17,7 @@ export const dynamic = "force-dynamic";
  * Always dry-run first to eyeball the recipient list + copy before a live send
  * (paying-family / child-PII comms — see LSN-014 + Minor-Data Governance).
  */
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("camp-reminder", async (req) => {
   const params = req.nextUrl.searchParams;
   const dryRun = params.get("dryRun") === "1";
   const slug = params.get("slug") ?? undefined;
@@ -40,15 +27,38 @@ export async function GET(req: NextRequest) {
     .map((e) => e.trim())
     .filter(Boolean);
 
-  try {
-    const result = await runCampReminder({ slug, dryRun, only });
-    const status = result.ok ? 200 : 500;
-    return NextResponse.json(result, { status });
-  } catch (err) {
-    console.error("[camp-reminder] run threw", err);
-    return NextResponse.json(
-      { ok: false, error: "camp reminder run failed" },
-      { status: 500 },
-    );
+  const result = await runCampReminder({ slug, dryRun, only });
+
+  // ok:false = config refusal (already 500'd before; now it also alerts).
+  // ok:true live runs can still carry per-recipient/roster-sync failures that
+  // used to ride back as counts inside a 200.
+  const failures: CronFailure[] = [];
+  let attempted = 0;
+  let succeeded = 0;
+  if (!result.ok) {
+    failures.push({ signature: result.reason, detail: result.message });
+  } else if ("sent" in result) {
+    attempted = result.recipientCount;
+    succeeded = result.sent;
+    if (result.failed > 0) {
+      failures.push({
+        signature: "reminder_send_failed",
+        detail: `${result.failed} of ${result.recipientCount} pending reminder(s) failed to send`,
+      });
+    }
+    if (result.synced.failed > 0) {
+      failures.push({
+        signature: "roster_sync_row_failed",
+        detail: `${result.synced.failed} roster row(s) failed to sync from Stripe`,
+      });
+    }
   }
-}
+
+  return {
+    ok: failures.length === 0,
+    attempted,
+    succeeded,
+    failures,
+    body: { ...result },
+  };
+});

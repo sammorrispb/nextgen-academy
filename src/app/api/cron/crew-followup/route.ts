@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { Resend } from "resend";
 import {
   fetchActionableCrewInterest,
@@ -105,28 +104,24 @@ function buildDigestHtml(entries: NudgeEntry[], now: Date): string {
 </body></html>`;
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("crew-followup", async () => {
+  const failures: CronFailure[] = [];
   const now = new Date();
   const rows = await fetchActionableCrewInterest();
 
-  // One sessions read, shared across every row's match.
+  // One sessions read, shared across every row's match. A miss used to be
+  // console.error'd and swallowed — every match silently came back empty, so
+  // parents got a "no matching sessions" email off broken data. Fail soft the
+  // same way (still send) but alert.
   let sessions: Awaited<ReturnType<typeof fetchUpcomingSessions>> = [];
   try {
     sessions = await fetchUpcomingSessions();
   } catch (err) {
     console.error("[cron/crew-followup] sessions fetch failed:", err);
+    failures.push({
+      signature: "sessions_fetch_failed",
+      detail: err instanceof Error ? err.message : String(err),
+    });
   }
 
   const pool = rows.map(toCandidate);
@@ -141,6 +136,7 @@ export async function GET(req: NextRequest) {
   const nudges: NudgeEntry[] = [];
   let reengaged = 0;
   let reengageErrors = 0;
+  let reengageSkippedNoResend = 0;
 
   for (const row of rows) {
     const stage = crewFollowupStage(
@@ -179,6 +175,9 @@ export async function GET(req: NextRequest) {
     }
 
     // stage === "reengage": parent email with matching open sessions.
+    if (!resend && EMAIL_RE.test(row.parentEmail)) {
+      reengageSkippedNoResend++;
+    }
     if (resend && EMAIL_RE.test(row.parentEmail)) {
       const parentFirst = (row.parentName || "").split(/\s+/)[0] || "there";
       const childFirst = row.childFirstName || "your player";
@@ -202,6 +201,11 @@ export async function GET(req: NextRequest) {
       if (error) {
         reengageErrors++;
         console.error("[cron/crew-followup] reengage send failed", error);
+        failures.push({
+          signature: "reengage_send_failed",
+          ref: row.id,
+          detail: error.message ?? String(error),
+        });
         continue; // Don't flag — retry next tick.
       }
       reengaged++;
@@ -225,12 +229,24 @@ export async function GET(req: NextRequest) {
     });
     if (error) {
       console.error("[cron/crew-followup] digest send failed", error);
+      failures.push({
+        signature: "digest_send_failed",
+        detail: error.message ?? String(error),
+      });
     } else {
       digestSent = true;
       for (const n of nudges) {
         await markCrewInterestFlag(n.row.id, "Nudge Sent");
       }
     }
+  }
+
+  // Due sends with no Resend key used to skip silently behind a 200.
+  if (!resend && (nudges.length > 0 || reengageSkippedNoResend > 0)) {
+    failures.push({
+      signature: "resend_not_configured",
+      detail: `${nudges.length} nudge(s) + ${reengageSkippedNoResend} re-engagement(s) due but RESEND_API_KEY is unset`,
+    });
   }
 
   const summary = {
@@ -241,5 +257,11 @@ export async function GET(req: NextRequest) {
     reengage_errors: reengageErrors,
   };
   console.log("[cron/crew-followup]", JSON.stringify(summary));
-  return NextResponse.json({ ok: true, ...summary });
-}
+  return {
+    ok: failures.length === 0,
+    attempted: reengaged + reengageErrors + (nudges.length > 0 ? 1 : 0),
+    succeeded: reengaged + (digestSent ? 1 : 0),
+    failures,
+    body: summary,
+  };
+});

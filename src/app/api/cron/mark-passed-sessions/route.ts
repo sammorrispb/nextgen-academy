@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import {
   fetchActiveSessionsOnOrBefore,
   setSessionLifecycle,
@@ -13,19 +12,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("mark-passed-sessions", async () => {
   const now = new Date();
   // ET calendar date "today" (en-CA → YYYY-MM-DD) — the upper bound for the
   // active-sessions query.
@@ -61,16 +48,31 @@ export async function GET(req: NextRequest) {
     else passed += 1;
   }
 
-  return NextResponse.json({
-    scanned: candidates.length,
-    ended: ended.length,
-    completed,
-    passed,
-    unparseable: unparseable.map((s) => ({
-      id: s.id,
-      title: s.title,
-      date: s.date,
-      endTime: s.endTime,
-    })),
-  });
-}
+  // Unparseable past rows used to be console.warn'd behind a 200 — they linger
+  // invisibly forever (never hidden, never stamped) until someone reads logs.
+  // Surface them so a typo'd time gets fixed instead of rotting.
+  const failures: CronFailure[] = unparseable.map((s) => ({
+    signature: "unparseable_end_time",
+    ref: s.id,
+    detail: `${s.date} end="${s.endTime}"`,
+  }));
+
+  return {
+    ok: failures.length === 0,
+    attempted: ended.length,
+    succeeded: completed + passed,
+    failures,
+    body: {
+      scanned: candidates.length,
+      ended: ended.length,
+      completed,
+      passed,
+      unparseable: unparseable.map((s) => ({
+        id: s.id,
+        title: s.title,
+        date: s.date,
+        endTime: s.endTime,
+      })),
+    },
+  };
+});
