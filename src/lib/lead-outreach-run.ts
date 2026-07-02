@@ -13,6 +13,7 @@
  */
 
 import { Resend } from "resend";
+import { playerCrmDbId } from "@/lib/notion-utils";
 import {
   classifyLead,
   isMailable,
@@ -33,10 +34,8 @@ import {
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-// Lead CRM database id — a non-secret constant, mirroring /api/lead (which
-// hardcodes the same id rather than reading an env var). Env override allowed.
-const LEAD_DB_ID =
-  process.env.NOTION_DB_ID || "1e5e34c258384c6cb5f3e846543ecfc7";
+// Lead CRM database id resolves through the shared env-backed constant in
+// notion-utils (NOTION_PLAYER_CRM_DB_ID → legacy NOTION_DB_ID → literal).
 
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
@@ -82,7 +81,7 @@ export async function fetchLeadOutreachRecipients(
   includeAmbiguous: boolean,
 ): Promise<LeadSegmentation> {
   const notionKey = process.env.NOTION_API_KEY;
-  const db = LEAD_DB_ID;
+  const db = playerCrmDbId();
   if (!notionKey) {
     throw new Error("NOTION_API_KEY not configured");
   }

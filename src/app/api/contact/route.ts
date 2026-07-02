@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { playerCrmDbId } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
   CONTACT_INTEREST_OPTIONS,
@@ -18,7 +19,6 @@ function getResend() {
 }
 
 const NOTION_API = "https://api.notion.com/v1";
-const NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7";
 
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
@@ -81,7 +81,7 @@ async function findNotionPlayer(email: string): Promise<string | null> {
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return null;
 
-  const res = await fetch(`${NOTION_API}/databases/${NOTION_DB_ID}/query`, {
+  const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${notionKey}`,
@@ -174,7 +174,7 @@ async function createNotionRow(
       "Notion-Version": "2022-06-28",
     },
     body: JSON.stringify({
-      parent: { database_id: NOTION_DB_ID },
+      parent: { database_id: playerCrmDbId() },
       properties,
     }),
   });
