@@ -1,13 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { cancelDropIn } from "@/lib/cancel-dropin";
-import {
-  COACH_SESSION_COOKIE,
-  verifySessionCookieValue,
-} from "@/lib/coach-auth";
-import { isAllowedCoachEmail } from "@/lib/coach-allowlist";
+import { requireCoach } from "@/lib/coach-auth-server";
 import {
   findDropInPageByCheckoutId,
   type AttendanceValue,
@@ -30,13 +25,6 @@ import {
   type GroupCancelResult,
 } from "@/lib/session-cancel-group";
 import type { CancelReason } from "@/lib/email/session-cancelled";
-
-async function requireCoach(): Promise<string | null> {
-  const c = await cookies();
-  const value = c.get(COACH_SESSION_COOKIE)?.value;
-  const email = value ? verifySessionCookieValue(value) : null;
-  return email && isAllowedCoachEmail(email) ? email : null;
-}
 
 export interface CancelActionResult {
   ok: boolean;
