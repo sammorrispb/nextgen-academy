@@ -6,6 +6,7 @@
 
 import { buildDropInIcs } from "./ics";
 import { c, s } from "./brand";
+import { escapeHtml } from "../html";
 import type { OpenEvalSlot } from "../notion-eval-slots";
 import { formatLongDate, formatShortDate } from "../eval-confirmation-send";
 
@@ -15,6 +16,9 @@ export interface EvalBookingNotifyInput {
   parentPhone: string;
   childFirst: string;
   level: string;
+  /** The claim's Booking Id token — with slot.id, the reconciliation record
+   * for any residual claim race (see notion-eval-slots.ts header). */
+  bookingId: string;
   slot: OpenEvalSlot;
 }
 
@@ -29,9 +33,11 @@ export function buildEvalBookingRequestIcs(
 ): string | null {
   const { slot } = input;
   return buildDropInIcs({
-    // Distinct UID from the parent's PUBLISH .ics so the two copies never
-    // collide in a shared calendar store.
-    uid: `eval-${slot.date}-${encodeURIComponent(input.childFirst.toLowerCase())}-coach@nextgenpbacademy.com`,
+    // UID is keyed on the SLOT id: stable per slot (re-sends update the same
+    // calendar event), distinct across slots (two back-to-back evals for
+    // same-named kids never collide), and distinct from the parent's PUBLISH
+    // .ics so the two copies never collide in a shared calendar store.
+    uid: `eval-${slot.date}-${slot.id}-coach@nextgenpbacademy.com`,
     date: slot.date,
     startTime: slot.startTime,
     endTime: slot.endTime,
@@ -49,8 +55,7 @@ export function buildEvalBookingRequestIcs(
 
 export function evalBookingNotifyHtml(input: EvalBookingNotifyInput): string {
   const { slot } = input;
-  const esc = (v: string) =>
-    v.replace(/[<>&]/g, (ch) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[ch] || ch);
+  const esc = escapeHtml;
   return `
 <div style="${s.wrapper}">
   <h1 style="${s.heading} margin-bottom: 24px;">
@@ -90,5 +95,11 @@ export function evalBookingNotifyHtml(input: EvalBookingNotifyInput): string {
       the NGA Eval Slots db.
     </p>
   </div>
+  <p style="margin: 16px 0 0; font-size: 11px; color: ${c.muted};">
+    Slot ${esc(slot.id)} &middot; Booking ${esc(input.bookingId)}
+    &mdash; if two of these emails ever reference the same slot with different
+    booking ids, a claim race double-booked it: keep the booking id shown on
+    the Notion row, reach out to the other family.
+  </p>
 </div>`;
 }

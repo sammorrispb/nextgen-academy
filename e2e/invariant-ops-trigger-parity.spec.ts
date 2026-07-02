@@ -2,11 +2,13 @@ import { test, expect } from "@playwright/test";
 import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 
-// Env BEFORE importing the routes/libs under test (module-level constants read
-// these at import time — LEAD_DB_ID in lead-outreach-run reads NOTION_DB_ID).
+// Env BEFORE importing the routes/libs under test (the libs read the CRM db
+// id at call time via playerCrmDbId(); the legacy NOTION_DB_ID is no longer
+// consulted for CRM targeting).
 process.env.NGA_ADMIN_SECRET = "test-ops-secret";
 process.env.NOTION_API_KEY = "ntn_test";
-process.env.NOTION_DB_ID = "lead-db";
+process.env.NOTION_PLAYER_CRM_DB_ID = "lead-db";
+delete process.env.NOTION_DB_ID;
 process.env.NOTION_SESSIONS_DB_ID = "sessions-db";
 process.env.RESEND_API_KEY = "re_test";
 

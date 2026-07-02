@@ -45,6 +45,18 @@ function fmtLocalDateTime(date: string, time: string): string | null {
   return `${y}${mo}${d}T${String(t.h).padStart(2, "0")}${String(t.m).padStart(2, "0")}00`;
 }
 
+/**
+ * "YYYY-MM-DD" + 1 day, via UTC epoch math (never `new Date(y, m, d)` — the
+ * date-only/UTC-build-server off-by-one trap). Handles month/year/leap
+ * rollover.
+ */
+function nextDay(date: string): string {
+  const [y, mo, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, d) + 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
 function escapeText(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;");
 }
@@ -85,8 +97,17 @@ const VTIMEZONE_AMERICA_NEW_YORK = [
  * malformed (e.g. unparseable time string).
  */
 export function buildDropInIcs(input: IcsInput): string | null {
+  // Midnight wrap: when the end clock-time is earlier than the start (e.g. an
+  // 11:45 PM eval ending 12:15 AM), DTEND belongs on the NEXT calendar day —
+  // never a negative-duration VEVENT.
+  const startT = parseTime(input.startTime);
+  const endT = parseTime(input.endTime);
+  if (!startT || !endT) return null;
+  const wraps = endT.h * 60 + endT.m < startT.h * 60 + startT.m;
+  const endDate = wraps ? nextDay(input.date) : input.date;
+
   const dtStart = fmtLocalDateTime(input.date, input.startTime);
-  const dtEnd = fmtLocalDateTime(input.date, input.endTime);
+  const dtEnd = fmtLocalDateTime(endDate, input.endTime);
   if (!dtStart || !dtEnd) return null;
 
   const method = input.method ?? "PUBLISH";

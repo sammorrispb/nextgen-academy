@@ -37,12 +37,18 @@ export type EvalBookErrors = Partial<
 const PHONE_RE = /^[\d\s\-+().]{7,}$/;
 const NAME_MAX = 40;
 
+// A slotId must LOOK like a Notion page id (UUID, dashed or bare 32-hex)
+// before we make a single Notion call with it (PR #244 F1) — anything else is
+// rejected at the validation boundary, never used to build an API URL.
+const SLOT_ID_RE =
+  /^(?:[0-9a-f]{32}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
 export function validateEvalBookForm(
   data: Partial<EvalBookFormData>,
 ): EvalBookErrors {
   const errors: EvalBookErrors = {};
 
-  if (!data.slotId?.trim()) {
+  if (!data.slotId?.trim() || !SLOT_ID_RE.test(data.slotId.trim())) {
     errors.slotId = "Pick a time slot";
   }
 

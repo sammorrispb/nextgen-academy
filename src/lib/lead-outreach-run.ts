@@ -35,7 +35,7 @@ const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
 // Lead CRM database id resolves through the shared env-backed constant in
-// notion-utils (NOTION_PLAYER_CRM_DB_ID → legacy NOTION_DB_ID → literal).
+// notion-utils (NOTION_PLAYER_CRM_DB_ID → literal; legacy NOTION_DB_ID is dead).
 
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";

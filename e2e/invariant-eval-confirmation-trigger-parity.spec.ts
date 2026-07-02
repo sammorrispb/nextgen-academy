@@ -3,10 +3,12 @@ import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 
 // Env BEFORE importing the route under test (the module + its libs read these
-// at call time). NOTION_DB_ID drives the lead DB that setEvalDate queries.
+// at call time). NOTION_PLAYER_CRM_DB_ID drives the lead DB that setEvalDate
+// queries (the legacy NOTION_DB_ID is no longer consulted for CRM targeting).
 process.env.NGA_ADMIN_SECRET = "test-eval-secret";
 process.env.NOTION_API_KEY = "ntn_test";
-process.env.NOTION_DB_ID = "lead-db";
+process.env.NOTION_PLAYER_CRM_DB_ID = "lead-db";
+delete process.env.NOTION_DB_ID;
 process.env.NOTION_EVAL_SLOTS_DB_ID = "eval-slots-db";
 process.env.RESEND_API_KEY = "re_test";
 
@@ -30,11 +32,13 @@ import { sendEvalConfirmation } from "../src/lib/eval-confirmation-send";
 // shared; this is the missing trigger-parity pin (mirrors
 // invariant-attendance-trigger-parity.spec.ts / invariant-crew-confirm-*).
 
+// Far-future date: the eval-book claim path rejects past slots (F5), and the
+// spec must stay deterministic under fixed fixtures.
 const VALID_BODY = {
   parentEmail: "parent@example.com",
   parentFirst: "Pat",
   childFirst: "Kid",
-  date: "2026-07-01",
+  date: "2036-07-01",
   startTime: "10:00 AM",
   endTime: "10:45 AM",
   location: "Olney, MD",
@@ -121,7 +125,7 @@ test.describe("eval-confirmation route — trigger fan-out", () => {
     const email = stub.callsTo("api.resend.com");
     expect(email.length, "exactly one parent email").toBe(1);
     expect(email[0].body, ".ics calendar attachment present").toContain("text/calendar");
-    expect(email[0].body, ".ics filename present").toContain("-eval-2026-07-01.ics");
+    expect(email[0].body, ".ics filename present").toContain("-eval-2036-07-01.ics");
 
     const stamp = stub.calls.find(
       (c) => c.method === "PATCH" && /\/pages\//.test(c.url) && c.body.includes('"Eval Date"'),
@@ -202,19 +206,27 @@ test.describe("eval-book (parent self-booking) — third-caller parity", () => {
     );
   }
 
+  // Notion page ids are UUIDs — the eval-book route now format-gates slotId
+  // (F1) before any Notion call.
+  const SLOT_ID = "22222222-2222-4222-8222-222222222222";
+  const SLOT_PATH = `/v1/pages/${SLOT_ID}`;
+
   function slotPage() {
     return {
-      id: "slot-1",
+      id: SLOT_ID,
       object: "page",
       archived: false,
       in_trash: false,
+      // The claim path verifies db membership (F1) against
+      // NOTION_EVAL_SLOTS_DB_ID.
+      parent: { type: "database_id", database_id: "eval-slots-db" },
       properties: {
-        Slot: { title: [{ plain_text: "2026-07-01 10:00 AM — Olney area" }] },
+        Slot: { title: [{ plain_text: "2036-07-01 10:00 AM — Olney area" }] },
         Status: { select: { name: "Open" } },
         Date: {
           date: {
-            start: "2026-07-01T10:00:00.000-04:00",
-            end: "2026-07-01T10:45:00.000-04:00",
+            start: "2036-07-01T10:00:00.000-04:00",
+            end: "2036-07-01T10:45:00.000-04:00",
           },
         },
         Location: { select: { name: "Olney area" } },
@@ -223,15 +235,48 @@ test.describe("eval-book (parent self-booking) — third-caller parity", () => {
     };
   }
 
+  // Reflect the claim PATCH back on subsequent reads so the Booking-Id verify
+  // (F3) sees its own token — a faithful single-row Notion.
+  function reflectingSlotRule() {
+    return () => {
+      const patches = stub
+        .callsTo(SLOT_PATH)
+        .filter((c) => c.method === "PATCH");
+      const base = slotPage();
+      if (patches.length === 0) return base;
+      const written = (
+        JSON.parse(patches[patches.length - 1].body) as {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          properties: Record<string, any>;
+        }
+      ).properties;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const read: Record<string, any> = {};
+      for (const [key, value] of Object.entries(written)) {
+        if (value && Array.isArray(value.rich_text)) {
+          read[key] = {
+            rich_text: value.rich_text.map(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (r: any) => ({ plain_text: r?.text?.content ?? "" }),
+            ),
+          };
+        } else {
+          read[key] = value;
+        }
+      }
+      return { ...base, properties: { ...base.properties, ...read } };
+    };
+  }
+
   test("booking fan-out === shared-engine fan-out (email+ics + CRM stamp)", async () => {
-    stub.on("/v1/pages/slot-1", slotPage());
+    stub.on(SLOT_PATH, reflectingSlotRule());
     stubHappyPath(stub);
 
     const res = await evalBookPOST(
       new NextRequest("http://localhost/api/eval-book", {
         method: "POST",
         body: JSON.stringify({
-          slotId: "slot-1",
+          slotId: SLOT_ID,
           parentName: "Pat Parity",
           email: VALID_BODY.parentEmail,
           phone: "301-555-0100",
@@ -253,7 +298,7 @@ test.describe("eval-book (parent self-booking) — third-caller parity", () => {
       .filter((c) => c.body.includes("method=PUBLISH"));
     expect(parentEmails.length, "exactly one parent confirmation").toBe(1);
     expect(parentEmails[0].body).toContain("text/calendar");
-    expect(parentEmails[0].body).toContain("-eval-2026-07-01.ics");
+    expect(parentEmails[0].body).toContain("-eval-2036-07-01.ics");
 
     const bookSig = fanoutSignature(confirmationCalls(stub.calls));
 

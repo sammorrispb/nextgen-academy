@@ -6,6 +6,7 @@
 
 import { c, s } from "./brand";
 import { site } from "@/data/site";
+import { escapeHtml } from "@/lib/html";
 import { whatsappInviteHtml } from "./whatsapp-invite";
 
 export const LEAD_CONFIRMATION_SUBJECT =
@@ -25,7 +26,7 @@ export function leadConfirmationHtml(input: LeadConfirmationInput): string {
   <h1 style="${s.heading} margin-bottom: 8px;">
     Thanks for Reaching Out!
   </h1>
-  <p style="font-size: 15px; line-height: 1.6;">Hi ${input.parentName},</p>
+  <p style="font-size: 15px; line-height: 1.6;">Hi ${escapeHtml(input.parentName)},</p>
   <p style="font-size: 15px; line-height: 1.6;">
     Thanks for your interest in Next Gen Pickleball Academy! We’ll be in touch within 24 hours to help find the right group for your child.
   </p>

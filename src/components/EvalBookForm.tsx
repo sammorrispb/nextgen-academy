@@ -52,6 +52,9 @@ export default function EvalBookForm({
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
   const [bookedSlot, setBookedSlot] = useState<DisplaySlot | null>(null);
+  // Distinguishes "refetch FAILED (times may be stale/empty-looking)" from
+  // "refetch worked and there are genuinely no open times".
+  const [refetchFailed, setRefetchFailed] = useState(false);
   const startedFiredRef = useRef(false);
 
   type Field = keyof EvalBookFormData;
@@ -84,11 +87,17 @@ export default function EvalBookForm({
   async function refetchSlots() {
     try {
       const res = await fetch("/api/eval-book");
-      if (!res.ok) return;
+      if (!res.ok) {
+        setRefetchFailed(true);
+        return;
+      }
       const data = (await res.json()) as { slots?: DisplaySlot[] };
       setSlots(data.slots ?? []);
+      setRefetchFailed(false);
     } catch {
-      // Keep the stale list — the claim-then-verify server path stays safe.
+      // Keep the stale list (the claim-then-verify server path stays safe) —
+      // but SAY so, with a retry, instead of showing an empty/stale picker.
+      setRefetchFailed(true);
     }
   }
 
@@ -211,6 +220,37 @@ export default function EvalBookForm({
           <span className={hintClass}>
             All evaluations are 30 minutes, one-on-one with a coach.
           </span>
+          {refetchFailed && (
+            <div className="bg-ngpa-red/10 border border-ngpa-red/30 rounded-lg p-4 mt-2 mb-2 flex items-center justify-between gap-3">
+              <p className="text-ngpa-red text-sm font-medium">
+                Couldn&rsquo;t refresh the open times.
+              </p>
+              <button
+                type="button"
+                onClick={refetchSlots}
+                className="shrink-0 px-4 py-2 min-h-[40px] rounded-full border border-ngpa-red/40 text-ngpa-red text-sm font-bold hover:bg-ngpa-red/10 transition-colors"
+              >
+                Tap to retry
+              </button>
+            </div>
+          )}
+          {!refetchFailed && slots.length === 0 && (
+            <div className="bg-ngpa-deep/60 border border-ngpa-slate/60 rounded-xl p-5 mt-2 text-center">
+              <p className="text-ngpa-white text-sm font-bold mb-1">
+                No open times right now
+              </p>
+              <p className="text-ngpa-white/65 text-sm">
+                New slots go up every week —{" "}
+                <Link
+                  href="/free-evaluation"
+                  className="text-ngpa-teal font-bold underline-offset-4 hover:underline"
+                >
+                  request an evaluation
+                </Link>{" "}
+                and we&rsquo;ll reach out within 24 hours.
+              </p>
+            </div>
+          )}
           <div className="space-y-4 mt-2">
             {groupByDate(slots).map(([dateLabel, daySlots]) => (
               <div key={dateLabel}>

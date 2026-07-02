@@ -8,7 +8,7 @@ import { playerCrmDbId } from "./notion-utils";
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 // Player CRM id resolves through the shared env-backed constant
-// (NOTION_PLAYER_CRM_DB_ID → legacy NOTION_DB_ID → literal fallback).
+// (NOTION_PLAYER_CRM_DB_ID → literal fallback; legacy NOTION_DB_ID is dead).
 
 export interface SetEvalDateResult {
   updated: boolean;

@@ -16,10 +16,18 @@ export interface RecordedFetch {
   body: string;
 }
 
+/**
+ * Static JSON, or a responder function evaluated per request (receives the
+ * just-recorded call, AFTER it was pushed to `calls`). Responders let a spec
+ * model stateful services — e.g. a Notion page that reflects the properties
+ * the route just PATCHed onto it (the claim-then-verify race protocol).
+ */
+type JsonSource = unknown | ((call: RecordedFetch) => unknown);
+
 interface Rule {
   test: (url: string) => boolean;
   status: number;
-  json: unknown;
+  json: JsonSource;
 }
 
 export class FetchStub {
@@ -27,7 +35,7 @@ export class FetchStub {
   private rules: Rule[] = [];
   private original: typeof globalThis.fetch | null = null;
 
-  on(pattern: string | RegExp, json: unknown, status = 200): this {
+  on(pattern: string | RegExp, json: JsonSource, status = 200): this {
     const test =
       typeof pattern === "string"
         ? (u: string) => u.includes(pattern)
@@ -61,7 +69,8 @@ export class FetchStub {
       const method = (
         init?.method ?? (input instanceof Request ? input.method : "GET")
       ).toUpperCase();
-      this.calls.push({ url, method, body });
+      const recorded: RecordedFetch = { url, method, body };
+      this.calls.push(recorded);
 
       const rule = this.rules.find((r) => r.test(url));
       if (!rule) {
@@ -69,7 +78,11 @@ export class FetchStub {
           `[fetch-stub] unstubbed fetch — a test dependency reached for the network: ${method} ${url}`,
         );
       }
-      return new Response(JSON.stringify(rule.json), {
+      const payload =
+        typeof rule.json === "function"
+          ? (rule.json as (call: RecordedFetch) => unknown)(recorded)
+          : rule.json;
+      return new Response(JSON.stringify(payload), {
         status: rule.status,
         headers: { "content-type": "application/json" },
       });

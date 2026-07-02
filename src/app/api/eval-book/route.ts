@@ -122,7 +122,9 @@ export async function POST(request: NextRequest) {
     level: form.level,
   };
 
-  // ── Claim the slot (claim-then-verify; loser path → slot_taken) ──
+  // ── Claim the slot (claim-then-verify with a booking token; loser path →
+  // slot_taken). The same generic 409 also covers a past slot, a page from a
+  // foreign database, and an archived row — no oracle. ──
   const claim = await claimEvalSlot(form.slotId.trim(), booking);
   if (!claim.ok) {
     if (claim.reason === "slot_taken") {
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
       { status: 502 },
     );
   }
-  const { slot } = claim;
+  const { slot, bookingId } = claim;
 
   // ── Parent confirmation — the shared engine, UNCHANGED (third caller) ──
   const confirmation = await sendEvalConfirmation({
@@ -147,13 +149,20 @@ export async function POST(request: NextRequest) {
     location: slot.location,
   });
   if (!confirmation.ok) {
-    // The claim landed but the parent never got confirmed — release the slot
-    // (best-effort) so they aren't silently holding a time they think failed.
+    // The claim landed but the parent never got confirmed — CONDITIONALLY
+    // release the slot (only while it still holds OUR bookingId) so they
+    // aren't silently holding a time they think failed. If a residual-race
+    // winner owns the row by now ("kept_foreign"), their booking stands
+    // untouched and their family hears nothing from this request.
     console.error("[eval-book] confirmation failed after claim:", confirmation.error);
-    const released = await releaseEvalSlot(slot.id);
-    if (!released) {
+    const released = await releaseEvalSlot(slot.id, bookingId);
+    if (released === "failed") {
       console.error(
-        `[eval-book] release ALSO failed — slot ${slot.id} left Booked; check the Eval Slots db`,
+        `[eval-book] release ALSO failed — slot ${slot.id} (booking ${bookingId}) left Booked; check the Eval Slots db`,
+      );
+    } else if (released === "kept_foreign") {
+      console.log(
+        `[eval-book] release skipped — slot ${slot.id} now holds another booking (ours was ${bookingId}); leaving the row`,
       );
     }
     return NextResponse.json(
@@ -162,13 +171,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // ── Coach notification (fail-soft) ──
-  await sendCoachNotification({ ...booking, slot });
+  // ── Coach notification (fail-soft; carries slot id + booking id — the
+  // reconciliation record for any residual claim race) ──
+  await sendCoachNotification({ ...booking, bookingId, slot });
 
   console.log(
     "[eval-book]",
     JSON.stringify({
       slot: slot.id,
+      booking: bookingId,
       date: slot.date,
       crm_updated: confirmation.dryRun ? false : confirmation.crm.updated,
     }),
