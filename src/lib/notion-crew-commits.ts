@@ -65,7 +65,18 @@ function pageToCommit(page: any): CrewCommit {
   };
 }
 
-export async function fetchActiveCommits(): Promise<CrewCommit[]> {
+/**
+ * Pure status filter shared by the commit fetchers — typed against
+ * CommitStatus so an invented status value is a compile error. Pinned by
+ * e2e/coach-inbox.spec.ts.
+ */
+export function buildCommitsStatusFilter(status: CommitStatus) {
+  return { property: "Status", select: { equals: status } };
+}
+
+async function fetchCommitsWithStatus(
+  status: CommitStatus,
+): Promise<CrewCommit[]> {
   const notionKey = process.env.NOTION_API_KEY;
   const db = process.env.NOTION_CREW_COMMITS_DB_ID;
   if (!notionKey || !db) return [];
@@ -81,7 +92,7 @@ export async function fetchActiveCommits(): Promise<CrewCommit[]> {
         "Notion-Version": NOTION_VERSION,
       },
       body: JSON.stringify({
-        filter: { property: "Status", select: { equals: "Active" } },
+        filter: buildCommitsStatusFilter(status),
         page_size: 100,
         ...(cursor ? { start_cursor: cursor } : {}),
       }),
@@ -89,7 +100,7 @@ export async function fetchActiveCommits(): Promise<CrewCommit[]> {
     });
     if (!res.ok) {
       console.error(
-        "[notion-crew-commits] fetchActiveCommits failed",
+        `[notion-crew-commits] fetchCommitsWithStatus(${status}) failed`,
         res.status,
         await res.text().catch(() => ""),
       );
@@ -100,6 +111,20 @@ export async function fetchActiveCommits(): Promise<CrewCommit[]> {
     cursor = data.has_more ? data.next_cursor : undefined;
   } while (cursor);
   return all;
+}
+
+export async function fetchActiveCommits(): Promise<CrewCommit[]> {
+  return fetchCommitsWithStatus("Active");
+}
+
+/**
+ * CardFailed commits for the coach-inbox queue — rows the autoreserve cron
+ * parked after a declined/failed off-session charge (its lastError carries
+ * the "set back to Active to rebook" instruction). Read-only here; the
+ * re-activate action goes through updateCommit.
+ */
+export async function fetchCardFailedCommits(): Promise<CrewCommit[]> {
+  return fetchCommitsWithStatus("CardFailed");
 }
 
 export async function findCommitByEmailChildCrew(

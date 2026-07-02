@@ -24,10 +24,18 @@ export interface RecordedFetch {
  */
 type JsonSource = unknown | ((call: RecordedFetch) => unknown);
 
+/** Per-call responder for onDynamic — decide status/json from the request. */
+export type FetchResponder = (call: RecordedFetch) => { status: number; json: unknown };
+
 interface Rule {
   test: (url: string) => boolean;
-  status: number;
-  json: JsonSource;
+  respond: FetchResponder;
+}
+
+function toTest(pattern: string | RegExp): (url: string) => boolean {
+  return typeof pattern === "string"
+    ? (u: string) => u.includes(pattern)
+    : (u: string) => pattern.test(u);
 }
 
 export class FetchStub {
@@ -36,11 +44,24 @@ export class FetchStub {
   private original: typeof globalThis.fetch | null = null;
 
   on(pattern: string | RegExp, json: JsonSource, status = 200): this {
-    const test =
-      typeof pattern === "string"
-        ? (u: string) => u.includes(pattern)
-        : (u: string) => pattern.test(u);
-    this.rules.push({ test, status, json });
+    this.rules.push({
+      test: toTest(pattern),
+      respond: (call) => ({
+        status,
+        json:
+          typeof json === "function"
+            ? (json as (call: RecordedFetch) => unknown)(call)
+            : json,
+      }),
+    });
+    return this;
+  }
+
+  /** Like on(), but the response is computed per call (e.g. fail only the
+   * requests whose BODY matches something) — for fail-soft/partial-failure
+   * specs where every request hits the same URL. */
+  onDynamic(pattern: string | RegExp, respond: FetchResponder): this {
+    this.rules.push({ test: toTest(pattern), respond });
     return this;
   }
 
@@ -72,18 +93,16 @@ export class FetchStub {
       const recorded: RecordedFetch = { url, method, body };
       this.calls.push(recorded);
 
+      const call = this.calls[this.calls.length - 1];
       const rule = this.rules.find((r) => r.test(url));
       if (!rule) {
         throw new Error(
           `[fetch-stub] unstubbed fetch — a test dependency reached for the network: ${method} ${url}`,
         );
       }
-      const payload =
-        typeof rule.json === "function"
-          ? (rule.json as (call: RecordedFetch) => unknown)(recorded)
-          : rule.json;
-      return new Response(JSON.stringify(payload), {
-        status: rule.status,
+      const { status, json } = rule.respond(call);
+      return new Response(JSON.stringify(json), {
+        status,
         headers: { "content-type": "application/json" },
       });
     }) as typeof globalThis.fetch;

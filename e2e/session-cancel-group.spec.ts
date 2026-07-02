@@ -67,14 +67,17 @@ function seed(stub: FetchStub) {
     .on("/pages/", { id: "x", properties: {} });
 }
 
-function req(auth: { cookie?: string; bearer?: string }): NextRequest {
+function req(
+  auth: { cookie?: string; bearer?: string },
+  body: Record<string, unknown> = { date: DATE, reason: "venue" },
+): NextRequest {
   const headers: Record<string, string> = { "content-type": "application/json" };
   if (auth.cookie !== undefined) headers.cookie = `nga_admin=${auth.cookie}`;
   if (auth.bearer !== undefined) headers.authorization = `Bearer ${auth.bearer}`;
   return new NextRequest("http://localhost/api/admin/sessions/cancel-all-levels", {
     method: "POST",
     headers,
-    body: JSON.stringify({ date: DATE, reason: "venue" }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -163,4 +166,77 @@ test("admin cookie path fires the identical fan-out (UI parity)", async () => {
   seed(stub);
   await cancelAllLevels(req({ cookie: COOKIE }));
   expect(statusFlippedIds(stub).sort()).toEqual(["green-row", "red-row", "yellow-row"]);
+});
+
+// ── F1: the default prefix guard is derived from the DATE's weekday, so a
+// wrong-date call can only ever be a safe no-op — never a wrong-date refund. ──
+test.describe("weekday-scoped default prefixes (F1)", () => {
+  test("a Wednesday date can only match Wednesday-family rows: Tuesday rows on it are NOT swept", async () => {
+    // Same Redland-Tuesday rows, but the caller asks for 2026-06-17 — a
+    // WEDNESDAY. Default prefixes are now the Wednesday family (Westland), so
+    // nothing matches: no refunds, no status flips, matched 0.
+    seed(stub);
+    const res = await cancelAllLevels(
+      req({ bearer: "test-session-ops-secret" }, { date: "2026-06-17", reason: "venue" }),
+    );
+    const body = await res.json();
+    expect(body.matched).toBe(0);
+    expect(body.cancelled).toBe(0);
+    expect(statusFlippedIds(stub)).toEqual([]);
+    expect(stub.callsTo("/databases/db-dropins-test/query").length).toBe(0); // no engine run
+  });
+
+  test("a weekend date (no template family at all) is a safe no-op", async () => {
+    seed(stub);
+    const res = await cancelAllLevels(
+      req({ bearer: "test-session-ops-secret" }, { date: "2026-06-20", reason: "venue" }), // Saturday
+    );
+    const body = await res.json();
+    expect(body.matched).toBe(0);
+    expect(statusFlippedIds(stub)).toEqual([]);
+  });
+
+  test("explicit caller-supplied titlePrefixes still override the weekday default", async () => {
+    // The coach button passes the base title explicitly — that path must keep
+    // working even when the date's weekday wouldn't match by default.
+    seed(stub);
+    await cancelAllLevels(
+      req(
+        { bearer: "test-session-ops-secret" },
+        { date: "2026-06-17", reason: "venue", titlePrefixes: ["Redland Tuesday Evening"] },
+      ),
+    );
+    expect(statusFlippedIds(stub).sort()).toEqual(["green-row", "red-row", "yellow-row"]);
+  });
+
+  test("an EXPLICIT empty-string prefix can never match-all: it is filtered, leaving a safe no-op", async () => {
+    // "" startsWith-matches every title — an agent passing {"titlePrefixes":
+    // [""]} must not sweep the whole date (incl. the unrelated Gaithersburg
+    // row). Filtered out → no usable prefix → matched 0, nothing flipped.
+    seed(stub);
+    const res = await cancelAllLevels(
+      req(
+        { bearer: "test-session-ops-secret" },
+        { date: DATE, reason: "venue", titlePrefixes: [""] },
+      ),
+    );
+    const body = await res.json();
+    expect(body.matched).toBe(0);
+    expect(statusFlippedIds(stub)).toEqual([]);
+    expect(stub.calls.some((c) => c.url.includes("/pages/gburg-row"))).toBe(false);
+  });
+
+  test("empty strings are dropped from a MIXED explicit prefix list; real prefixes still work", async () => {
+    seed(stub);
+    await cancelAllLevels(
+      req(
+        { bearer: "test-session-ops-secret" },
+        { date: DATE, reason: "venue", titlePrefixes: ["", "  ", "Redland Tuesday Evening"] },
+      ),
+    );
+    // Only the three open Tuesday rows — never the unrelated Gaithersburg row
+    // (which "" would have matched).
+    expect(statusFlippedIds(stub).sort()).toEqual(["green-row", "red-row", "yellow-row"]);
+    expect(stub.calls.some((c) => c.url.includes("/pages/gburg-row"))).toBe(false);
+  });
 });
