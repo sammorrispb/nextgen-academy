@@ -1,4 +1,4 @@
-import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { rollupFailure, withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { EMAIL_RE } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
@@ -134,6 +134,7 @@ export const GET = withCronAlert("crew-followup", async () => {
   }
 
   const nudges: NudgeEntry[] = [];
+  const invalidEmailIds: string[] = [];
   let reengaged = 0;
   let reengageErrors = 0;
   let reengageSkippedNoResend = 0;
@@ -175,10 +176,21 @@ export const GET = withCronAlert("crew-followup", async () => {
     }
 
     // stage === "reengage": parent email with matching open sessions.
-    if (!resend && EMAIL_RE.test(row.parentEmail)) {
+    // A missing/malformed parent email can never get this send — it used to
+    // fall through BOTH branches below (resend truthy but EMAIL_RE fails):
+    // never sent, never flagged, never counted, reported as success every
+    // daily run forever. Same posture as the dropin routes: collect, then
+    // roll into ONE invalid_parent_email entry (count + refs) after the loop.
+    // (The nudge/digest path has no such fall-through — the digest goes to
+    // the fixed admin inbox, not to row.parentEmail.)
+    if (!row.parentEmail || !EMAIL_RE.test(row.parentEmail)) {
+      invalidEmailIds.push(row.id);
+      continue;
+    }
+    if (!resend) {
       reengageSkippedNoResend++;
     }
-    if (resend && EMAIL_RE.test(row.parentEmail)) {
+    if (resend) {
       const parentFirst = (row.parentName || "").split(/\s+/)[0] || "there";
       const childFirst = row.childFirstName || "your player";
       const input = {
@@ -266,6 +278,12 @@ export const GET = withCronAlert("crew-followup", async () => {
       detail: `${nudges.length} nudge(s) + ${reengageSkippedNoResend} re-engagement(s) due but RESEND_API_KEY is unset`,
     });
   }
+  const invalidEmail = rollupFailure(
+    "invalid_parent_email",
+    invalidEmailIds,
+    "re-engagement row(s) with a missing/malformed parent email",
+  );
+  if (invalidEmail) failures.push(invalidEmail);
 
   const summary = {
     actionable: rows.length,
@@ -273,6 +291,7 @@ export const GET = withCronAlert("crew-followup", async () => {
     digest_sent: digestSent,
     reengaged,
     reengage_errors: reengageErrors,
+    invalid_email: invalidEmailIds.length,
   };
   console.log("[cron/crew-followup]", JSON.stringify(summary));
   return {
