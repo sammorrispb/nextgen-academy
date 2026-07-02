@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
 import LeadForm from "@/components/LeadForm";
 import JsonLd from "@/components/JsonLd";
@@ -149,6 +150,14 @@ export default function FreeEvaluationPage() {
                   </p>
                   <p className="text-ngpa-white/65 text-sm mt-1.5">
                     We&rsquo;ll call or text within 24 hours to schedule.
+                  </p>
+                  <p className="text-sm mt-2.5">
+                    <Link
+                      href="/free-evaluation/book"
+                      className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
+                    >
+                      Or skip the wait — pick an open eval time now &rarr;
+                    </Link>
                   </p>
                   <p className="text-ngpa-white/55 text-xs mt-2.5 leading-relaxed">
                     After the eval, group sessions are{" "}

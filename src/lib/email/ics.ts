@@ -16,6 +16,15 @@ interface IcsInput {
   title: string;
   location: string;
   description: string;
+  /**
+   * Additive (Phase 1a): "PUBLISH" (default — informational attachment) or
+   * "REQUEST" (a real invitation, so mail clients like Gmail/Apple Mail offer
+   * add-to-calendar/RSVP on the coach booking-notification email). REQUEST
+   * requires `organizer` + at least one entry in `attendees` to be honored.
+   */
+  method?: "PUBLISH" | "REQUEST";
+  organizer?: { name: string; email: string };
+  attendees?: { name?: string; email: string }[];
 }
 
 function parseTime(time: string): { h: number; m: number } | null {
@@ -80,11 +89,25 @@ export function buildDropInIcs(input: IcsInput): string | null {
   const dtEnd = fmtLocalDateTime(input.date, input.endTime);
   if (!dtStart || !dtEnd) return null;
 
+  const method = input.method ?? "PUBLISH";
+  const participantLines: string[] = [];
+  if (input.organizer) {
+    participantLines.push(
+      `ORGANIZER;CN=${escapeText(input.organizer.name)}:mailto:${input.organizer.email}`,
+    );
+  }
+  for (const attendee of input.attendees ?? []) {
+    const cn = attendee.name ? `;CN=${escapeText(attendee.name)}` : "";
+    participantLines.push(
+      `ATTENDEE${cn};ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:${attendee.email}`,
+    );
+  }
+
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Next Gen Pickleball Academy//Drop-in//EN",
-    "METHOD:PUBLISH",
+    `METHOD:${method}`,
     "CALSCALE:GREGORIAN",
     VTIMEZONE_AMERICA_NEW_YORK,
     "BEGIN:VEVENT",
@@ -92,6 +115,7 @@ export function buildDropInIcs(input: IcsInput): string | null {
     `DTSTAMP:${nowStampUtc()}`,
     `DTSTART;TZID=America/New_York:${dtStart}`,
     `DTEND;TZID=America/New_York:${dtEnd}`,
+    ...participantLines,
     `SUMMARY:${escapeText(input.title)}`,
     `LOCATION:${escapeText(input.location)}`,
     `DESCRIPTION:${escapeText(input.description)}`,

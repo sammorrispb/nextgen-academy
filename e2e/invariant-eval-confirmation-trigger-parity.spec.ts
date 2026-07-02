@@ -7,15 +7,18 @@ import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 process.env.NGA_ADMIN_SECRET = "test-eval-secret";
 process.env.NOTION_API_KEY = "ntn_test";
 process.env.NOTION_DB_ID = "lead-db";
+process.env.NOTION_EVAL_SLOTS_DB_ID = "eval-slots-db";
 process.env.RESEND_API_KEY = "re_test";
 
 import { POST } from "../src/app/api/eval-confirmation/route";
+import { POST as evalBookPOST } from "../src/app/api/eval-book/route";
 import { sendEvalConfirmation } from "../src/lib/eval-confirmation-send";
 
-// The free-eval confirmation has TWO equal-trust entry points that must fire the
-// IDENTICAL fan-out — the coach-dashboard server action `confirmEvalAction`
-// (src/app/coach/(authed)/eval/actions.ts) and the secret-gated agent route
-// POST /api/eval-confirmation. Both funnel through the one shared engine
+// The free-eval confirmation has THREE equal-trust entry points that must fire
+// the IDENTICAL fan-out — the coach-dashboard server action `confirmEvalAction`
+// (src/app/coach/(authed)/eval/actions.ts), the secret-gated agent route
+// POST /api/eval-confirmation, and (Phase 1a) the public parent self-booking
+// route POST /api/eval-book. All funnel through the one shared engine
 // `sendEvalConfirmation` (src/lib/eval-confirmation-send.ts), whose fan-out is:
 //   1. a Resend parent email,
 //   2. carrying the .ics calendar attachment,
@@ -181,5 +184,89 @@ test.describe("eval-confirmation — UI action ↔ agent route parity", () => {
     expect(engineSig, "agent route and coach-action engine fire identical triggers").toEqual(
       routeSig,
     );
+  });
+});
+
+test.describe("eval-book (parent self-booking) — third-caller parity", () => {
+  // Phase 1a: POST /api/eval-book claims a slot then reuses sendEvalConfirmation
+  // UNCHANGED. Its confirmation fan-out (parent email + .ics METHOD:PUBLISH,
+  // CRM lead query, Eval-Date stamp) must be byte-for-byte the same trigger set
+  // as the shared engine. The route's ADDITIONAL fan-out — slot claim/verify on
+  // the slots db + the admin booking-notification email (its .ics is the
+  // METHOD:REQUEST variant) — is excluded from the signature by construction:
+  // slot writes never touch "Eval Date"/lead-db, and the admin email is the
+  // only Resend call carrying method=REQUEST.
+  function confirmationCalls(calls: RecordedFetch[]): RecordedFetch[] {
+    return calls.filter(
+      (c) => !(c.url.includes("api.resend.com") && c.body.includes("method=REQUEST")),
+    );
+  }
+
+  function slotPage() {
+    return {
+      id: "slot-1",
+      object: "page",
+      archived: false,
+      in_trash: false,
+      properties: {
+        Slot: { title: [{ plain_text: "2026-07-01 10:00 AM — Olney area" }] },
+        Status: { select: { name: "Open" } },
+        Date: {
+          date: {
+            start: "2026-07-01T10:00:00.000-04:00",
+            end: "2026-07-01T10:45:00.000-04:00",
+          },
+        },
+        Location: { select: { name: "Olney area" } },
+        "Parent Email": { email: VALID_BODY.parentEmail },
+      },
+    };
+  }
+
+  test("booking fan-out === shared-engine fan-out (email+ics + CRM stamp)", async () => {
+    stub.on("/v1/pages/slot-1", slotPage());
+    stubHappyPath(stub);
+
+    const res = await evalBookPOST(
+      new NextRequest("http://localhost/api/eval-book", {
+        method: "POST",
+        body: JSON.stringify({
+          slotId: "slot-1",
+          parentName: "Pat Parity",
+          email: VALID_BODY.parentEmail,
+          phone: "301-555-0100",
+          childFirstName: VALID_BODY.childFirst,
+          level: "Green",
+        }),
+        headers: {
+          "content-type": "application/json",
+          "x-forwarded-for": "10.42.42.1",
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    // Exactly one parent-facing confirmation email, carrying the same
+    // METHOD:PUBLISH .ics attachment naming as the other two callers.
+    const parentEmails = stub
+      .callsTo("api.resend.com")
+      .filter((c) => c.body.includes("method=PUBLISH"));
+    expect(parentEmails.length, "exactly one parent confirmation").toBe(1);
+    expect(parentEmails[0].body).toContain("text/calendar");
+    expect(parentEmails[0].body).toContain("-eval-2026-07-01.ics");
+
+    const bookSig = fanoutSignature(confirmationCalls(stub.calls));
+
+    stub.reset();
+    stub.install();
+    stubHappyPath(stub);
+    const engineResult = await sendEvalConfirmation(VALID_BODY);
+    expect(engineResult.ok).toBe(true);
+    const engineSig = fanoutSignature(stub.calls);
+
+    expect(
+      bookSig,
+      "parent self-booking fires the identical confirmation triggers as the shared engine",
+    ).toEqual(engineSig);
   });
 });
