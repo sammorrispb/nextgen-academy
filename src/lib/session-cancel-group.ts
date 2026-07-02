@@ -55,9 +55,11 @@ export async function fetchGroupRowsForDate(
   const dbId = process.env.NOTION_SESSIONS_DB_ID;
   if (!notionKey || !dbId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
 
-  const prefixes = titlePrefixes ?? recurringPrefixesForDate(date);
-  // No template family runs on this weekday → nothing can match; skip the
-  // Notion round-trip entirely.
+  // Drop empty/whitespace prefixes from EXPLICIT caller input too — ""
+  // startsWith-matches every row on the date. (The default path is already
+  // safe: templateTitlePrefixes filters empties at the source.)
+  const prefixes = (titlePrefixes ?? recurringPrefixesForDate(date)).filter((p) => p?.trim());
+  // No usable prefix → nothing can match; skip the Notion round-trip entirely.
   if (prefixes.length === 0) return [];
 
   const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {

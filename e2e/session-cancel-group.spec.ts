@@ -208,4 +208,35 @@ test.describe("weekday-scoped default prefixes (F1)", () => {
     );
     expect(statusFlippedIds(stub).sort()).toEqual(["green-row", "red-row", "yellow-row"]);
   });
+
+  test("an EXPLICIT empty-string prefix can never match-all: it is filtered, leaving a safe no-op", async () => {
+    // "" startsWith-matches every title — an agent passing {"titlePrefixes":
+    // [""]} must not sweep the whole date (incl. the unrelated Gaithersburg
+    // row). Filtered out → no usable prefix → matched 0, nothing flipped.
+    seed(stub);
+    const res = await cancelAllLevels(
+      req(
+        { bearer: "test-session-ops-secret" },
+        { date: DATE, reason: "venue", titlePrefixes: [""] },
+      ),
+    );
+    const body = await res.json();
+    expect(body.matched).toBe(0);
+    expect(statusFlippedIds(stub)).toEqual([]);
+    expect(stub.calls.some((c) => c.url.includes("/pages/gburg-row"))).toBe(false);
+  });
+
+  test("empty strings are dropped from a MIXED explicit prefix list; real prefixes still work", async () => {
+    seed(stub);
+    await cancelAllLevels(
+      req(
+        { bearer: "test-session-ops-secret" },
+        { date: DATE, reason: "venue", titlePrefixes: ["", "  ", "Redland Tuesday Evening"] },
+      ),
+    );
+    // Only the three open Tuesday rows — never the unrelated Gaithersburg row
+    // (which "" would have matched).
+    expect(statusFlippedIds(stub).sort()).toEqual(["green-row", "red-row", "yellow-row"]);
+    expect(stub.calls.some((c) => c.url.includes("/pages/gburg-row"))).toBe(false);
+  });
 });

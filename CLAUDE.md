@@ -153,7 +153,7 @@ Promo codes work at checkout because `/api/checkout/route.ts` already passes `al
 On top of the open sessions, the Thursday cron (`/api/cron/weekly-newsletter`) now renders four new blocks (`src/lib/email/weekly-newsletter.ts`):
 - **Forming crews now** — up to 5 Open polls from `fetchOpenPolls()`, each with day/time/location/level + Yes-vote progress label, linking to `/poll/<slug>`. Hidden when none.
 - **Crew interest CTA** — always renders; copy adapts to whether polls are present ("None of these fit?" vs "Want a regular crew?").
-- **Private lessons card** — routes to `/#contact-form` for parents whose kid isn't ready for group play (Red/Orange Ball are private-lesson-only, except the all-levels Tuesday).
+- **Private lessons card** — routes to `/#contact-form` for parents whose kid isn't ready for group play. (Since the 2026-06-18 policy change, Red/Orange kids are welcome at the cron-seeded weekly evenings too — Ridgeview Mon / Redland Tue / Westland Wed run all four levels, Shannon Thu currently Green/Yellow per its template — so the card frames privates as *also*-available 1:1 work, not the only Red/Orange option.)
 - **Bring the crew (referral)** — personalized `/newsletter?ref=<token>` link with the 50% off framing. Falls back to a generic forward ask if `REFERRAL_TOKEN_SECRET`/`NGA_ADMIN_SECRET` aren't configured.
 
 ### Eval-lead re-engagement (`POST /api/eval-reengagement`)
