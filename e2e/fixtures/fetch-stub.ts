@@ -8,6 +8,15 @@
  * hanging or silently passing.
  *
  * Rules are first-match-wins: register specific patterns before catch-alls.
+ *
+ * Two ways to vary a response per request (both exist on purpose):
+ *  - `on(pattern, (call) => json, status)` — JSON computed per call, status
+ *    fixed by the rule; lets a spec model stateful services (e.g. a Notion
+ *    row that reflects the properties just PATCHed onto it — the eval
+ *    claim-then-verify race protocol).
+ *  - `onDynamic(pattern, (call) => ({ status, json }))` — status AND json
+ *    computed per call (e.g. fail only requests whose BODY matches
+ *    something) — for fail-soft/partial-failure specs.
  */
 
 export interface RecordedFetch {
@@ -93,14 +102,13 @@ export class FetchStub {
       const recorded: RecordedFetch = { url, method, body };
       this.calls.push(recorded);
 
-      const call = this.calls[this.calls.length - 1];
       const rule = this.rules.find((r) => r.test(url));
       if (!rule) {
         throw new Error(
           `[fetch-stub] unstubbed fetch — a test dependency reached for the network: ${method} ${url}`,
         );
       }
-      const { status, json } = rule.respond(call);
+      const { status, json } = rule.respond(recorded);
       return new Response(JSON.stringify(json), {
         status,
         headers: { "content-type": "application/json" },
