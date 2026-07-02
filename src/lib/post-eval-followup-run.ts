@@ -134,7 +134,19 @@ export async function runPostEvalFollowup(
     };
   }
 
-  const player = await fetchPlayer(body.playerId, process.env.NOTION_API_KEY);
+  // A network/JSON failure fetching the player must surface as a STRUCTURED
+  // 500 result — never a throw that escapes to the route caller or trips the
+  // ops page's error boundary.
+  let player: Awaited<ReturnType<typeof fetchPlayer>>;
+  try {
+    player = await fetchPlayer(body.playerId, process.env.NOTION_API_KEY);
+  } catch (err) {
+    console.error("[post-eval-followup] player fetch failed:", err);
+    return {
+      status: 500,
+      body: { error: "Player fetch failed", detail: String(err) },
+    };
+  }
   if (!player) {
     return { status: 404, body: { error: "Player not found" } };
   }

@@ -6,6 +6,7 @@ import {
   opsGateReducer,
   canSendLive,
   opsParamsKey,
+  parseOnlyList,
   sendLiveLabel,
   confirmSendCopy,
 } from "@/lib/ops-gate";
@@ -31,11 +32,19 @@ interface PreviewRecipient {
   email: string;
 }
 
+/** failed_emails from the last live run, if the op reports them. */
+function failedEmailsOf(body: Record<string, unknown> | null): string[] {
+  if (!body || !Array.isArray(body.failed_emails)) return [];
+  return body.failed_emails.filter((e): e is string => typeof e === "string");
+}
+
 /**
  * One ops card. The dryRun-first gate is the pure reducer in
  * src/lib/ops-gate.ts (pinned by e2e/ops-gate.spec.ts): "Send live" stays
  * disabled until a preview succeeded in THIS page session against EXACTLY the
  * params about to be sent, and the confirm step states the previewed count.
+ * Live sends are additionally admin-only — enforced server-side in the
+ * actions (ops-authz); the disabled button here is just honest UI.
  */
 function OpsCard({
   title,
@@ -46,6 +55,9 @@ function OpsCard({
   countFromPreview,
   run,
   renderPreview,
+  isAdmin,
+  supportsRetryFailed = false,
+  liveBlockedReason = null,
 }: {
   title: string;
   description: string;
@@ -53,35 +65,57 @@ function OpsCard({
   params: Record<string, unknown>;
   paramsUi?: React.ReactNode;
   countFromPreview: (body: Record<string, unknown>) => number;
-  run: (dryRun: boolean) => Promise<OpsActionResult>;
+  run: (dryRun: boolean, only?: string[]) => Promise<OpsActionResult>;
   renderPreview: (body: Record<string, unknown>) => React.ReactNode;
+  isAdmin: boolean;
+  /** Blast ops report failed_emails and can re-run with only=failed. */
+  supportsRetryFailed?: boolean;
+  /** Non-null blocks the live button with this explanation (e.g. camp's empty allow-list). */
+  liveBlockedReason?: string | null;
 }) {
   const [gate, dispatch] = useReducer(opsGateReducer, initialOpsGate);
   const [pending, startTransition] = useTransition();
   const [preview, setPreview] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [sentSummary, setSentSummary] = useState<string | null>(null);
+  // Result of the last LIVE run. Kept when the gate resets, so a partial
+  // failure stays visible and retryable until the next live run replaces it.
+  const [lastSend, setLastSend] = useState<Record<string, unknown> | null>(null);
   const [confirming, setConfirming] = useState(false);
+  // Retry-failed-only override: when set, previews/sends pass only=these.
+  const [retryOnly, setRetryOnly] = useState<string[] | null>(null);
 
-  const key = opsParamsKey(params);
+  const keyFor = (only: string[] | null) =>
+    opsParamsKey(only ? { ...params, retryOnly: only } : params);
+  const key = keyFor(retryOnly);
   const armed = canSendLive(gate, key);
 
-  function doPreview() {
+  function doPreview(only: string[] | null) {
     startTransition(async () => {
       setError(null);
-      setSentSummary(null);
       setConfirming(false);
-      const r = await run(true);
-      if (!r.ok || !r.body) {
+      try {
+        const r = await run(true, only ?? undefined);
+        if (!r.ok || !r.body) {
+          dispatch({ type: "PREVIEW_FAILED" });
+          setPreview(null);
+          setError(
+            r.message ?? String(r.body?.error ?? `Preview failed (${r.status})`),
+          );
+          return;
+        }
+        setPreview(r.body);
+        dispatch({
+          type: "PREVIEW_OK",
+          key: keyFor(only),
+          count: countFromPreview(r.body),
+        });
+      } catch {
+        // A rejected server action must land as inline card state, never
+        // escape to the route error boundary.
         dispatch({ type: "PREVIEW_FAILED" });
         setPreview(null);
-        setError(
-          r.message ?? String(r.body?.error ?? `Preview failed (${r.status})`),
-        );
-        return;
+        setError("Preview failed — network or server error. Try again.");
       }
-      setPreview(r.body);
-      dispatch({ type: "PREVIEW_OK", key, count: countFromPreview(r.body) });
     });
   }
 
@@ -91,24 +125,51 @@ function OpsCard({
     startTransition(async () => {
       setError(null);
       setConfirming(false);
-      const r = await run(false);
-      if (!r.ok || !r.body) {
+      try {
+        const r = await run(false, retryOnly ?? undefined);
+        if (!r.ok || !r.body) {
+          dispatch({ type: "SEND_FAILED" });
+          setError(
+            r.message ?? String(r.body?.error ?? `Send failed (${r.status})`),
+          );
+          return;
+        }
+        dispatch({ type: "SENT" });
+        setPreview(null);
+        setRetryOnly(null);
+        setLastSend(r.body);
+      } catch {
         dispatch({ type: "SEND_FAILED" });
         setError(
-          r.message ?? String(r.body?.error ?? `Send failed (${r.status})`),
+          "Send failed — network or server error. The run may be partially sent; run a fresh preview before retrying.",
         );
-        return;
       }
-      dispatch({ type: "SENT" });
-      setPreview(null);
-      const b = r.body;
-      setSentSummary(
-        typeof b.sent === "number"
-          ? `Sent ${b.sent}, failed ${b.failed ?? 0}.`
-          : `Sent to ${String(b.sent_to ?? "recipient")}.`,
-      );
     });
   }
+
+  function startRetryFailed(failed: string[]) {
+    // Same op, only=the failures — and the full preview-then-confirm cycle
+    // again: this only ARMS via a fresh preview, it never sends directly.
+    setRetryOnly(failed);
+    setPreview(null);
+    doPreview(failed);
+  }
+
+  const failedEmails = failedEmailsOf(lastSend);
+  const sentSummary =
+    lastSend === null
+      ? null
+      : typeof lastSend.sent === "number"
+        ? `Sent ${lastSend.sent}, failed ${lastSend.failed ?? 0}.`
+        : `Sent to ${String(lastSend.sent_to ?? "recipient")}.`;
+
+  const liveDisabledTitle = !isAdmin
+    ? "Live sends are admin-only — previews are open to every coach."
+    : liveBlockedReason
+      ? liveBlockedReason
+      : armed
+        ? undefined
+        : "Run a preview first — Send live unlocks after a dry run of these exact settings.";
 
   return (
     <section className="rounded-2xl border border-ngpa-slate/40 bg-ngpa-panel/60 p-5 sm:p-6">
@@ -126,17 +187,36 @@ function OpsCard({
             dispatch({ type: "PARAMS_CHANGED" });
             setPreview(null);
             setConfirming(false);
+            setRetryOnly(null);
           }}
         >
           {paramsUi}
         </div>
       ) : null}
 
+      {retryOnly && (
+        <p className="mb-3 text-xs font-bold text-ngpa-white/70">
+          Retrying failed only — {retryOnly.length} address
+          {retryOnly.length === 1 ? "" : "es"} from the last run.{" "}
+          <button
+            type="button"
+            className="underline hover:text-ngpa-teal"
+            onClick={() => {
+              setRetryOnly(null);
+              setPreview(null);
+              dispatch({ type: "PARAMS_CHANGED" });
+            }}
+          >
+            Cancel retry
+          </button>
+        </p>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
           className={primaryBtn}
-          onClick={doPreview}
+          onClick={() => doPreview(retryOnly)}
           disabled={pending}
         >
           {pending ? "Working…" : "Preview (dry run)"}
@@ -145,20 +225,20 @@ function OpsCard({
           type="button"
           className={dangerBtn}
           onClick={() => setConfirming(true)}
-          disabled={!armed || pending || confirming}
-          title={
-            armed
-              ? undefined
-              : "Run a preview first — Send live unlocks after a dry run of these exact settings."
+          disabled={
+            !armed || !isAdmin || !!liveBlockedReason || pending || confirming
           }
+          title={liveDisabledTitle}
         >
           {armed && gate.previewCount !== null
             ? sendLiveLabel(gate.previewCount)
-            : "Send live (preview first)"}
+            : isAdmin
+              ? "Send live (preview first)"
+              : "Send live (admin only)"}
         </button>
       </div>
 
-      {confirming && armed && gate.previewCount !== null && (
+      {confirming && armed && isAdmin && gate.previewCount !== null && (
         <div className="mt-4 rounded-xl border border-ngpa-red/50 bg-ngpa-red/10 p-4">
           <p className="text-sm font-bold text-ngpa-white mb-3">
             {confirmSendCopy(opName, gate.previewCount)}
@@ -189,10 +269,44 @@ function OpsCard({
       )}
 
       {sentSummary && (
-        <div className="mt-4 rounded-xl border border-ngpa-skill-green/50 bg-ngpa-skill-green/10 p-4">
-          <p className="text-sm font-bold text-ngpa-skill-green">
+        <div
+          className={`mt-4 rounded-xl border p-4 ${
+            failedEmails.length
+              ? "border-ngpa-red/50 bg-ngpa-red/10"
+              : "border-ngpa-skill-green/50 bg-ngpa-skill-green/10"
+          }`}
+        >
+          <p
+            className={`text-sm font-bold ${
+              failedEmails.length ? "text-ngpa-red" : "text-ngpa-skill-green"
+            }`}
+          >
             {sentSummary} Run a fresh preview before sending again.
           </p>
+          {failedEmails.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-ngpa-white/60 mb-1.5">
+                Failed addresses
+              </p>
+              <ul className="max-h-40 overflow-y-auto divide-y divide-ngpa-slate/20 text-sm text-ngpa-white/80">
+                {failedEmails.map((e) => (
+                  <li key={e} className="py-1">
+                    {e}
+                  </li>
+                ))}
+              </ul>
+              {supportsRetryFailed && (
+                <button
+                  type="button"
+                  className={`${ghostBtn} mt-3`}
+                  onClick={() => startRetryFailed(failedEmails)}
+                  disabled={pending}
+                >
+                  Retry failed only (preview first)
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -263,11 +377,14 @@ function BlastPreview({
   );
 }
 
-export default function OpsConsole() {
+export default function OpsConsole({ isAdmin }: { isAdmin: boolean }) {
   const [includeAmbiguous, setIncludeAmbiguous] = useState(false);
+  const [campOnlyText, setCampOnlyText] = useState("");
   const [playerId, setPlayerId] = useState("");
   const [level, setLevel] = useState("Green");
   const [observations, setObservations] = useState("");
+
+  const campOnly = parseOnlyList(campOnlyText);
 
   return (
     <div className="grid grid-cols-1 gap-6 max-w-3xl">
@@ -277,31 +394,60 @@ export default function OpsConsole() {
         opName="eval re-engagement"
         params={{}}
         countFromPreview={(b) => Number(b.to_send ?? 0)}
-        run={(dryRun) => evalReengagementAction({ dryRun })}
+        run={(dryRun, only) => evalReengagementAction({ dryRun, only })}
         renderPreview={(b) => <BlastPreview body={b} />}
+        isAdmin={isAdmin}
+        supportsRetryFailed
       />
 
       <OpsCard
         title="Camp outreach"
-        description="Mails the summer-camp invite to the eligible warm list. Default is eligible-only; the toggle adds the ambiguous bucket (own leads with an unverified source — never DD-derived)."
+        description="Mails the summer-camp invite. The preview shows the FULL DD-clean eligible list for situational awareness; a live send goes only to the vetted allow-list pasted below, never the whole list in one click."
         opName="camp outreach"
-        params={{ includeAmbiguous }}
+        params={{ includeAmbiguous, only: campOnly }}
         paramsUi={
-          <label className="flex items-start gap-2.5 text-sm text-ngpa-white/80 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeAmbiguous}
-              onChange={(e) => setIncludeAmbiguous(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-ngpa-teal"
-            />
-            <span>
-              Also mail the <strong>ambiguous</strong> bucket (unverified own
-              leads — changing this requires a fresh preview)
-            </span>
-          </label>
+          <div className="grid grid-cols-1 gap-4">
+            {isAdmin && (
+              <label className="flex items-start gap-2.5 text-sm text-ngpa-white/80 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeAmbiguous}
+                  onChange={(e) => setIncludeAmbiguous(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-ngpa-teal"
+                />
+                <span>
+                  Also mail the <strong>ambiguous</strong> bucket (unverified own
+                  leads — changing this requires a fresh preview; admin-only)
+                </span>
+              </label>
+            )}
+            <div>
+              <label className={labelClass}>
+                Recipient allow-list (required for a live send)
+              </label>
+              <textarea
+                className={inputClass}
+                rows={4}
+                value={campOnlyText}
+                onChange={(e) => setCampOnlyText(e.target.value)}
+                placeholder={"parent1@example.com\nparent2@example.com"}
+              />
+              <p className="mt-1.5 text-xs text-ngpa-white/50">
+                One email per line (or comma-separated) — paste the vetted warm
+                list. {campOnly.length} parsed. Live sends mail ONLY these
+                addresses (still DD-gated server-side).
+              </p>
+            </div>
+          </div>
         }
         countFromPreview={(b) => Number(b.to_send ?? 0)}
-        run={(dryRun) => campOutreachAction({ dryRun, includeAmbiguous })}
+        run={(dryRun, only) =>
+          campOutreachAction({
+            dryRun,
+            includeAmbiguous,
+            only: only ?? (campOnly.length ? campOnly : undefined),
+          })
+        }
         renderPreview={(b) => (
           <BlastPreview
             body={b}
@@ -313,6 +459,13 @@ export default function OpsConsole() {
             ]}
           />
         )}
+        isAdmin={isAdmin}
+        supportsRetryFailed
+        liveBlockedReason={
+          campOnly.length === 0
+            ? "Paste the vetted recipient allow-list to enable a live camp send."
+            : null
+        }
       />
 
       <OpsCard
@@ -381,6 +534,7 @@ export default function OpsConsole() {
             )}
           </>
         )}
+        isAdmin={isAdmin}
       />
     </div>
   );

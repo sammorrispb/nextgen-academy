@@ -223,10 +223,29 @@ async function sendBlast(
   return { sent, failed, sentEmails, failedEmails, errors };
 }
 
-function normalizeOnly(only: unknown): Set<string> | null {
-  return Array.isArray(only) && only.length
-    ? new Set(only.map((e) => String(e).trim().toLowerCase()))
-    : null;
+/**
+ * Validate + normalize the optional `only` allow-list. Fails LOUD: any
+ * non-string entry is a structured 400 (zero sends) — a silently-coerced or
+ * silently-dropped allow-list could widen a send to the full eligible set.
+ */
+function normalizeOnly(
+  only: unknown,
+):
+  | { ok: true; set: Set<string> | null }
+  | { ok: false; result: OutreachRunResult } {
+  if (!Array.isArray(only) || only.length === 0) {
+    return { ok: true, set: null };
+  }
+  if (only.some((e) => typeof e !== "string")) {
+    return {
+      ok: false,
+      result: { status: 400, body: { error: "only[] must be strings" } },
+    };
+  }
+  return {
+    ok: true,
+    set: new Set(only.map((e) => e.trim().toLowerCase())),
+  };
 }
 
 export interface EvalReengagementOpts {
@@ -235,79 +254,6 @@ export interface EvalReengagementOpts {
   /** Optional allow-list: restrict the send to these emails (e.g. retrying only
    * the addresses that failed a prior run, so already-sent rows aren't redone). */
   only?: string[];
-}
-
-export async function runEvalReengagement(
-  opts: EvalReengagementOpts = {},
-): Promise<OutreachRunResult> {
-  const dryRun = opts.dryRun === true;
-  const subject = opts.subject?.trim() || EVAL_REENGAGEMENT_SUBJECT;
-  const only = normalizeOnly(opts.only);
-
-  let seg: LeadSegmentation;
-  try {
-    seg = await fetchLeadOutreachRecipients(false);
-  } catch (err) {
-    console.error("[eval-reengagement] CRM query failed:", err);
-    return {
-      status: 500,
-      body: { error: err instanceof Error ? err.message : "CRM query failed" },
-    };
-  }
-
-  // Apply the optional allow-list (used to retry only previously-failed sends).
-  const recipients = only
-    ? seg.recipients.filter((r) => only.has(r.email.toLowerCase()))
-    : seg.recipients;
-
-  if (dryRun) {
-    return {
-      status: 200,
-      body: {
-        ok: true,
-        dryRun: true,
-        scanned: seg.scanned,
-        eligible_unique: seg.recipients.length,
-        to_send: recipients.length,
-        eligible_rows: seg.eligible,
-        off_limits: seg.offLimits,
-        ambiguous: seg.ambiguous,
-        test_excluded: seg.test,
-        subject,
-        recipients: recipients.map((r) => ({ name: r.name, email: r.email })),
-      },
-    };
-  }
-
-  if (!process.env.RESEND_API_KEY) {
-    return { status: 500, body: { error: "RESEND_API_KEY missing" } };
-  }
-
-  const out = await sendBlast(recipients, subject, (r) => {
-    const input = { parentFirst: r.parentFirst, newsletterUrl: NEWSLETTER_URL };
-    return {
-      html: evalReengagementHtml(input),
-      text: evalReengagementText(input),
-    };
-  });
-
-  const summary = {
-    ok: true,
-    to_send: recipients.length,
-    sent: out.sent,
-    failed: out.failed,
-    off_limits_excluded: seg.offLimits,
-    ambiguous_excluded: seg.ambiguous,
-    subject,
-    sent_emails: out.sentEmails,
-    failed_emails: out.failedEmails,
-  };
-  console.log(
-    "[eval-reengagement]",
-    JSON.stringify({ to_send: recipients.length, sent: out.sent, failed: out.failed }),
-    out.errors.length ? `errors: ${out.errors.slice(0, 5).join("; ")}` : "",
-  );
-  return { status: 200, body: summary };
 }
 
 export interface CampOutreachOpts {
@@ -322,25 +268,52 @@ export interface CampOutreachOpts {
   includeAmbiguous?: boolean;
 }
 
-export async function runCampOutreach(
-  opts: CampOutreachOpts = {},
+/**
+ * The one parameterized blast runner behind both exported ops. The two blasts
+ * were byte-for-byte identical except for the bits captured in this config —
+ * subject default, rendered template, log tag, whether the ambiguous bucket is
+ * mailed, and the camp-only response fields. The exported names stay as thin
+ * wrappers so routes/actions/specs don't churn, and each op's response bodies
+ * are preserved key-for-key (pinned by e2e/invariant-ops-trigger-parity.spec.ts).
+ */
+interface OutreachBlastConfig {
+  logTag: "eval-reengagement" | "camp-outreach";
+  defaultSubject: string;
+  render: (r: OutreachRecipient) => { html: string; text: string };
+  /** Whether the ambiguous bucket is included in the recipient set. */
+  includeAmbiguous: boolean;
+  /** Op-specific leading fields (camp: { includeAmbiguous }; eval: {}). */
+  headerFields: Record<string, unknown>;
+  /** Op-specific ambiguous/off-limits accounting in the dryRun body. */
+  dryRunSegmentFields: (seg: LeadSegmentation) => Record<string, unknown>;
+  /** Op-specific ambiguous_excluded accounting in the live summary. */
+  ambiguousExcluded: (seg: LeadSegmentation) => number;
+}
+
+async function runOutreachBlast(
+  cfg: OutreachBlastConfig,
+  opts: { dryRun?: boolean; subject?: string; only?: string[] },
 ): Promise<OutreachRunResult> {
   const dryRun = opts.dryRun === true;
-  const includeAmbiguous = opts.includeAmbiguous === true;
-  const subject = opts.subject?.trim() || CAMP_OUTREACH_SUBJECT;
-  const only = normalizeOnly(opts.only);
+  const subject = opts.subject?.trim() || cfg.defaultSubject;
+  const normalized = normalizeOnly(opts.only);
+  if (!normalized.ok) return normalized.result;
+  const only = normalized.set;
 
   let seg: LeadSegmentation;
   try {
-    seg = await fetchLeadOutreachRecipients(includeAmbiguous);
+    seg = await fetchLeadOutreachRecipients(cfg.includeAmbiguous);
   } catch (err) {
-    console.error("[camp-outreach] CRM query failed:", err);
+    console.error(`[${cfg.logTag}] CRM query failed:`, err);
     return {
       status: 500,
       body: { error: err instanceof Error ? err.message : "CRM query failed" },
     };
   }
 
+  // Apply the optional allow-list (vetted warm list / retry-failed-only). It
+  // only ever NARROWS the DD-clean set — an off-limits email in `only` still
+  // never mails, because it was excluded before this filter.
   const recipients = only
     ? seg.recipients.filter((r) => only.has(r.email.toLowerCase()))
     : seg.recipients;
@@ -351,14 +324,12 @@ export async function runCampOutreach(
       body: {
         ok: true,
         dryRun: true,
-        includeAmbiguous,
+        ...cfg.headerFields,
         scanned: seg.scanned,
         eligible_unique: seg.recipients.length,
         to_send: recipients.length,
         eligible_rows: seg.eligible,
-        ambiguous_rows: seg.ambiguous,
-        ambiguous_mailed: includeAmbiguous,
-        off_limits: seg.offLimits,
+        ...cfg.dryRunSegmentFields(seg),
         test_excluded: seg.test,
         subject,
         recipients: recipients.map((r) => ({ name: r.name, email: r.email })),
@@ -370,27 +341,78 @@ export async function runCampOutreach(
     return { status: 500, body: { error: "RESEND_API_KEY missing" } };
   }
 
-  const out = await sendBlast(recipients, subject, (r) => {
-    const input = { parentFirst: r.parentFirst, campUrl: CAMP_URL };
-    return { html: campOutreachHtml(input), text: campOutreachText(input) };
-  });
+  const out = await sendBlast(recipients, subject, cfg.render);
 
   const summary = {
     ok: true,
-    includeAmbiguous,
+    ...cfg.headerFields,
     to_send: recipients.length,
     sent: out.sent,
     failed: out.failed,
     off_limits_excluded: seg.offLimits,
-    ambiguous_excluded: includeAmbiguous ? 0 : seg.ambiguous,
+    ambiguous_excluded: cfg.ambiguousExcluded(seg),
     subject,
     sent_emails: out.sentEmails,
     failed_emails: out.failedEmails,
   };
   console.log(
-    "[camp-outreach]",
+    `[${cfg.logTag}]`,
     JSON.stringify({ to_send: recipients.length, sent: out.sent, failed: out.failed }),
     out.errors.length ? `errors: ${out.errors.slice(0, 5).join("; ")}` : "",
   );
   return { status: 200, body: summary };
+}
+
+export async function runEvalReengagement(
+  opts: EvalReengagementOpts = {},
+): Promise<OutreachRunResult> {
+  return runOutreachBlast(
+    {
+      logTag: "eval-reengagement",
+      defaultSubject: EVAL_REENGAGEMENT_SUBJECT,
+      render: (r) => {
+        const input = {
+          parentFirst: r.parentFirst,
+          newsletterUrl: NEWSLETTER_URL,
+        };
+        return {
+          html: evalReengagementHtml(input),
+          text: evalReengagementText(input),
+        };
+      },
+      includeAmbiguous: false, // ambiguous is always held for re-engagement
+      headerFields: {},
+      dryRunSegmentFields: (seg) => ({
+        off_limits: seg.offLimits,
+        ambiguous: seg.ambiguous,
+      }),
+      ambiguousExcluded: (seg) => seg.ambiguous,
+    },
+    opts,
+  );
+}
+
+export async function runCampOutreach(
+  opts: CampOutreachOpts = {},
+): Promise<OutreachRunResult> {
+  const includeAmbiguous = opts.includeAmbiguous === true;
+  return runOutreachBlast(
+    {
+      logTag: "camp-outreach",
+      defaultSubject: CAMP_OUTREACH_SUBJECT,
+      render: (r) => {
+        const input = { parentFirst: r.parentFirst, campUrl: CAMP_URL };
+        return { html: campOutreachHtml(input), text: campOutreachText(input) };
+      },
+      includeAmbiguous,
+      headerFields: { includeAmbiguous },
+      dryRunSegmentFields: (seg) => ({
+        ambiguous_rows: seg.ambiguous,
+        ambiguous_mailed: includeAmbiguous,
+        off_limits: seg.offLimits,
+      }),
+      ambiguousExcluded: (seg) => (includeAmbiguous ? 0 : seg.ambiguous),
+    },
+    opts,
+  );
 }

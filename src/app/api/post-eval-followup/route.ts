@@ -23,14 +23,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const dryRun = request.nextUrl.searchParams.get("dryRun") === "1";
-
-  let body: PostEvalBody;
+  let body: PostEvalBody & { dryRun?: unknown };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+
+  // `?dryRun=1` or body `{ dryRun: true }` — parity with the sibling
+  // eval-reengagement / camp-outreach routes, which accept both spellings.
+  const dryRun =
+    request.nextUrl.searchParams.get("dryRun") === "1" ||
+    body.dryRun === true;
 
   const result = await runPostEvalFollowup(body, { dryRun });
   return NextResponse.json(result.body, { status: result.status });

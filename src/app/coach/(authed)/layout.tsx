@@ -1,26 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import {
-  COACH_SESSION_COOKIE,
-  verifySessionCookieValue,
-} from "@/lib/coach-auth";
-import { isAllowedCoachEmail } from "@/lib/coach-allowlist";
+import { requireCoach } from "@/lib/coach-auth-server";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
-
-async function requireCoach(): Promise<string> {
-  const c = await cookies();
-  const value = c.get(COACH_SESSION_COOKIE)?.value;
-  const email = value ? verifySessionCookieValue(value) : null;
-  if (!email || !isAllowedCoachEmail(email)) {
-    redirect("/coach/login");
-  }
-  return email;
-}
 
 export default async function CoachAuthedLayout({
   children,
@@ -28,6 +13,9 @@ export default async function CoachAuthedLayout({
   children: React.ReactNode;
 }) {
   const email = await requireCoach();
+  if (!email) {
+    redirect("/coach/login");
+  }
 
   return (
     <div className="min-h-screen bg-ngpa-deep text-ngpa-white">

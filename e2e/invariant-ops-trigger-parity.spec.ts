@@ -363,6 +363,143 @@ test.describe("post-eval-followup — route ↔ ops-action core parity", () => {
 });
 
 // ---------------------------------------------------------------------------
+// dryRun trigger parity WITHIN the post-eval route: body.dryRun === true must
+// behave exactly like ?dryRun=1 (parity with the two sibling blast routes,
+// which already accept both spellings).
+// ---------------------------------------------------------------------------
+
+test.describe("post-eval-followup — body.dryRun parity with ?dryRun=1", () => {
+  test("body { dryRun: true } previews: NO email, NO Notion write, same body as ?dryRun=1", async () => {
+    stubPlayer(stub);
+    const res = await postEvalFollowupRoute(
+      req("/api/post-eval-followup", { ...PLAYER_BODY, dryRun: true }),
+    );
+    expect(res.status).toBe(200);
+    const viaBody = await res.json();
+    expect(viaBody.dryRun).toBe(true);
+    expect(resendRecipients(stub.calls), "no email on body dryRun").toEqual([]);
+    expect(
+      stub.calls.find((c) => c.method === "PATCH"),
+      "no Notion write on body dryRun",
+    ).toBeFalsy();
+
+    stub.reset();
+    stub.install();
+    stubPlayer(stub);
+    const res2 = await postEvalFollowupRoute(
+      req("/api/post-eval-followup", PLAYER_BODY, { dryRun: "1" }),
+    );
+    expect(res2.status).toBe(200);
+    expect(await res2.json()).toEqual(viaBody);
+  });
+
+  test("body { dryRun: 'yes' } (non-boolean) does NOT trigger dryRun semantics", async () => {
+    stubPlayer(stub);
+    const res = await postEvalFollowupRoute(
+      req("/api/post-eval-followup", { ...PLAYER_BODY, dryRun: "yes" }),
+    );
+    expect(res.status).toBe(200);
+    // Live semantics: the parent WAS emailed.
+    expect(resendRecipients(stub.calls)).toEqual(["parent@example.org"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Failure containment: a player-fetch network failure must come back as a
+// STRUCTURED 500 result — never a throw that escapes to the route's caller or
+// the ops action's error boundary.
+// ---------------------------------------------------------------------------
+
+test.describe("post-eval-followup — player fetch failure is a structured 500", () => {
+  test("core: fetchPlayer network error → { status: 500 }, zero sends, zero writes", async () => {
+    // /pages/player-1 deliberately UNstubbed → the stub throws, simulating a
+    // network failure inside fetchPlayer.
+    stub
+      .on("/databases/sessions-db/query", { results: [], has_more: false })
+      .on("api.resend.com", { id: "email_test" });
+    const core = await runPostEvalFollowup(PLAYER_BODY, {});
+    expect(core.status).toBe(500);
+    expect(core.body.error).toBeTruthy();
+    expect(resendRecipients(stub.calls)).toEqual([]);
+    expect(stub.calls.find((c) => c.method === "PATCH")).toBeFalsy();
+  });
+
+  test("route: same failure surfaces as a 500 JSON response, not a thrown error", async () => {
+    stub
+      .on("/databases/sessions-db/query", { results: [], has_more: false })
+      .on("api.resend.com", { id: "email_test" });
+    const res = await postEvalFollowupRoute(
+      req("/api/post-eval-followup", PLAYER_BODY),
+    );
+    expect(res.status).toBe(500);
+    expect((await res.json()).error).toBeTruthy();
+    expect(resendRecipients(stub.calls)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The `only` allow-list: fails LOUD on junk (any non-string entry → 400,
+// zero sends) and filters correctly when valid — the substrate for both the
+// camp warm-list requirement and the "retry failed only" flow.
+// ---------------------------------------------------------------------------
+
+test.describe("only[] allow-list — loud validation, correct filtering", () => {
+  test("route: only[] with a non-string entry → 400, ZERO network calls (no CRM read, no sends)", async () => {
+    stubLeadDb(stub);
+    stub.calls.length = 0;
+    const res = await evalReengagementRoute(
+      req("/api/eval-reengagement", { only: ["amy@example.org", 42] }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("only[] must be strings");
+    expect(stub.calls.length).toBe(0);
+  });
+
+  test("core parity: both blasts 400 on non-string only[] entries with zero downstream", async () => {
+    stubLeadDb(stub);
+    stub.calls.length = 0;
+    const junk = { only: [null] as unknown as string[] };
+    const evalCore = await runEvalReengagement(junk);
+    expect(evalCore.status).toBe(400);
+    expect(evalCore.body.error).toContain("only[] must be strings");
+    const campCore = await runCampOutreach(junk);
+    expect(campCore.status).toBe(400);
+    expect(campCore.body.error).toContain("only[] must be strings");
+    expect(stub.calls.length).toBe(0);
+  });
+
+  test("live with only[]: mails ONLY the intersection with the eligible set — a DD-derived email in only[] is still never mailed", async () => {
+    stubLeadDb(stub);
+    const core = await runCampOutreach({
+      only: ["amy@example.org", "dana@example.org"], // dana = OFF-LIMITS
+    });
+    expect(core.status).toBe(200);
+    expect(resendRecipients(stub.calls)).toEqual(["amy@example.org"]);
+
+    stub.reset();
+    stub.install();
+    stubLeadDb(stub);
+    const evalCore = await runEvalReengagement({
+      only: ["BEN@example.org"], // case-insensitive match
+    });
+    expect(evalCore.status).toBe(200);
+    expect(resendRecipients(stub.calls)).toEqual(["ben@example.org"]);
+  });
+
+  test("dryRun with only[]: to_send reflects the filtered list (the count the UI gate arms on)", async () => {
+    stubLeadDb(stub);
+    const core = await runCampOutreach({
+      dryRun: true,
+      only: ["amy@example.org"],
+    });
+    expect(core.status).toBe(200);
+    expect(core.body.to_send).toBe(1);
+    expect(core.body.eligible_unique).toBe(2); // full situational-awareness count
+    expect(resendRecipients(stub.calls)).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // The routes keep their secret gates (the ops actions are cookie-authed via
 // requireCoach; the invariant-eval-admin-gate spec pins two of these already —
 // camp-outreach is pinned here).

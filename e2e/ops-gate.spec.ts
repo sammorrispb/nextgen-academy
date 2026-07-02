@@ -4,6 +4,7 @@ import {
   opsGateReducer,
   canSendLive,
   opsParamsKey,
+  parseOnlyList,
   sendLiveLabel,
   confirmSendCopy,
   type OpsGateState,
@@ -94,6 +95,34 @@ test.describe("opsParamsKey — the preview is bound to the exact params", () =>
     );
     expect(opsParamsKey({ playerId: "p1" })).not.toBe(
       opsParamsKey({ playerId: "p2" }),
+    );
+  });
+});
+
+test.describe("parseOnlyList — the camp allow-list textarea parser", () => {
+  test("splits on newlines, commas, and semicolons; trims; drops empties", () => {
+    expect(parseOnlyList("a@x.org\n b@x.org ,c@x.org; \n\n")).toEqual([
+      "a@x.org",
+      "b@x.org",
+      "c@x.org",
+    ]);
+  });
+
+  test("dedupes case-insensitively, keeping the first spelling", () => {
+    expect(parseOnlyList("A@x.org\na@X.ORG\nb@x.org")).toEqual([
+      "A@x.org",
+      "b@x.org",
+    ]);
+  });
+
+  test("empty/whitespace input parses to an empty list (live send stays blocked)", () => {
+    expect(parseOnlyList("")).toEqual([]);
+    expect(parseOnlyList("  \n , ;  ")).toEqual([]);
+  });
+
+  test("a different pasted list produces a different params key (fresh preview required)", () => {
+    expect(opsParamsKey({ only: parseOnlyList("a@x.org") })).not.toBe(
+      opsParamsKey({ only: parseOnlyList("a@x.org\nb@x.org") }),
     );
   });
 });

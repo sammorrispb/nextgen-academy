@@ -70,6 +70,26 @@ export function opsParamsKey(params: Record<string, unknown>): string {
   );
 }
 
+/**
+ * Parse the camp allow-list textarea — one email per line, or comma/semicolon
+ * separated. Trims, drops empties, dedupes case-insensitively (first spelling
+ * wins). An empty result keeps the live send blocked (see validateCampLiveOnly
+ * in src/lib/ops-authz.ts, the server-side twin of this UI affordance).
+ */
+export function parseOnlyList(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of text.split(/[\n,;]+/)) {
+    const email = raw.trim();
+    if (!email) continue;
+    const key = email.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(email);
+  }
+  return out;
+}
+
 export function sendLiveLabel(count: number): string {
   return `Send live to ${count} recipient${count === 1 ? "" : "s"}`;
 }
