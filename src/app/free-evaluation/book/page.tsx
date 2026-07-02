@@ -60,7 +60,7 @@ export default async function EvalBookPage() {
           <h1 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white leading-[1.05] tracking-tight">
             Pick your time.
             <br />
-            <span className="text-ngpa-teal">We&rsquo;ll take it from there.</span>
+            <span className="text-ngpa-teal">Coach Sam takes it from there.</span>
           </h1>
           <p className="mt-5 text-lg text-ngpa-white/85 leading-relaxed max-w-xl">
             30 minutes with a real coach, ages 6&ndash;16, no cost. Request

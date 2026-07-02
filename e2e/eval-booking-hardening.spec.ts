@@ -102,6 +102,28 @@ test.describe("eval-request-received template (flow change) — escaped + no pre
     }
     expect(evalRequestReceivedSubject("Kiddo")).toContain("Request received");
   });
+
+  test("times render as the ET wall-clock strings, verbatim (parseSlotTimes reads the Notion ET-offset string — no TZ math)", () => {
+    const html = evalRequestReceivedHtml(input);
+    const text = evalRequestReceivedText(input);
+    expect(html).toContain("5:30 PM&ndash;6:00 PM");
+    expect(text).toContain("5:30 PM-6:00 PM");
+  });
+
+  test("signature follows the NGA comms standard (never bare 'Sam', never dashed '— Coach Sam')", () => {
+    const html = evalRequestReceivedHtml(input);
+    const text = evalRequestReceivedText(input);
+    expect(html).toContain(
+      "See you on the court &mdash; better than yesterday, together.",
+    );
+    expect(html).toContain("Coach Sam &middot; Next Gen Pickleball Academy");
+    expect(html).not.toContain("&mdash; Coach Sam<");
+    expect(text).toContain("text Coach Sam at");
+    expect(text).toContain(
+      "See you on the court - better than yesterday, together.",
+    );
+    expect(text).toContain("Coach Sam · Next Gen Pickleball Academy");
+  });
 });
 
 test.describe("eval-booking-notify template escapes user values (F9)", () => {

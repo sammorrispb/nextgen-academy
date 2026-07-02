@@ -56,12 +56,11 @@ export function evalRequestReceivedHtml(input: EvalRequestReceivedInput): string
   <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
       Need a different time, or have a question? Reply to this email or text
-      Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
+      Coach Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
     </p>
     <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
-      See you on the court!<br/>
-      <strong style="color: ${c.accentLime};">— Coach Sam</strong><br/>
-      <span style="color: ${c.muted};">Next Gen Pickleball Academy</span><br/>
+      See you on the court &mdash; better than yesterday, together.<br/>
+      <strong style="color: ${c.accentLime};">Coach Sam &middot; Next Gen Pickleball Academy</strong><br/>
       <a href="https://nextgenpbacademy.com" style="${s.link}">nextgenpbacademy.com</a>
     </p>
   </div>
@@ -79,11 +78,10 @@ export function evalRequestReceivedText(input: EvalRequestReceivedInput): string
     "",
     "Coach Sam will confirm within 24 hours. As soon as your time is locked in, you'll get a confirmation email with a calendar invite. Nothing else to do right now - that time is held for you while we confirm.",
     "",
-    `Need a different time, or have a question? Reply to this email or text Sam at ${site.phone}.`,
+    `Need a different time, or have a question? Reply to this email or text Coach Sam at ${site.phone}.`,
     "",
-    "See you on the court!",
-    "- Coach Sam",
-    "Next Gen Pickleball Academy",
+    "See you on the court - better than yesterday, together.",
+    "Coach Sam · Next Gen Pickleball Academy",
     "nextgenpbacademy.com",
   ].join("\n");
 }
