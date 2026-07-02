@@ -4,7 +4,7 @@ import {
   type SessionCancelResult,
 } from "@/lib/session-cancel";
 import type { CancelReason } from "@/lib/email/session-cancelled";
-import { TUESDAY_TITLE_PREFIXES } from "@/lib/recurring-sessions";
+import { RECURRING_TITLE_PREFIXES } from "@/lib/recurring-sessions";
 
 /**
  * One-call cancel for a multi-row session day.
@@ -41,12 +41,13 @@ interface GroupRow {
  * Every Sessions-DB row on `date` whose title starts with one of
  * `titlePrefixes`. The prefix match is the blast-radius guard: an unrelated
  * same-date session (e.g. a Saturday HS clinic) is never returned, so it can
- * never be swept into a group cancel. Defaults to the recurring-Tuesday
- * prefixes; the coach button passes the specific base title instead.
+ * never be swept into a group cancel. Defaults to the union of all
+ * recurring-template prefixes (Mon–Thu, Phase 2a); the coach button passes
+ * the specific base title instead.
  */
 export async function fetchGroupRowsForDate(
   date: string,
-  titlePrefixes: readonly string[] = TUESDAY_TITLE_PREFIXES,
+  titlePrefixes: readonly string[] = RECURRING_TITLE_PREFIXES,
 ): Promise<GroupRow[]> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_SESSIONS_DB_ID;
@@ -140,7 +141,7 @@ export async function cancelAllLevelsForDate(
     return { ...base, message: "A valid date (YYYY-MM-DD) is required" };
   }
 
-  const rows = await fetchGroupRowsForDate(date, titlePrefixes ?? TUESDAY_TITLE_PREFIXES);
+  const rows = await fetchGroupRowsForDate(date, titlePrefixes ?? RECURRING_TITLE_PREFIXES);
   base.matched = rows.length;
   if (rows.length === 0) {
     return { ...base, message: `No multi-level sessions found on ${date}` };

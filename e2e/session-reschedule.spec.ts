@@ -9,7 +9,7 @@ process.env.NEXT_PUBLIC_SITE_URL = "https://nextgenpbacademy.com";
 
 import {
   planRescheduleRoster,
-  isSeededTuesday,
+  isSeededRecurring,
   executeSessionReschedule,
   type RowPlan,
 } from "../src/lib/session-reschedule";
@@ -101,14 +101,17 @@ test.describe("planRescheduleRoster (pure)", () => {
   });
 });
 
-test.describe("isSeededTuesday (pure)", () => {
-  test("Redland/Olney Tuesday Evening titles are seeded", () => {
-    expect(isSeededTuesday("Redland Tuesday Evening — Red")).toBe(true);
-    expect(isSeededTuesday("Olney Tuesday Evening — Yellow")).toBe(true);
+test.describe("isSeededRecurring (pure)", () => {
+  test("every recurring-template title is seeded (incl. legacy Olney)", () => {
+    expect(isSeededRecurring("Redland Tuesday Evening — Red")).toBe(true);
+    expect(isSeededRecurring("Olney Tuesday Evening — Yellow")).toBe(true);
+    expect(isSeededRecurring("Ridgeview Monday Evening — Green")).toBe(true);
+    expect(isSeededRecurring("Westland Wednesday Evening — Red")).toBe(true);
+    expect(isSeededRecurring("Shannon Thursday Evening — Yellow")).toBe(true);
   });
-  test("non-Tuesday titles are not", () => {
-    expect(isSeededTuesday("Green Saturday")).toBe(false);
-    expect(isSeededTuesday("")).toBe(false);
+  test("non-recurring titles are not", () => {
+    expect(isSeededRecurring("Green Saturday")).toBe(false);
+    expect(isSeededRecurring("")).toBe(false);
   });
 });
 

@@ -7,7 +7,7 @@ import {
 } from "@/lib/notion-dropins";
 import { partitionRegistrants } from "@/lib/registrant-match";
 import { updateSession } from "@/lib/notion-sessions-admin";
-import { TUESDAY_TITLE_PREFIXES } from "@/lib/recurring-sessions";
+import { RECURRING_TITLE_PREFIXES } from "@/lib/recurring-sessions";
 import {
   sessionRescheduledHtml,
   sessionRescheduledText,
@@ -29,8 +29,9 @@ import {
  *    The roster is captured across [min..max of old/new date] and matched by
  *    Session Row ID so a re-run finds rows whether or not they already moved;
  *    `Reschedule Notified` gates the email so a re-run never double-sends.
- *  - Seeded all-levels Tuesdays are blocked — moving one makes the seed cron
- *    re-create a ghost at the original date. Cancel it instead.
+ *  - Seeded recurring evenings (Mon–Thu templates) are blocked — moving one
+ *    makes the seed cron re-create a ghost at the original date. Cancel it
+ *    instead.
  */
 
 const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
@@ -76,9 +77,9 @@ export function todayET(): string {
   return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 }
 
-export function isSeededTuesday(title: string): boolean {
+export function isSeededRecurring(title: string): boolean {
   const t = (title || "").trim();
-  return TUESDAY_TITLE_PREFIXES.some((p) => t.startsWith(p));
+  return RECURRING_TITLE_PREFIXES.some((p) => t.startsWith(p));
 }
 
 function formatLongDate(isoDate: string): string {
@@ -128,11 +129,11 @@ export async function executeSessionReschedule(
   if (input.newDate <= todayET()) {
     return { ok: false, message: "New date must be in the future" };
   }
-  if (isSeededTuesday(input.sessionTitle)) {
+  if (isSeededRecurring(input.sessionTitle)) {
     return {
       ok: false,
       message:
-        "This is an auto-seeded Tuesday — cancel it instead (the weekly seeder manages its dates).",
+        "This is an auto-seeded recurring session — cancel it instead (the weekly seeder manages its dates).",
     };
   }
 

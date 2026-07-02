@@ -1,82 +1,96 @@
-// Keeps the recurring all-levels Tuesday session stocked. Each future Tuesday
-// should have one row per level (Red/Orange/Green/Yellow) — a court each — at
-// the Redland Tuesday Evening 6–7 PM slot. The seed cron calls
-// ensureAllLevelsTuesdays() weekly; it's idempotent (never duplicates a row)
-// and never resurrects a deliberately-cancelled one (any existing row for a
-// date+level counts as present, whatever its Status).
+// Keeps the recurring weekly-evening sessions stocked (admin-reduction
+// roadmap Phase 2a). Each active template in src/data/recurring-templates.ts
+// gets one row per level per upcoming week — a court each. The seed cron
+// (still at /api/cron/seed-tuesday-sessions, wrapped by withCronAlert) calls
+// ensureWeeklyTemplates() weekly; it's idempotent (never duplicates a row)
+// and never resurrects a deliberately-cancelled one: any existing row for a
+// date|level counts as present, whatever its Status, matched against the
+// template's titleBase OR any legacyTitlePrefix.
 
 import { readPlainText } from "@/lib/notion-utils";
+import {
+  RECURRING_TEMPLATES,
+  type RecurringTemplate,
+  type SessionLevel,
+} from "@/data/recurring-templates";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
-export const TUESDAY_TITLE_BASE = "Redland Tuesday Evening";
-// Rows seeded before the 2026-06-09 Redland move carry the old name; matching
-// both prefixes keeps the seeder from ever double-seeding a date+level.
-export const TUESDAY_TITLE_PREFIXES = [TUESDAY_TITLE_BASE, "Olney Tuesday Evening"];
-export const TUESDAY_LEVELS = ["Red", "Orange", "Green", "Yellow"] as const;
-export type TuesdayLevel = (typeof TUESDAY_LEVELS)[number];
+/** Every title prefix that marks a row as belonging to `template` — the
+ * current titleBase plus every legacy prefix, deduped. */
+export function templateTitlePrefixes(template: RecurringTemplate): string[] {
+  return [...new Set([template.titleBase, ...template.legacyTitlePrefixes])];
+}
 
-// One template for every generated row. Change the venue/time here and the
-// cron follows. `publicArea` stays as a broad fallback in case Location is
-// ever cleared on a row.
-const TEMPLATE = {
-  startTime: "6:00 PM",
-  endTime: "7:00 PM",
-  courtCount: 1,
-  // Each level soft-launches at one court (4 kids) and may auto-expand to a
-  // second (8 kids) at one-seat-left — see computeRegistrationIncrement.
-  maxCourts: 2,
-  location:
-    "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
-  publicArea: "Derwood, MD",
-  notes:
-    "All-levels Tuesday: one court per level (Red/Orange/Green/Yellow). Venue: Redland MS tennis courts. Auto-seeded by the seed-tuesday-sessions cron.",
-} as const;
+/** Union of every recurring template's title prefixes (active or not — a
+ * deactivated template's already-seeded rows still exist and still belong to
+ * the recurring family). Used as the blast-radius guard by the group-cancel
+ * and reschedule flows. */
+export const RECURRING_TITLE_PREFIXES: readonly string[] = [
+  ...new Set(RECURRING_TEMPLATES.flatMap(templateTitlePrefixes)),
+];
 
 /**
- * ISO dates (YYYY-MM-DD) of the next `weeks` Tuesdays on or after `todayIso`.
- * Pure + UTC-anchored (Date.UTC, never `new Date(y,m,d)`) so it can't drift on
- * a UTC build server. If today is a Tuesday, today is included.
+ * ISO dates (YYYY-MM-DD) of the next `count` occurrences of `weekday`
+ * (0=Sun … 6=Sat) on or after `todayIso`. Pure + UTC-anchored (Date.UTC,
+ * never `new Date(y,m,d)`) so it can't drift on a UTC build server. If today
+ * IS the requested weekday, today is included.
  */
-export function upcomingTuesdays(todayIso: string, weeks: number): string[] {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(todayIso) || weeks <= 0) return [];
+export function upcomingWeekday(
+  weekday: number,
+  todayIso: string,
+  count: number,
+): string[] {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(todayIso) || count <= 0) return [];
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return [];
   const [y, m, d] = todayIso.split("-").map(Number);
   const base = Date.UTC(y, m - 1, d);
-  const dow = new Date(base).getUTCDay(); // 0=Sun … 2=Tue … 6=Sat
-  const daysUntilTue = (2 - dow + 7) % 7;
+  const dow = new Date(base).getUTCDay(); // 0=Sun … 6=Sat
+  const daysUntil = (weekday - dow + 7) % 7;
   const out: string[] = [];
-  for (let i = 0; i < weeks; i++) {
-    const ms = base + (daysUntilTue + i * 7) * 86_400_000;
+  for (let i = 0; i < count; i++) {
+    const ms = base + (daysUntil + i * 7) * 86_400_000;
     out.push(new Date(ms).toISOString().slice(0, 10));
   }
   return out;
 }
 
-/** Notion REST `properties` payload for one Tuesday session row. Pure. */
-export function buildTuesdayRowProps(date: string, level: TuesdayLevel) {
+/** Notion REST `properties` payload for one templated session row. Pure. */
+export function buildTemplateRowProps(
+  template: RecurringTemplate,
+  date: string,
+  level: SessionLevel,
+) {
   return {
-    Session: { title: [{ text: { content: `${TUESDAY_TITLE_BASE} — ${level}` } }] },
+    Session: { title: [{ text: { content: `${template.titleBase} — ${level}` } }] },
     Level: { select: { name: level } },
     Date: { date: { start: date } },
-    "Start time": { rich_text: [{ text: { content: TEMPLATE.startTime } }] },
-    "End time": { rich_text: [{ text: { content: TEMPLATE.endTime } }] },
-    "Court count": { number: TEMPLATE.courtCount },
-    "Max courts": { number: TEMPLATE.maxCourts },
-    Location: { rich_text: [{ text: { content: TEMPLATE.location } }] },
-    "Public Area": { rich_text: [{ text: { content: TEMPLATE.publicArea } }] },
+    "Start time": { rich_text: [{ text: { content: template.startTime } }] },
+    "End time": { rich_text: [{ text: { content: template.endTime } }] },
+    "Court count": { number: template.courtCount },
+    "Max courts": { number: template.maxCourts },
+    Location: { rich_text: [{ text: { content: template.location } }] },
+    "Public Area": { rich_text: [{ text: { content: template.publicArea } }] },
     Status: { select: { name: "Open" } },
-    Notes: { rich_text: [{ text: { content: TEMPLATE.notes } }] },
+    Notes: { rich_text: [{ text: { content: template.notes } }] },
   };
 }
 
-/** Existing `date|level` keys for recurring-Tuesday rows in [minDate, maxDate]. */
-async function fetchExistingTuesdayKeys(
+/**
+ * Existing `date|level` keys for template-owned rows in [minDate, maxDate].
+ * A row belongs to a template when its title starts with the titleBase OR any
+ * legacyTitlePrefix — Status is deliberately ignored so a Cancelled row still
+ * counts as present (never resurrect a deliberate cancellation).
+ */
+async function fetchExistingTemplateKeys(
   notionKey: string,
   dbId: string,
   minDate: string,
   maxDate: string,
+  templates: readonly RecurringTemplate[],
 ): Promise<Set<string>> {
+  const prefixes = [...new Set(templates.flatMap(templateTitlePrefixes))];
   const keys = new Set<string>();
   let cursor: string | undefined;
   do {
@@ -109,7 +123,7 @@ async function fetchExistingTuesdayKeys(
     for (const page of data.results ?? []) {
       const props = page.properties ?? {};
       const title = readPlainText(props["Session"]);
-      if (!TUESDAY_TITLE_PREFIXES.some((p) => title.startsWith(p))) continue;
+      if (!prefixes.some((p) => title.startsWith(p))) continue;
       const date = props["Date"]?.date?.start ?? "";
       const level = props["Level"]?.select?.name ?? "";
       if (date && level) keys.add(`${date}|${level}`);
@@ -122,8 +136,9 @@ async function fetchExistingTuesdayKeys(
 async function createRow(
   notionKey: string,
   dbId: string,
+  template: RecurringTemplate,
   date: string,
-  level: TuesdayLevel,
+  level: SessionLevel,
 ): Promise<boolean> {
   const res = await fetch(`${NOTION_API}/pages`, {
     method: "POST",
@@ -134,12 +149,12 @@ async function createRow(
     },
     body: JSON.stringify({
       parent: { database_id: dbId },
-      properties: buildTuesdayRowProps(date, level),
+      properties: buildTemplateRowProps(template, date, level),
     }),
   });
   if (!res.ok) {
     console.error(
-      `[recurring-sessions] create failed ${date} ${level}:`,
+      `[recurring-sessions] create failed ${date} ${template.titleBase} ${level}:`,
       res.status,
       await res.text().catch(() => ""),
     );
@@ -149,43 +164,80 @@ async function createRow(
 }
 
 export interface EnsureResult {
-  tuesdays: string[];
-  created: string[]; // "YYYY-MM-DD Level"
-  skipped: number; // already existed
+  dryRun: boolean;
+  /** All dates considered across templates, ascending. */
+  dates: string[];
+  /** Rows created this run — "YYYY-MM-DD TitleBase — Level". Empty in dryRun. */
+  created: string[];
+  /** dryRun only: rows a live run WOULD create. Empty otherwise. */
+  wouldCreate: string[];
+  /** date|level pairs that already existed (any Status). */
+  skipped: number;
   failed: string[];
 }
 
+export interface EnsureOptions {
+  /** Plan only — return `wouldCreate` and write NOTHING to Notion. */
+  dryRun?: boolean;
+  /** Override for tests; defaults to RECURRING_TEMPLATES. */
+  templates?: readonly RecurringTemplate[];
+}
+
 /**
- * Ensure each of the next `weeks` Tuesdays has all four level rows. Idempotent:
- * existing rows (any Status) are left untouched. Fail-soft per row — one bad
- * create doesn't abort the rest.
+ * Ensure each active template has all of its level rows for the next `weeks`
+ * occurrences of its weekday. Idempotent: existing rows (any Status, any
+ * known title prefix) are left untouched. Fail-soft per row — one bad create
+ * doesn't abort the rest.
  */
-export async function ensureAllLevelsTuesdays(
+export async function ensureWeeklyTemplates(
   todayIso: string,
   weeks: number,
+  options: EnsureOptions = {},
 ): Promise<EnsureResult> {
+  const { dryRun = false, templates = RECURRING_TEMPLATES } = options;
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_SESSIONS_DB_ID;
-  const tuesdays = upcomingTuesdays(todayIso, weeks);
-  const result: EnsureResult = { tuesdays, created: [], skipped: 0, failed: [] };
-  if (!notionKey || !dbId || tuesdays.length === 0) return result;
 
-  const existing = await fetchExistingTuesdayKeys(
+  const active = templates.filter((t) => t.active);
+  const datesByTemplate = new Map<RecurringTemplate, string[]>(
+    active.map((t) => [t, upcomingWeekday(t.weekday, todayIso, weeks)]),
+  );
+  const allDates = [...new Set([...datesByTemplate.values()].flat())].sort();
+
+  const result: EnsureResult = {
+    dryRun,
+    dates: allDates,
+    created: [],
+    wouldCreate: [],
+    skipped: 0,
+    failed: [],
+  };
+  if (!notionKey || !dbId || allDates.length === 0) return result;
+
+  const existing = await fetchExistingTemplateKeys(
     notionKey,
     dbId,
-    tuesdays[0],
-    tuesdays[tuesdays.length - 1],
+    allDates[0],
+    allDates[allDates.length - 1],
+    templates,
   );
 
-  for (const date of tuesdays) {
-    for (const level of TUESDAY_LEVELS) {
-      if (existing.has(`${date}|${level}`)) {
-        result.skipped += 1;
-        continue;
+  for (const [template, dates] of datesByTemplate) {
+    for (const date of dates) {
+      for (const level of template.levels) {
+        const label = `${date} ${template.titleBase} — ${level}`;
+        if (existing.has(`${date}|${level}`)) {
+          result.skipped += 1;
+          continue;
+        }
+        if (dryRun) {
+          result.wouldCreate.push(label);
+          continue;
+        }
+        const ok = await createRow(notionKey, dbId, template, date, level);
+        if (ok) result.created.push(label);
+        else result.failed.push(label);
       }
-      const ok = await createRow(notionKey, dbId, date, level);
-      if (ok) result.created.push(`${date} ${level}`);
-      else result.failed.push(`${date} ${level}`);
     }
   }
   return result;
