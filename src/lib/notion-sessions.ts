@@ -1,4 +1,5 @@
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
+import { readPlainText } from "@/lib/notion-utils";
 import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 import { isSessionEnded } from "@/lib/session-time";
 
@@ -49,14 +50,6 @@ const NOTION_VERSION = "2022-06-28";
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readPlainText(prop: any): string {
-  if (!prop) return "";
-  const arr = prop.rich_text ?? prop.title ?? [];
-  if (!Array.isArray(arr)) return "";
-  return arr.map((r: { plain_text?: string }) => r.plain_text ?? "").join("");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

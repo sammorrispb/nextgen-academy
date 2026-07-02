@@ -1,5 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
-import { NextRequest, NextResponse } from "next/server";
+import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 import { fetchCancelledSessionsInWindow } from "@/lib/notion-sessions";
@@ -50,19 +49,7 @@ function windowEndIso(fromIso: string): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
-export async function GET(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json(
-      { error: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
-  }
-  const auth = req.headers.get("authorization") ?? "";
-  if (!secretEquals(auth, `Bearer ${expected}`)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withCronAlert("reconcile-cancelled-sessions", async () => {
   const fromIso = todayEtIso();
   const toIso = windowEndIso(fromIso);
 
@@ -70,14 +57,23 @@ export async function GET(req: NextRequest) {
   if (cancelled.length === 0) {
     const summary = { window: { fromIso, toIso }, cancelled: 0, acted: 0 };
     console.log("[cron/reconcile-cancelled-sessions]", JSON.stringify(summary));
-    return NextResponse.json({ ok: true, ...summary, outcomes: [] });
+    return {
+      attempted: 0,
+      succeeded: 0,
+      failures: [],
+      body: { ...summary, outcomes: [] },
+    };
   }
 
   // One roster read per distinct cancelled date covers every level on that day.
   const drops = await fetchUpcomingDropIns(fromIso, toIso, { revalidate: 0 });
 
   const outcomes: Array<Record<string, unknown>> = [];
+  // A failed refund/notify fan-out used to be a count behind ok:true — money
+  // movement for a cancelled session stalled with no signal to Sam.
+  const failures: CronFailure[] = [];
   let acted = 0;
+  let fanoutOk = 0;
   for (const session of cancelled) {
     const roster = rosterForSession(drops, {
       title: session.title,
@@ -116,6 +112,22 @@ export async function GET(req: NextRequest) {
       smsSent: result.smsSent ?? 0,
       errors: result.errors ?? 0,
     });
+    if (!result.ok) {
+      failures.push({
+        signature: "session_cancel_fanout_failed",
+        ref: session.id,
+        detail: result.message,
+      });
+    } else {
+      fanoutOk += 1;
+      if ((result.errors ?? 0) > 0) {
+        failures.push({
+          signature: "session_cancel_partial_errors",
+          ref: session.id,
+          detail: `${result.errors} registrant-level error(s) during refund/notify fan-out`,
+        });
+      }
+    }
   }
 
   const summary = {
@@ -126,5 +138,10 @@ export async function GET(req: NextRequest) {
   };
   console.log("[cron/reconcile-cancelled-sessions]", JSON.stringify(summary));
 
-  return NextResponse.json({ ok: true, ...summary, outcomes });
-}
+  return {
+    attempted: acted,
+    succeeded: fanoutOk,
+    failures,
+    body: { ...summary, outcomes },
+  };
+});

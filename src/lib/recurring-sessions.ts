@@ -5,6 +5,8 @@
 // and never resurrects a deliberately-cancelled one (any existing row for a
 // date+level counts as present, whatever its Status).
 
+import { readPlainText } from "@/lib/notion-utils";
+
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
 
@@ -66,14 +68,6 @@ export function buildTuesdayRowProps(date: string, level: TuesdayLevel) {
     Status: { select: { name: "Open" } },
     Notes: { rich_text: [{ text: { content: TEMPLATE.notes } }] },
   };
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readPlainText(prop: any): string {
-  const arr = prop?.rich_text ?? prop?.title ?? [];
-  return Array.isArray(arr)
-    ? arr.map((r: { plain_text?: string }) => r.plain_text ?? "").join("")
-    : "";
 }
 
 /** Existing `date|level` keys for recurring-Tuesday rows in [minDate, maxDate]. */

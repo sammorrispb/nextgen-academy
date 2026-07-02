@@ -1,4 +1,5 @@
 import { secretEquals } from "@/lib/secret-compare";
+import { readPlainText } from "@/lib/notion-utils";
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { site } from "@/data/site";
@@ -41,14 +42,6 @@ interface ExtractedSession {
   sessionDate: string;
   sessionLocation: string;
   sessionLevel: string | null;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readPlainText(prop: any): string {
-  if (!prop) return "";
-  const arr = prop.rich_text ?? prop.title ?? [];
-  if (!Array.isArray(arr)) return "";
-  return arr.map((r: { plain_text?: string }) => r.plain_text ?? "").join("");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
