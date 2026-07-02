@@ -144,4 +144,8 @@ export const GET = withCronAlert("reconcile-cancelled-sessions", async () => {
     failures,
     body: { ...summary, outcomes },
   };
-});
+  // Every-2h cron (vercel.json `0 */2 * * *`): cap alert EMAILS to 4 UTC
+  // windows a day so a stuck dependency can't burn 12 re-alerts/day from the
+  // shared Resend 100/day quota — same stateless throttle as the two hourly
+  // crons. Every failing run still 500s + logs the full alert body.
+}, { alertEmailUtcHours: [0, 6, 12, 18] });

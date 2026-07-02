@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { NextRequest } from "next/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { FetchStub } from "./fixtures/fetch-stub";
 
 // Env BEFORE importing the lib (mirrors invariant-crew-followup-egress).
@@ -374,6 +376,39 @@ test.describe("withCronAlert — alertEmailUtcHours throttle", () => {
     expect(res.status).toBe(200);
     expect(stub.calls.length).toBe(0);
   });
+});
+
+// ─── Throttle WIRING: every sub-daily cron must cap its alert emails ─────────
+//
+// The wrapper honors alertEmailUtcHours (F4 above); this pins that each cron
+// firing more than once a day per vercel.json actually PASSES it — a stuck
+// dependency on an unthrottled 2-hourly cron would burn 12 alert emails/day
+// from the shared Resend 100/day quota. OBSERVE-only source assertions (same
+// pattern as invariant-camp-promo-code.spec.ts).
+
+test.describe("alertEmailUtcHours wiring — sub-daily crons per vercel.json", () => {
+  const SUB_DAILY = [
+    { name: "coach-pre-event", schedule: "0 * * * *" },
+    { name: "mark-passed-sessions", schedule: "0 * * * *" },
+    { name: "reconcile-cancelled-sessions", schedule: "0 */2 * * *" },
+  ];
+
+  const vercelJson = JSON.parse(
+    readFileSync(join(__dirname, "..", "vercel.json"), "utf8"),
+  ) as { crons: Array<{ path: string; schedule: string }> };
+
+  for (const { name, schedule } of SUB_DAILY) {
+    test(`${name} runs sub-daily (${schedule}) and wires alertEmailUtcHours [0,6,12,18]`, () => {
+      const cron = vercelJson.crons.find((c) => c.path === `/api/cron/${name}`);
+      expect(cron?.schedule, `vercel.json schedule for ${name}`).toBe(schedule);
+
+      const src = readFileSync(
+        join(__dirname, "..", "src", "app", "api", "cron", name, "route.ts"),
+        "utf8",
+      );
+      expect(src).toMatch(/alertEmailUtcHours:\s*\[0,\s*6,\s*12,\s*18\]/);
+    });
+  }
 });
 
 // ─── F5/F7: per-kind failure aggregation helper ─────────────────────────────

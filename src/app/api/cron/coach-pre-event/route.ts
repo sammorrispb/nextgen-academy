@@ -99,16 +99,30 @@ async function sendOne(
 }
 
 export const GET = withCronAlert("coach-pre-event", async () => {
-  const coachEmails = getCoachEmails();
   const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey || coachEmails.length === 0) {
+  if (!resendApiKey) {
+    // Misconfiguration, not a benign state — the exact "dead key, nothing
+    // reached Sam" incident class. Same resend_not_configured posture as
+    // dropin-reminder / dropin-post-session / crew-followup / weekly-newsletter.
+    console.warn("[cron/coach-pre-event] RESEND_API_KEY missing — cannot send coach briefs");
+    return {
+      attempted: 0,
+      succeeded: 0,
+      failures: [{ signature: "resend_not_configured" }],
+      body: { error: "RESEND_API_KEY missing" },
+    };
+  }
+
+  const coachEmails = getCoachEmails();
+  if (coachEmails.length === 0) {
+    // Deliberately a benign skip, NOT a failure: an empty COACH_ALLOWED_EMAILS
+    // is legitimate config-free state (no coach-area users onboarded yet),
+    // unlike a missing Resend key which breaks every send path site-wide.
     return {
       attempted: 0,
       succeeded: 0,
       failures: [],
-      body: {
-        skipped: !resendApiKey ? "RESEND_API_KEY missing" : "no coach emails configured",
-      },
+      body: { skipped: "no coach emails configured" },
     };
   }
   const resend = new Resend(resendApiKey);
