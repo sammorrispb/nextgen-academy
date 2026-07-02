@@ -1,4 +1,5 @@
 import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { EMAIL_RE } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
   fetchActionableCrewInterest,
@@ -34,8 +35,6 @@ const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function toCandidate(row: ActionableCrewInterest): CrewCandidate {
   return {

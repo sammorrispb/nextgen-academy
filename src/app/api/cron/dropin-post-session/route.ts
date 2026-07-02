@@ -1,4 +1,5 @@
 import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { EMAIL_RE } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
   fetchUpcomingDropIns,
@@ -132,7 +133,7 @@ async function sendOne(
   if (
     !resend ||
     !row.parentEmail ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.parentEmail)
+    !EMAIL_RE.test(row.parentEmail)
   ) {
     outcome.error = "no_resend_or_email";
     return outcome;

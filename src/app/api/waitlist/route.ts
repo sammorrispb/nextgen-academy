@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { EMAIL_RE } from "@/lib/notion-utils";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { site } from "@/data/site";
@@ -15,8 +16,6 @@ const NOTION_VERSION = "2022-06-28";
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const ALLOWED_AREAS = new Set([
   "Anywhere in MoCo",

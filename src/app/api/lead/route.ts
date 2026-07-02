@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { EMAIL_RE } from "@/lib/notion-utils";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { normalizeKids, validateLeadForm } from "@/lib/validate-lead";
@@ -19,8 +20,6 @@ const NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7";
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Per-route in-memory rate limit (5/hr, resets on deploy) — shared impl in
 // src/lib/rate-limit.ts; each route keeps its own bucket, as before.

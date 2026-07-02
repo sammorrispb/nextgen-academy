@@ -1,3 +1,4 @@
+import { readPlainText } from "@/lib/notion-utils";
 import {
   executeSessionCancel,
   type SessionCancelResult,
@@ -34,14 +35,6 @@ interface GroupRow {
   startTime: string;
   level: string;
   status: string;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function readPlainText(prop: any): string {
-  const arr = prop?.rich_text ?? prop?.title ?? [];
-  return Array.isArray(arr)
-    ? arr.map((r: { plain_text?: string }) => r.plain_text ?? "").join("")
-    : "";
 }
 
 /**
