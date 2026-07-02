@@ -147,6 +147,7 @@ test.describe("ops actions wire the gates server-side (source pins)", () => {
     const sites = [
       ["src", "app", "coach", "(authed)", "layout.tsx"],
       ["src", "app", "coach", "(authed)", "eval", "actions.ts"],
+      ["src", "app", "coach", "(authed)", "inbox", "actions.ts"],
       ["src", "app", "coach", "(authed)", "polls", "[slug]", "actions.ts"],
       ["src", "app", "coach", "(authed)", "[slug]", "actions.ts"],
     ];

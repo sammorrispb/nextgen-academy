@@ -211,6 +211,52 @@ export async function fetchActionableCrewInterest(): Promise<
   });
 }
 
+/**
+ * Coach-inbox review statuses. Audited against markCrewInterestFlag before
+ * adding this (roadmap Rev 2): that setter flips the follow-up CRON's
+ * idempotency CHECKBOXES ("Nudge Sent" / "Reengagement Sent") — comms state,
+ * not review state — so writing them from the inbox would suppress or
+ * double-fire the cron's parent comms. Review state lives on the Status
+ * select. Values are NOT invented: "Reviewed" is in ACTIONABLE_STATUSES
+ * above, "Closed" is a documented Sam-terminal state (this file's docs +
+ * the crew-followup section of CLAUDE.md: "routed families — Polled/Closed —
+ * are never re-touched"). "Polled" is deliberately excluded — flipping a row
+ * to Polled belongs to actually creating a poll, which stays a Sam decision
+ * (do-NOT-build red line: no auto-creating crew polls).
+ */
+export type CrewInterestReviewStatus = "Reviewed" | "Closed";
+
+/** Set the Status select on a Crew Interest row from the coach inbox. */
+export async function setCrewInterestStatus(
+  pageId: string,
+  status: CrewInterestReviewStatus,
+): Promise<boolean> {
+  const notionKey = process.env.NOTION_API_KEY;
+  if (!notionKey) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      properties: { Status: { select: { name: status } } },
+    }),
+  });
+  if (!res.ok) {
+    console.error(
+      "[notion-crew-interest] setStatus failed",
+      status,
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return false;
+  }
+  return true;
+}
+
 export type CrewInterestFlag = "Nudge Sent" | "Reengagement Sent";
 
 /** Flip a follow-up idempotency checkbox on a Crew Interest row. */
