@@ -12,6 +12,10 @@ import {
   postSessionRebookHtml,
   postSessionRebookText,
 } from "@/lib/email/post-session-rebook";
+import {
+  crewInterestWelcomeHtml,
+  crewInterestWelcomeText,
+} from "@/lib/email/crew-interest-welcome";
 
 // Pure-function specs (no dev server):
 //   npx playwright test e2e/whatsapp-invite.spec.ts --project=desktop
@@ -58,6 +62,13 @@ const rebookInput = {
   scheduleUrl: "https://nextgenpbacademy.com/schedule",
 };
 
+const crewInterestInput = {
+  parentFirst: "Jordan",
+  childFirst: "Mia",
+  preferredSummary: "Green · Wed · 4-6pm",
+  newsletterUrl: "https://nextgenpbacademy.com/newsletter",
+};
+
 test.describe("WhatsApp invite — on every registrant email", () => {
   test("booking confirmation carries the group link unconditionally", () => {
     expect(bookingConfirmationHtml(confirmationInput)).toContain(
@@ -88,6 +99,15 @@ test.describe("WhatsApp invite — on every registrant email", () => {
       WHATSAPP_PARENT_GROUP_URL,
     );
     expect(postSessionRebookText(rebookInput)).toContain(
+      WHATSAPP_PARENT_GROUP_URL,
+    );
+  });
+
+  test("crew interest welcome carries the group link (HTML + text)", () => {
+    expect(crewInterestWelcomeHtml(crewInterestInput)).toContain(
+      WHATSAPP_PARENT_GROUP_URL,
+    );
+    expect(crewInterestWelcomeText(crewInterestInput)).toContain(
       WHATSAPP_PARENT_GROUP_URL,
     );
   });
