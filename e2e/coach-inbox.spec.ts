@@ -1,27 +1,49 @@
 import { test, expect } from "@playwright/test";
+import { FetchStub } from "./fixtures/fetch-stub";
 
-// Pure specs for the Coach Inbox (Phase 1b) — the four queue fetchers' query
-// builders, the decision→Notion-status maps (vocabulary pins: the inbox may
-// only write status values that already exist in each DB's documented union),
-// the pending-count badge math, and the draft-body approvability gate.
+// Pure + offline-behavioral specs for the Coach Inbox (Phase 1b) — the four
+// queue fetchers' query builders, the decision→Notion-status maps (vocabulary
+// pins: the inbox may only write status values that already exist in each
+// DB's documented union), the pending-count badge math, the draft-body
+// approvability gate, the href scheme allowlist, and the ship-window math
+// pinned to the Thursday 22:00 UTC cron fire.
 //
 // Written RED-FIRST: every import below fails until the helpers exist.
 
+// Env BEFORE any fetcher call (read at call time; pattern matches
+// invariant-coach-inbox-authz.spec.ts).
+process.env.NOTION_API_KEY = "test-notion-key-inbox";
+process.env.NOTION_NEWS_DB_ID = "test-news-db";
+process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID = "test-drafts-db";
+process.env.NOTION_CREW_INTEREST_DB_ID = "test-crew-db";
+process.env.NOTION_CREW_COMMITS_DB_ID = "test-commits-db";
+
 import {
   inboxPendingCount,
+  inboxCountsTotal,
+  pendingBadgeLabel,
+  fetchInboxCounts,
   filterCrewInboxRows,
-  isDraftWithinShipWindow,
   NEWS_DECISION_TO_STATUS,
   DRAFT_DECISION_TO_STATUS,
   CREW_DECISION_TO_STATUS,
   type InboxQueues,
 } from "../src/lib/coach-inbox";
-import { buildNewNewsQuery } from "../src/lib/notion-news";
+import { buildNewNewsQuery, fetchNewNews } from "../src/lib/notion-news";
 import {
   blocksToHtml,
   blocksToText,
   buildPendingDraftsQueryFilter,
+  buildDraftsQueryFilter,
   isDraftBodyApprovable,
+  isSafeHref,
+  nextNewsletterFire,
+  shipWindowBounds,
+  draftPassesShipFilter,
+  willRideThursdaySend,
+  pendingDraftFromRow,
+  fetchPendingDrafts,
+  fetchPendingDraftCount,
 } from "../src/lib/notion-newsletter-drafts";
 import { buildCommitsStatusFilter } from "../src/lib/notion-crew-commits";
 import type { ActionableCrewInterest } from "../src/lib/notion-crew-interest";
@@ -102,6 +124,11 @@ test.describe("queue fetcher query builders", () => {
     expect(buildNewNewsQuery(-5).page_size).toBe(1);
   });
 
+  test("news query carries the pagination cursor only when one is given (F5)", () => {
+    expect(buildNewNewsQuery(20)).not.toHaveProperty("start_cursor");
+    expect(buildNewNewsQuery(20, "cursor-abc").start_cursor).toBe("cursor-abc");
+  });
+
   test("newsletter queue queries Status=Pending only", () => {
     expect(buildPendingDraftsQueryFilter()).toEqual({
       property: "Status",
@@ -135,8 +162,14 @@ test.describe("queue fetcher query builders", () => {
 // ---------------------------------------------------------------------------
 // Pending-count badge math
 // ---------------------------------------------------------------------------
-test.describe("inboxPendingCount", () => {
-  const empty: InboxQueues = { news: [], drafts: [], crew: [], cardFailed: [] };
+test.describe("inboxPendingCount / badge labeling", () => {
+  const empty: InboxQueues = {
+    news: [],
+    newsHasMore: false,
+    drafts: [],
+    crew: [],
+    cardFailed: [],
+  };
 
   test("zero on all-empty queues", () => {
     expect(inboxPendingCount(empty)).toBe(0);
@@ -145,11 +178,30 @@ test.describe("inboxPendingCount", () => {
   test("sums all four queues", () => {
     const queues = {
       news: [{}, {}] ,
+      newsHasMore: false,
       drafts: [{}],
       crew: [{}, {}, {}],
       cardFailed: [{}],
     } as unknown as InboxQueues;
     expect(inboxPendingCount(queues)).toBe(7);
+  });
+
+  test("inboxCountsTotal sums the count-only shape", () => {
+    expect(
+      inboxCountsTotal({
+        news: 2,
+        newsHasMore: false,
+        drafts: 1,
+        crew: 3,
+        cardFailed: 1,
+      }),
+    ).toBe(7);
+  });
+
+  test("pendingBadgeLabel is honest about a capped news fetch (F5)", () => {
+    expect(pendingBadgeLabel(7, false)).toBe("7");
+    expect(pendingBadgeLabel(104, true)).toBe("104+");
+    expect(pendingBadgeLabel(0, false)).toBe("0");
   });
 });
 
@@ -205,25 +257,337 @@ test.describe("draft body render + approve gate", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Thursday-send freshness context (7-day Drafted At window per the lib docs)
+// F2 — ship-window eligibility computed against the NEXT Thursday 22:00 UTC
+// cron fire (vercel.json "0 22 * * 4"), mirroring queryApprovedRows' own
+// filter (7-day Drafted At window + Expires At guard). All dates fixed;
+// helpers are UTC/Intl-explicit so results are TZ-independent.
+// 2026-07-02 is a Thursday.
 // ---------------------------------------------------------------------------
-test.describe("isDraftWithinShipWindow", () => {
-  const now = new Date("2026-07-02T15:00:00.000Z");
-
-  test("a draft from 2 days ago is inside the window", () => {
-    expect(isDraftWithinShipWindow("2026-06-30", now)).toBe(true);
+test.describe("F2 — nextNewsletterFire pins the cron schedule", () => {
+  test("mid-week → the coming Thursday 22:00 UTC", () => {
+    expect(
+      nextNewsletterFire(new Date("2026-06-30T12:00:00.000Z")).toISOString(),
+    ).toBe("2026-07-02T22:00:00.000Z");
   });
 
-  test("a draft from 8 days ago is stale — cron will not pick it up", () => {
-    expect(isDraftWithinShipWindow("2026-06-24", now)).toBe(false);
+  test("Thursday just before the fire → today's fire", () => {
+    expect(
+      nextNewsletterFire(new Date("2026-07-02T21:59:59.000Z")).toISOString(),
+    ).toBe("2026-07-02T22:00:00.000Z");
   });
 
-  test("boundary: exactly 7 days ago still ships (cron uses on_or_after)", () => {
-    expect(isDraftWithinShipWindow("2026-06-25", now)).toBe(true);
+  test("at or after the fire → next week's Thursday", () => {
+    expect(
+      nextNewsletterFire(new Date("2026-07-02T22:00:00.000Z")).toISOString(),
+    ).toBe("2026-07-09T22:00:00.000Z");
+    expect(
+      nextNewsletterFire(new Date("2026-07-03T02:00:00.000Z")).toISOString(),
+    ).toBe("2026-07-09T22:00:00.000Z");
+  });
+});
+
+test.describe("F2 — shipWindowBounds is THE cutoff math the cron queries with", () => {
+  const fire = new Date("2026-07-02T22:00:00.000Z");
+
+  test("cutoff = fire minus 7 days (date-only), todayEt = fire's ET date", () => {
+    const b = shipWindowBounds(fire);
+    expect(b.cutoff).toBe("2026-06-25");
+    // 22:00 UTC on Jul 2 = 18:00 EDT — still Jul 2 in ET.
+    expect(b.todayEt).toBe("2026-07-02");
   });
 
-  test("empty / garbage Drafted At reads as stale, never throws", () => {
-    expect(isDraftWithinShipWindow("", now)).toBe(false);
-    expect(isDraftWithinShipWindow("not-a-date", now)).toBe(false);
+  test("the bounds slot into buildDraftsQueryFilter exactly as the cron sends them", () => {
+    const b = shipWindowBounds(fire);
+    expect(buildDraftsQueryFilter(b.cutoff, b.todayEt)).toEqual({
+      and: [
+        { property: "Status", select: { equals: "Approved" } },
+        { property: "Drafted At", date: { on_or_after: "2026-06-25" } },
+        {
+          or: [
+            { property: "Expires At", date: { is_empty: true } },
+            { property: "Expires At", date: { on_or_after: "2026-07-02" } },
+          ],
+        },
+      ],
+    });
+  });
+});
+
+test.describe("F2 — draftPassesShipFilter mirrors the cron's Notion filter", () => {
+  const bounds = { cutoff: "2026-06-25", todayEt: "2026-07-02" };
+  const d = (draftedAt: string, expiresAt = "") => ({ draftedAt, expiresAt });
+
+  test("Drafted At on_or_after the cutoff passes; older fails", () => {
+    expect(draftPassesShipFilter(d("2026-06-25"), bounds)).toBe(true); // boundary
+    expect(draftPassesShipFilter(d("2026-06-30"), bounds)).toBe(true);
+    expect(draftPassesShipFilter(d("2026-06-24"), bounds)).toBe(false);
+  });
+
+  test("Expires At before the fire's ET date excludes an otherwise-fresh draft", () => {
+    expect(draftPassesShipFilter(d("2026-06-30", "2026-07-01"), bounds)).toBe(false);
+    expect(draftPassesShipFilter(d("2026-06-30", "2026-07-02"), bounds)).toBe(true); // inclusive
+    expect(draftPassesShipFilter(d("2026-06-30", ""), bounds)).toBe(true); // empty = no expiry
+  });
+
+  test("empty / garbage Drafted At reads as ineligible, never throws", () => {
+    expect(draftPassesShipFilter(d(""), bounds)).toBe(false);
+    expect(draftPassesShipFilter(d("not-a-date"), bounds)).toBe(false);
+  });
+});
+
+test.describe("F2 — willRideThursdaySend uses the FIRE as the basis, not `now`", () => {
+  test("Friday: a draft 4 days old NOW but >7 days old at next fire will NOT ride", () => {
+    // now = Fri 2026-06-26; next fire = Thu 2026-07-02 22:00 UTC, cutoff 06-25.
+    const now = new Date("2026-06-26T12:00:00.000Z");
+    // A naive now-based 7-day window says true (drafted 06-22, 4 days ago);
+    // the cron's filter at fire time says false. Fire basis must win.
+    expect(willRideThursdaySend({ draftedAt: "2026-06-22", expiresAt: "" }, now)).toBe(false);
+    expect(willRideThursdaySend({ draftedAt: "2026-06-25", expiresAt: "" }, now)).toBe(true);
+  });
+
+  test("expiring before the fire's ET date means it will NOT ride, even if fresh", () => {
+    const now = new Date("2026-06-30T12:00:00.000Z"); // Tue; fire Thu 07-02
+    expect(
+      willRideThursdaySend({ draftedAt: "2026-06-29", expiresAt: "2026-07-01" }, now),
+    ).toBe(false);
+    expect(
+      willRideThursdaySend({ draftedAt: "2026-06-29", expiresAt: "2026-07-02" }, now),
+    ).toBe(true);
+  });
+
+  test("parity: willRideThursdaySend === draftPassesShipFilter over the fire's bounds", () => {
+    const nows = [
+      new Date("2026-06-26T12:00:00.000Z"),
+      new Date("2026-07-02T21:00:00.000Z"),
+      new Date("2026-07-02T23:00:00.000Z"),
+    ];
+    const drafts = [
+      { draftedAt: "2026-06-22", expiresAt: "" },
+      { draftedAt: "2026-06-28", expiresAt: "" },
+      { draftedAt: "2026-07-01", expiresAt: "2026-07-01" },
+      { draftedAt: "", expiresAt: "" },
+    ];
+    for (const now of nows) {
+      const bounds = shipWindowBounds(nextNewsletterFire(now));
+      for (const draft of drafts) {
+        expect(willRideThursdaySend(draft, now)).toBe(
+          draftPassesShipFilter(draft, bounds),
+        );
+      }
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F1 — href scheme allowlist in the SHARED draft renderer (inbox preview and
+// the Thursday email both render blocksToHtml, so the fix guards both).
+// ---------------------------------------------------------------------------
+test.describe("F1 — link scheme allowlist in blocksToHtml", () => {
+  const linkBlocks = (href: string) => [
+    {
+      type: "paragraph",
+      paragraph: { rich_text: [{ plain_text: "click me", href }] },
+    },
+  ];
+
+  test("javascript: href renders as plain text — no anchor, no scheme in output", () => {
+    const html = blocksToHtml(linkBlocks("javascript:alert(1)"));
+    expect(html).toContain("click me");
+    expect(html).not.toContain("<a");
+    expect(html.toLowerCase()).not.toContain("javascript:");
+  });
+
+  test("data: and vbscript: hrefs are dropped too", () => {
+    for (const href of ["data:text/html,<script>1</script>", "vbscript:msgbox(1)"]) {
+      const html = blocksToHtml(linkBlocks(href));
+      expect(html).toContain("click me");
+      expect(html).not.toContain("<a");
+    }
+  });
+
+  test("http, https and mailto anchors survive", () => {
+    expect(blocksToHtml(linkBlocks("https://nextgenpbacademy.com/camp"))).toContain(
+      '<a href="https://nextgenpbacademy.com/camp"',
+    );
+    expect(blocksToHtml(linkBlocks("http://example.com"))).toContain(
+      '<a href="http://example.com"',
+    );
+    expect(blocksToHtml(linkBlocks("mailto:nextgenacademypb@gmail.com"))).toContain(
+      '<a href="mailto:nextgenacademypb@gmail.com"',
+    );
+  });
+
+  test("isSafeHref is case/whitespace hardened and allowlist-only", () => {
+    expect(isSafeHref("  JAVASCRIPT:alert(1)")).toBe(false);
+    expect(isSafeHref("java\nscript:alert(1)")).toBe(false);
+    expect(isSafeHref("jAvAsCrIpT:alert(1)")).toBe(false);
+    expect(isSafeHref("/relative/path")).toBe(false); // not on the allowlist
+    expect(isSafeHref("")).toBe(false);
+    expect(isSafeHref("HTTPS://example.com")).toBe(true);
+    expect(isSafeHref("mailto:x@y.com")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// F3 — a blocks-fetch failure must SURFACE the pending row (bodyUnavailable),
+// never hide it; a genuinely-empty body still drops (nothing to review).
+// ---------------------------------------------------------------------------
+const draftRow = (id: string, draftedAt = "2026-06-30", expiresAt = "") => ({
+  id,
+  properties: {
+    Week: { title: [{ plain_text: `Week ${id}` }] },
+    "Source Radar": { url: "" },
+    "Section Count": { number: 2 },
+    "Drafted At": { date: draftedAt ? { start: draftedAt } : null },
+    "Expires At": { date: expiresAt ? { start: expiresAt } : null },
+  },
+});
+
+const paragraphBlock = (text: string) => ({
+  type: "paragraph",
+  paragraph: { rich_text: [{ plain_text: text }] },
+});
+
+test.describe("F3 — pendingDraftFromRow distinguishes unavailable from empty", () => {
+  test("blocks=null (fetch failed) → row kept, flagged bodyUnavailable", () => {
+    const row = pendingDraftFromRow(draftRow("row-x"), null);
+    expect(row).not.toBeNull();
+    expect(row?.bodyUnavailable).toBe(true);
+    expect(row?.html).toBe("");
+    expect(row?.weekTitle).toBe("Week row-x");
+    expect(row?.draftedAt).toBe("2026-06-30");
+  });
+
+  test("blocks=[] (genuinely empty body) → dropped, nothing to review", () => {
+    expect(pendingDraftFromRow(draftRow("row-y"), [])).toBeNull();
+  });
+
+  test("real body → normal reviewable row with the shared render", () => {
+    const row = pendingDraftFromRow(draftRow("row-z", "2026-07-01", "2026-07-09"), [
+      paragraphBlock("Hi parents"),
+    ]);
+    expect(row?.bodyUnavailable).toBe(false);
+    expect(row?.html).toContain("Hi parents");
+    expect(row?.expiresAt).toBe("2026-07-09");
+  });
+});
+
+test.describe("F3/F5/F6 — offline behavioral (FetchStub)", () => {
+  const stub = new FetchStub();
+  test.beforeEach(() => {
+    stub.reset();
+    stub.install();
+  });
+  test.afterEach(() => stub.uninstall());
+
+  test("F3: fetchPendingDrafts keeps a row whose blocks fetch 500s, flagged bodyUnavailable", async () => {
+    stub.on("/databases/test-drafts-db/query", {
+      results: [draftRow("row-ok"), draftRow("row-broken")],
+    });
+    stub.on("/blocks/row-ok/", { results: [paragraphBlock("Hi parents")] });
+    stub.on("/blocks/row-broken/", { error: "boom" }, 500);
+
+    const rows = await fetchPendingDrafts();
+    expect(rows.map((r) => [r.pageId, r.bodyUnavailable])).toEqual([
+      ["row-ok", false],
+      ["row-broken", true],
+    ]);
+    expect(rows[0].html).toContain("Hi parents");
+    expect(rows[1].html).toBe("");
+  });
+
+  test("F5: fetchNewNews follows next_cursor up to the ceiling and reports hasMore", async () => {
+    const page = (n: number) => ({
+      results: Array.from({ length: n }, (_, i) => ({
+        id: `news-${i}`,
+        properties: {
+          Title: { title: [{ plain_text: `Story ${i}` }] },
+          URL: { url: "https://example.com" },
+          Status: { select: { name: "New" } },
+        },
+      })),
+      has_more: true,
+      next_cursor: "cursor-2",
+    });
+    stub.on("/databases/test-news-db/query", page(4));
+
+    const { rows, hasMore } = await fetchNewNews(10);
+    expect(rows).toHaveLength(10); // capped at the ceiling, never more
+    expect(hasMore).toBe(true);
+    const calls = stub.callsTo("/databases/test-news-db/query");
+    expect(calls.length).toBe(3); // 4 + 4 + 2(sliced)
+    expect(calls[0].body).not.toContain("start_cursor");
+    expect(calls[1].body).toContain('"start_cursor":"cursor-2"');
+  });
+
+  test("F5: a single short page reports hasMore=false", async () => {
+    stub.on("/databases/test-news-db/query", {
+      results: [
+        {
+          id: "news-solo",
+          properties: {
+            Title: { title: [{ plain_text: "Solo" }] },
+            Status: { select: { name: "New" } },
+          },
+        },
+      ],
+      has_more: false,
+      next_cursor: null,
+    });
+    const { rows, hasMore } = await fetchNewNews();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe("Solo");
+    expect(hasMore).toBe(false);
+    expect(stub.callsTo("/databases/test-news-db/query")).toHaveLength(1);
+  });
+
+  test("F6: fetchPendingDraftCount counts WITHOUT any blocks fetch", async () => {
+    stub.on("/databases/test-drafts-db/query", {
+      results: [draftRow("a"), draftRow("b"), draftRow("c")],
+    });
+    expect(await fetchPendingDraftCount()).toBe(3);
+    expect(stub.callsTo("/blocks/")).toHaveLength(0);
+    expect(stub.callsTo("/databases/test-drafts-db/query")).toHaveLength(1);
+  });
+
+  test("F6: fetchInboxCounts is O(4) queries and NEVER hydrates draft bodies", async () => {
+    stub.on("/databases/test-news-db/query", {
+      results: [
+        {
+          id: "n1",
+          properties: {
+            Title: { title: [{ plain_text: "Story" }] },
+            Status: { select: { name: "New" } },
+          },
+        },
+      ],
+      has_more: false,
+    });
+    stub.on("/databases/test-drafts-db/query", {
+      results: [draftRow("d1"), draftRow("d2")],
+    });
+    stub.on("/databases/test-crew-db/query", {
+      results: [
+        { id: "c1", properties: { Status: { select: { name: "New" } } } },
+        { id: "c2", properties: { Status: { select: { name: "Reviewed" } } } },
+      ],
+    });
+    stub.on("/databases/test-commits-db/query", {
+      results: [{ id: "cf1", properties: { Status: { select: { name: "CardFailed" } } } }],
+      has_more: false,
+    });
+
+    const counts = await fetchInboxCounts();
+    // crew counts ONLY Status=New (same filter the inbox rows use).
+    expect(counts).toEqual({
+      news: 1,
+      newsHasMore: false,
+      drafts: 2,
+      crew: 1,
+      cardFailed: 1,
+    });
+    expect(inboxCountsTotal(counts)).toBe(5);
+    expect(stub.callsTo("/blocks/")).toHaveLength(0); // the N+1 this fix removes
+    expect(stub.calls).toHaveLength(4); // O(4) — one query per queue
   });
 });

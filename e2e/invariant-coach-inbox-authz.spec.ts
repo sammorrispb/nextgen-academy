@@ -51,7 +51,9 @@ test.describe("inbox actions are coach-gated (wiring pins)", () => {
   test("every exported action awaits requireCoach and fails closed", () => {
     const src = actionsSrc();
     const exported = src.match(/export async function \w+Action/g) ?? [];
-    expect(exported.length).toBeGreaterThanOrEqual(5);
+    // 4 actions: news triage, draft decide (approve/skip collapsed into
+    // decideDraftAction), crew review, commit re-activate.
+    expect(exported.length).toBeGreaterThanOrEqual(4);
     const gates = src.match(/await requireCoach\(\)/g) ?? [];
     expect(
       gates.length,
@@ -106,8 +108,58 @@ test.describe("newsletter approve gate — approval is approval of READ content"
     const rows = rowsSrc();
     const page = pageSrc();
     expect(rows).toContain("dangerouslySetInnerHTML");
-    expect(rows).toContain("approveDraftAction");
-    expect(page).not.toContain("approveDraftAction");
+    expect(rows).toContain("decideDraftAction");
+    expect(page).not.toContain("decideDraftAction");
+  });
+
+  test("an unavailable body disables Approve in the UI (server gate is the backstop)", () => {
+    // F3: a blocks-fetch failure surfaces the row but Approve must be
+    // disabled — approval is approval of READ content, and there is nothing
+    // readable. setDraftStatus's own re-read refuses server-side regardless.
+    const rows = rowsSrc();
+    expect(rows).toContain("bodyUnavailable");
+  });
+});
+
+test.describe("F4 — approve re-checks the Thursday ship window server-side", () => {
+  test("decideDraftAction gates approval on willRideThursdaySend BEFORE the status write", () => {
+    const src = actionsSrc();
+    const fnStart = src.indexOf("export async function decideDraftAction");
+    expect(fnStart, "decideDraftAction must exist").toBeGreaterThan(-1);
+    const body = src.slice(fnStart);
+    const windowAt = body.indexOf("willRideThursdaySend(");
+    const writeAt = body.indexOf("setDraftStatus(");
+    expect(windowAt, "approve must re-check the ship window").toBeGreaterThan(-1);
+    expect(writeAt).toBeGreaterThan(-1);
+    expect(windowAt, "window check must precede the write").toBeLessThan(writeAt);
+  });
+
+  test("refuse-by-default: an out-of-window approve needs an explicit force", () => {
+    const src = actionsSrc();
+    expect(src).toContain("needsForce");
+    expect(src).toMatch(/force/);
+    // The success copy never promises the send unless the cron filter agrees.
+    expect(src).toContain("will NOT ship Thursday");
+  });
+});
+
+test.describe("F2/F6 — shared-basis wiring pins", () => {
+  test("the cron's queryApprovedRows and the inbox share shipWindowBounds (no drift)", () => {
+    const src = draftsLibSrc();
+    const fnStart = src.indexOf("async function queryApprovedRows");
+    expect(fnStart).toBeGreaterThan(-1);
+    const body = src.slice(fnStart, src.indexOf("async function", fnStart + 10));
+    expect(body).toContain("shipWindowBounds(");
+    // willRideThursdaySend composes the SAME bounds helper.
+    const rideStart = src.indexOf("export function willRideThursdaySend");
+    expect(rideStart).toBeGreaterThan(-1);
+    expect(src.slice(rideStart, rideStart + 400)).toContain("shipWindowBounds(");
+  });
+
+  test("the /coach home badge uses the count-only path — never the body-hydrating fetch", () => {
+    const home = read("src", "app", "coach", "(authed)", "page.tsx");
+    expect(home).toContain("fetchInboxCounts");
+    expect(home).not.toContain("fetchInboxQueues");
   });
 });
 

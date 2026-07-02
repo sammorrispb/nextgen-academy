@@ -7,10 +7,15 @@ import {
   DRAFT_DECISION_TO_STATUS,
   CREW_DECISION_TO_STATUS,
   type NewsDecision,
+  type DraftDecision,
   type CrewDecision,
 } from "@/lib/coach-inbox";
 import { setNewsStatus } from "@/lib/notion-news";
-import { setDraftStatus } from "@/lib/notion-newsletter-drafts";
+import {
+  setDraftStatus,
+  fetchDraftShipFields,
+  willRideThursdaySend,
+} from "@/lib/notion-newsletter-drafts";
 import { setCrewInterestStatus } from "@/lib/notion-crew-interest";
 import { updateCommit } from "@/lib/notion-crew-commits";
 
@@ -30,6 +35,13 @@ import { updateCommit } from "@/lib/notion-crew-commits";
 export interface InboxActionResult {
   ok: boolean;
   message: string;
+  /**
+   * Set on a refused draft approval that the coach may still push through
+   * with an explicit second tap (force) — e.g. the draft is past the
+   * freshness window and will NOT ship Thursday, but approving anyway is a
+   * legitimate informed choice (F4: refuse by default, force to override).
+   */
+  needsForce?: boolean;
 }
 
 const UNAUTHORIZED: InboxActionResult = {
@@ -68,34 +80,75 @@ export async function triageNewsAction(
   };
 }
 
-export async function approveDraftAction(
+/**
+ * One action for both draft decisions (F8) — the decision value maps through
+ * DRAFT_DECISION_TO_STATUS so nothing here can invent a Notion status.
+ *
+ * Approve additionally re-checks the Thursday ship window SERVER-SIDE (F4):
+ * the row's Drafted At / Expires At are re-fetched (never trusted from the
+ * client) and run through willRideThursdaySend — the same helper that mirrors
+ * the cron's own query filter. Out-of-window (or unverifiable) approvals are
+ * REFUSED by default with needsForce set; a second, explicit force tap
+ * approves anyway with a message that never claims the draft rides the send
+ * unless the cron filter would actually include it.
+ */
+export async function decideDraftAction(
   pageId: string,
+  decision: DraftDecision,
+  opts?: { force?: boolean },
 ): Promise<InboxActionResult> {
   const email = await requireCoach();
   if (!email) return UNAUTHORIZED;
   if (!validPageId(pageId)) return { ok: false, message: "Missing row id." };
+  const status = DRAFT_DECISION_TO_STATUS[decision];
+  if (!status) return { ok: false, message: "Unknown decision." };
 
-  const result = await setDraftStatus(pageId, DRAFT_DECISION_TO_STATUS.approve);
+  let ridesSend: boolean | null = null; // null = couldn't verify
+  if (status === "Approved") {
+    const fields = await fetchDraftShipFields(pageId);
+    ridesSend = fields ? willRideThursdaySend(fields, new Date()) : null;
+    if (!opts?.force) {
+      if (ridesSend === null) {
+        return {
+          ok: false,
+          needsForce: true,
+          message:
+            "Couldn't verify the freshness window — try again, or approve anyway (it may NOT ship Thursday).",
+        };
+      }
+      if (!ridesSend) {
+        return {
+          ok: false,
+          needsForce: true,
+          message:
+            "This draft is past the freshness window — it will NOT ship Thursday. Regenerate it (or bump Drafted At in Notion), or approve anyway.",
+        };
+      }
+    }
+  }
+
+  const result = await setDraftStatus(pageId, status);
   if (!result.ok) {
-    return { ok: false, message: result.error ?? "Approve failed." };
+    return {
+      ok: false,
+      message:
+        result.error ?? (status === "Approved" ? "Approve failed." : "Skip failed."),
+    };
   }
   refreshInbox();
-  return { ok: true, message: "Approved — rides Thursday's 6pm ET send." };
-}
-
-export async function skipDraftAction(
-  pageId: string,
-): Promise<InboxActionResult> {
-  const email = await requireCoach();
-  if (!email) return UNAUTHORIZED;
-  if (!validPageId(pageId)) return { ok: false, message: "Missing row id." };
-
-  const result = await setDraftStatus(pageId, DRAFT_DECISION_TO_STATUS.skip);
-  if (!result.ok) {
-    return { ok: false, message: result.error ?? "Skip failed." };
+  if (status !== "Approved") {
+    return { ok: true, message: "Skipped — won't ship." };
   }
-  refreshInbox();
-  return { ok: true, message: "Skipped — won't ship." };
+  if (ridesSend === true) {
+    return { ok: true, message: "Approved — rides Thursday's send." };
+  }
+  return {
+    ok: true,
+    message:
+      ridesSend === false
+        ? "Approved — but it's past the freshness window, so it will NOT ship Thursday. Regenerate or bump Drafted At in Notion."
+        : "Approved — but the freshness window couldn't be verified; check Notion whether it rides Thursday's send.",
+  };
 }
 
 export async function reviewCrewInterestAction(

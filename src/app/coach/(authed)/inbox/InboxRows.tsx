@@ -3,8 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   triageNewsAction,
-  approveDraftAction,
-  skipDraftAction,
+  decideDraftAction,
   reviewCrewInterestAction,
   reactivateCommitAction,
   type InboxActionResult,
@@ -40,10 +39,25 @@ function useRowAction() {
     startTransition(async () => {
       setResult(await fn());
     });
-  return { pending, result, run };
+  return { pending, result, setResult, run };
 }
 
-export function NewsRowActions({ pageId }: { pageId: string }) {
+/**
+ * The shared two-tap decision row (F9): one primary "go" action, one quiet
+ * secondary — news triage and crew review are the same interaction with
+ * different labels/actions, so they render through this single component.
+ */
+function TwoDecisionRow({
+  goLabel,
+  quietLabel,
+  onGo,
+  onQuiet,
+}: {
+  goLabel: string;
+  quietLabel: string;
+  onGo: () => Promise<InboxActionResult>;
+  onQuiet: () => Promise<InboxActionResult>;
+}) {
   const { pending, result, run } = useRowAction();
   if (result?.ok) return <ResultLine result={result} />;
   return (
@@ -51,21 +65,32 @@ export function NewsRowActions({ pageId }: { pageId: string }) {
       <button
         type="button"
         disabled={pending}
-        onClick={() => run(() => triageNewsAction(pageId, "approve"))}
+        onClick={() => run(onGo)}
         className={BTN_GO}
       >
-        Approve
+        {goLabel}
       </button>
       <button
         type="button"
         disabled={pending}
-        onClick={() => run(() => triageNewsAction(pageId, "reject"))}
+        onClick={() => run(onQuiet)}
         className={BTN_QUIET}
       >
-        Reject
+        {quietLabel}
       </button>
       <ResultLine result={result} />
     </div>
+  );
+}
+
+export function NewsRowActions({ pageId }: { pageId: string }) {
+  return (
+    <TwoDecisionRow
+      goLabel="Approve"
+      quietLabel="Reject"
+      onGo={() => triageNewsAction(pageId, "approve")}
+      onQuiet={() => triageNewsAction(pageId, "reject")}
+    />
   );
 }
 
@@ -75,14 +100,16 @@ export function DraftCard({
   draftedAt,
   withinShipWindow,
   bodyHtml,
+  bodyUnavailable,
 }: {
   pageId: string;
   weekTitle: string;
   draftedAt: string;
   withinShipWindow: boolean;
   bodyHtml: string;
+  bodyUnavailable: boolean;
 }) {
-  const { pending, result, run } = useRowAction();
+  const { pending, result, setResult, run } = useRowAction();
   return (
     <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 px-5 py-5 sm:px-6">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
@@ -94,33 +121,73 @@ export function DraftCard({
             Drafted {draftedAt || "(no date)"} ·{" "}
             {withinShipWindow ? (
               <span className="text-ngpa-teal font-bold">
-                ships Thursday 6pm ET if approved
+                rides Thursday&rsquo;s send if approved
               </span>
             ) : (
               <span className="text-amber-300 font-bold">
-                outside the 7-day window — approving won&rsquo;t ship it
+                misses Thursday&rsquo;s send — the cron&rsquo;s freshness
+                filter will exclude it
               </span>
             )}
           </p>
         </div>
       </div>
 
-      {/* The rendered body — the exact HTML the Thursday cron would ship
-          (same blocksToHtml renderer). The Approve button lives INSIDE this
-          card only: approving means you read this. */}
-      <div
-        className="rounded-xl bg-white text-black px-4 py-4 mb-4 overflow-x-auto text-sm"
-        dangerouslySetInnerHTML={{ __html: bodyHtml }}
-      />
+      {bodyUnavailable ? (
+        /* F3 — the row's body couldn't be fetched. Surface the row (a Notion
+           blip must never hide a pending decision) but keep Approve disabled:
+           approval is approval of READ content. setDraftStatus re-reads the
+           body server-side too, so this is UX, not the gate. */
+        <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-4 mb-4 text-sm text-amber-200 leading-relaxed">
+          The draft body couldn&rsquo;t load from Notion just now — reload to
+          retry, or review it directly in Notion. Approving is disabled until
+          the body is readable.
+        </div>
+      ) : (
+        /* The rendered body — the exact HTML the Thursday cron would ship
+           (same blocksToHtml renderer, same scheme-allowlisted links). The
+           Approve button lives INSIDE this card only: approving means you
+           read this. */
+        <div
+          className="rounded-xl bg-white text-black px-4 py-4 mb-4 overflow-x-auto text-sm"
+          dangerouslySetInnerHTML={{ __html: bodyHtml }}
+        />
+      )}
 
       {result?.ok ? (
         <ResultLine result={result} />
+      ) : result?.needsForce ? (
+        /* F4 — the server refused: this approval won't ride Thursday's send.
+           One explicit tap approves anyway; Never mind returns to the card. */
+        <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 space-y-3">
+          <p className="text-sm text-amber-200 leading-relaxed">{result.message}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                run(() => decideDraftAction(pageId, "approve", { force: true }))
+              }
+              className={BTN_WARN}
+            >
+              Approve anyway — won&rsquo;t ship Thursday
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setResult(null)}
+              className={BTN_QUIET}
+            >
+              Never mind
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            disabled={pending}
-            onClick={() => run(() => approveDraftAction(pageId))}
+            disabled={pending || bodyUnavailable}
+            onClick={() => run(() => decideDraftAction(pageId, "approve"))}
             className={BTN_GO}
           >
             Approve for Thursday
@@ -128,7 +195,7 @@ export function DraftCard({
           <button
             type="button"
             disabled={pending}
-            onClick={() => run(() => skipDraftAction(pageId))}
+            onClick={() => run(() => decideDraftAction(pageId, "skip"))}
             className={BTN_QUIET}
           >
             Skip — don&rsquo;t ship
@@ -141,28 +208,13 @@ export function DraftCard({
 }
 
 export function CrewRowActions({ pageId }: { pageId: string }) {
-  const { pending, result, run } = useRowAction();
-  if (result?.ok) return <ResultLine result={result} />;
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => run(() => reviewCrewInterestAction(pageId, "reviewed"))}
-        className={BTN_GO}
-      >
-        Mark reviewed
-      </button>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => run(() => reviewCrewInterestAction(pageId, "closed"))}
-        className={BTN_QUIET}
-      >
-        Close
-      </button>
-      <ResultLine result={result} />
-    </div>
+    <TwoDecisionRow
+      goLabel="Mark reviewed"
+      quietLabel="Close"
+      onGo={() => reviewCrewInterestAction(pageId, "reviewed")}
+      onQuiet={() => reviewCrewInterestAction(pageId, "closed")}
+    />
   );
 }
 

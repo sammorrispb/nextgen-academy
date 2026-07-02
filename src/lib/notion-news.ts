@@ -120,15 +120,33 @@ export async function createNewsRow(item: RawNewsItem): Promise<boolean> {
   return true;
 }
 
+/** Map one Notion page into a NewsRow — shared by every news fetcher. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pageToNewsRow(page: any): NewsRow {
+  const props = page.properties ?? {};
+  return {
+    pageId: page.id as string,
+    title: readTitle(props["Title"]),
+    url: props["URL"]?.url ?? "",
+    source: readRichText(props["Source"]),
+    summary: readRichText(props["Summary"]),
+    published: props["Published"]?.date?.start ?? "",
+    status: (props["Status"]?.select?.name as NewsStatus) ?? "New",
+  };
+}
+
 /**
- * Return Approved rows for inclusion in the weekly newsletter. Capped at
- * `limit` so a long approval backlog doesn't blow up the email. Sorted
- * newest-published first (falling back to discovery order).
+ * Run one news-DB query and map the results (fetchCommitsWithStatus
+ * precedent) — the single fetch+map path shared by fetchApprovedNews and
+ * fetchNewNews. Returns null on any error so callers can fail soft.
  */
-export async function fetchApprovedNews(limit: number = 4): Promise<NewsRow[]> {
+async function queryNewsRows(
+  queryBody: Record<string, unknown>,
+  label: string,
+): Promise<{ rows: NewsRow[]; hasMore: boolean; nextCursor: string | null } | null> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_NEWS_DB_ID;
-  if (!notionKey || !dbId) return [];
+  if (!notionKey || !dbId) return null;
 
   const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
     method: "POST",
@@ -137,46 +155,57 @@ export async function fetchApprovedNews(limit: number = 4): Promise<NewsRow[]> {
       "Content-Type": "application/json",
       "Notion-Version": NOTION_VERSION,
     },
-    body: JSON.stringify({
+    body: JSON.stringify(queryBody),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error(
+      `[notion-news] ${label} failed`,
+      res.status,
+      await res.text().catch(() => ""),
+    );
+    return null;
+  }
+  const data = (await res.json()) as {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    results: any[];
+    has_more?: boolean;
+    next_cursor?: string | null;
+  };
+  return {
+    rows: (data.results ?? []).map(pageToNewsRow),
+    hasMore: data.has_more === true,
+    nextCursor: data.next_cursor ?? null,
+  };
+}
+
+/**
+ * Return Approved rows for inclusion in the weekly newsletter. Capped at
+ * `limit` so a long approval backlog doesn't blow up the email. Sorted
+ * newest-published first (falling back to discovery order).
+ */
+export async function fetchApprovedNews(limit: number = 4): Promise<NewsRow[]> {
+  const page = await queryNewsRows(
+    {
       filter: { property: "Status", select: { equals: "Approved" } },
       sorts: [
         { property: "Published", direction: "descending" },
         { property: "Discovered At", direction: "descending" },
       ],
       page_size: Math.max(1, limit),
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    console.error(
-      "[notion-news] fetchApprovedNews failed",
-      res.status,
-      await res.text().catch(() => ""),
-    );
-    return [];
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = (await res.json()) as { results: any[] };
-  return data.results.map((page) => {
-    const props = page.properties ?? {};
-    return {
-      pageId: page.id as string,
-      title: readTitle(props["Title"]),
-      url: props["URL"]?.url ?? "",
-      source: readRichText(props["Source"]),
-      summary: readRichText(props["Summary"]),
-      published: props["Published"]?.date?.start ?? "",
-      status: (props["Status"]?.select?.name as NewsStatus) ?? "New",
-    };
-  });
+    },
+    "fetchApprovedNews",
+  );
+  return page ? page.rows : [];
 }
 
 /**
  * Query body for the coach-inbox triage queue: Status=New rows, newest
- * discovered first. Pure so the filter/sort/limit are pinned by
- * e2e/coach-inbox.spec.ts (buildDraftsQueryFilter precedent).
+ * discovered first, with an optional pagination cursor. Pure so the
+ * filter/sort/limit are pinned by e2e/coach-inbox.spec.ts
+ * (buildDraftsQueryFilter precedent).
  */
-export function buildNewNewsQuery(limit: number) {
+export function buildNewNewsQuery(limit: number, cursor?: string) {
   return {
     filter: {
       property: "Status",
@@ -184,51 +213,44 @@ export function buildNewNewsQuery(limit: number) {
     },
     sorts: [{ property: "Discovered At", direction: "descending" }],
     page_size: Math.max(1, limit),
+    ...(cursor ? { start_cursor: cursor } : {}),
   };
+}
+
+/** How many Status=New rows the inbox will pull before saying "more in Notion". */
+export const NEW_NEWS_FETCH_CEILING = 100;
+
+export interface NewNewsResult {
+  rows: NewsRow[];
+  /** True when rows remain in Notion beyond the ceiling — surface it, never hide it. */
+  hasMore: boolean;
 }
 
 /**
  * Return Status=New rows for the coach-inbox triage queue (the rows Sam
- * currently flips by hand in Notion). Modeled on fetchApprovedNews; fails
- * soft to [] so the inbox renders its other queues on a Notion blip.
+ * currently flips by hand in Notion). Follows has_more/next_cursor up to
+ * `max` rows (default NEW_NEWS_FETCH_CEILING) and reports whether more
+ * remain, so a backlog deeper than one page is surfaced honestly instead of
+ * silently truncated at 20 (F5). Fails soft to { rows: [], hasMore: false }
+ * so the inbox renders its other queues on a Notion blip.
  */
-export async function fetchNewNews(limit: number = 20): Promise<NewsRow[]> {
-  const notionKey = process.env.NOTION_API_KEY;
-  const dbId = process.env.NOTION_NEWS_DB_ID;
-  if (!notionKey || !dbId) return [];
-
-  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": NOTION_VERSION,
-    },
-    body: JSON.stringify(buildNewNewsQuery(limit)),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    console.error(
-      "[notion-news] fetchNewNews failed",
-      res.status,
-      await res.text().catch(() => ""),
+export async function fetchNewNews(
+  max: number = NEW_NEWS_FETCH_CEILING,
+): Promise<NewNewsResult> {
+  const all: NewsRow[] = [];
+  let cursor: string | undefined;
+  let hasMore = false;
+  do {
+    const page = await queryNewsRows(
+      buildNewNewsQuery(Math.min(100, max - all.length), cursor),
+      "fetchNewNews",
     );
-    return [];
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = (await res.json()) as { results: any[] };
-  return data.results.map((page) => {
-    const props = page.properties ?? {};
-    return {
-      pageId: page.id as string,
-      title: readTitle(props["Title"]),
-      url: props["URL"]?.url ?? "",
-      source: readRichText(props["Source"]),
-      summary: readRichText(props["Summary"]),
-      published: props["Published"]?.date?.start ?? "",
-      status: (props["Status"]?.select?.name as NewsStatus) ?? "New",
-    };
-  });
+    if (!page) return { rows: all, hasMore: false };
+    all.push(...page.rows);
+    hasMore = page.hasMore;
+    cursor = page.hasMore && page.nextCursor ? page.nextCursor : undefined;
+  } while (cursor && all.length < max);
+  return { rows: all.slice(0, max), hasMore: hasMore || all.length > max };
 }
 
 /** Flip a single row's Status select. Idempotent. */

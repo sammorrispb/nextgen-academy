@@ -14,6 +14,7 @@
 import { fetchNewNews, type NewsRow, type NewsStatus } from "@/lib/notion-news";
 import {
   fetchPendingDrafts,
+  fetchPendingDraftCount,
   type PendingNewsletterDraft,
   type NewsletterDraftStatus,
 } from "@/lib/notion-newsletter-drafts";
@@ -48,9 +49,20 @@ export type CrewDecision = keyof typeof CREW_DECISION_TO_STATUS;
 
 export interface InboxQueues {
   news: NewsRow[];
+  /** True when Status=New rows remain in Notion beyond the fetch ceiling (F5). */
+  newsHasMore: boolean;
   drafts: PendingNewsletterDraft[];
   crew: ActionableCrewInterest[];
   cardFailed: CrewCommit[];
+}
+
+/** Count-only mirror of InboxQueues for the /coach home badge (F6). */
+export interface InboxCounts {
+  news: number;
+  newsHasMore: boolean;
+  drafts: number;
+  crew: number;
+  cardFailed: number;
 }
 
 /**
@@ -64,24 +76,11 @@ export function filterCrewInboxRows(
   return rows.filter((r) => r.status === "New");
 }
 
-/**
- * The weekly cron only ships drafts whose Drafted At is within the last
- * 7 days (on_or_after, date-only) — surface that so Sam knows whether an
- * approval will actually ride Thursday's send. Garbage/empty dates read as
- * stale, never throw.
- */
-export function isDraftWithinShipWindow(draftedAt: string, now: Date): boolean {
-  if (!draftedAt) return false;
-  const drafted = Date.parse(
-    draftedAt.includes("T") ? draftedAt : `${draftedAt}T00:00:00.000Z`,
-  );
-  if (Number.isNaN(drafted)) return false;
-  const cutoffDay = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
-  // Compare on the date-only cutoff exactly like the cron's on_or_after.
-  return draftedAt.slice(0, 10) >= cutoffDay && drafted <= now.getTime();
-}
+// "Will this draft ride Thursday's send?" now lives with the cron's own
+// query math: willRideThursdaySend in @/lib/notion-newsletter-drafts (F2 —
+// eligibility is computed against the NEXT Thursday 22:00 UTC fire via the
+// same shipWindowBounds helper queryApprovedRows uses, so the inbox hint and
+// the cron filter can never drift).
 
 /** Badge math: one number = everything waiting on a decision. */
 export function inboxPendingCount(queues: InboxQueues): number {
@@ -91,6 +90,20 @@ export function inboxPendingCount(queues: InboxQueues): number {
     queues.crew.length +
     queues.cardFailed.length
   );
+}
+
+/** Same badge math over the count-only shape (F6). */
+export function inboxCountsTotal(counts: InboxCounts): number {
+  return counts.news + counts.drafts + counts.crew + counts.cardFailed;
+}
+
+/**
+ * Honest badge label (F5): when the news fetch hit its ceiling with rows
+ * still in Notion, the count is a floor — say so ("104+"), never present a
+ * truncated fetch as the whole backlog.
+ */
+export function pendingBadgeLabel(total: number, hasMore: boolean): string {
+  return hasMore ? `${total}+` : `${total}`;
 }
 
 /**
@@ -107,10 +120,40 @@ export async function fetchInboxQueues(): Promise<InboxQueues> {
     fetchCardFailedCommits(),
   ]);
   return {
-    news: news.status === "fulfilled" ? news.value : [],
+    news: news.status === "fulfilled" ? news.value.rows : [],
+    newsHasMore: news.status === "fulfilled" ? news.value.hasMore : false,
     drafts: drafts.status === "fulfilled" ? drafts.value : [],
     crew:
       crew.status === "fulfilled" ? filterCrewInboxRows(crew.value) : [],
     cardFailed: cardFailed.status === "fulfilled" ? cardFailed.value : [],
+  };
+}
+
+/**
+ * Count-only fetch for the /coach home badge (F6): O(4) Notion queries, and
+ * crucially NO draft-body hydration — fetchPendingDrafts fetches each
+ * pending row's blocks (an N+1 the badge never needs), so the home page uses
+ * fetchPendingDraftCount instead. The full body-hydrating fetchInboxQueues
+ * stays inbox-page-only. Same fail-soft posture: a dead queue counts 0.
+ * (Drafts may over-count a row whose body would render empty — see
+ * fetchPendingDraftCount; the badge still equals what the inbox shows in
+ * every non-degenerate case.)
+ */
+export async function fetchInboxCounts(): Promise<InboxCounts> {
+  const [news, draftCount, crew, cardFailed] = await Promise.allSettled([
+    fetchNewNews(),
+    fetchPendingDraftCount(),
+    fetchActionableCrewInterest(),
+    fetchCardFailedCommits(),
+  ]);
+  return {
+    news: news.status === "fulfilled" ? news.value.rows.length : 0,
+    newsHasMore: news.status === "fulfilled" ? news.value.hasMore : false,
+    drafts: draftCount.status === "fulfilled" ? draftCount.value : 0,
+    crew:
+      crew.status === "fulfilled"
+        ? filterCrewInboxRows(crew.value).length
+        : 0,
+    cardFailed: cardFailed.status === "fulfilled" ? cardFailed.value.length : 0,
   };
 }

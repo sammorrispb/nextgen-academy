@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { fetchInboxQueues, isDraftWithinShipWindow, inboxPendingCount } from "@/lib/coach-inbox";
+import {
+  fetchInboxQueues,
+  inboxPendingCount,
+  pendingBadgeLabel,
+} from "@/lib/coach-inbox";
+import { willRideThursdaySend } from "@/lib/notion-newsletter-drafts";
+import { formatLongDate } from "@/lib/format-date";
 import {
   NewsRowActions,
   DraftCard,
@@ -8,18 +14,6 @@ import {
 } from "./InboxRows";
 
 export const dynamic = "force-dynamic";
-
-function formatLongDate(date: string): string {
-  if (!date) return "";
-  const iso = date.slice(0, 10);
-  const d = new Date(`${iso}T12:00:00Z`);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function SectionHeader({
   title,
@@ -69,7 +63,7 @@ export default async function CoachInboxPage() {
       <p className="text-base text-ngpa-white/70 leading-relaxed mb-10 max-w-2xl">
         {pending === 0
           ? "Nothing waiting — all four queues are clear."
-          : `${pending} item${pending === 1 ? "" : "s"} across news triage, newsletter drafts, crew interest, and failed card commits. One tap each, no Notion tabs.`}
+          : `${pendingBadgeLabel(pending, queues.newsHasMore)} item${pending === 1 && !queues.newsHasMore ? "" : "s"} across news triage, newsletter drafts, crew interest, and failed card commits. One tap each, no Notion tabs.`}
       </p>
 
       {/* 1 — Newsletter drafts first: the only queue with a hard deadline. */}
@@ -89,8 +83,9 @@ export default async function CoachInboxPage() {
                 pageId={d.pageId}
                 weekTitle={d.weekTitle}
                 draftedAt={formatLongDate(d.draftedAt)}
-                withinShipWindow={isDraftWithinShipWindow(d.draftedAt, now)}
+                withinShipWindow={willRideThursdaySend(d, now)}
                 bodyHtml={d.html}
+                bodyUnavailable={d.bodyUnavailable}
               />
             ))}
           </div>
@@ -139,6 +134,12 @@ export default async function CoachInboxPage() {
                 <NewsRowActions pageId={n.pageId} />
               </div>
             ))}
+            {queues.newsHasMore && (
+              <p className="text-sm text-ngpa-white/55 pt-1">
+                Showing the {queues.news.length} newest — more stories are
+                waiting in Notion.
+              </p>
+            )}
           </div>
         )}
       </section>

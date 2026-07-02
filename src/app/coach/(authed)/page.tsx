@@ -9,23 +9,18 @@ import {
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
 import { isSessionEnded } from "@/lib/session-time";
-import { fetchInboxQueues, inboxPendingCount } from "@/lib/coach-inbox";
+import {
+  fetchInboxCounts,
+  inboxCountsTotal,
+  pendingBadgeLabel,
+} from "@/lib/coach-inbox";
+import { formatLongDate } from "@/lib/format-date";
 
 export const dynamic = "force-dynamic";
 
 // Match the check-in page: a finished session stays reachable for this many
 // days so attendance can still be recorded after the slot ends.
 const CHECKIN_LOOKBACK_DAYS = 14;
-
-function formatLongDate(date: string): string {
-  if (!date) return "";
-  const d = new Date(`${date}T12:00:00Z`);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -55,18 +50,20 @@ export default async function CoachDashboard() {
   const end = new Date(now);
   end.setDate(end.getDate() + 60); // 60-day window — wider than /schedule
 
-  const [allSessions, drops, inboxQueues] = await Promise.all([
+  const [allSessions, drops, inboxCounts] = await Promise.all([
     fetchUpcomingSessions(now, {
       lookbackDays: CHECKIN_LOOKBACK_DAYS,
       includeTerminal: true,
       includeEnded: true,
     }),
     fetchUpcomingDropIns(isoDate(start), isoDate(end)),
-    // Fail-soft by construction (every queue fetcher returns [] on error),
-    // so the badge can only ever under-count — never break the dashboard.
-    fetchInboxQueues(),
+    // Count-only path (F6): the badge must never hydrate draft BODIES — the
+    // full body-hydrating fetch stays on /coach/inbox itself. Fail-soft by
+    // construction (a dead queue counts 0), so the badge can only ever
+    // under-count — never break the dashboard.
+    fetchInboxCounts(),
   ]);
-  const inboxPending = inboxPendingCount(inboxQueues);
+  const inboxPending = inboxCountsTotal(inboxCounts);
 
   const dropsByKey = groupBySessionKey(drops);
 
@@ -105,7 +102,7 @@ export default async function CoachDashboard() {
           Inbox
           {inboxPending > 0 && (
             <span className="inline-flex items-center justify-center min-w-[1.375rem] h-[1.375rem] px-1 rounded-full bg-amber-400 text-ngpa-navy text-xs font-black">
-              {inboxPending}
+              {pendingBadgeLabel(inboxPending, inboxCounts.newsHasMore)}
             </span>
           )}
           →
