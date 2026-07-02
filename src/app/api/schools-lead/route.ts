@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { c, s } from "@/lib/email/brand";
 import {
@@ -30,28 +31,9 @@ const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60 * 60 * 1000;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
-  }
-  entry.count++;
-  return entry.count > RATE_LIMIT;
-}
-
-function getClientIp(request: NextRequest): string {
-  return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown"
-  );
-}
+// Per-route in-memory rate limit (5/hr, resets on deploy) — shared impl in
+// src/lib/rate-limit.ts; each route keeps its own bucket, as before.
+const { isRateLimited } = createRateLimiter();
 
 function attributedSource(body: SchoolsLeadFormData): string {
   const src = body.utm_source?.toLowerCase();
