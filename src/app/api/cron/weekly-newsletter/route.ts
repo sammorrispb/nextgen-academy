@@ -249,7 +249,6 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   if (!resend) {
     console.warn("[cron/weekly-newsletter] RESEND_API_KEY missing — nothing sent");
     return {
-      ok: false,
       attempted: subscribers.length,
       succeeded: 0,
       failures: [{ signature: "resend_not_configured" }],
@@ -364,9 +363,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     });
   } catch (err) {
     console.error("[cron/weekly-newsletter] admin copy failed:", err);
+    // Class name only — raw exception text stays in the log line above.
     failures.push({
       signature: "admin_copy_failed",
-      detail: err instanceof Error ? err.message : String(err),
+      detail: err instanceof Error ? err.constructor.name : typeof err,
     });
   }
 
@@ -376,8 +376,17 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   let newsMarkedUsed = 0;
   if (sent > 0) {
     for (const row of newsRows) {
-      const ok = await setNewsStatus(row.pageId, "Used");
-      if (ok) newsMarkedUsed++;
+      // A false return = the Used flip didn't stick → the same news item
+      // repeats in next week's issue. Surface it instead of dropping it.
+      const marked = await setNewsStatus(row.pageId, "Used");
+      if (marked) newsMarkedUsed++;
+      else
+        failures.push({
+          signature: "news_status_write_failed",
+          ref: row.pageId,
+          detail:
+            "news row not flipped to Used; it will repeat in next week's issue",
+        });
     }
     // Stamp "Sent At" on every draft row that shipped so the Notion DB shows
     // exactly when each issue went out (fire-and-forget, never throws).
@@ -409,7 +418,6 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   };
   console.log("[cron/weekly-newsletter]", JSON.stringify(summary));
   return {
-    ok: failures.length === 0,
     attempted: subscribers.length,
     succeeded: sent,
     failures,

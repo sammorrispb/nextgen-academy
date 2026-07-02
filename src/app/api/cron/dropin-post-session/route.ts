@@ -1,4 +1,4 @@
-import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { rollupFailure, withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { EMAIL_RE } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
@@ -113,7 +113,7 @@ async function buildCommitUrl(
 // follow-up branches on the attendance the coach submitted at check-in; rows
 // with no attendance recorded are handled separately (held + admin nudge).
 async function sendOne(
-  resend: Resend | null,
+  resend: Resend,
   row: DropInRegistration,
   kind: "present" | "noshow",
 ): Promise<SendOutcome> {
@@ -129,15 +129,6 @@ async function sendOne(
     emailSent: false,
     flagged: false,
   };
-
-  if (
-    !resend ||
-    !row.parentEmail ||
-    !EMAIL_RE.test(row.parentEmail)
-  ) {
-    outcome.error = "no_resend_or_email";
-    return outcome;
-  }
 
   let subject: string;
   let html: string;
@@ -290,12 +281,24 @@ export const GET = withCronAlert("dropin-post-session", async () => {
     console.warn("[cron/dropin-post-session] RESEND_API_KEY missing — skipping sends");
   }
 
+  // One consistent posture with dropin-reminder: a due row with a missing or
+  // malformed parent email can never get its follow-up — roll those into ONE
+  // failure entry per run (count + page-id refs) instead of one hard failure
+  // per row, and roll a missing RESEND_API_KEY into one entry too.
+  const dueRows: Array<{ row: DropInRegistration; kind: "present" | "noshow" }> = [
+    ...present.map((row) => ({ row, kind: "present" as const })),
+    ...noShow.map((row) => ({ row, kind: "noshow" as const })),
+  ];
+  const hasValidEmail = ({ row }: { row: DropInRegistration }) =>
+    Boolean(row.parentEmail) && EMAIL_RE.test(row.parentEmail);
+  const invalidEmailRows = dueRows.filter((r) => !hasValidEmail(r));
+  const sendable = dueRows.filter(hasValidEmail);
+
   const outcomes: SendOutcome[] = [];
-  for (const row of present) {
-    outcomes.push(await sendOne(resend, row, "present"));
-  }
-  for (const row of noShow) {
-    outcomes.push(await sendOne(resend, row, "noshow"));
+  if (resend) {
+    for (const { row, kind } of sendable) {
+      outcomes.push(await sendOne(resend, row, kind));
+    }
   }
   const adminNudged = await sendAttendanceNudge(resend, blank);
 
@@ -303,11 +306,22 @@ export const GET = withCronAlert("dropin-post-session", async () => {
   // roster with a failed admin nudge means the "attendance missing" signal
   // never reached Sam — that's a failure too.
   const failures: CronFailure[] = [];
+  if (!resend && (sendable.length > 0 || blank.length > 0)) {
+    failures.push({
+      signature: "resend_not_configured",
+      detail: `${sendable.length} follow-up(s) + ${blank.length} held-roster nudge(s) due but RESEND_API_KEY is unset`,
+    });
+  }
+  const invalidEmail = rollupFailure(
+    "invalid_parent_email",
+    invalidEmailRows.map(({ row }) => row.id),
+    "follow-up row(s) with a missing/malformed parent email",
+  );
+  if (invalidEmail) failures.push(invalidEmail);
   for (const o of outcomes) {
     if (o.error) {
       failures.push({
-        signature:
-          o.error === "no_resend_or_email" ? "no_resend_or_email" : "resend_rejected",
+        signature: "resend_rejected",
         ref: o.pageId,
         detail: o.error,
       });
@@ -334,14 +348,14 @@ export const GET = withCronAlert("dropin-post-session", async () => {
     present_sent: outcomes.filter((o) => o.emailSent && present.some((p) => p.id === o.pageId)).length,
     noshow_sent: outcomes.filter((o) => o.emailSent && noShow.some((n) => n.id === o.pageId)).length,
     held_no_attendance: blank.length,
+    invalid_email: invalidEmailRows.length,
     admin_nudged: adminNudged,
     errors: outcomes.filter((o) => o.error).length,
   };
   console.log("[cron/dropin-post-session]", JSON.stringify(summary));
 
   return {
-    ok: failures.length === 0,
-    attempted: outcomes.length,
+    attempted: sendable.length,
     succeeded: outcomes.filter((o) => o.emailSent).length,
     failures,
     body: {

@@ -28,7 +28,6 @@ export const GET = withCronAlert("seed-tuesday-sessions", async () => {
     }),
   );
   return {
-    ok: result.failed.length === 0,
     attempted: result.created.length + result.failed.length,
     succeeded: result.created.length,
     // failed entries are "YYYY-MM-DD Level" strings — no PII.

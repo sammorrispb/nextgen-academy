@@ -103,7 +103,6 @@ export const GET = withCronAlert("coach-pre-event", async () => {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey || coachEmails.length === 0) {
     return {
-      ok: true,
       attempted: 0,
       succeeded: 0,
       failures: [],
@@ -160,10 +159,12 @@ export const GET = withCronAlert("coach-pre-event", async () => {
   };
   console.log("[cron/coach-pre-event]", JSON.stringify(summary));
   return {
-    ok: failures.length === 0,
     attempted: due.length,
     succeeded: outcomes.filter((o) => o.emailSent).length,
     failures,
     body: summary,
   };
-});
+  // Hourly cron (vercel.json `0 * * * *`): cap alert EMAILS to 4 UTC windows a
+  // day so a stuck dependency can't burn the shared Resend 100/day quota
+  // (24–48 re-alerts/day). Every failing run still 500s + logs the full alert.
+}, { alertEmailUtcHours: [0, 6, 12, 18] });

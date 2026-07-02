@@ -38,16 +38,6 @@ export const GET = withCronAlert("mark-passed-sessions", async () => {
     );
   }
 
-  let completed = 0;
-  let passed = 0;
-  for (const s of ended) {
-    const status = lifecycleStatusFor(s.registeredCount);
-    const note = `Auto-lifecycle ${todayEt}: end time ${s.endTime} ET passed. Registered count ${s.registeredCount} → ${status}${status === "Passed" ? " (no completion)" : ""}.`;
-    await setSessionLifecycle(s.id, status, note);
-    if (status === "Completed") completed += 1;
-    else passed += 1;
-  }
-
   // Unparseable past rows used to be console.warn'd behind a 200 — they linger
   // invisibly forever (never hidden, never stamped) until someone reads logs.
   // Surface them so a typo'd time gets fixed instead of rotting.
@@ -57,8 +47,28 @@ export const GET = withCronAlert("mark-passed-sessions", async () => {
     detail: `${s.date} end="${s.endTime}"`,
   }));
 
+  let completed = 0;
+  let passed = 0;
+  for (const s of ended) {
+    const status = lifecycleStatusFor(s.registeredCount);
+    const note = `Auto-lifecycle ${todayEt}: end time ${s.endTime} ET passed. Registered count ${s.registeredCount} → ${status}${status === "Passed" ? " (no completion)" : ""}.`;
+    // Only count a success when the Notion write actually stuck — a false
+    // return used to be swallowed here, so a dead write path looked green
+    // while the row lingered on the schedule.
+    const wrote = await setSessionLifecycle(s.id, status, note);
+    if (!wrote) {
+      failures.push({
+        signature: "lifecycle_write_failed",
+        ref: s.id,
+        detail: `status "${status}" did not stick; row stays on the schedule until the next tick`,
+      });
+      continue;
+    }
+    if (status === "Completed") completed += 1;
+    else passed += 1;
+  }
+
   return {
-    ok: failures.length === 0,
     attempted: ended.length,
     succeeded: completed + passed,
     failures,
@@ -75,4 +85,7 @@ export const GET = withCronAlert("mark-passed-sessions", async () => {
       })),
     },
   };
-});
+  // Hourly cron (vercel.json `0 * * * *`): cap alert EMAILS to 4 UTC windows a
+  // day so a stuck dependency can't burn the shared Resend 100/day quota
+  // (24–48 re-alerts/day). Every failing run still 500s + logs the full alert.
+}, { alertEmailUtcHours: [0, 6, 12, 18] });

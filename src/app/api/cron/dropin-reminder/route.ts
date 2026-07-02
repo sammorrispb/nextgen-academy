@@ -1,4 +1,4 @@
-import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { rollupFailure, withCronAlert, type CronFailure } from "@/lib/cron-alert";
 import { EMAIL_RE } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
@@ -260,6 +260,18 @@ export const GET = withCronAlert("dropin-reminder", async () => {
       detail: `${toSend.length} reminder(s) due but RESEND_API_KEY is unset`,
     });
   }
+  // One consistent posture with dropin-post-session: a due row with a missing
+  // or malformed parent email can never get its primary send — these used to
+  // be skipped silently here. Roll them into ONE failure entry per run (count
+  // + page-id refs), not one per row, so the alert stays readable.
+  const invalidEmail = rollupFailure(
+    "invalid_parent_email",
+    toSend
+      .filter((r) => !r.parentEmail || !EMAIL_RE.test(r.parentEmail))
+      .map((r) => r.id),
+    "reminder row(s) with a missing/malformed parent email",
+  );
+  if (invalidEmail) failures.push(invalidEmail);
   for (const o of outcomes) {
     if (o.error) {
       failures.push({
@@ -293,7 +305,6 @@ export const GET = withCronAlert("dropin-reminder", async () => {
   console.log("[cron/dropin-reminder]", JSON.stringify(summary));
 
   return {
-    ok: failures.length === 0,
     attempted: toSend.length,
     succeeded: outcomes.filter((o) => o.emailSent).length,
     failures,

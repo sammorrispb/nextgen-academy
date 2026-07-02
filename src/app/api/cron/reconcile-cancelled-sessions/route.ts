@@ -58,7 +58,6 @@ export const GET = withCronAlert("reconcile-cancelled-sessions", async () => {
     const summary = { window: { fromIso, toIso }, cancelled: 0, acted: 0 };
     console.log("[cron/reconcile-cancelled-sessions]", JSON.stringify(summary));
     return {
-      ok: true,
       attempted: 0,
       succeeded: 0,
       failures: [],
@@ -140,7 +139,6 @@ export const GET = withCronAlert("reconcile-cancelled-sessions", async () => {
   console.log("[cron/reconcile-cancelled-sessions]", JSON.stringify(summary));
 
   return {
-    ok: failures.length === 0,
     attempted: acted,
     succeeded: fanoutOk,
     failures,

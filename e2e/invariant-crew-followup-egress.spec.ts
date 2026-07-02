@@ -101,4 +101,35 @@ test.describe("crew-followup cron — PII egress", () => {
     expect(ack).not.toContain(PARENT_EMAIL);
     expect(ack).toContain('"reengaged":1');
   });
+
+  // F1: markCrewInterestFlag's boolean return used to be ignored after the
+  // re-engagement send — a Notion write that didn't stick meant the same
+  // parent got the same email EVERY day with no alert. A false flag write
+  // must surface as a flag_write_failed failure (500 + alert email), and the
+  // alert must stay PII-free.
+  test("flag write returns false → 500 + flag_write_failed alert (no silent daily duplicates)", async () => {
+    stub
+      .on("/databases/crew-interest-db/query", { results: [crewRow(10)] })
+      .on("/databases/sessions-db/query", { results: [] })
+      // The idempotency-flag PATCH fails → markCrewInterestFlag returns false.
+      .on("api.notion.com/v1/pages", { message: "boom" }, 500)
+      .on("api.resend.com", { id: "email_test" });
+
+    const res = await GET(req("test-cron-secret"));
+    expect(res.status).toBe(500);
+
+    const emails = stub.callsTo("api.resend.com");
+    // Parent re-engagement email + the cron alert to Sam.
+    expect(emails.length, "re-engagement send + one alert email").toBe(2);
+    const alert = emails[1].body;
+    expect(alert).toContain("flag_write_failed");
+    expect(alert).toContain("crew-1"); // page-id ref rides the alert…
+    expect(alert).not.toContain(CHILD_NAME); // …child/parent data never does
+    expect(alert).not.toContain(PARENT_EMAIL);
+
+    // Generic 500 ack — no PII, no exception text.
+    const ack = JSON.stringify(await res.json());
+    expect(ack).not.toContain(CHILD_NAME);
+    expect(ack).not.toContain(PARENT_EMAIL);
+  });
 });

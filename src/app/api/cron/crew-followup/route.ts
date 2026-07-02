@@ -117,9 +117,10 @@ export const GET = withCronAlert("crew-followup", async () => {
     sessions = await fetchUpcomingSessions();
   } catch (err) {
     console.error("[cron/crew-followup] sessions fetch failed:", err);
+    // Class name only — raw exception text stays in the log line above.
     failures.push({
       signature: "sessions_fetch_failed",
-      detail: err instanceof Error ? err.message : String(err),
+      detail: err instanceof Error ? err.constructor.name : typeof err,
     });
   }
 
@@ -209,8 +210,18 @@ export const GET = withCronAlert("crew-followup", async () => {
       }
       reengaged++;
       // Flip both flags so a stale nudge never fires after the bigger touch.
-      await markCrewInterestFlag(row.id, "Reengagement Sent");
-      await markCrewInterestFlag(row.id, "Nudge Sent");
+      // A false return = the write didn't stick → this parent gets the SAME
+      // email again tomorrow. Surface it instead of silently duplicating.
+      const reengFlagged = await markCrewInterestFlag(row.id, "Reengagement Sent");
+      const nudgeFlagged = await markCrewInterestFlag(row.id, "Nudge Sent");
+      if (!reengFlagged || !nudgeFlagged) {
+        failures.push({
+          signature: "flag_write_failed",
+          ref: row.id,
+          detail:
+            "Reengagement/Nudge Sent flag did not stick; parent will be re-emailed next tick",
+        });
+      }
     }
   }
 
@@ -235,7 +246,15 @@ export const GET = withCronAlert("crew-followup", async () => {
     } else {
       digestSent = true;
       for (const n of nudges) {
-        await markCrewInterestFlag(n.row.id, "Nudge Sent");
+        const flagged = await markCrewInterestFlag(n.row.id, "Nudge Sent");
+        if (!flagged) {
+          failures.push({
+            signature: "flag_write_failed",
+            ref: n.row.id,
+            detail:
+              "Nudge Sent flag did not stick; row repeats in tomorrow's digest",
+          });
+        }
       }
     }
   }
@@ -257,7 +276,6 @@ export const GET = withCronAlert("crew-followup", async () => {
   };
   console.log("[cron/crew-followup]", JSON.stringify(summary));
   return {
-    ok: failures.length === 0,
     attempted: reengaged + reengageErrors + (nudges.length > 0 ? 1 : 0),
     succeeded: reengaged + (digestSent ? 1 : 0),
     failures,

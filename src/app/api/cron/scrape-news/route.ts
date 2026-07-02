@@ -19,7 +19,6 @@ export const GET = withCronAlert("scrape-news", async () => {
       "[cron/scrape-news] NOTION_NEWS_DB_ID or NOTION_API_KEY missing — dry run only",
     );
     return {
-      ok: true,
       attempted: 0,
       succeeded: 0,
       failures: [],
@@ -70,7 +69,6 @@ export const GET = withCronAlert("scrape-news", async () => {
   };
   console.log("[cron/scrape-news]", JSON.stringify(summary));
   return {
-    ok: failures.length === 0,
     attempted: candidates.length,
     succeeded: created + skipped,
     failures,

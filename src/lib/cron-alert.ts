@@ -9,21 +9,23 @@ import { sendSms } from "@/lib/sms";
  * The incident class this exists for is a SWALLOWED domain failure returned as
  * 200 — a Resend reject console.error'd and forgotten, a Notion flag write that
  * silently didn't stick. Every non-payment cron route wraps its body in
- * `withCronAlert(name, handler)`; the handler reports `{ ok, attempted,
- * succeeded, failures[] }` so PARTIAL failures alert too. On any failure the
- * wrapper emails Sam (CC admin inbox), falls back to SMS if that email itself
- * fails (the "Resend key is dead" case), and returns HTTP 500 so the Vercel
- * cron dashboard shows red.
+ * `withCronAlert(name, handler)`; the handler reports `{ attempted, succeeded,
+ * failures[] }` so PARTIAL failures alert too. On any failure the wrapper
+ * emails Sam (CC admin inbox), falls back to SMS if that email itself fails
+ * (the "Resend key is dead" case), and returns HTTP 500 so the Vercel cron
+ * dashboard shows red.
  *
  * Alert-storm posture (documented in docs/admin-reduction-roadmap.md): there is
  * deliberately NO "already alerted" state store — a persistently failing
  * dependency re-alerts every run. The failure signature lives in the SUBJECT so
  * Gmail threads the repeats; SMS escalates ONLY when the alert email fails,
- * never per-run.
+ * never per-run. Hourly crons additionally cap alert EMAILS to fixed UTC
+ * windows via `alertEmailUtcHours` (see CronAlertOptions).
  *
- * NO PII in alert bodies: page IDs + counts + error strings only. The builder
- * renders only signature/ref/detail and scrubs anything email- or phone-shaped
- * from those strings as a backstop.
+ * NO PII in alert bodies: controlled-vocabulary signatures, counts, page-id
+ * refs, and (for unhandled exceptions) error CLASS names only — never raw
+ * exception text. The builder renders only signature/ref/detail and scrubs
+ * anything email- or phone-shaped from those strings as a backstop.
  */
 
 export interface CronFailure {
@@ -37,11 +39,15 @@ export interface CronFailure {
 }
 
 export interface CronRunResult {
-  ok: boolean;
   attempted: number;
   succeeded: number;
+  /** THE failure signal. The wrapper derives the run's outcome from
+   * `failures.length` alone — a handler signals failure only by pushing
+   * entries here (or throwing). There is deliberately no separate `ok` flag
+   * to hand-compute (and get wrong) in every route. */
   failures: CronFailure[];
-  /** Extra JSON merged into the HTTP response body (the route's summary). */
+  /** Extra JSON merged into the 200 response body (the route's summary).
+   * Failing runs return a fixed generic 500 body — detail stays in logs. */
   body?: Record<string, unknown>;
 }
 
@@ -60,8 +66,11 @@ const DEFAULT_SMS_TO = "3013254731";
 
 const EMAILISH_RE = /[^\s@<>,;:"'()[\]]+@[^\s@<>,;:"'()[\]]+\.[A-Za-z]{2,}/g;
 // US phone shapes (3-3-4 with optional +1/parens/separators). Deliberately NOT
-// a generic long-digit-run match so ISO dates and numeric IDs survive.
-const PHONEISH_RE = /(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g;
+// a generic long-digit-run match so ISO dates and numeric IDs survive. The
+// digit-boundary guards ((?<!\d) / (?!\d)) keep it from redacting a 10-digit
+// run INSIDE a longer number — a 13-digit ms timestamp or a long numeric ID
+// must survive, while a standalone 10-digit phone still gets caught.
+const PHONEISH_RE = /(?<!\d)(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}(?!\d)/g;
 
 /** Redact anything email- or phone-shaped. Backstop only — call sites must
  * still pass page IDs + counts + error strings, never parent/child data. */
@@ -69,6 +78,24 @@ export function scrubPii(text: string): string {
   return text
     .replace(EMAILISH_RE, "[email redacted]")
     .replace(PHONEISH_RE, "[phone redacted]");
+}
+
+/** Roll many same-kind per-row failures into ONE alert entry carrying the
+ * count + PII-free refs (Notion page ids), so a batch-wide condition — e.g.
+ * rows imported with malformed parent emails — alerts once per run instead of
+ * once per row. Returns null when there is nothing to report. */
+export function rollupFailure(
+  signature: string,
+  refs: string[],
+  what: string,
+): CronFailure | null {
+  if (refs.length === 0) return null;
+  const shown = refs.slice(0, MAX_LISTED_FAILURES);
+  const more = refs.length - shown.length;
+  return {
+    signature,
+    detail: `${refs.length} ${what}: ${shown.join(", ")}${more > 0 ? ` …and ${more} more` : ""}`,
+  };
 }
 
 function signatureSummary(failures: CronFailure[]): string {
@@ -184,14 +211,46 @@ export async function deliverCronAlert(
 
 type CronHandler = (req: NextRequest) => Promise<CronRunResult>;
 
+export interface CronAlertOptions {
+  /**
+   * UTC hours (0–23) during which a failing run may SEND the alert email.
+   * Unset = every failing run emails (right for daily/weekly crons).
+   *
+   * Tradeoff (accepted, deliberate): alert emails share the single Resend
+   * 100/day quota with parent-facing mail, so an HOURLY cron with a stuck
+   * dependency would re-alert 24–48×/day and could starve booking
+   * confirmations. Listing e.g. [0, 6, 12, 18] bounds that to ≤4 alert
+   * emails/day per hourly cron, at the cost of up to ~6h of email latency on
+   * a new failure — the 500 (red Vercel cron dash) and the console.error'd
+   * full alert body remain immediate on EVERY failing run. Stateless and
+   * deterministic by design (no "already alerted" store). The SMS fallback is
+   * unchanged: it fires only when an ATTEMPTED alert email fails, so a
+   * throttled (never-attempted) email cannot trigger SMS.
+   */
+  alertEmailUtcHours?: number[];
+}
+
 /**
  * Wrap a cron route body. Owns the (previously copy-pasted) Bearer-CRON_SECRET
  * gate — byte-identical responses to the inlined version it replaces — then:
- *   clean run    → 200 { ok:true, ...body }
- *   any failure  → alert (email → SMS fallback) + 500 { ok:false, ...body, failures }
- *   handler throw → treated as a failure with signature "unhandled_exception"
+ *   failures empty → 200 { ok:true, ...body }
+ *   failures > 0   → alert (email → SMS fallback) + a GENERIC 500 body
+ *   handler throw  → failure with signature "unhandled_exception"
+ *
+ * The outcome is derived from `failures.length` alone — handlers never
+ * hand-compute an ok flag.
+ *
+ * PII invariant (detail stays in LOGS): the 500 body is a fixed generic
+ * shape and the alert email carries only controlled-vocabulary signatures,
+ * counts, refs, and — for unhandled exceptions — the error CLASS name.
+ * Raw exception text (which regexes can't reliably scrub of child names;
+ * drop-in rows are titled by child) goes to console.error only.
  */
-export function withCronAlert(name: string, handler: CronHandler) {
+export function withCronAlert(
+  name: string,
+  handler: CronHandler,
+  options: CronAlertOptions = {},
+) {
   return async function GET(req: NextRequest): Promise<NextResponse> {
     const expected = process.env.CRON_SECRET;
     if (!expected) {
@@ -209,30 +268,42 @@ export function withCronAlert(name: string, handler: CronHandler) {
     try {
       result = await handler(req);
     } catch (err) {
+      // Full raw detail to the logs; only the error CLASS name may ride the
+      // alert email (never err.message — it can embed row titles = child names).
       console.error(`[cron/${name}] unhandled exception:`, err);
       result = {
-        ok: false,
         attempted: 0,
         succeeded: 0,
         failures: [
           {
             signature: "unhandled_exception",
-            detail: err instanceof Error ? err.message : String(err),
+            detail: err instanceof Error ? err.constructor.name : typeof err,
           },
         ],
       };
     }
 
-    if (result.ok && result.failures.length === 0) {
+    if (result.failures.length === 0) {
       return NextResponse.json({ ...(result.body ?? {}), ok: true });
     }
 
-    if (result.failures.length === 0) {
-      result.failures = [{ signature: "unspecified_failure" }];
+    const hours = options.alertEmailUtcHours;
+    const utcHour = new Date().getUTCHours();
+    if (hours && !hours.includes(utcHour)) {
+      // Quota-throttled window: skip the email but keep the failure loud —
+      // full alert body in the logs, 500 below keeps the cron dash red.
+      const { subject, text } = buildCronAlertEmail(name, result);
+      console.error(
+        `[cron-alert] ${name}: alert email skipped (UTC hour ${utcHour} not in [${hours.join(",")}]) — full alert:\n${subject}\n${text}`,
+      );
+    } else {
+      await deliverCronAlert(name, result);
     }
-    await deliverCronAlert(name, result);
+
+    // Generic on purpose — failure detail lives in the logs + alert email,
+    // never in the HTTP response (see the PII invariant above).
     return NextResponse.json(
-      { ...(result.body ?? {}), ok: false, failures: result.failures },
+      { ok: false, cron: name, error: "run failed — see logs" },
       { status: 500 },
     );
   };

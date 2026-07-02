@@ -16,6 +16,7 @@ delete process.env.CRON_ALERT_SMS_TO;
 import {
   buildCronAlertEmail,
   deliverCronAlert,
+  rollupFailure,
   scrubPii,
   withCronAlert,
   type CronFailure,
@@ -35,7 +36,7 @@ function req(token?: string): NextRequest {
 }
 
 function failing(failures: CronFailure[], attempted = 3, succeeded = 1): CronRunResult {
-  return { ok: false, attempted, succeeded, failures };
+  return { attempted, succeeded, failures };
 }
 
 // ─── Alert-body builder ──────────────────────────────────────────────────────
@@ -125,6 +126,28 @@ test.describe("scrubPii", () => {
     expect(out).toContain("557f01d8");
     expect(out).toContain("2026-07-01");
   });
+
+  // F8: the phone regex must be digit-boundary-guarded so a 10-digit run
+  // INSIDE a longer number (ms timestamp, numeric ID) is never redacted.
+  test("digit boundaries: a 13-digit ms timestamp and long numeric ids survive", () => {
+    const out = scrubPii("enqueued at 1751371200000 for invoice 12345678901234567");
+    expect(out).toContain("1751371200000");
+    expect(out).toContain("12345678901234567");
+    expect(out).not.toContain("redacted");
+  });
+
+  test("still redacts standalone 10-digit phones with/without separators and +1", () => {
+    for (const phone of [
+      "3013254731",
+      "301-325-4731",
+      "(301) 325-4731",
+      "+1 301 325 4731",
+      "+13013254731",
+      "301.325.4731",
+    ]) {
+      expect(scrubPii(`call ${phone} now`), phone).toBe("call [phone redacted] now");
+    }
+  });
 });
 
 // ─── Wrapper: auth, statuses, alert egress ──────────────────────────────────
@@ -139,7 +162,6 @@ test.afterEach(() => stub.uninstall());
 test.describe("withCronAlert — auth (fail closed, matches existing cron routes)", () => {
   test("no Authorization → 401, zero downstream calls", async () => {
     const route = withCronAlert("test-cron", async () => ({
-      ok: true,
       attempted: 0,
       succeeded: 0,
       failures: [],
@@ -151,7 +173,6 @@ test.describe("withCronAlert — auth (fail closed, matches existing cron routes
 
   test("wrong token → 401, zero downstream calls", async () => {
     const route = withCronAlert("test-cron", async () => ({
-      ok: true,
       attempted: 0,
       succeeded: 0,
       failures: [],
@@ -168,7 +189,7 @@ test.describe("withCronAlert — auth (fail closed, matches existing cron routes
       let ran = false;
       const route = withCronAlert("test-cron", async () => {
         ran = true;
-        return { ok: true, attempted: 0, succeeded: 0, failures: [] };
+        return { attempted: 0, succeeded: 0, failures: [] };
       });
       const res = await route(req("test-cron-secret"));
       expect(res.status).toBe(500);
@@ -182,7 +203,6 @@ test.describe("withCronAlert — auth (fail closed, matches existing cron routes
 test.describe("withCronAlert — outcomes", () => {
   test("clean run → 200, ok:true, body merged, NO alert email", async () => {
     const route = withCronAlert("test-cron", async () => ({
-      ok: true,
       attempted: 4,
       succeeded: 4,
       failures: [],
@@ -196,10 +216,24 @@ test.describe("withCronAlert — outcomes", () => {
     expect(stub.callsTo("api.resend.com").length).toBe(0);
   });
 
-  test("failures → 500, ok:false, ONE alert email to Sam (cc admin) with signature + counts", async () => {
+  // F10: the wrapper derives the outcome from failures.length ALONE — a
+  // handler with zero failure entries is a clean run even when succeeded <
+  // attempted (e.g. rows legitimately skipped).
+  test("empty failures → 200 even when succeeded < attempted (failures[] is the only failure signal)", async () => {
+    const route = withCronAlert("test-cron", async () => ({
+      attempted: 5,
+      succeeded: 2,
+      failures: [],
+    }));
+    const res = await route(req("test-cron-secret"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).ok).toBe(true);
+    expect(stub.callsTo("api.resend.com").length).toBe(0);
+  });
+
+  test("failures → 500 + ONE alert email to Sam (cc admin) with signature + counts", async () => {
     stub.on("api.resend.com", { id: "email_alert" });
     const route = withCronAlert("test-cron", async () => ({
-      ok: false,
       attempted: 3,
       succeeded: 1,
       failures: [
@@ -212,7 +246,6 @@ test.describe("withCronAlert — outcomes", () => {
     expect(res.status).toBe(500);
     const json = await res.json();
     expect(json.ok).toBe(false);
-    expect(json.failures.length).toBe(2);
 
     const alerts = stub.callsTo("api.resend.com");
     expect(alerts.length, "exactly one alert email per failing run").toBe(1);
@@ -221,6 +254,24 @@ test.describe("withCronAlert — outcomes", () => {
     expect(alerts[0].body).toContain("[cron-alert]");
     expect(alerts[0].body).toContain("resend_rejected");
     expect(alerts[0].body).toContain("test-cron");
+  });
+
+  // F9(a): detail stays in LOGS. The 500 body is a fixed generic shape — no
+  // failure details, refs, exception text, or merged route body ride the
+  // HTTP response.
+  test("500 body is generic { ok, cron, error } — no failures, refs, or route body", async () => {
+    stub.on("api.resend.com", { id: "email_alert" });
+    const route = withCronAlert("test-cron", async () => ({
+      attempted: 3,
+      succeeded: 1,
+      failures: [{ signature: "resend_rejected", ref: "page-1", detail: "resend: 500" }],
+      body: { target_date_et: "2026-07-02" },
+    }));
+    const res = await route(req("test-cron-secret"));
+    expect(res.status).toBe(500);
+    const json = await res.json();
+    expect(Object.keys(json).sort()).toEqual(["cron", "error", "ok"]);
+    expect(json).toEqual({ ok: false, cron: "test-cron", error: "run failed — see logs" });
   });
 
   test("handler throws → 500 + alert with unhandled_exception (cron can never die silently)", async () => {
@@ -233,13 +284,31 @@ test.describe("withCronAlert — outcomes", () => {
     const alerts = stub.callsTo("api.resend.com");
     expect(alerts.length).toBe(1);
     expect(alerts[0].body).toContain("unhandled_exception");
-    expect(alerts[0].body).toContain("notion exploded");
+  });
+
+  // F9(b): regexes can't scrub child names out of arbitrary exception text
+  // (drop-in rows are titled by child) — so the alert carries only the error
+  // CLASS name; the raw message goes to console.error / the logs.
+  test("thrown message text NEVER reaches the alert email or the 500 body — only the error class name does", async () => {
+    stub.on("api.resend.com", { id: "email_alert" });
+    class NotionRowError extends Error {}
+    const route = withCronAlert("test-cron", async () => {
+      throw new NotionRowError("row Kiddotest Piitest 2026-07-01 rejected");
+    });
+    const res = await route(req("test-cron-secret"));
+    expect(res.status).toBe(500);
+    expect(JSON.stringify(await res.json())).not.toContain("Kiddotest");
+
+    const alerts = stub.callsTo("api.resend.com");
+    expect(alerts.length).toBe(1);
+    expect(alerts[0].body).toContain("NotionRowError");
+    expect(alerts[0].body).not.toContain("Kiddotest");
+    expect(alerts[0].body).not.toContain("Piitest");
   });
 
   test("NO PII reaches the alert egress: emails/names in failures never hit the Resend payload", async () => {
     stub.on("api.resend.com", { id: "email_alert" });
     const route = withCronAlert("test-cron", async () => ({
-      ok: false,
       attempted: 1,
       succeeded: 0,
       failures: [
@@ -258,6 +327,83 @@ test.describe("withCronAlert — outcomes", () => {
     expect(alerts[0].body).not.toContain("parent.jane@example.com");
     expect(alerts[0].body).not.toContain("Kiddotest");
     expect(alerts[0].body).toContain("page-xyz");
+  });
+});
+
+// ─── F4: alertEmailUtcHours throttle (Resend 100/day quota guard) ───────────
+
+test.describe("withCronAlert — alertEmailUtcHours throttle", () => {
+  const HOUR = new Date().getUTCHours();
+  const failingHandler = async () => ({
+    attempted: 2,
+    succeeded: 0,
+    failures: [{ signature: "resend_rejected", ref: "page-1" }],
+  });
+
+  test("current UTC hour IN the window → failing run still emails the alert", async () => {
+    stub.on("api.resend.com", { id: "email_alert" });
+    const route = withCronAlert("test-cron", failingHandler, {
+      alertEmailUtcHours: [HOUR],
+    });
+    const res = await route(req("test-cron-secret"));
+    expect(res.status).toBe(500);
+    expect(stub.callsTo("api.resend.com").length).toBe(1);
+  });
+
+  test("current UTC hour OUTSIDE the window → 500 (dash stays red) but NO email and NO SMS", async () => {
+    const route = withCronAlert("test-cron", failingHandler, {
+      alertEmailUtcHours: [(HOUR + 1) % 24, (HOUR + 2) % 24],
+    });
+    const res = await route(req("test-cron-secret"));
+    // Still red on the Vercel cron dashboard…
+    expect(res.status).toBe(500);
+    expect((await res.json()).ok).toBe(false);
+    // …but zero alert egress of any kind: no email, and the SMS fallback must
+    // NOT fire (it only escalates when an ATTEMPTED email fails, and a
+    // throttled email was never attempted).
+    expect(stub.calls.length).toBe(0);
+  });
+
+  test("clean run with a throttle window → 200, no alert either way", async () => {
+    const route = withCronAlert(
+      "test-cron",
+      async () => ({ attempted: 1, succeeded: 1, failures: [] }),
+      { alertEmailUtcHours: [(HOUR + 1) % 24] },
+    );
+    const res = await route(req("test-cron-secret"));
+    expect(res.status).toBe(200);
+    expect(stub.calls.length).toBe(0);
+  });
+});
+
+// ─── F5/F7: per-kind failure aggregation helper ─────────────────────────────
+
+test.describe("rollupFailure — one entry per failure kind, not per row", () => {
+  test("zero refs → null (no failure entry at all)", () => {
+    expect(rollupFailure("invalid_parent_email", [], "row(s) with bad email")).toBeNull();
+  });
+
+  test("N refs → ONE entry carrying the count and every page-id ref", () => {
+    const f = rollupFailure(
+      "invalid_parent_email",
+      ["page-a", "page-b", "page-c"],
+      "row(s) with missing/malformed parent email",
+    );
+    expect(f).not.toBeNull();
+    expect(f!.signature).toBe("invalid_parent_email");
+    expect(f!.detail).toContain("3 row(s) with missing/malformed parent email");
+    expect(f!.detail).toContain("page-a");
+    expect(f!.detail).toContain("page-b");
+    expect(f!.detail).toContain("page-c");
+  });
+
+  test("caps the listed refs and counts the remainder (alert stays readable)", () => {
+    const refs = Array.from({ length: 30 }, (_, i) => `page-${i}`);
+    const f = rollupFailure("invalid_parent_email", refs, "row(s)");
+    expect(f!.detail).toContain("30 row(s)");
+    expect(f!.detail).toContain("page-19");
+    expect(f!.detail).not.toContain("page-20");
+    expect(f!.detail).toContain("10 more");
   });
 });
 

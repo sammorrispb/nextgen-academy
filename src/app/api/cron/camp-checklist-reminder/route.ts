@@ -42,7 +42,6 @@ export const GET = withCronAlert("camp-checklist-reminder", async (req) => {
   }
 
   return {
-    ok: failures.length === 0,
     attempted,
     succeeded,
     failures,

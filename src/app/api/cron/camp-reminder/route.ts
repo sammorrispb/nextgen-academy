@@ -55,7 +55,6 @@ export const GET = withCronAlert("camp-reminder", async (req) => {
   }
 
   return {
-    ok: failures.length === 0,
     attempted,
     succeeded,
     failures,
