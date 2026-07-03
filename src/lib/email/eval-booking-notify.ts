@@ -1,0 +1,110 @@
+// Coach-side notification for a parent self-REQUESTED eval (Phase 1a; flow
+// change 2026-07-02 — the request awaits Sam's confirmation). Admin-only
+// recipients (Sam + academy inbox) — this email intentionally carries the full
+// booking (parent contact + child first name + level) so Sam can decide, plus
+// a METHOD:REQUEST .ics so his mail client offers add-to-calendar without any
+// Google API integration. ACTION NEEDED: confirm or release the request in
+// the /coach/eval-requests queue.
+
+import { buildDropInIcs } from "./ics";
+import { c, s } from "./brand";
+import { escapeHtml } from "../html";
+import type { OpenEvalSlot } from "../notion-eval-slots";
+import { formatLongDate, formatShortDate } from "../eval-confirmation-send";
+
+export interface EvalBookingNotifyInput {
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  childFirst: string;
+  level: string;
+  /** The claim's Booking Id token — with slot.id, the reconciliation record
+   * for any residual claim race (see notion-eval-slots.ts header). */
+  bookingId: string;
+  slot: OpenEvalSlot;
+}
+
+export function evalBookingNotifySubject(input: EvalBookingNotifyInput): string {
+  return `Eval requested — ${input.childFirst} (${input.level}) · ${formatShortDate(input.slot.date)} ${input.slot.startTime}`;
+}
+
+/** METHOD:REQUEST invite for the coach's mailbox (Gmail + Apple Calendar). */
+export function buildEvalBookingRequestIcs(
+  input: EvalBookingNotifyInput,
+  attendeeEmails: string[],
+): string | null {
+  const { slot } = input;
+  return buildDropInIcs({
+    // UID is keyed on the SLOT id: stable per slot (re-sends update the same
+    // calendar event), distinct across slots (two back-to-back evals for
+    // same-named kids never collide), and distinct from the parent's PUBLISH
+    // .ics so the two copies never collide in a shared calendar store.
+    uid: `eval-${slot.date}-${slot.id}-coach@nextgenpbacademy.com`,
+    date: slot.date,
+    startTime: slot.startTime,
+    endTime: slot.endTime,
+    title: `Eval: ${input.childFirst} (${input.level}) — ${slot.location}`,
+    location: slot.location,
+    description: `Free evaluation (parent-requested; confirm in /coach/eval-requests). Parent: ${input.parentName}, ${input.parentEmail}, ${input.parentPhone}. Child: ${input.childFirst}, level ${input.level}.`,
+    method: "REQUEST",
+    organizer: {
+      name: "Next Gen PB Academy",
+      email: "noreply@nextgenpbacademy.com",
+    },
+    attendees: attendeeEmails.map((email) => ({ email })),
+  });
+}
+
+export function evalBookingNotifyHtml(input: EvalBookingNotifyInput): string {
+  const { slot } = input;
+  const esc = escapeHtml;
+  return `
+<div style="${s.wrapper}">
+  <h1 style="${s.heading} margin-bottom: 24px;">
+    Eval Requested
+  </h1>
+  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabelWide}">When</td>
+      <td style="${s.tableValue}">${esc(formatLongDate(slot.date))}, ${esc(slot.startTime)}&ndash;${esc(slot.endTime)}</td>
+    </tr>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Where</td>
+      <td style="${s.tableValue}">${esc(slot.location)}</td>
+    </tr>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Child</td>
+      <td style="${s.tableValue}">${esc(input.childFirst)} &mdash; ${esc(input.level)} level</td>
+    </tr>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Parent</td>
+      <td style="${s.tableValue}">${esc(input.parentName)}</td>
+    </tr>
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Contact</td>
+      <td style="padding: 10px 8px;">
+        <a href="mailto:${esc(input.parentEmail)}" style="${s.link}">${esc(input.parentEmail)}</a>
+        &middot;
+        <a href="tel:${esc(input.parentPhone)}" style="${s.link}">${esc(input.parentPhone)}</a>
+      </td>
+    </tr>
+  </table>
+  <div style="${s.actionCallout}">
+    <p style="${s.actionLabel}">ACTION NEEDED — AWAITING YOUR CONFIRMATION</p>
+    <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
+      The parent got a request-received email (confirmation promised within 24
+      hours) — their real confirmation + calendar invite go out when you
+      confirm. <a href="https://nextgenpbacademy.com/coach/eval-requests" style="${s.link}">Confirm
+      or release this request in the coach portal</a>. The slot is marked
+      Requested in the NGA Eval Slots db; the attached invite is for your own
+      calendar.
+    </p>
+  </div>
+  <p style="margin: 16px 0 0; font-size: 11px; color: ${c.muted};">
+    Slot ${esc(slot.id)} &middot; Booking ${esc(input.bookingId)}
+    &mdash; if two of these emails ever reference the same slot with different
+    booking ids, a claim race double-booked it: keep the booking id shown on
+    the Notion row, reach out to the other family.
+  </p>
+</div>`;
+}

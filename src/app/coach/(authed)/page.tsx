@@ -91,6 +91,15 @@ export default async function CoachDashboard() {
         {drops.length === 1 ? "" : "s"} total.
       </p>
       <div className="flex flex-wrap gap-3 mb-8">
+        {/* TODO(coach-inbox): fold the Requested count into the Coach Inbox
+            pending-count badge once the parallel feat/coach-inbox PR lands
+            (its files are untouched here on purpose). */}
+        <Link
+          href="/coach/eval-requests"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ngpa-teal/15 border border-ngpa-teal/50 text-ngpa-teal hover:bg-ngpa-teal/25 text-sm font-bold transition-colors"
+        >
+          Eval requests →
+        </Link>
         <Link
           href="/coach/inbox"
           className={
@@ -109,7 +118,7 @@ export default async function CoachDashboard() {
         </Link>
         <Link
           href="/coach/eval"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ngpa-teal/15 border border-ngpa-teal/50 text-ngpa-teal hover:bg-ngpa-teal/25 text-sm font-bold transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
         >
           Confirm an eval →
         </Link>

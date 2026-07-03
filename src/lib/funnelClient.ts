@@ -50,6 +50,14 @@ export type AnalyticsEventMap = {
     interest?: string;
     page?: string;
   };
+  eval_book_started: {
+    interest?: string;
+    page?: string;
+  };
+  eval_book_submitted: {
+    interest?: string;
+    page?: string;
+  };
   crew_interest_started: {
     interest?: string;
     page?: string;

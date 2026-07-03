@@ -17,3 +17,23 @@ export function readPlainText(prop: any): string {
 /** The house email-shape check (same literal previously redefined ~24×).
  * Migration is opportunistic — swap call sites only when already editing. */
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * NGA Player CRM (Notion "Next Gen Academy Player Database") id — ONE
+ * env-backed constant for the id that was previously hardcoded in 6 files
+ * (roadmap Phase 1a batch of 0.2/M4). Resolution order, read at CALL time so
+ * specs can set env before/after import:
+ *   1. NOTION_PLAYER_CRM_DB_ID (the ONLY documented env override)
+ *   2. the well-known literal (non-secret) so nothing breaks while unset.
+ *
+ * The legacy NOTION_DB_ID env is deliberately NOT consulted (PR #244 F8): it
+ * was an undocumented widening that let one stray env var silently retarget
+ * every CRM read/write — including the two outreach helpers (notion-eval,
+ * lead-outreach-run) that historically honored it. Verified before removal:
+ * no deployment environment sets NOTION_DB_ID.
+ */
+export const PLAYER_CRM_DB_ID_FALLBACK = "1e5e34c258384c6cb5f3e846543ecfc7";
+
+export function playerCrmDbId(): string {
+  return process.env.NOTION_PLAYER_CRM_DB_ID || PLAYER_CRM_DB_ID_FALLBACK;
+}

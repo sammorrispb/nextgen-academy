@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EMAIL_RE } from "@/lib/notion-utils";
+import { EMAIL_RE, playerCrmDbId } from "@/lib/notion-utils";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { normalizeKids, validateLeadForm } from "@/lib/validate-lead";
@@ -8,14 +8,16 @@ import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import { c, s } from "@/lib/email/brand";
-import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
+import {
+  leadConfirmationHtml,
+  LEAD_CONFIRMATION_SUBJECT,
+} from "@/lib/email/lead-confirmation";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
 
 const NOTION_API = "https://api.notion.com/v1";
-const NOTION_DB_ID = "1e5e34c258384c6cb5f3e846543ecfc7";
 
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
@@ -43,7 +45,7 @@ async function findNotionPlayer(contact: string): Promise<string | null> {
     ? { property: "Parent Email", email: { equals: email } }
     : { property: "Parent Phone", phone_number: { equals: phone } };
 
-  const res = await fetch(`${NOTION_API}/databases/${NOTION_DB_ID}/query`, {
+  const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${notionKey}`,
@@ -146,7 +148,7 @@ async function createNotionPlayerRow(
       "Notion-Version": "2022-06-28",
     },
     body: JSON.stringify({
-      parent: { database_id: NOTION_DB_ID },
+      parent: { database_id: playerCrmDbId() },
       properties,
     }),
   });
@@ -300,34 +302,10 @@ export async function POST(request: NextRequest) {
   // Only send parent confirmation if we have an email
   const shouldEmailParent = !!email;
 
-  const parentHtml = `
-<div style="${s.wrapper}">
-  <h1 style="${s.heading} margin-bottom: 8px;">
-    Thanks for Reaching Out!
-  </h1>
-  <p style="font-size: 15px; line-height: 1.6;">Hi ${body.parentName},</p>
-  <p style="font-size: 15px; line-height: 1.6;">
-    Thanks for your interest in Next Gen Pickleball Academy! We\u2019ll be in touch within 24 hours to help find the right group for your child.
-  </p>
-  <div style="${s.card}">
-    <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">In the meantime</p>
-    <p style="margin: 0; font-size: 15px; line-height: 1.6;">
-      Check out our <a href="https://nextgenpbacademy.com/schedule" style="${s.link} font-weight: 600;">upcoming sessions</a> to see what\u2019s available.
-    </p>
-  </div>
-  ${isFirstTimer ? whatsappInviteHtml() : ""}
-  <div style="${s.footer}">
-    <p style="font-size: 14px; line-height: 1.6;">
-      Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
-    </p>
-    <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
-      See you on the court!<br/>
-      <strong style="color: ${c.accentLime};">\u2014 Coach Sam &amp; Coach Amine</strong><br/>
-      <span style="color: ${c.muted};">Next Gen Pickleball Academy</span><br/>
-      <a href="https://nextgenpbacademy.com" style="${s.link}">nextgenpbacademy.com</a>
-    </p>
-  </div>
-</div>`;
+  const parentHtml = leadConfirmationHtml({
+    parentName: body.parentName,
+    isFirstTimer,
+  });
 
   try {
     const resend = getResend();
@@ -352,7 +330,7 @@ export async function POST(request: NextRequest) {
           from: FROM_EMAIL,
           to: email,
           replyTo: site.email,
-          subject: "Thanks for Reaching Out — Next Gen Pickleball Academy",
+          subject: LEAD_CONFIRMATION_SUBJECT,
           html: parentHtml,
         }),
       );

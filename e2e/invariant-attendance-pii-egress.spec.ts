@@ -9,6 +9,11 @@ process.env.OPEN_BRAIN_INGEST_URL = "https://ob.test/ingest";
 process.env.LEAD_INGEST_TOKEN = "ob-token";
 
 const PLAYER_DB = "1e5e34c258384c6cb5f3e846543ecfc7";
+// playerCrmDbId() honors NOTION_PLAYER_CRM_DB_ID/NOTION_DB_ID leaked from
+// other spec files sharing this Playwright worker — clear BOTH (don't set:
+// setting would leak forward) so resolution falls to the literal above.
+delete process.env.NOTION_PLAYER_CRM_DB_ID;
+delete process.env.NOTION_DB_ID;
 
 import { POST } from "../src/app/api/coach/attendance/route";
 
