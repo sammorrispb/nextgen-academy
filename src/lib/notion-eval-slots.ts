@@ -188,10 +188,18 @@ function buildOpenEvalSlotsQuery(nowIso: string, cursor?: string) {
  * is exhausted (or a logged safety ceiling), so the WHOLE open backlog
  * surfaces on the picker — not just the soonest 100 (the display-cap bug: Sam
  * loaded 180 slots and the last 80 stayed invisible until earlier ones
- * cleared). Fail-soft on missing env (empty list, no error — the page renders
- * its no-open-slots state); ANY page's Notion failure sets `error: true` (and
- * discards the partial accumulation) so the GET route answers 503 instead of a
- * lying 200-[] or a silently-truncated list.
+ * cleared).
+ *
+ * Fail-soft on missing env (empty list, no error — the page renders its
+ * no-open-slots state). PARTIAL-SUCCESS on a later-page failure: the FIRST
+ * page holds the soonest slots (the ones parents actually book), so if page 2+
+ * fails we return what we've already fetched with `error: false` and log it —
+ * showing the soonest 100 beats a false "No open times" empty state (which the
+ * ISR-cached page would then serve). ONLY a first-page failure (nothing
+ * accumulated) returns `{ slots: [], error: true }`, preserving the GET-503 /
+ * retry contract for the total-outage case. An abnormal truncation
+ * (has_more:true but no usable next_cursor) is treated the same way — keep the
+ * partial, warn, stop (never a silent truncation).
  */
 export async function fetchOpenEvalSlots(): Promise<FetchOpenEvalSlotsResult> {
   const notionKey = process.env.NOTION_API_KEY;
@@ -211,8 +219,17 @@ export async function fetchOpenEvalSlots(): Promise<FetchOpenEvalSlotsResult> {
         body: JSON.stringify(buildOpenEvalSlotsQuery(nowIso, cursor)),
       });
       if (!res.ok) {
-        console.error(`[eval-slots] query failed (${res.status})`);
-        return { slots: [], error: true };
+        if (slots.length === 0) {
+          // First page failed — nothing to show; signal error → GET 503/retry.
+          console.error(`[eval-slots] query failed (${res.status})`);
+          return { slots: [], error: true };
+        }
+        // A later page failed — keep the soonest slots already fetched rather
+        // than blanking the picker. Never silent.
+        console.warn(
+          `[eval-slots] later page failed (${res.status}) after ${pages} page(s) — returning the ${slots.length} slot(s) already fetched`,
+        );
+        break;
       }
       const data = (await res.json()) as {
         results?: NotionSlotPage[];
@@ -223,8 +240,18 @@ export async function fetchOpenEvalSlots(): Promise<FetchOpenEvalSlotsResult> {
         if (slot) slots.push(slot);
       }
       pages++;
-      cursor =
-        data.has_more === true && data.next_cursor ? data.next_cursor : undefined;
+
+      const hasMore = data.has_more === true;
+      const nextCursor = data.next_cursor || null;
+      if (hasMore && !nextCursor) {
+        // Abnormal: the db says there's more but gave us no cursor to fetch it.
+        // Treat as a truncation — keep the partial, warn, stop (no silent cap).
+        console.warn(
+          `[eval-slots] has_more=true but no next_cursor after ${pages} page(s) — stopping with ${slots.length} slot(s) (possible truncation)`,
+        );
+        break;
+      }
+      cursor = hasMore ? nextCursor ?? undefined : undefined;
 
       if (cursor && (pages >= OPEN_SLOTS_MAX_PAGES || slots.length >= OPEN_SLOTS_MAX_ROWS)) {
         console.warn(
@@ -236,8 +263,17 @@ export async function fetchOpenEvalSlots(): Promise<FetchOpenEvalSlotsResult> {
 
     return { slots, error: false };
   } catch (err) {
-    console.error("[eval-slots] query error:", err);
-    return { slots: [], error: true };
+    if (slots.length === 0) {
+      console.error("[eval-slots] query error:", err);
+      return { slots: [], error: true };
+    }
+    // Mid-pagination throw after earlier pages landed — same partial-success
+    // stance as a later-page HTTP failure.
+    console.warn(
+      `[eval-slots] later page errored after ${pages} page(s) — returning the ${slots.length} slot(s) already fetched:`,
+      err,
+    );
+    return { slots, error: false };
   }
 }
 

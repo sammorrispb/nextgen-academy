@@ -136,7 +136,9 @@ test.describe("fetchOpenEvalSlots — pagination (display-cap fix)", () => {
     ).toBe(true);
   });
 
-  test("a LATER page failing → error:true (fail-soft-to-error, same as a first-page failure)", async () => {
+  test("F1: a LATER page failing → keep page 1's slots, error:FALSE, and warn (partial success beats a false empty state)", async () => {
+    // Page 1 succeeds with the soonest 100; page 2 500s. The soonest slots are
+    // the ones parents actually book — showing them beats blanking the picker.
     let page = 0;
     stub.onDynamic(SLOTS_QUERY, () => {
       page++;
@@ -149,8 +151,62 @@ test.describe("fetchOpenEvalSlots — pagination (display-cap fix)", () => {
       return { status: 500, json: { object: "error" } };
     });
 
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(" "));
+    let result: Awaited<ReturnType<typeof fetchOpenEvalSlots>>;
+    try {
+      result = await fetchOpenEvalSlots();
+    } finally {
+      console.warn = origWarn;
+    }
+
+    expect(result.error, "a later-page failure is NOT a total outage").toBe(false);
+    expect(result.slots.length, "page 1's soonest slots survive").toBe(100);
+    expect(result.slots.map((s) => s.id)).toEqual(
+      Array.from({ length: 100 }, (_, k) => `slot-${k}`),
+    );
+    expect(
+      warnings.some((w) => w.includes("[eval-slots]") && w.includes("later page")),
+      "the kept-partial is logged, never silent",
+    ).toBe(true);
+  });
+
+  test("F1: the FIRST page failing → { slots: [], error: true } (total-outage GET-503/retry contract preserved)", async () => {
+    stub.on(SLOTS_QUERY, { object: "error" }, 500);
     const { slots, error } = await fetchOpenEvalSlots();
     expect(error).toBe(true);
     expect(slots).toEqual([]);
+  });
+
+  test("F2: has_more:true but null/empty next_cursor → stop, KEEP the partial, error:false, and warn (no silent truncation)", async () => {
+    // Abnormal Notion response: claims more rows but hands back no cursor. The
+    // old code would exit normally with a silently-truncated list and no log.
+    stub.on(SLOTS_QUERY, {
+      results: rows(0, 100),
+      has_more: true,
+      next_cursor: null,
+    });
+
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(" "));
+    let result: Awaited<ReturnType<typeof fetchOpenEvalSlots>>;
+    try {
+      result = await fetchOpenEvalSlots();
+    } finally {
+      console.warn = origWarn;
+    }
+
+    expect(result.error).toBe(false);
+    expect(result.slots.length, "the fetched page is kept").toBe(100);
+    // Exactly ONE query — it must NOT loop with an empty cursor.
+    expect(stub.callsTo(SLOTS_QUERY).length).toBe(1);
+    expect(
+      warnings.some(
+        (w) => w.includes("[eval-slots]") && w.includes("no next_cursor"),
+      ),
+      "the abnormal truncation is logged, never silent",
+    ).toBe(true);
   });
 });
