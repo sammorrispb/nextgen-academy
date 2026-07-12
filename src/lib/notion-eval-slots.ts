@@ -156,44 +156,124 @@ export interface FetchOpenEvalSlotsResult {
 }
 
 /**
- * Future Open slots, soonest first. Fail-soft on missing env (empty list, no
- * error — the page renders its no-open-slots state); a Notion failure sets
- * `error: true` so the GET route can answer 503 instead of a lying 200-[].
+ * Safety ceilings on the open-slots pagination loop so a runaway (a Notion db
+ * that never stops reporting has_more) can't spin forever. Sam bulk-types
+ * eval slots by hand, so hundreds is realistic and 100s is not — 10 pages ×
+ * 100 = 1000 rows is a generous headroom that still bounds the loop. Hitting a
+ * ceiling is LOGGED, never silently swallowed (no-silent-caps convention).
+ */
+export const OPEN_SLOTS_MAX_PAGES = 10;
+export const OPEN_SLOTS_MAX_ROWS = 1000;
+
+/** Query body for the public open-slots picker: future Open rows, soonest
+ * first, one 100-row page, with an optional pagination cursor. `nowIso` is
+ * pinned once by the caller so every page filters against the SAME instant
+ * (an on_or_after that drifted per page could skip a boundary slot). */
+function buildOpenEvalSlotsQuery(nowIso: string, cursor?: string) {
+  return {
+    filter: {
+      and: [
+        { property: "Status", select: { equals: "Open" } },
+        { property: "Date", date: { on_or_after: nowIso } },
+      ],
+    },
+    sorts: [{ property: "Date", direction: "ascending" }],
+    page_size: 100,
+    ...(cursor ? { start_cursor: cursor } : {}),
+  };
+}
+
+/**
+ * Future Open slots, soonest first. Follows has_more/next_cursor until the db
+ * is exhausted (or a logged safety ceiling), so the WHOLE open backlog
+ * surfaces on the picker — not just the soonest 100 (the display-cap bug: Sam
+ * loaded 180 slots and the last 80 stayed invisible until earlier ones
+ * cleared).
+ *
+ * Fail-soft on missing env (empty list, no error — the page renders its
+ * no-open-slots state). PARTIAL-SUCCESS on a later-page failure: the FIRST
+ * page holds the soonest slots (the ones parents actually book), so if page 2+
+ * fails we return what we've already fetched with `error: false` and log it —
+ * showing the soonest 100 beats a false "No open times" empty state (which the
+ * ISR-cached page would then serve). ONLY a first-page failure (nothing
+ * accumulated) returns `{ slots: [], error: true }`, preserving the GET-503 /
+ * retry contract for the total-outage case. An abnormal truncation
+ * (has_more:true but no usable next_cursor) is treated the same way — keep the
+ * partial, warn, stop (never a silent truncation).
  */
 export async function fetchOpenEvalSlots(): Promise<FetchOpenEvalSlotsResult> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = slotsDbId();
   if (!notionKey || !dbId) return { slots: [], error: false };
 
+  const nowIso = new Date().toISOString();
+  const slots: OpenEvalSlot[] = [];
+  let cursor: string | undefined;
+  let pages = 0;
+
   try {
-    const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
-      method: "POST",
-      headers: headers(notionKey),
-      body: JSON.stringify({
-        filter: {
-          and: [
-            { property: "Status", select: { equals: "Open" } },
-            { property: "Date", date: { on_or_after: new Date().toISOString() } },
-          ],
-        },
-        sorts: [{ property: "Date", direction: "ascending" }],
-        page_size: 100,
-      }),
-    });
-    if (!res.ok) {
-      console.error(`[eval-slots] query failed (${res.status})`);
+    do {
+      const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+        method: "POST",
+        headers: headers(notionKey),
+        body: JSON.stringify(buildOpenEvalSlotsQuery(nowIso, cursor)),
+      });
+      if (!res.ok) {
+        if (slots.length === 0) {
+          // First page failed — nothing to show; signal error → GET 503/retry.
+          console.error(`[eval-slots] query failed (${res.status})`);
+          return { slots: [], error: true };
+        }
+        // A later page failed — keep the soonest slots already fetched rather
+        // than blanking the picker. Never silent.
+        console.warn(
+          `[eval-slots] later page failed (${res.status}) after ${pages} page(s) — returning the ${slots.length} slot(s) already fetched`,
+        );
+        break;
+      }
+      const data = (await res.json()) as {
+        results?: NotionSlotPage[];
+        has_more?: boolean;
+        next_cursor?: string | null;
+      };
+      for (const slot of (data.results ?? []).map(readSlot)) {
+        if (slot) slots.push(slot);
+      }
+      pages++;
+
+      const hasMore = data.has_more === true;
+      const nextCursor = data.next_cursor || null;
+      if (hasMore && !nextCursor) {
+        // Abnormal: the db says there's more but gave us no cursor to fetch it.
+        // Treat as a truncation — keep the partial, warn, stop (no silent cap).
+        console.warn(
+          `[eval-slots] has_more=true but no next_cursor after ${pages} page(s) — stopping with ${slots.length} slot(s) (possible truncation)`,
+        );
+        break;
+      }
+      cursor = hasMore ? nextCursor ?? undefined : undefined;
+
+      if (cursor && (pages >= OPEN_SLOTS_MAX_PAGES || slots.length >= OPEN_SLOTS_MAX_ROWS)) {
+        console.warn(
+          `[eval-slots] pagination ceiling hit (${pages} pages, ${slots.length} rows) — more Open slots remain unshown; raise OPEN_SLOTS_MAX_PAGES/ROWS or prune stale slots`,
+        );
+        break;
+      }
+    } while (cursor);
+
+    return { slots, error: false };
+  } catch (err) {
+    if (slots.length === 0) {
+      console.error("[eval-slots] query error:", err);
       return { slots: [], error: true };
     }
-    const data = (await res.json()) as { results?: NotionSlotPage[] };
-    return {
-      slots: (data.results ?? [])
-        .map(readSlot)
-        .filter((s): s is OpenEvalSlot => s !== null),
-      error: false,
-    };
-  } catch (err) {
-    console.error("[eval-slots] query error:", err);
-    return { slots: [], error: true };
+    // Mid-pagination throw after earlier pages landed — same partial-success
+    // stance as a later-page HTTP failure.
+    console.warn(
+      `[eval-slots] later page errored after ${pages} page(s) — returning the ${slots.length} slot(s) already fetched:`,
+      err,
+    );
+    return { slots, error: false };
   }
 }
 
