@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import {
   CAMPS,
@@ -10,12 +11,22 @@ import {
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
+// Re-render on a timer so the past-week filter below stays current without a
+// manual redeploy (a fully-static page would freeze "today" at build time).
+export const revalidate = 43200; // 12h
+
 export const metadata: Metadata = {
   title: `Summer Pickleball Camp | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
   description:
-    "Next Gen Pickleball Academy summer morning camp in Gaithersburg, MD. Two weeks this summer for ages 8 and up — small groups, real coaching. $50 a morning, or $150 for the full week.",
+    "Next Gen Pickleball Academy summer morning camp in Gaithersburg, MD, for ages 8 and up — small groups, real coaching. $50 a morning, or $150 for the full week.",
   alternates: { canonical: `${SITE_ORIGIN}/camp` },
 };
+
+// Today (America/New_York) as YYYY-MM-DD — ISO strings sort lexicographically,
+// so a camp is "past" once its makeup/rain Friday is behind us.
+function todayET(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+}
 
 function formatLongDate(date: string): string {
   if (!date) return "";
@@ -52,9 +63,20 @@ function formatShortDate(date: string): string {
 }
 
 export default function CampIndexPage() {
+  // Hide weeks that are already over (past their makeup/rain Friday) from the
+  // public page. The camp data itself stays in `camps.ts` so coach rosters and
+  // reminder history for a finished week remain intact.
+  const today = todayET();
+  const upcomingCamps = CAMPS.filter((camp) => camp.makeupDate >= today);
+
+  const weeksLeft = upcomingCamps.length;
+  const countWord =
+    weeksLeft === 1 ? "One" : weeksLeft === 2 ? "Two" : String(weeksLeft);
+  const weekWord = weeksLeft === 1 ? "week" : "weeks";
+
   const jsonLd = {
     "@context": "https://schema.org",
-    "@graph": CAMPS.map((camp) => ({
+    "@graph": upcomingCamps.map((camp) => ({
       "@type": "SportsEvent",
       name: `${camp.title} — Next Gen Pickleball Academy`,
       sport: "Pickleball",
@@ -102,11 +124,30 @@ export default function CampIndexPage() {
               Next Gen Summer Pickleball Camp
             </h1>
             <p className="mt-4 text-lg text-ngpa-muted max-w-2xl mx-auto leading-relaxed">
-              Two weeks of high-energy pickleball for ages {CAMP_AGE_MIN}–
-              {CAMP_AGE_MAX} in Gaithersburg. Small groups, real coaching, and a
-              ton of fun — campers leave more confident than they arrived. Just
-              two weeks left this summer — register before each week begins.
+              High-energy pickleball for ages {CAMP_AGE_MIN}–{CAMP_AGE_MAX} in
+              Gaithersburg. Small groups, real coaching, and a ton of fun —
+              campers leave more confident than they arrived.
+              {weeksLeft > 0 && (
+                <>
+                  {" "}
+                  {countWord} {weekWord} left this summer — register before{" "}
+                  {weeksLeft === 1 ? "it begins" : "each week begins"}.
+                </>
+              )}
             </p>
+          </div>
+
+          {/* Camp action photo */}
+          <div className="mt-8 overflow-hidden rounded-2xl border border-ngpa-slate">
+            <div className="relative aspect-[16/10]">
+              <Image
+                src="/images/camp-action.jpeg"
+                alt="Players rallying on the courts at a Next Gen Pickleball Academy summer camp in Gaithersburg."
+                fill
+                className="object-cover object-center"
+                sizes="(max-width: 768px) 100vw, 768px"
+              />
+            </div>
           </div>
 
           {/* What a day looks like */}
@@ -145,10 +186,32 @@ export default function CampIndexPage() {
 
           {/* Weeks */}
           <h2 className="font-heading text-2xl font-bold text-ngpa-white mt-12 mb-4">
-            Pick your week
+            {weeksLeft > 0 ? "Pick your week" : "Summer camp"}
           </h2>
+          {weeksLeft === 0 && (
+            <div className="bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 text-center">
+              <p className="text-ngpa-muted leading-relaxed">
+                This summer&rsquo;s camp weeks have wrapped up. Want first dibs on
+                next season&rsquo;s dates?{" "}
+                <Link
+                  href="/newsletter"
+                  className="text-ngpa-teal-bright font-semibold hover:underline"
+                >
+                  Join the newsletter
+                </Link>{" "}
+                or{" "}
+                <Link
+                  href="/free-evaluation"
+                  className="text-ngpa-teal-bright font-semibold hover:underline"
+                >
+                  book a free evaluation
+                </Link>{" "}
+                to get your child on the court now.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {CAMPS.map((camp) => (
+            {upcomingCamps.map((camp) => (
               <Link
                 key={camp.slug}
                 href={`/camp/${camp.slug}`}
