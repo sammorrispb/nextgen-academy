@@ -18,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/free-evaluation`, lastModified, changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/schools`, lastModified, changeFrequency: "monthly", priority: 0.85 },
     { url: `${base}/montgomery-county-youth-pickleball`, lastModified, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${base}/montgomery-village-youth-pickleball`, lastModified, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/schedule`, lastModified, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/newsletter`, lastModified, changeFrequency: "weekly", priority: 0.75 },
     ...clusterEntries,
