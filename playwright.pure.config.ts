@@ -13,6 +13,7 @@ export default defineConfig({
     "**/clusters-pages.spec.ts",
     "**/contact-form.spec.ts",
     "**/homepage.spec.ts",
+    "**/mvf-page.spec.ts",
     "**/newsletter.spec.ts",
     "**/reserve-modal.spec.ts",
     "**/seo.spec.ts",

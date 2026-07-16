@@ -10,6 +10,7 @@ const links = [
   { href: "#levels", label: "Programs" },
   { href: "/schedule", label: "Schedule" },
   { href: "/camp", label: "Camp" },
+  { href: "/montgomery-village-youth-pickleball", label: "MVF Classes" },
   { href: "/league", label: "League" },
   { href: "/clusters", label: "Clusters" },
   { href: "/newsletter", label: "Newsletter" },

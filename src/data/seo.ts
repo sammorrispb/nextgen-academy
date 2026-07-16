@@ -20,4 +20,9 @@ export const seo = {
     description:
       "Structured youth pickleball coaching for kids ages 6–16 across Montgomery County, MD — Bethesda, Rockville, Potomac, Gaithersburg, Chevy Chase, and beyond.",
   },
+  mvf: {
+    title: "MVF Youth Pickleball in Montgomery Village, MD — Ages 8–16",
+    description:
+      "Youth pickleball classes at Apple Ridge in Montgomery Village, MD — an intro class Aug 27 and two fall Thursday sessions for kids ages 8–16, coached by Next Gen.",
+  },
 } as const;

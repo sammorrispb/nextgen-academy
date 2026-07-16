@@ -25,6 +25,9 @@ const nextConfig: NextConfig = {
       { source: "/contact", destination: "/#contact", permanent: true },
       { source: "/faq", destination: "/#faq", permanent: true },
       { source: "/free-trial", destination: "/free-evaluation", permanent: true },
+      // Short link for MVF Rec Guide / flyers. Non-permanent while the
+      // landing page is new — flip to 301 once the URL settles.
+      { source: "/mvf", destination: "/montgomery-village-youth-pickleball", permanent: false },
       // ── Legacy Squarespace URLs still in Google's index ───────────
       // Squarespace appended numeric `-N` suffixes to disambiguate
       // titles ("/about-us-1", "/contact-us-1"). The old "/about-us-1"
