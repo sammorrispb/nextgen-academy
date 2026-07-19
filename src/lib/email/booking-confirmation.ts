@@ -7,7 +7,7 @@ export interface ConfirmationFill {
   goal: number;
 }
 
-interface ConfirmationInput {
+export interface ConfirmationInput {
   parentFirst: string;
   childFirst: string;
   sessionTitle: string;
