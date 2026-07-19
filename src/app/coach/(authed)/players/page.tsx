@@ -1,17 +1,17 @@
 import Link from "next/link";
 import { fetchAllDropInsInRange } from "@/lib/notion-dropins";
-import { buildFamilyDirectory } from "@/lib/player-profiles";
+import { buildFamilyDirectory, encodeParentKey } from "@/lib/player-profiles";
+import {
+  fetchAllPlayerLevels,
+  buildLevelIndex,
+  type PlayerLevel,
+} from "@/lib/notion-player-bracket";
+import FamiliesTable, { type FamilyRow } from "./FamiliesTable";
 
 export const dynamic = "force-dynamic";
 
 function isoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
-}
-
-function formatDate(date: string): string {
-  if (!date) return "—";
-  const d = new Date(`${date}T12:00:00Z`);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 export default async function PlayersIndexPage() {
@@ -20,9 +20,39 @@ export default async function PlayersIndexPage() {
   from.setDate(from.getDate() - 365);
   const to = new Date(now);
   to.setDate(to.getDate() + 60);
+  const currentYear = now.getFullYear();
 
-  const rows = await fetchAllDropInsInRange(isoDate(from), isoDate(to));
+  const [rows, playerLevels] = await Promise.all([
+    fetchAllDropInsInRange(isoDate(from), isoDate(to)),
+    fetchAllPlayerLevels(),
+  ]);
   const families = buildFamilyDirectory(rows);
+  const levelIndex = buildLevelIndex(playerLevels, encodeParentKey);
+
+  const familyRows: FamilyRow[] = families.map((f) => {
+    const children = f.children.map((c) => {
+      const level = (levelIndex.get(`${f.key}::${c.name.trim().toLowerCase()}`) ?? "") as
+        | PlayerLevel
+        | "";
+      const age = c.birthYear > 0 ? currentYear - c.birthYear : 0;
+      return { name: c.name, age, level };
+    });
+    const levels = Array.from(
+      new Set(children.map((c) => c.level).filter((l): l is PlayerLevel => l !== "")),
+    );
+    return {
+      key: f.key,
+      parentName: f.parentName,
+      children,
+      levels,
+      ages: children.map((c) => c.age).filter((a) => a > 0),
+      hasUnassigned: children.some((c) => c.level === ""),
+      dateAdded: f.firstSessionDate,
+      lastAttended: f.lastAttendedDate,
+      lastSession: f.lastSessionDate,
+      registrations: f.registrations,
+    };
+  });
 
   return (
     <>
@@ -37,49 +67,16 @@ export default async function PlayersIndexPage() {
         Families
       </h1>
       <p className="text-base text-ngpa-white/70 mb-8">
-        Every family who has registered, with their attendance and payment history.
+        Every family who has registered — search, filter by bracket or age, and
+        sort by activity.
       </p>
 
-      {families.length === 0 ? (
+      {familyRows.length === 0 ? (
         <div className="px-5 py-6 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/60 text-ngpa-white/70">
           No registrations yet.
         </div>
       ) : (
-        <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase tracking-wider text-ngpa-white/55 bg-ngpa-deep/40">
-              <tr>
-                <th className="text-left font-bold px-4 sm:px-5 py-3">Family</th>
-                <th className="text-left font-bold px-4 sm:px-5 py-3">Players</th>
-                <th className="text-right font-bold px-4 sm:px-5 py-3 hidden sm:table-cell">Last session</th>
-                <th className="text-right font-bold px-4 sm:px-5 py-3">Regs</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ngpa-slate/40">
-              {families.map((f) => (
-                <tr key={f.key} className="hover:bg-ngpa-deep/30">
-                  <td className="px-4 sm:px-5 py-3 align-top">
-                    <Link
-                      href={`/coach/players/${f.key}`}
-                      className="text-ngpa-teal font-bold hover:underline"
-                    >
-                      {f.parentName}
-                    </Link>
-                  </td>
-                  <td className="px-4 sm:px-5 py-3 align-top text-ngpa-white/80">
-                    {f.childNames.join(", ") || "—"}
-                  </td>
-                  <td className="px-4 sm:px-5 py-3 align-top text-right text-ngpa-white/70 hidden sm:table-cell">
-                    {formatDate(f.lastSessionDate)}
-                  </td>
-                  <td className="px-4 sm:px-5 py-3 align-top text-right font-mono text-ngpa-white/85">
-                    {f.registrations}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <FamiliesTable families={familyRows} />
       )}
     </>
   );

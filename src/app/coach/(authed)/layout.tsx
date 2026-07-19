@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireCoach } from "@/lib/coach-auth-server";
+import CoachFamilySearch from "./CoachFamilySearch";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -23,12 +24,13 @@ export default async function CoachAuthedLayout({
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
           <Link
             href="/coach"
-            className="font-heading text-lg sm:text-xl font-black tracking-tight hover:text-ngpa-teal transition-colors"
+            className="font-heading text-lg sm:text-xl font-black tracking-tight hover:text-ngpa-teal transition-colors shrink-0"
           >
             NGA Coach
           </Link>
-          <div className="flex items-center gap-3 text-xs text-ngpa-white/65">
-            <span className="hidden sm:inline truncate max-w-[16rem]">
+          <CoachFamilySearch />
+          <div className="flex items-center gap-3 text-xs text-ngpa-white/65 shrink-0">
+            <span className="hidden lg:inline truncate max-w-[12rem]">
               {email}
             </span>
             <form action="/coach/logout" method="post">

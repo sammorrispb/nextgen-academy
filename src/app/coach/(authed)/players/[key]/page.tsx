@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getFamilyProfile } from "@/lib/player-profiles";
+import BracketAssign from "./BracketAssign";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export default async function PlayerProfilePage({ params }: PageProps) {
       <div className="space-y-8">
         {profile.children.map((child) => (
           <section key={child.childFirstName}>
-            <div className="flex items-baseline gap-3 mb-3">
+            <div className="flex items-baseline gap-3 mb-2">
               <h2 className="font-heading text-xl font-black text-ngpa-white">
                 {child.childFirstName}
               </h2>
@@ -80,12 +81,24 @@ export default async function PlayerProfilePage({ params }: PageProps) {
               </span>
             </div>
 
-            <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="mb-3">
+              <BracketAssign
+                parentEmail={profile.parentEmail}
+                parentPhone={profile.parentPhone}
+                parentName={profile.parentName}
+                childFirstName={child.childFirstName}
+                level={child.level}
+              />
+            </div>
+
+            {/* Horizontal scroll so the full table is reachable on a phone
+                rather than clipped at the right edge. */}
+            <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 overflow-x-auto">
+              <table className="w-full min-w-[34rem] text-sm">
                 <thead className="text-xs uppercase tracking-wider text-ngpa-white/55 bg-ngpa-deep/40">
                   <tr>
                     <th className="text-left font-bold px-4 py-3">Session</th>
-                    <th className="text-left font-bold px-4 py-3 hidden sm:table-cell">Location</th>
+                    <th className="text-left font-bold px-4 py-3">Location</th>
                     <th className="text-center font-bold px-4 py-3">Attendance</th>
                     <th className="text-right font-bold px-4 py-3">Paid</th>
                   </tr>
@@ -93,7 +106,7 @@ export default async function PlayerProfilePage({ params }: PageProps) {
                 <tbody className="divide-y divide-ngpa-slate/40">
                   {child.events.map((e, i) => (
                     <tr key={`${e.sessionDate}-${i}`} className="hover:bg-ngpa-deep/30">
-                      <td className="px-4 py-3 align-top">
+                      <td className="px-4 py-3 align-top whitespace-nowrap">
                         <p className="text-ngpa-white/90 font-bold">{e.sessionTitle || "—"}</p>
                         <p className="text-xs text-ngpa-white/55">{formatDate(e.sessionDate)}</p>
                         {e.status !== "Confirmed" && (
@@ -102,7 +115,7 @@ export default async function PlayerProfilePage({ params }: PageProps) {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 align-top text-ngpa-white/70 hidden sm:table-cell">
+                      <td className="px-4 py-3 align-top text-ngpa-white/70 whitespace-nowrap">
                         {e.location?.split(",")[0] || "—"}
                       </td>
                       <td className="px-4 py-3 align-top text-center">
