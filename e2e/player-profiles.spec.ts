@@ -4,6 +4,7 @@ import {
   decodeParentKey,
   buildFamilyProfile,
   buildFamilyDirectory,
+  toSearchIndex,
 } from "../src/lib/player-profiles";
 import type { DropInRegistration } from "../src/lib/notion-dropins";
 
@@ -121,5 +122,39 @@ test.describe("buildFamilyDirectory", () => {
     const porter = dir.find((d) => d.parentName === "Lauren Porter")!;
     expect(porter.childNames.sort()).toEqual(["Maya", "Preston"]);
     expect(porter.registrations).toBe(2);
+  });
+
+  test("carries child birth years, first-session, and last-attended dates", () => {
+    const rows = [
+      row({ childFirstName: "Preston", childBirthYear: 2015, sessionDate: "2026-05-02", attendance: "Present" }),
+      row({ childFirstName: "Preston", childBirthYear: 2015, sessionDate: "2026-05-23", attendance: "No-show" }),
+      row({ childFirstName: "Maya", childBirthYear: 2017, sessionDate: "2026-05-16", attendance: "Present" }),
+    ];
+    const dir = buildFamilyDirectory(rows);
+    expect(dir).toHaveLength(1);
+    const fam = dir[0];
+    expect(fam.firstSessionDate).toBe("2026-05-02");
+    expect(fam.lastSessionDate).toBe("2026-05-23");
+    // Latest Present date across the family (Preston 5/02, Maya 5/16) — the
+    // 5/23 row was a No-show and must not count as attended.
+    expect(fam.lastAttendedDate).toBe("2026-05-16");
+    expect(
+      fam.children.map((c) => `${c.name}:${c.birthYear}`).sort(),
+    ).toEqual(["Maya:2017", "Preston:2015"]);
+  });
+});
+
+test.describe("toSearchIndex", () => {
+  test("projects to key + parent + child names ONLY (no contact info leaks)", () => {
+    const rows = [
+      row({ parentEmail: "kathy@example.com", parentPhone: "2404476826", childFirstName: "Ethan", childBirthYear: 2012 }),
+    ];
+    const index = toSearchIndex(buildFamilyDirectory(rows));
+    expect(index).toHaveLength(1);
+    expect(Object.keys(index[0]).sort()).toEqual(["childNames", "key", "parentName"]);
+    const serialized = JSON.stringify(index);
+    expect(serialized).not.toContain("kathy@example.com");
+    expect(serialized).not.toContain("2404476826");
+    expect(serialized).not.toContain("2012");
   });
 });

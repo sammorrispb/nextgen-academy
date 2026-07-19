@@ -181,13 +181,13 @@ export default async function CoachSessionPage({ params }: PageProps) {
           No reservations yet for this session.
         </div>
       ) : (
-        <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 overflow-x-auto">
+          <table className="w-full min-w-[40rem] text-sm">
             <thead className="text-xs uppercase tracking-wider text-ngpa-white/55 bg-ngpa-deep/40">
               <tr>
                 <th className="text-left font-bold px-4 sm:px-5 py-3">Child</th>
                 <th className="text-left font-bold px-4 sm:px-5 py-3">Parent · Contact</th>
-                <th className="text-right font-bold px-4 sm:px-5 py-3 hidden sm:table-cell">Paid</th>
+                <th className="text-right font-bold px-4 sm:px-5 py-3">Paid</th>
                 <th className="text-right font-bold px-4 sm:px-5 py-3 w-20"></th>
               </tr>
             </thead>
@@ -244,7 +244,7 @@ export default async function CoachSessionPage({ params }: PageProps) {
                       </a>
                     )}
                   </td>
-                  <td className="px-4 sm:px-5 py-4 align-top text-right font-mono text-ngpa-white/85 hidden sm:table-cell">
+                  <td className="px-4 sm:px-5 py-4 align-top text-right font-mono text-ngpa-white/85">
                     ${r.amountPaidUsd.toFixed(0)}
                   </td>
                   <td className="px-4 sm:px-5 py-4 align-top text-right">

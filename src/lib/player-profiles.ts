@@ -3,6 +3,10 @@ import {
   type AttendanceValue,
   type DropInRegistration,
 } from "@/lib/notion-dropins";
+import {
+  fetchPlayerLevelsByParent,
+  type PlayerLevel,
+} from "@/lib/notion-player-bracket";
 
 /**
  * Family/player profile, assembled from the Notion drop-in rows (the
@@ -29,6 +33,8 @@ export interface ProfileEvent {
 export interface ChildProfile {
   childFirstName: string;
   birthYear: number;
+  /** Coach-assigned skill bracket (Player CRM Level). "" when unassigned. */
+  level: PlayerLevel | "";
   events: ProfileEvent[];
   attended: number;
   noShow: number;
@@ -49,12 +55,39 @@ export interface FamilyProfile {
   refundedUsd: number;
 }
 
+export interface FamilyDirectoryChild {
+  name: string;
+  birthYear: number;
+}
+
 export interface FamilyDirectoryEntry {
   key: string;
   parentName: string;
   childNames: string[];
+  children: FamilyDirectoryChild[];
+  /** Newest registered session date (any status) — "recent activity". */
   lastSessionDate: string;
+  /** Newest session the child was marked Present — "last attended". */
+  lastAttendedDate: string;
+  /** Oldest registered session date — a proxy for "date added". */
+  firstSessionDate: string;
   registrations: number;
+}
+
+/** Minimal, coach-scoped search projection — parent + child NAMES only, never
+ *  contact info or birth years. Powers the top-nav family search dropdown. */
+export interface FamilySearchEntry {
+  key: string;
+  parentName: string;
+  childNames: string[];
+}
+
+export function toSearchIndex(entries: FamilyDirectoryEntry[]): FamilySearchEntry[] {
+  return entries.map((e) => ({
+    key: e.key,
+    parentName: e.parentName,
+    childNames: e.childNames,
+  }));
 }
 
 function b64url(s: string): string {
@@ -119,6 +152,8 @@ export function buildFamilyProfile(
     children.push({
       childFirstName: group.find((r) => r.childFirstName)?.childFirstName ?? "Unknown",
       birthYear: group.find((r) => r.childBirthYear > 0)?.childBirthYear ?? 0,
+      // Enriched from the Player CRM in getFamilyProfile (the async layer).
+      level: "",
       events,
       attended: group.filter((r) => r.attendance === "Present").length,
       noShow: group.filter((r) => r.attendance === "No-show").length,
@@ -146,15 +181,28 @@ export function buildFamilyProfile(
   };
 }
 
-/** Fetch + assemble one family's profile from its deep-link key. */
+/** Fetch + assemble one family's profile from its deep-link key, with each
+ *  child's coach-assigned bracket overlaid from the Player CRM (fail-soft — a
+ *  Notion miss just leaves brackets unassigned). */
 export async function getFamilyProfile(key: string): Promise<FamilyProfile | null> {
   const decoded = decodeParentKey(key);
   if (!decoded) return null;
-  const rows = await fetchDropInsByParent(decoded.email, decoded.phone);
-  return buildFamilyProfile(rows, key);
+  const [rows, levels] = await Promise.all([
+    fetchDropInsByParent(decoded.email, decoded.phone),
+    fetchPlayerLevelsByParent(decoded.email, decoded.phone),
+  ]);
+  const profile = buildFamilyProfile(rows, key);
+  if (profile) {
+    for (const child of profile.children) {
+      const entry = levels.get(child.childFirstName.trim().toLowerCase());
+      child.level = entry?.level ?? "";
+    }
+  }
+  return profile;
 }
 
-/** Collapse a flat list of rows into one directory entry per family. */
+/** Collapse a flat list of rows into one directory entry per family. Carries the
+ *  per-child birth years + first/last-attended dates the directory filters on. */
 export function buildFamilyDirectory(
   rows: DropInRegistration[],
 ): FamilyDirectoryEntry[] {
@@ -168,14 +216,36 @@ export function buildFamilyDirectory(
         key,
         parentName: r.parentName || r.parentEmail || r.parentPhone || "Unknown",
         childNames: [] as string[],
+        children: [] as FamilyDirectoryChild[],
         lastSessionDate: "",
+        lastAttendedDate: "",
+        firstSessionDate: "",
         registrations: 0,
       };
     entry.registrations += 1;
     if (r.childFirstName && !entry.childNames.includes(r.childFirstName)) {
       entry.childNames.push(r.childFirstName);
     }
+    if (r.childFirstName) {
+      const existing = entry.children.find(
+        (c) => c.name.toLowerCase() === r.childFirstName.toLowerCase(),
+      );
+      if (existing) {
+        if (!existing.birthYear && r.childBirthYear > 0) existing.birthYear = r.childBirthYear;
+      } else {
+        entry.children.push({ name: r.childFirstName, birthYear: r.childBirthYear || 0 });
+      }
+    }
     if (r.sessionDate > entry.lastSessionDate) entry.lastSessionDate = r.sessionDate;
+    if (r.sessionDate && (!entry.firstSessionDate || r.sessionDate < entry.firstSessionDate)) {
+      entry.firstSessionDate = r.sessionDate;
+    }
+    if (
+      r.attendance === "Present" &&
+      r.sessionDate > entry.lastAttendedDate
+    ) {
+      entry.lastAttendedDate = r.sessionDate;
+    }
     byFamily.set(key, entry);
   }
   return Array.from(byFamily.values()).sort((a, b) =>

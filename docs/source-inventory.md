@@ -106,7 +106,9 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 |---|---|---|---|
 | src/lib/notion-player-sync.ts | 2026-06-04 | upserts kid rows into Notion Player CRM | high |
 | src/lib/notion-player-lookup.ts | 2026-05-26 | player CRM lookup by parent/child | high |
-| src/lib/player-profiles.ts | 2026-05-21 | coach-portal player profile assembly | high |
+| src/lib/notion-player-bracket.ts | 2026-07-19 | coach-assignable skill bracket = Player CRM Level (R/O/G/Y): read by parent (profile) + full scan (directory filter) + `setPlayerLevel` write. Write touches ONLY the Level select; egress Notion-only (pinned by `invariant-player-bracket-egress.spec.ts`) | high |
+| src/lib/player-profiles.ts | 2026-07-19 | coach-portal player profile + directory assembly; overlays Player CRM brackets; `toSearchIndex` = coach-scoped parent+child-NAMES-only projection for top-nav search | high |
+| src/app/api/coach/family-search/route.ts | 2026-07-19 | coach-cookie-gated family search index (parent + child names + key only); fails closed → 401 + zero egress without coach auth (pinned by `invariant-coach-family-search-authz.spec.ts`) | high |
 | src/lib/notion-dropins.ts | 2026-06-12 | drop-in registration rows (child name, parent contact) | high |
 | src/lib/notion-eval.ts | 2026-06-05 | eval records | high |
 | src/lib/registrant-match.ts | 2026-06-12 | match registrants to player profiles | high |
