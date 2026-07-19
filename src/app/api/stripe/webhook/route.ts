@@ -204,6 +204,8 @@ async function emailParent(
     "",
     `Session link: ${detailUrl}`,
     "",
+    `Bring a friend: join our free weekly newsletter and you'll get a personal invite link. When a friend signs up through it and plays their first session, you both get 50% off your next drop-in. Join & grab your link: ${SITE_ORIGIN}/newsletter`,
+    "",
     whatsappInviteText(),
     "",
     `See you on the court — better than yesterday, together.`,
@@ -223,6 +225,7 @@ async function emailParent(
     detailUrl,
     cancelUrl,
     fill,
+    newsletterUrl: `${SITE_ORIGIN}/newsletter`,
   });
 
   // Attach a one-shot .ics calendar invite. End time may be missing in

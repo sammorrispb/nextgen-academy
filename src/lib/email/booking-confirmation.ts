@@ -23,6 +23,13 @@ interface ConfirmationInput {
   cancelUrl?: string;
   /** Post-signup fill count (their spot included). Omit if the count is unknown. */
   fill?: ConfirmationFill | null;
+  /**
+   * /newsletter URL for the "Bring a friend" referral block. Routes through the
+   * newsletter on purpose: the 50%-off payout only fires for subscribers, so
+   * promising it to a non-subscriber would be a discount that never lands.
+   * Omit to hide the block entirely.
+   */
+  newsletterUrl?: string;
 }
 
 export function bookingConfirmationHtml(input: ConfirmationInput): string {
@@ -39,9 +46,21 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
     detailUrl,
     cancelUrl,
     fill,
+    newsletterUrl,
   } = input;
 
   const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sessionLocation)}`;
+
+  const referralBlock = newsletterUrl
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring a friend</p>
+      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">
+        Loved it? Join our free weekly newsletter and you&rsquo;ll get a personal invite link. When a friend signs up through it and plays their first session, you both get <strong>50% off</strong> your next drop-in.
+      </p>
+      <p style="margin:0;"><a href="${newsletterUrl}" style="${s.link}font-weight:700;text-decoration:none;">Join the newsletter &amp; grab your link &rarr;</a></p>
+    </div>`
+    : "";
 
   const fillBlock =
     fill && fill.goal > 0
@@ -110,6 +129,8 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
       Paid: $${escape(amountPaid)} &middot;
       <a href="${detailUrl}" style="${s.link}">View session details</a>
     </p>
+
+    ${referralBlock}
 
     ${whatsappInviteHtml()}
 
