@@ -90,6 +90,18 @@ export const CAMPS: Camp[] = [
     publicArea: "Gaithersburg, MD",
     exactLocation: "Gaithersburg HS, 314 South Frederick Ave, Gaithersburg, MD 20877",
   },
+  {
+    // Back-to-school half-day camp the week before MCPS starts (first day
+    // 2026-08-25). Mon–Thu mornings + Fri makeup, at the new weekend venue.
+    slug: "august-17",
+    title: "Summer Camp — Back to School",
+    weekLabel: "August 17 – August 20, 2026",
+    startDate: "2026-08-17",
+    endDate: "2026-08-20",
+    makeupDate: "2026-08-21",
+    publicArea: "Bethesda, MD",
+    exactLocation: "Walter Johnson High School, 6400 Rock Spring Dr, Bethesda, MD 20814",
+  },
 ];
 
 export function findCampBySlug(slug: string): Camp | undefined {

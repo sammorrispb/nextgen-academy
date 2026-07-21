@@ -35,6 +35,16 @@ function template(titleBase: string): RecurringTemplate {
   return t;
 }
 
+// The four weeknight templates were retired to `active: false` in the
+// 2026-07-21 weekend move, but the SEEDER LOGIC (idempotency, drift, 429
+// retry, fail-soft) is unchanged and still worth exercising. These tests
+// inject an active-weeknight fixture so they test the loop, not the data
+// file's current active flags. (Mon/Tue/Wed = all four levels, Thu = Green/
+// Yellow → 4+4+4+2 = 14 rows/week.)
+const WEEKNIGHT_FIXTURE: RecurringTemplate[] = RECURRING_TEMPLATES.filter(
+  (t) => t.weekday >= 1 && t.weekday <= 4,
+).map((t) => ({ ...t, active: true }));
+
 /** A Notion query result page carrying just what the dedup matcher reads.
  * `start` defaults to the template time so only drift tests differ. */
 function notionPage(
@@ -102,62 +112,57 @@ test.describe("upcomingWeekday", () => {
   });
 });
 
-test.describe("recurring templates (audit-verified 2026-07-01)", () => {
-  test("all four weekday evenings exist, active, Mon–Thu", () => {
-    expect(RECURRING_TEMPLATES.map((t) => t.titleBase)).toEqual([
+test.describe("recurring templates (weekend move 2026-07-21)", () => {
+  test("nothing auto-seeds right now — every template is inactive (Aug weekend block is hand-seeded)", () => {
+    // The Aug 2026 weekend run has holes the weekly cron can't express (Sam is
+    // away Aug 8–16; the block starts Aug 1), so it's hand-seeded in Notion and
+    // all templates stay inactive. Flip the weekend templates active to resume
+    // open-ended auto-seeding once the cadence runs gap-free.
+    expect(RECURRING_TEMPLATES.every((t) => t.active === false)).toBe(true);
+  });
+
+  test("weekend format: Wood Sat + Walter Johnson Sun, Red/Orange 6–7 then Green/Yellow 7–8", () => {
+    const sat = RECURRING_TEMPLATES.filter((t) => t.titleBase === "Wood Saturday Evening");
+    expect(sat.map((t) => t.weekday)).toEqual([6, 6]);
+    const [satEarly, satLate] = sat;
+    expect(satEarly.startTime).toBe("6:00 PM");
+    expect(satEarly.endTime).toBe("7:00 PM");
+    expect(satEarly.levels).toEqual(["Red", "Orange"]);
+    expect(satLate.startTime).toBe("7:00 PM");
+    expect(satLate.endTime).toBe("8:00 PM");
+    expect(satLate.levels).toEqual(["Green", "Yellow"]);
+    expect(satEarly.location).toContain("Earle B. Wood");
+    expect(satEarly.publicArea).toBe("Rockville, MD");
+
+    const sun = RECURRING_TEMPLATES.filter(
+      (t) => t.titleBase === "Walter Johnson Sunday Evening",
+    );
+    expect(sun.map((t) => t.weekday)).toEqual([0, 0]);
+    expect(sun[0].levels).toEqual(["Red", "Orange"]);
+    expect(sun[0].startTime).toBe("6:00 PM");
+    expect(sun[1].levels).toEqual(["Green", "Yellow"]);
+    expect(sun[1].startTime).toBe("7:00 PM");
+    expect(sun[0].location).toContain("Walter Johnson");
+    expect(sun[0].publicArea).toBe("Bethesda, MD");
+  });
+
+  test("retired weeknight templates are retained (row-family idempotency) but inactive", () => {
+    const weeknights = RECURRING_TEMPLATES.filter((t) => t.weekday >= 1 && t.weekday <= 4);
+    expect(weeknights.map((t) => t.titleBase)).toEqual([
       "Ridgeview Monday Evening",
       "Redland Tuesday Evening",
       "Westland Wednesday Evening",
       "Shannon Thursday Evening",
     ]);
-    expect(RECURRING_TEMPLATES.map((t) => t.weekday)).toEqual([1, 2, 3, 4]);
-    expect(RECURRING_TEMPLATES.every((t) => t.active)).toBe(true);
-  });
-
-  test("Tuesday runs 6:30–7:30 PM (MCPS permit #684275 covers 6:30+ only) and keeps the legacy Olney prefix", () => {
-    const tue = template("Redland Tuesday Evening");
-    expect(tue.startTime).toBe("6:30 PM");
-    expect(tue.endTime).toBe("7:30 PM");
-    expect(templateTitlePrefixes(tue)).toEqual([
+    expect(weeknights.map((t) => t.weekday)).toEqual([1, 2, 3, 4]);
+    expect(weeknights.every((t) => t.active === false)).toBe(true);
+    // Redland keeps its legacy Olney prefix so old rows still match.
+    expect(templateTitlePrefixes(template("Redland Tuesday Evening"))).toEqual([
       "Redland Tuesday Evening",
       "Olney Tuesday Evening",
     ]);
-    expect(tue.location).toBe(
-      "Redland Middle School Tennis Courts, 6505 Muncaster Mill Rd, Rockville, MD 20855",
-    );
-    expect(tue.publicArea).toBe("Derwood, MD");
-    expect(tue.levels).toEqual(["Red", "Orange", "Green", "Yellow"]);
-    expect(tue.maxCourts).toBe(2);
-  });
-
-  test("Mon/Wed run all four levels at max 2 courts; every evening is 6:30–7:30 PM", () => {
-    for (const name of ["Ridgeview Monday Evening", "Westland Wednesday Evening"]) {
-      const t = template(name);
-      expect(t.levels).toEqual(["Red", "Orange", "Green", "Yellow"]);
-      expect(t.maxCourts).toBe(2);
-    }
-    for (const t of RECURRING_TEMPLATES) {
-      expect(t.startTime).toBe("6:30 PM");
-      expect(t.endTime).toBe("7:30 PM");
-    }
-    expect(template("Ridgeview Monday Evening").location).toBe(
-      "Ridgeview Middle School Tennis Courts, 16600 Raven Rock Dr, Gaithersburg, MD 20878",
-    );
-    expect(template("Ridgeview Monday Evening").publicArea).toBe("Gaithersburg, MD");
-    expect(template("Westland Wednesday Evening").location).toBe(
-      "Westland Middle School Tennis Courts, 5511 Massachusetts Ave, Bethesda, MD 20816",
-    );
-    expect(template("Westland Wednesday Evening").publicArea).toBe("Bethesda, MD");
-  });
-
-  test("Thursday (Shannon) seeds Green/Yellow ONLY, at max 3 courts", () => {
-    const thu = template("Shannon Thursday Evening");
-    expect(thu.levels).toEqual(["Green", "Yellow"]);
-    expect(thu.maxCourts).toBe(3);
-    expect(thu.location).toBe(
-      "Odessa Shannon Middle School Tennis Courts, 11800 Monticello Ave, Silver Spring, MD 20902",
-    );
-    expect(thu.publicArea).toBe("Silver Spring, MD");
+    // Thursday stayed Green/Yellow only.
+    expect(template("Shannon Thursday Evening").levels).toEqual(["Green", "Yellow"]);
   });
 });
 
@@ -207,7 +212,7 @@ test.describe("ensureWeeklyTemplates", () => {
 
   test("empty DB → seeds every active template's levels for one week (4+4+4+2 = 14 rows), Thursday only Green/Yellow", async () => {
     stub.on(`/databases/${SESSIONS_DB}/query`, EMPTY_QUERY).on("/pages", { id: "new" });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.created).toHaveLength(14);
     expect(result.failed).toEqual([]);
     expect(result.skipped).toBe(0);
@@ -233,7 +238,7 @@ test.describe("ensureWeeklyTemplates", () => {
         next_cursor: null,
       })
       .on("/pages", { id: "new" });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.skipped).toBe(1);
     expect(result.created).toHaveLength(13);
     expect(result.created.some((c) => c.includes("2026-07-07") && c.endsWith("— Red"))).toBe(false);
@@ -257,7 +262,7 @@ test.describe("ensureWeeklyTemplates", () => {
         next_cursor: null,
       })
       .on("/pages", { id: "new" });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.skipped).toBe(1);
     expect(result.created.some((c) => c.includes("2026-07-07") && c.endsWith("— Orange"))).toBe(
       false,
@@ -279,7 +284,7 @@ test.describe("ensureWeeklyTemplates", () => {
         ? { status: 500, json: { message: "boom" } }
         : { status: 200, json: { id: "new" } };
     });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     // Mon/Tue/Wed each attempt Red and fail; the other 11 rows still land.
     expect(result.failed).toHaveLength(3);
     expect(result.failed.every((f) => f.endsWith("— Red"))).toBe(true);
@@ -294,7 +299,11 @@ test.describe("ensureWeeklyTemplates", () => {
       next_cursor: null,
     });
     // Deliberately no /pages rule: any create attempt would throw loudly.
-    const result = await ensureWeeklyTemplates(TODAY, 1, { dryRun: true, throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, {
+      templates: WEEKNIGHT_FIXTURE,
+      dryRun: true,
+      throttleMs: 0,
+    });
     expect(result.dryRun).toBe(true);
     expect(stub.callsTo("/pages")).toHaveLength(0);
     expect(result.created).toEqual([]);
@@ -306,9 +315,8 @@ test.describe("ensureWeeklyTemplates", () => {
   });
 
   test("an inactive template seeds nothing (and its dates aren't attempted)", async () => {
-    const inactiveThu: RecurringTemplate = { ...template("Shannon Thursday Evening"), active: false };
-    const templates = RECURRING_TEMPLATES.map((t) =>
-      t.titleBase === "Shannon Thursday Evening" ? inactiveThu : t,
+    const templates = WEEKNIGHT_FIXTURE.map((t) =>
+      t.titleBase === "Shannon Thursday Evening" ? { ...t, active: false } : t,
     );
     stub.on(`/databases/${SESSIONS_DB}/query`, EMPTY_QUERY).on("/pages", { id: "new" });
     const result = await ensureWeeklyTemplates(TODAY, 1, { templates, throttleMs: 0 });
@@ -321,7 +329,7 @@ test.describe("ensureWeeklyTemplates", () => {
 
   test("missing env → config_missing failure entry, never a green no-op (F4)", async () => {
     delete process.env.NOTION_SESSIONS_DB_ID;
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.created).toEqual([]);
     expect(result.skipped).toBe(0);
     expect(stub.calls).toHaveLength(0);
@@ -333,7 +341,7 @@ test.describe("ensureWeeklyTemplates", () => {
   test("both env vars missing → config_missing names both", async () => {
     delete process.env.NOTION_API_KEY;
     delete process.env.NOTION_SESSIONS_DB_ID;
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.failures).toHaveLength(1);
     expect(result.failures[0].signature).toBe("config_missing");
     expect(result.failures[0].detail).toContain("NOTION_API_KEY");
@@ -351,7 +359,7 @@ test.describe("ensureWeeklyTemplates", () => {
         next_cursor: null,
       })
       .on("/pages", { id: "new" });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     // All 14 rows still seed — including Tuesday Red.
     expect(result.skipped).toBe(0);
     expect(result.created).toHaveLength(14);
@@ -370,7 +378,7 @@ test.describe("ensureWeeklyTemplates", () => {
         next_cursor: null,
       })
       .on("/pages", { id: "new" });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.skipped).toBe(1);
     expect(result.created).toHaveLength(13);
     expect(
@@ -391,7 +399,7 @@ test.describe("ensureWeeklyTemplates", () => {
         next_cursor: null,
       })
       .on("/pages", { id: "new" });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.skipped).toBe(3);
     const drift = result.failures.filter((f) => f.signature === "time_drift");
     expect(drift).toHaveLength(1); // rolled up, not per-row
@@ -415,7 +423,7 @@ test.describe("ensureWeeklyTemplates", () => {
         next_cursor: null,
       })
       .on("/pages", { id: "new" });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.failures).toEqual([]);
   });
 
@@ -438,7 +446,12 @@ test.describe("ensureWeeklyTemplates", () => {
       legacyTitlePrefixes: ["Broken Thursday Evening"],
       levels: [] as unknown as RecurringTemplate["levels"],
     };
-    const templates = [badWeekday, template("Redland Tuesday Evening"), badTime, badLevels];
+    const templates = [
+      badWeekday,
+      { ...template("Redland Tuesday Evening"), active: true },
+      badTime,
+      badLevels,
+    ];
     stub.on(`/databases/${SESSIONS_DB}/query`, EMPTY_QUERY).on("/pages", { id: "new" });
     const result = await ensureWeeklyTemplates(TODAY, 1, { templates, throttleMs: 0 });
     const invalid = result.failures.filter((f) => f.signature === "config_invalid");
@@ -481,7 +494,7 @@ test.describe("ensureWeeklyTemplates", () => {
       }
       return { status: 200, json: { id: "new" } };
     });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(tueRedAttempts).toBe(2); // first attempt 429'd, retry landed
     expect(result.created).toHaveLength(14);
     expect(result.failed).toEqual([]);
@@ -498,7 +511,7 @@ test.describe("ensureWeeklyTemplates", () => {
         ? { status: 429, json: { message: "rate limited" } }
         : { status: 200, json: { id: "new" } };
     });
-    const result = await ensureWeeklyTemplates(TODAY, 1, { throttleMs: 0 });
+    const result = await ensureWeeklyTemplates(TODAY, 1, { templates: WEEKNIGHT_FIXTURE, throttleMs: 0 });
     expect(result.failed).toHaveLength(1);
     expect(result.failed[0]).toContain("Redland Tuesday Evening — Red");
     expect(result.created).toHaveLength(13);
@@ -559,7 +572,10 @@ test.describe("seed route dryRun handling (F6, route-level)", () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.dryRun).toBe(true);
-      expect(body.wouldCreate.length).toBeGreaterThan(0);
+      // All live templates are inactive (weekend move — Aug is hand-seeded), so
+      // the route plans zero rows; the invariant under test is that a dry run
+      // writes NOTHING regardless of how many rows it would create.
+      expect(Array.isArray(body.wouldCreate)).toBe(true);
       expect(stub.callsTo("/pages")).toHaveLength(0);
     }
   });
