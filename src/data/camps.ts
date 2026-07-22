@@ -99,8 +99,8 @@ export const CAMPS: Camp[] = [
     startDate: "2026-08-17",
     endDate: "2026-08-20",
     makeupDate: "2026-08-21",
-    publicArea: "Bethesda, MD",
-    exactLocation: "Walter Johnson High School, 6400 Rock Spring Dr, Bethesda, MD 20814",
+    publicArea: "Rockville, MD",
+    exactLocation: "Earle B. Wood Middle School, 14615 Bauer Dr, Rockville, MD 20853",
   },
 ];
 
