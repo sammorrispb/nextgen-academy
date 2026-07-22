@@ -21,6 +21,15 @@ import {
 
 const SESSION_ROW_ID = "11111111-1111-1111-1111-111111111111";
 
+// The weeknight templates were retired to `active: false` in the 2026-07-21
+// weekend move, so NO live template is active and the F5 seeder-managed guard
+// is dormant. The guard LOGIC is unchanged and still fires the moment a
+// template is active again, so the pure tests below inject an active-weeknight
+// fixture to keep pinning it (title + level + weekday + active must ALL match).
+const WEEKNIGHT_FIXTURE = RECURRING_TEMPLATES.filter(
+  (t) => t.weekday >= 1 && t.weekday <= 4,
+).map((t) => ({ ...t, active: true }));
+
 // ── Notion drop-in page factory (shape pageToDropIn reads) ──
 function dropInPage(opts: {
   id: string;
@@ -105,50 +114,56 @@ test.describe("planRescheduleRoster (pure)", () => {
 test.describe("isSeederManagedRow (pure, F5) — title+level+weekday must ALL match an active template", () => {
   // 2026-07-06 Mon · 07-07 Tue · 07-08 Wed · 07-09 Thu · 07-11 Sat
   test("rows the seeder actually manages are blocked (incl. legacy Olney prefix)", () => {
-    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" })).toBe(true);
-    expect(isSeederManagedRow({ title: "Olney Tuesday Evening — Yellow", date: "2026-07-07" })).toBe(true);
-    expect(isSeederManagedRow({ title: "Ridgeview Monday Evening — Green", date: "2026-07-06" })).toBe(true);
-    expect(isSeederManagedRow({ title: "Westland Wednesday Evening — Red", date: "2026-07-08" })).toBe(true);
-    expect(isSeederManagedRow({ title: "Shannon Thursday Evening — Yellow", date: "2026-07-09" })).toBe(true);
+    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" }, WEEKNIGHT_FIXTURE)).toBe(true);
+    expect(isSeederManagedRow({ title: "Olney Tuesday Evening — Yellow", date: "2026-07-07" }, WEEKNIGHT_FIXTURE)).toBe(true);
+    expect(isSeederManagedRow({ title: "Ridgeview Monday Evening — Green", date: "2026-07-06" }, WEEKNIGHT_FIXTURE)).toBe(true);
+    expect(isSeederManagedRow({ title: "Westland Wednesday Evening — Red", date: "2026-07-08" }, WEEKNIGHT_FIXTURE)).toBe(true);
+    expect(isSeederManagedRow({ title: "Shannon Thursday Evening — Yellow", date: "2026-07-09" }, WEEKNIGHT_FIXTURE)).toBe(true);
   });
 
   test("weekday mismatch → NOT managed (hand-moved row reschedules normally)", () => {
     // A Tuesday-titled row sitting on a Saturday: the seeder will never touch
     // that date, so blocking its reschedule was pure friction.
-    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-11" })).toBe(false);
-    expect(isSeederManagedRow({ title: "Ridgeview Monday Evening — Green", date: "2026-07-07" })).toBe(false);
+    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-11" }, WEEKNIGHT_FIXTURE)).toBe(false);
+    expect(isSeederManagedRow({ title: "Ridgeview Monday Evening — Green", date: "2026-07-07" }, WEEKNIGHT_FIXTURE)).toBe(false);
   });
 
   test("level outside the template's levels → NOT managed (Shannon seeds Green/Yellow only)", () => {
     expect(
-      isSeederManagedRow({ title: "Shannon Thursday Evening — Red", date: "2026-07-09", level: "Red" }),
+      isSeederManagedRow({ title: "Shannon Thursday Evening — Red", date: "2026-07-09", level: "Red" }, WEEKNIGHT_FIXTURE),
     ).toBe(false);
     expect(
-      isSeederManagedRow({ title: "Shannon Thursday Evening — Green", date: "2026-07-09", level: "Green" }),
+      isSeederManagedRow({ title: "Shannon Thursday Evening — Green", date: "2026-07-09", level: "Green" }, WEEKNIGHT_FIXTURE),
     ).toBe(true);
   });
 
   test("explicit level wins over the title suffix", () => {
     // Row hand-retitled but its Level select says Red — Shannon doesn't seed Red.
     expect(
-      isSeederManagedRow({ title: "Shannon Thursday Evening — Green", date: "2026-07-09", level: "Red" }),
+      isSeederManagedRow({ title: "Shannon Thursday Evening — Green", date: "2026-07-09", level: "Red" }, WEEKNIGHT_FIXTURE),
     ).toBe(false);
   });
 
   test("an INACTIVE template's rows are not managed", () => {
-    const inactive = RECURRING_TEMPLATES.map((t) =>
+    const oneInactive = WEEKNIGHT_FIXTURE.map((t) =>
       t.titleBase === "Redland Tuesday Evening" ? { ...t, active: false } : t,
     );
     expect(
-      isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" }, inactive),
+      isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" }, oneInactive),
     ).toBe(false);
   });
 
+  test("with all live templates retired (inactive), nothing is seeder-managed", () => {
+    // Default templates arg = the live RECURRING_TEMPLATES, all inactive now.
+    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" })).toBe(false);
+    expect(isSeederManagedRow({ title: "Wood Saturday Evening — Red", date: "2026-08-01" })).toBe(false);
+  });
+
   test("non-recurring titles / bad dates are never managed", () => {
-    expect(isSeederManagedRow({ title: "Green Saturday", date: "2026-07-11" })).toBe(false);
-    expect(isSeederManagedRow({ title: "", date: "2026-07-07" })).toBe(false);
-    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "" })).toBe(false);
-    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "not-a-date" })).toBe(false);
+    expect(isSeederManagedRow({ title: "Green Saturday", date: "2026-07-11" }, WEEKNIGHT_FIXTURE)).toBe(false);
+    expect(isSeederManagedRow({ title: "", date: "2026-07-07" }, WEEKNIGHT_FIXTURE)).toBe(false);
+    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "" }, WEEKNIGHT_FIXTURE)).toBe(false);
+    expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "not-a-date" }, WEEKNIGHT_FIXTURE)).toBe(false);
   });
 });
 
@@ -256,15 +271,20 @@ test.describe("executeSessionReschedule (integration, offline)", () => {
     expect(stub.callsTo("api.resend.com").length).toBe(0);
   });
 
-  test("rejects a seeder-managed row (template title, matching weekday+level) before any network call", async () => {
+  test("a retired weeknight row reschedules normally now its template is inactive (guard dormant)", async () => {
+    // Pre-weekend-move this was blocked as seeder-managed. With the Tuesday
+    // template retired to inactive, the seeder will never re-create the row, so
+    // the F5 guard correctly no longer blocks it — it reschedules like any row.
+    stub
+      .on("/databases/", queryResult([]))
+      .on("/pages/", { id: "x", properties: {} });
     const res = await executeSessionReschedule({
       ...baseInput,
       sessionTitle: "Redland Tuesday Evening — Red",
-      oldDate: "2026-06-16", // a Tuesday — the seeder owns this slot
+      oldDate: "2026-06-16", // a Tuesday — but the template is inactive now
     });
-    expect(res.ok).toBe(false);
-    expect(res.message).toMatch(/auto-seeded/i);
-    expect(stub.calls.length).toBe(0);
+    expect(res.ok).toBe(true);
+    expect(stub.callsTo(SESSION_ROW_ID).length).toBe(1); // session row advanced
   });
 
   test("a template-titled row on a NON-template weekday reschedules normally (F5 scope-narrowing)", async () => {
