@@ -18,7 +18,7 @@ export const revalidate = 43200; // 12h
 export const metadata: Metadata = {
   title: `Summer Pickleball Camp | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
   description:
-    "Next Gen Pickleball Academy summer morning camp in Gaithersburg, MD, for ages 8 and up — small groups, real coaching. $50 a morning, or $150 for the full week.",
+    "Next Gen Pickleball Academy summer morning camp in Montgomery County, MD, for ages 8 and up — small groups, real coaching. $50 a morning, or $150 for the full week.",
   alternates: { canonical: `${SITE_ORIGIN}/camp` },
 };
 
@@ -88,7 +88,7 @@ export default function CampIndexPage() {
         name: camp.publicArea,
         address: {
           "@type": "PostalAddress",
-          addressLocality: "Gaithersburg",
+          addressLocality: camp.publicArea.split(",")[0].trim(),
           addressRegion: "MD",
         },
       },
@@ -118,14 +118,14 @@ export default function CampIndexPage() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center">
             <p className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-ngpa-teal/15 text-ngpa-teal-bright text-xs font-bold tracking-wider uppercase mb-4">
-              Summer 2026 · Gaithersburg
+              Summer 2026 · Montgomery County
             </p>
             <h1 className="font-heading text-3xl sm:text-5xl font-extrabold text-ngpa-white tracking-tight">
               Next Gen Summer Pickleball Camp
             </h1>
             <p className="mt-4 text-lg text-ngpa-muted max-w-2xl mx-auto leading-relaxed">
               High-energy pickleball for ages {CAMP_AGE_MIN}–{CAMP_AGE_MAX} in
-              Gaithersburg. Small groups, real coaching, and a ton of fun —
+              Montgomery County. Small groups, real coaching, and a ton of fun —
               campers leave more confident than they arrived.
               {weeksLeft > 0 && (
                 <>
@@ -142,7 +142,7 @@ export default function CampIndexPage() {
             <div className="relative aspect-[16/10]">
               <Image
                 src="/images/camp-action.jpeg"
-                alt="Players rallying on the courts at a Next Gen Pickleball Academy summer camp in Gaithersburg."
+                alt="Players rallying on the courts at a Next Gen Pickleball Academy summer camp."
                 fill
                 className="object-cover object-center"
                 sizes="(max-width: 768px) 100vw, 768px"
@@ -225,7 +225,7 @@ export default function CampIndexPage() {
                   {formatLongDate(camp.endDate)}
                 </p>
                 <p className="text-sm text-ngpa-muted mt-1">
-                  Mon–Thu · Gaithersburg, MD
+                  Mon–Thu · {camp.publicArea}
                 </p>
                 <p className="text-xs font-semibold text-ngpa-teal-bright mt-2">
                   Starts {weekdayLong(camp.startDate)} · register by{" "}

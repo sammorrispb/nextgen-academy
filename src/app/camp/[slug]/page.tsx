@@ -29,7 +29,7 @@ export async function generateMetadata({
   if (!camp) return { title: "Camp not found · Next Gen Pickleball Academy" };
   return {
     title: `${camp.title} (${camp.weekLabel}) | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
-    description: `Register for Next Gen Pickleball ${camp.title} — ${camp.weekLabel}, Mon–Thu mornings in Gaithersburg, MD. Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} — $50 a morning, or $150 for the full week.`,
+    description: `Register for Next Gen Pickleball ${camp.title} — ${camp.weekLabel}, Mon–Thu mornings in ${camp.publicArea}. Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} — $50 a morning, or $150 for the full week.`,
     alternates: { canonical: `${SITE_ORIGIN}/camp/${camp.slug}` },
   };
 }
@@ -68,7 +68,7 @@ export default async function CampWeekPage({ params }: PageProps) {
           </h1>
           <p className="mt-2 text-ngpa-muted">
             {formatLongDate(camp.startDate)} – {formatLongDate(camp.endDate)}{" "}
-            (Mon–Thu) · Gaithersburg, MD · ages {CAMP_AGE_MIN}–{CAMP_AGE_MAX}
+            (Mon–Thu) · {camp.publicArea} · ages {CAMP_AGE_MIN}–{CAMP_AGE_MAX}
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export default async function CampWeekPage({ params }: PageProps) {
             </li>
             <li>
               <span className="text-ngpa-white font-semibold">Location:</span>{" "}
-              Gaithersburg, MD — exact site shared with registered families
+              {camp.publicArea} — exact site shared with registered families
               before camp.
             </li>
           </ul>

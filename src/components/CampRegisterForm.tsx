@@ -378,7 +378,7 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
 
       <p className="text-ngpa-white/55 text-xs text-center mt-4">
         Secure checkout by Stripe. We&rsquo;ll email your camp confirmation and
-        share the exact Gaithersburg location before camp starts.
+        share the exact location before camp starts.
       </p>
     </form>
   );
