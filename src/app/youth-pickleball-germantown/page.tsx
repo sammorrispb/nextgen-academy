@@ -27,8 +27,15 @@ export default function GermantownPage() {
     <CityLanding
       city="Germantown"
       slug="youth-pickleball-germantown"
-      intro="Next Gen Pickleball Academy coaches kids ages 6–16 from Germantown and the surrounding MoCo neighborhoods. Small-group sessions for kids who can rally, and private lessons for anyone still learning — a clear pathway from first paddle touch to tournament play. Start with a free 30-minute evaluation."
-      whereWePlay="We serve players from Germantown and surrounding MoCo neighborhoods at our rotating MCPS locations across Montgomery County — including Walter Johnson HS, Gaithersburg, and Sherwood-cluster venues. The court that's closest to you depends on what's open for the week."
+      intro="Germantown kids 6–16 train with us at venues a straight shot down I-270 — Sunday evenings at Walter Johnson High School in Bethesda, Saturdays at Earle B. Wood Middle School in Rockville — plus summer camp weeks in nearby Gaithersburg. Start with a free 30-minute evaluation and we'll find the slot that fits your drive."
+      whereWePlay="The closest options from Germantown are usually the Gaithersburg summer camps and the fall classes at Apple Ridge in Montgomery Village; the weekly group sessions run down-county on weekend evenings. Venue lineups change seasonally based on where families are — if enough Germantown families want a closer crew, tell us on the crew-interest form."
+      cityFaq={[
+        {
+          question: "Is there anything closer to Germantown?",
+          answer:
+            "The Gaithersburg camp weeks and the Montgomery Village fall classes are the closest programs today; weekly group sessions currently run down-county in Rockville and Bethesda on weekend evenings. If your family wants a Germantown-side crew, the Find Your Kid's Crew form is exactly how new venues get started.",
+        },
+      ]}
     />
   );
 }

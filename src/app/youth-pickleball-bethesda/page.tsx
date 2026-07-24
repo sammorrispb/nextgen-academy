@@ -29,8 +29,15 @@ export default function BethesdaPage() {
     <CityLanding
       city="Bethesda"
       slug="youth-pickleball-bethesda"
-      intro="Next Gen Pickleball Academy coaches kids ages 6–16 from Bethesda and the surrounding MoCo neighborhoods. Small-group sessions for kids who can rally, and private lessons for anyone still learning — a clear pathway from first paddle touch to tournament play. Start with a free 30-minute evaluation."
-      whereWePlay="We serve players from Bethesda and surrounding MoCo neighborhoods at our rotating MCPS locations across Montgomery County — including Walter Johnson HS, Gaithersburg, and Sherwood-cluster venues. The court that's closest to you depends on what's open for the week."
+      intro="Bethesda is one of our home bases: this season's Sunday-evening group sessions run at Walter Johnson High School on Rock Spring Drive, with a court for every level — Red, Orange, Green, and Yellow. Kids 6–16 from Bethesda and Chevy Chase start with a free 30-minute evaluation, then drop in at the level that fits — no subscription, no long-term commitment."
+      whereWePlay="Walter Johnson HS is the closest regular venue for most Bethesda families, and we've also coached Bethesda kids at Westland Middle School in past seasons. Saturday evenings run at Earle B. Wood Middle School in Rockville if that end of the weekend works better for your crew — same format at both: one court per level, four players per court."
+      cityFaq={[
+        {
+          question: "Where do Bethesda kids play with Next Gen?",
+          answer:
+            "This season's Sunday group sessions run at Walter Johnson High School (6400 Rock Spring Dr) right in Bethesda, with Saturday sessions at Earle B. Wood Middle School in Rockville. Venues can shift season to season, so check the schedule page for this week's exact slots.",
+        },
+      ]}
     />
   );
 }
