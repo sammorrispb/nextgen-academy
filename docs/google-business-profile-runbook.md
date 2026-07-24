@@ -48,11 +48,18 @@ don't stop at step 1.
 
 ## 3. Grab the review link → unblock the camp follow-up
 
+**DONE 2026-07-24** — profile created; the live review link is:
+
+    https://g.page/r/Cf9bOH1vS8e-EBE/review
+
+(verified resolving 302→200 into Google's review flow)
+
 1. In the GBP dashboard, hit **Ask for reviews** — copy the short share link
    (`https://g.page/r/.../review`).
 2. Vercel → nextgen-academy → Settings → Environment Variables → add
    `NGA_GOOGLE_REVIEW_URL` = that link (Production). No redeploy needed — the
-   route reads it at request time.
+   route reads it at request time. (One-off alternative: pass
+   `"reviewUrl": "<link>"` in the POST body — it overrides the env var.)
 3. Dry-run, eyeball, send:
    ```bash
    curl -X POST "https://nextgenpbacademy.com/api/camp-followup?secret=$NGA_ADMIN_SECRET" \
