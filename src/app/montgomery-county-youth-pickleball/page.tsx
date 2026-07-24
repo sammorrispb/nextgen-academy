@@ -10,7 +10,7 @@ import { testimonials } from "@/data/testimonials";
 import JsonLd from "@/components/JsonLd";
 import LeadForm from "@/components/LeadForm";
 import TrackedCTA from "@/components/TrackedCTA";
-import { NGA_POSTAL_ADDRESS, areaServedJsonLd } from "@/lib/seo";
+import { NGA_POSTAL_ADDRESS, areaServedJsonLd, CITY_LANDING_PAGES } from "@/lib/seo";
 
 export const metadata: Metadata = {
   // Absolute title so the rendered <title> stays inside Google's ~60-char
@@ -190,14 +190,26 @@ export default function MontgomeryCountyPage() {
             Families regularly drive in from
           </h3>
           <ul className="flex flex-wrap gap-2">
-            {SERVED_TOWNS.map((town) => (
-              <li
-                key={town}
-                className="px-4 py-2 bg-ngpa-panel/80 border border-ngpa-slate/60 rounded-full text-sm font-medium text-ngpa-white/85"
-              >
-                {town}
-              </li>
-            ))}
+            {SERVED_TOWNS.map((town) => {
+              const cityPage = CITY_LANDING_PAGES.find((p) => p.city === town);
+              return (
+                <li
+                  key={town}
+                  className="px-4 py-2 bg-ngpa-panel/80 border border-ngpa-slate/60 rounded-full text-sm font-medium text-ngpa-white/85"
+                >
+                  {cityPage ? (
+                    <Link
+                      href={`/${cityPage.slug}`}
+                      className="hover:text-ngpa-teal transition-colors"
+                    >
+                      {town}
+                    </Link>
+                  ) : (
+                    town
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </section>

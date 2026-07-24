@@ -17,7 +17,7 @@ moves the item to the **Done log** below.
 - Never push to main directly — always PR.
 - Never auto-merge.
 - Each city page must have unique substance — coach POV per location, hand-written. No template duplication.
-- Pricing: $35 drop-in only (Red), $45 (other tiers). Monthly subscription model is **retired** — never reference it. Source of truth: existing pricing components.
+- Pricing: $20 per 1-hour drop-in slot, all tiers. Monthly subscription model is **retired** — never reference it. Source of truth: existing pricing components.
 - `npm run build` must pass before PR.
 - JSON-LD must validate via `seo-sweep-state/tools/validate-jsonld.mjs`.
 
@@ -29,7 +29,7 @@ moves the item to the **Done log** below.
 - [ ] (schema, S) Add `/yellowball/inquiry` to `src/app/sitemap.ts` (currently missing — sitemap has 5 of 7 routes). Keep `/schedule/success` excluded (post-conversion, intentional).
 - [ ] (schema, S) Update `/schedule` `<title>` via `generateMetadata` to include "Montgomery County" — e.g. `"NGA Drop-in Schedule | Montgomery County Youth Pickleball"`. Currently omits the county and weakens local SEO.
 - [ ] (schema, S) Add BreadcrumbList JSON-LD to `/`, `/schedule`, `/free-evaluation`, `/schools`, `/yellowball/inquiry`. (Already on `/montgomery-county-youth-pickleball`.)
-- [ ] (schema, M) Add `SportsEvent` JSON-LD per session on `/schedule`. For each `NgaSession`: `name` (session title), `startDate`/`endDate` (ISO from session date + start/end times), `location` as Place with name + address (resolve via existing location data), `offers` ($35 USD, `availability` based on `s.status`), `maximumAttendeeCapacity` and `remainingAttendeeCapacity`, `sport: "Pickleball"`, `audience.suggestedMinAge`/`suggestedMaxAge` derived from level. Render inside the existing session `.map()` via the existing `<JsonLd>` component.
+- [ ] (schema, M) Add `SportsEvent` JSON-LD per session on `/schedule`. For each `NgaSession`: `name` (session title), `startDate`/`endDate` (ISO from session date + start/end times), `location` as Place with name + address (resolve via existing location data), `offers` ($20 USD, `availability` based on `s.status`), `maximumAttendeeCapacity` and `remainingAttendeeCapacity`, `sport: "Pickleball"`, `audience.suggestedMinAge`/`suggestedMaxAge` derived from level. Render inside the existing session `.map()` via the existing `<JsonLd>` component.
 - [ ] (schema, S) Add `Service` JSON-LD to `/free-evaluation` (copy the pattern from `/schools/page.tsx`). Free evaluation as a Service offering with `provider`, `areaServed: "Montgomery County, MD"`, `audience: "EducationalAudience"` ages 5-16, `price: 0`.
 - [ ] (schema, M) Add 4 `Course` JSON-LD entities on `/` (one per Red/Orange/Green/Yellow tier). Each with `provider` referencing the org, `educationalLevel`, `audience.suggestedMinAge`/`suggestedMaxAge`, `coursePrerequisites` (the prior tier name), `hasCourseInstance` linking to `/schedule`. Reuse data from the existing `LevelCard` / level rendering.
 

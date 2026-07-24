@@ -10,6 +10,8 @@ import TrackedCTA from "@/components/TrackedCTA";
 import {
   breadcrumbJsonLd,
   localBusinessJsonLd,
+  cityPageForCity,
+  CITY_NEIGHBORS,
   SITE_URL,
   type ServiceCity,
 } from "@/lib/seo";
@@ -87,6 +89,9 @@ export default function CityLanding({
   const description = `Youth pickleball coaching for kids ages 6–16 in ${city}, MD — and across Montgomery County. Free evaluations, small-group sessions, and private lessons with Next Gen Pickleball Academy.`;
   const cluster = getClusterForCity(city);
   const clusterClasses = cluster ? CLUSTER_ACCENT_CLASSES[cluster.slug] : null;
+  const neighborPages = (CITY_NEIGHBORS[city] ?? [])
+    .map(cityPageForCity)
+    .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
   return (
     <>
@@ -378,6 +383,36 @@ export default function CityLanding({
             </a>
             .
           </p>
+        </div>
+      </section>
+
+      {/* ─── Nearby areas — cross-links so the city pages link each other
+             (and the county hub) instead of being internal-link orphans ── */}
+      <section className="bg-ngpa-deep py-12 sm:py-14 px-4 sm:px-6 lg:px-10">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-heading text-xs font-bold text-ngpa-white uppercase tracking-[0.2em] mb-4">
+            Nearby Areas We Serve
+          </h2>
+          <ul className="flex flex-wrap gap-x-5 gap-y-2.5 text-sm text-ngpa-white/70">
+            {neighborPages.map((page) => (
+              <li key={page.slug}>
+                <Link
+                  href={`/${page.slug}`}
+                  className="hover:text-ngpa-teal transition-colors underline-offset-4 hover:underline"
+                >
+                  Youth pickleball in {page.city}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link
+                href="/montgomery-county-youth-pickleball"
+                className="hover:text-ngpa-teal transition-colors underline-offset-4 hover:underline"
+              >
+                All of Montgomery County
+              </Link>
+            </li>
+          </ul>
         </div>
       </section>
 
