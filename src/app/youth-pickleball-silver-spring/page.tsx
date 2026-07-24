@@ -27,8 +27,15 @@ export default function SilverSpringPage() {
     <CityLanding
       city="Silver Spring"
       slug="youth-pickleball-silver-spring"
-      intro="Next Gen Pickleball Academy coaches kids ages 6–16 from Silver Spring and the surrounding MoCo neighborhoods. Small-group sessions for kids who can rally, and private lessons for anyone still learning — a clear pathway from first paddle touch to tournament play. Start with a free 30-minute evaluation."
-      whereWePlay="We serve players from Silver Spring and surrounding MoCo neighborhoods at our rotating MCPS locations across Montgomery County — including Walter Johnson HS, Gaithersburg, and Sherwood-cluster venues. The court that's closest to you depends on what's open for the week."
+      intro="Silver Spring families have trained with us at Odessa Shannon Middle School in past seasons. This season's group sessions for kids 6–16 run on weekend evenings at Earle B. Wood Middle School in Rockville — an easy ride up Layhill or Norbeck from north Silver Spring — and Walter Johnson High School in Bethesda. Start with a free 30-minute evaluation."
+      whereWePlay="From most of Silver Spring, Wood MS on Bauer Drive is the closer weekend venue; down-county families may find the Bethesda Sundays easier. We've run Silver Spring evenings before — if your family wants sessions back on this side of the county, the crew-interest form is how that happens."
+      cityFaq={[
+        {
+          question: "Have you run sessions in Silver Spring?",
+          answer:
+            "Yes — past seasons included weekly evenings at Odessa Shannon Middle School in Silver Spring. This season's group sessions run at Earle B. Wood MS in Rockville and Walter Johnson HS in Bethesda; check the schedule page for current slots, and use the crew-interest form if you'd like Silver Spring sessions back.",
+        },
+      ]}
     />
   );
 }
