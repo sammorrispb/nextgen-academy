@@ -5,7 +5,7 @@ import LeadForm from "@/components/LeadForm";
 import JsonLd from "@/components/JsonLd";
 import { testimonials } from "@/data/testimonials";
 import { site } from "@/data/site";
-import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+import { areaServedJsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 
 const PAGE_TITLE = "Free Youth Pickleball Evaluation — Montgomery County, MD";
 const PAGE_DESCRIPTION =
@@ -50,6 +50,34 @@ export default function FreeEvaluationPage() {
             url: `${SITE_URL}/free-evaluation`,
           },
         ])}
+      />
+
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Service",
+          name: "Free 30-Minute Youth Pickleball Evaluation",
+          serviceType: "Youth pickleball skill evaluation",
+          description: PAGE_DESCRIPTION,
+          url: `${SITE_URL}/free-evaluation`,
+          areaServed: areaServedJsonLd(),
+          audience: {
+            "@type": "PeopleAudience",
+            audienceType: "Children",
+            suggestedMinAge: 6,
+            suggestedMaxAge: 16,
+          },
+          offers: {
+            "@type": "Offer",
+            price: 0,
+            priceCurrency: "USD",
+          },
+          provider: {
+            "@type": "SportsOrganization",
+            name: "Next Gen Pickleball Academy",
+            url: SITE_URL,
+          },
+        }}
       />
 
       {/* ─── Hero + Form ─────────────── */}

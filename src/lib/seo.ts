@@ -22,6 +22,42 @@ export const SERVICE_AREAS = [
 
 export type ServiceCity = (typeof SERVICE_AREAS)[number];
 
+/**
+ * The live city landing pages (subset of SERVICE_AREAS with a dedicated
+ * route). ONE source of truth for the sitemap, the footer "Areas we serve"
+ * block, and the per-city "nearby areas" links — a new city page ships by
+ * adding a row here plus its page file.
+ */
+export const CITY_LANDING_PAGES: { city: ServiceCity; slug: string }[] = [
+  { city: "Bethesda", slug: "youth-pickleball-bethesda" },
+  { city: "North Bethesda", slug: "youth-pickleball-north-bethesda" },
+  { city: "Rockville", slug: "youth-pickleball-rockville" },
+  { city: "Potomac", slug: "youth-pickleball-potomac" },
+  { city: "Gaithersburg", slug: "youth-pickleball-gaithersburg" },
+  { city: "Germantown", slug: "youth-pickleball-germantown" },
+  { city: "Silver Spring", slug: "youth-pickleball-silver-spring" },
+  { city: "Olney", slug: "youth-pickleball-olney" },
+];
+
+/**
+ * Geographic neighbors among the cities that HAVE landing pages — used for
+ * the "nearby areas" cross-links so no city page is an internal-link orphan.
+ */
+export const CITY_NEIGHBORS: Record<string, ServiceCity[]> = {
+  Bethesda: ["North Bethesda", "Potomac", "Silver Spring"],
+  "North Bethesda": ["Bethesda", "Rockville", "Potomac"],
+  Rockville: ["North Bethesda", "Potomac", "Gaithersburg"],
+  Potomac: ["Bethesda", "North Bethesda", "Rockville"],
+  Gaithersburg: ["Rockville", "Germantown", "Olney"],
+  Germantown: ["Gaithersburg", "Rockville", "Potomac"],
+  "Silver Spring": ["Bethesda", "Olney", "Rockville"],
+  Olney: ["Rockville", "Silver Spring", "Gaithersburg"],
+};
+
+export function cityPageForCity(city: ServiceCity) {
+  return CITY_LANDING_PAGES.find((p) => p.city === city);
+}
+
 /** PostalAddress used everywhere — county-level, no street (sessions rotate). */
 export const NGA_POSTAL_ADDRESS = {
   "@type": "PostalAddress",

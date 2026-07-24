@@ -315,7 +315,7 @@ Mobile: 4-col | Tablet: 8-col | Desktop: 12-col
 
 1. All program dates: <time datetime="YYYY-MM-DD"> — never plain text only
 2. All prices: itemprop="price" content="149" — numeric, no $ in attribute
-3. Age ranges: data-age-min="5" data-age-max="16" on all program containers
+3. Age ranges: data-age-min="6" data-age-max="16" on all program containers (6 is the strict floor — no under-6 on-ramp)
 4. Skill levels: use ONLY Red | Orange | Green | Yellow — never synonyms
 5. EASE values always spelled in full when used as labels or metadata
 6. Page title pattern: [Program Name] | Ages [range] | Next Gen Pickleball Academy

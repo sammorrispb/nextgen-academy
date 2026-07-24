@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { site } from "@/data/site";
+import { CITY_LANDING_PAGES } from "@/lib/seo";
 import { familySiteUrl, familyMarketingRef, type FamilyDest } from "@/lib/urls";
 import { trackEvent } from "@/lib/funnelClient";
 
@@ -125,6 +126,31 @@ export default function Footer() {
               </li>
             </ul>
           </div>
+        </div>
+
+        {/* Areas we serve — real inbound links to the local landing pages so
+            they aren't sitemap-only orphans (2026-07 discovery review). */}
+        <div className="mt-12 pt-8 border-t border-ngpa-slate/40">
+          <h4 className="font-heading text-xs font-bold text-ngpa-white uppercase tracking-[0.2em] mb-4">
+            Areas We Serve
+          </h4>
+          <ul className="flex flex-wrap gap-x-5 gap-y-2.5 text-sm">
+            <li>
+              <Link
+                href="/montgomery-county-youth-pickleball"
+                className="hover:text-ngpa-teal transition-colors"
+              >
+                All of Montgomery County
+              </Link>
+            </li>
+            {CITY_LANDING_PAGES.map(({ city, slug }) => (
+              <li key={slug}>
+                <Link href={`/${slug}`} className="hover:text-ngpa-teal transition-colors">
+                  {city}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* For Schools & Organizations */}
