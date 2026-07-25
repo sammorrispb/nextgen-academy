@@ -40,6 +40,9 @@ agent-consumable surface of this host.
   evaluation (the standard entry point for new families).
 - https://nextgenpbacademy.com/camp — Summer camps.
 - https://nextgenpbacademy.com/newsletter — Free weekly parent newsletter.
+- https://nextgenpbacademy.com/blog — Coach-written guides for parents (safety,
+  the Red/Orange/Green/Yellow youth progression, where kids play in MoCo, what
+  a first session looks like).
 - https://nextgenpbacademy.com/montgomery-county-youth-pickleball — Service-area
   overview for Montgomery County, MD.
 - https://nextgenpbacademy.com/yellowball/inquiry — Yellow Ball tournament track
