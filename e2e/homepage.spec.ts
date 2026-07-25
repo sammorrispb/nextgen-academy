@@ -28,7 +28,7 @@ test.describe("How It Works", () => {
     await expect(section.getByRole("heading", { name: "Free evaluation" })).toBeVisible();
     await expect(section.getByRole("heading", { name: "Drop in to sessions" })).toBeVisible();
     await expect(section.getByRole("heading", { name: "Move up the pathway" })).toBeVisible();
-    await expect(section.getByText("$40 per 1-hour session")).toBeVisible();
+    await expect(section.getByText("$20 per 1-hour session")).toBeVisible();
   });
 });
 
@@ -193,9 +193,9 @@ test.describe("Level Cards", () => {
 // ─── Yellow Ball CTA ──────────────────────────────
 
 test.describe("Yellow Ball CTA", () => {
-  test("shows $40 per slot drop-in copy", async ({ page }) => {
+  test("shows $20 per slot drop-in copy", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("$40").first()).toBeVisible();
+    await expect(page.getByText("$20").first()).toBeVisible();
     await expect(page.getByText(/per 1-hour slot/i).first()).toBeVisible();
     await expect(page.getByText(/Drop-in/i).first()).toBeVisible();
   });
