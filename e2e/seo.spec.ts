@@ -57,6 +57,16 @@ const ROUTES: RouteSpec[] = [
     h1Contains: /Youth pickleball in/i,
   },
   {
+    path: "/blog",
+    titleContains: /Youth Pickleball Blog/,
+    h1Contains: /youth pickleball blog/i,
+  },
+  {
+    path: "/blog/is-pickleball-safe-for-kids",
+    titleContains: /Safe for Kids/,
+    h1Contains: /safe for kids/i,
+  },
+  {
     path: "/youth-pickleball-bethesda",
     titleContains: /Bethesda/,
     h1Contains: /Bethesda.*pickleball|pickleball.*Bethesda/i,

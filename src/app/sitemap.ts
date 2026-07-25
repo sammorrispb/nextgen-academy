@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { getAllClusterSlugs } from "@/lib/clusters";
 import { CITY_LANDING_PAGES } from "@/lib/seo";
 import { CAMPS } from "@/data/camps";
+import { blogPosts } from "@/data/blog";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = "https://nextgenpbacademy.com";
@@ -30,6 +31,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     })),
     { url: `${base}/newsletter`, lastModified, changeFrequency: "weekly", priority: 0.75 },
+    { url: `${base}/blog`, lastModified, changeFrequency: "weekly", priority: 0.7 },
+    ...blogPosts.map((post) => ({
+      url: `${base}/blog/${post.slug}`,
+      lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.65,
+    })),
     { url: `${base}/crew`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/league`, lastModified, changeFrequency: "monthly", priority: 0.7 },
     ...clusterEntries,
