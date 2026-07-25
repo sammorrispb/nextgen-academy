@@ -27,8 +27,15 @@ export default function RockvillePage() {
     <CityLanding
       city="Rockville"
       slug="youth-pickleball-rockville"
-      intro="Next Gen Pickleball Academy coaches kids ages 6–16 from Rockville and the surrounding MoCo neighborhoods. Small-group sessions for kids who can rally, and private lessons for anyone still learning — a clear pathway from first paddle touch to tournament play. Start with a free 30-minute evaluation."
-      whereWePlay="We serve players from Rockville and surrounding MoCo neighborhoods at our rotating MCPS locations across Montgomery County — including Walter Johnson HS, Gaithersburg, and Sherwood-cluster venues. The court that's closest to you depends on what's open for the week."
+      intro="Rockville is where our Saturday evenings live: Earle B. Wood Middle School on Bauer Drive hosts this season's Saturday group sessions, with a court each for Red, Orange, Green, and Yellow Ball. Kids 6–16 start with a free 30-minute evaluation — we place by skill, every level is welcome, and you pay per session with no subscription."
+      whereWePlay="Beyond the Wood MS Saturdays, Rockville families have trained with us at Redland Middle School near Derwood in past seasons, and our August back-to-school camp runs at Wood MS too. Sunday evenings run at Walter Johnson HS in Bethesda if that end of the weekend fits your family better."
+      cityFaq={[
+        {
+          question: "Where in Rockville do sessions run?",
+          answer:
+            "This season's Saturday-evening group sessions run at Earle B. Wood Middle School (14615 Bauer Dr, Rockville), and the August back-to-school camp runs there as well. Sundays run at Walter Johnson HS in Bethesda. Venues can change seasonally — the schedule page always has the current lineup.",
+        },
+      ]}
     />
   );
 }

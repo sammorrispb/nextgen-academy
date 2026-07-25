@@ -27,8 +27,15 @@ export default function PotomacPage() {
     <CityLanding
       city="Potomac"
       slug="youth-pickleball-potomac"
-      intro="Next Gen Pickleball Academy coaches kids ages 6–16 from Potomac and the surrounding MoCo neighborhoods. Small-group sessions for kids who can rally, and private lessons for anyone still learning — a clear pathway from first paddle touch to tournament play. Start with a free 30-minute evaluation."
-      whereWePlay="We serve players from Potomac and surrounding MoCo neighborhoods at our rotating MCPS locations across Montgomery County — including Walter Johnson HS, Gaithersburg, and Sherwood-cluster venues. The court that's closest to you depends on what's open for the week."
+      intro="Most Potomac families join our Sunday-evening group sessions at Walter Johnson High School — on Rock Spring Drive near the Montgomery Mall area — where every level from Red to Yellow gets its own court. Kids 6–16 start with a free 30-minute evaluation, then drop in session by session with no subscription or commitment."
+      whereWePlay="Walter Johnson HS is the closest regular venue from Potomac; Saturday evenings run at Earle B. Wood Middle School in Rockville. Summer camp weeks run in Gaithersburg, and if your child wants 1:1 work before joining a group, ask about private lessons at your evaluation — we'll figure out what works for your family."
+      cityFaq={[
+        {
+          question: "What's the closest venue to Potomac?",
+          answer:
+            "Walter Johnson High School (6400 Rock Spring Dr, Bethesda), near the Montgomery Mall area, hosts this season's Sunday-evening sessions and is the closest regular venue for most Potomac families. Saturdays run at Earle B. Wood MS in Rockville — check the schedule page for current slots.",
+        },
+      ]}
     />
   );
 }

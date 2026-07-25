@@ -22,10 +22,15 @@ interface CityLandingProps {
   city: ServiceCity;
   /** Route slug, e.g. "youth-pickleball-bethesda" — no leading slash. */
   slug: string;
-  /** Localized blurb under the H1 — keep it generic-to-MoCo (no fabricated venue specifics). */
+  /** Localized blurb under the H1. Venue claims must be REAL (current or
+   * clearly-past venues from recurring-templates.ts / camps) — never invented. */
   intro: string;
-  /** Shorter 1-paragraph "Where we play near {city}" — generic-to-MoCo. */
+  /** 1-paragraph "Where we play near {city}" — same no-invented-venues rule. */
   whereWePlay: string;
+  /** City-specific FAQ items appended to the shared set (rendered + JSON-LD).
+   * Answers must stay truthful when the season changes — point to /schedule
+   * for anything time-sensitive. */
+  cityFaq?: { question: string; answer: string }[];
 }
 
 const LOCAL_FAQ_QUESTIONS = new Set([
@@ -84,7 +89,9 @@ export default function CityLanding({
   slug,
   intro,
   whereWePlay,
+  cityFaq = [],
 }: CityLandingProps) {
+  const pageFaq = [...cityFaq, ...localFaq];
   const url = `${SITE_URL}/${slug}`;
   const description = `Youth pickleball coaching for kids ages 6–16 in ${city}, MD — and across Montgomery County. Free evaluations, small-group sessions, and private lessons with Next Gen Pickleball Academy.`;
   const cluster = getClusterForCity(city);
@@ -118,7 +125,7 @@ export default function CityLanding({
         data={{
           "@context": "https://schema.org",
           "@type": "FAQPage",
-          mainEntity: localFaq.map((item) => ({
+          mainEntity: pageFaq.map((item) => ({
             "@type": "Question",
             name: item.question,
             acceptedAnswer: { "@type": "Answer", text: item.answer },
@@ -203,8 +210,8 @@ export default function CityLanding({
             {whereWePlay}
           </p>
           <p className="text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
-            Sessions rotate weekly based on court availability across Montgomery
-            County Public Schools. Check the{" "}
+            Sessions run on reserved Montgomery County Public Schools courts and
+            the venue lineup changes seasonally. Check the{" "}
             <Link
               href="/schedule"
               className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
@@ -358,7 +365,7 @@ export default function CityLanding({
             {city} parent FAQ.
           </h2>
           <div className="space-y-7">
-            {localFaq.map((item) => (
+            {pageFaq.map((item) => (
               <div
                 key={item.question}
                 className="bg-ngpa-panel/60 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-6"

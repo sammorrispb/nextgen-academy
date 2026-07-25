@@ -27,8 +27,15 @@ export default function GaithersburgPage() {
     <CityLanding
       city="Gaithersburg"
       slug="youth-pickleball-gaithersburg"
-      intro="Next Gen Pickleball Academy coaches kids ages 6–16 from Gaithersburg and the surrounding MoCo neighborhoods. Small-group sessions for kids who can rally, and private lessons for anyone still learning — a clear pathway from first paddle touch to tournament play. Start with a free 30-minute evaluation."
-      whereWePlay="We serve players from Gaithersburg and surrounding MoCo neighborhoods at our rotating MCPS locations across Montgomery County — including Walter Johnson HS, Gaithersburg, and Sherwood-cluster venues. The court that's closest to you depends on what's open for the week."
+      intro="Gaithersburg is home turf for our summer camps — this year's June and July camp weeks ran at Gaithersburg High School — and our fall MVF classes run next door in Montgomery Village. This season's weekly group sessions for kids 6–16 run on weekend evenings at Earle B. Wood MS in Rockville and Walter Johnson HS in Bethesda. Start with a free 30-minute evaluation."
+      whereWePlay="We've coached Gaithersburg kids at Ridgeview Middle School in past seasons, run summer camp weeks at Gaithersburg High School, and teach fall classes at Apple Ridge in Montgomery Village. The current weekend sessions run at Wood MS (Saturdays) and Walter Johnson HS (Sundays) — one court per level, four players per court."
+      cityFaq={[
+        {
+          question: "Do you run anything in Gaithersburg itself?",
+          answer:
+            "Yes — our summer camp weeks run at Gaithersburg High School, and our fall MVF classes run at Apple Ridge in Montgomery Village next door. The weekly weekend group sessions currently run in Rockville (Saturdays) and Bethesda (Sundays) — the schedule page has the current lineup.",
+        },
+      ]}
     />
   );
 }
