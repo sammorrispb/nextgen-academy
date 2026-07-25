@@ -111,7 +111,7 @@ export default function RootLayout({
           ],
           founder: [
             { "@type": "Person", name: "Sam Morris" },
-            { "@type": "Person", name: "Amine Belkadi" },
+            { "@type": "Person", name: "Amine Lahlou" },
           ],
         }} />
         <a
