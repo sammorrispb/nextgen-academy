@@ -13,9 +13,11 @@ import {
 import {
   evalReengagementAction,
   campOutreachAction,
+  fallSurveyAction,
   postEvalFollowupAction,
   type OpsActionResult,
 } from "./actions";
+import type { FallSurveyVariant } from "@/lib/email/fall-survey";
 
 const inputClass =
   "w-full px-3 py-2 rounded-lg bg-ngpa-deep border border-ngpa-slate/60 text-ngpa-white text-sm placeholder:text-ngpa-white/30 focus:outline-none focus:border-ngpa-teal";
@@ -383,6 +385,7 @@ export default function OpsConsole({ isAdmin }: { isAdmin: boolean }) {
   const [playerId, setPlayerId] = useState("");
   const [level, setLevel] = useState("Green");
   const [observations, setObservations] = useState("");
+  const [fallVariant, setFallVariant] = useState<FallSurveyVariant>("nga");
 
   const campOnly = parseOnlyList(campOnlyText);
 
@@ -466,6 +469,49 @@ export default function OpsConsole({ isAdmin }: { isAdmin: boolean }) {
             ? "Paste the vetted recipient allow-list to enable a live camp send."
             : null
         }
+      />
+
+      <OpsCard
+        title="Fall 2026 survey"
+        description="Asks both audiences — newsletter subscribers plus DD-clean eligible leads — whether the Sat/Sun 5–7 PM fall season at Wood MS works, and drives them to /fall. No sent-flag column, so a repeated live run RE-SENDS: preview first, and use retry-failed to fix a partial run."
+        opName="fall survey"
+        params={{ variant: fallVariant }}
+        paramsUi={
+          <div>
+            <label className={labelClass}>Variant</label>
+            <select
+              className={inputClass}
+              value={fallVariant}
+              onChange={(e) =>
+                setFallVariant(e.target.value as FallSurveyVariant)
+              }
+            >
+              <option value="nga">NGA — leads with the youth season</option>
+              <option value="ld">
+                L&amp;D — leads with the adult round robin
+              </option>
+            </select>
+            <p className="mt-1.5 text-xs text-ngpa-white/50">
+              Both variants describe both programs; the variant only decides
+              which one leads. Changing it requires a fresh preview.
+            </p>
+          </div>
+        }
+        countFromPreview={(b) => Number(b.to_send ?? 0)}
+        run={(dryRun, only) =>
+          fallSurveyAction({ dryRun, variant: fallVariant, only })
+        }
+        renderPreview={(b) => (
+          <BlastPreview
+            body={b}
+            extraStats={[
+              { label: "Newsletter subs", value: b.subscribers },
+              { label: "Unique recipients", value: b.eligible_unique },
+            ]}
+          />
+        )}
+        isAdmin={isAdmin}
+        supportsRetryFailed
       />
 
       <OpsCard
