@@ -11,7 +11,9 @@ import {
   runCampOutreach,
 } from "@/lib/lead-outreach-run";
 import { runPostEvalFollowup } from "@/lib/post-eval-followup-run";
+import { runFallSurvey } from "@/lib/fall-survey-run";
 import type { Level } from "@/lib/email/post-eval-followup";
+import type { FallSurveyVariant } from "@/lib/email/fall-survey";
 
 // Cookie-authed ops actions — thin wrappers over the SAME shared cores the
 // secret-gated curl routes call (lead-outreach-run.ts /
@@ -24,7 +26,7 @@ import type { Level } from "@/lib/email/post-eval-followup";
 // parent first-contact blasts are a Sam-reserved surface:
 //   - any allow-listed coach: previews (dry runs);
 //   - admin identity only (the /admin ADMIN_ALLOWLIST, via authorizeOpsSend):
-//     live sends on all three ops, and camp's includeAmbiguous even on preview.
+//     live sends on every op, and camp's includeAmbiguous even on preview.
 // A live camp send additionally requires an explicit non-empty `only`
 // allow-list (validateCampLiveOnly) — the full-eligible camp blast stays a
 // deliberate curl-with-secret act. Both gates are pinned (logic + this file's
@@ -88,6 +90,28 @@ export async function campOutreachAction(opts: {
     only: onlyCheck.only ?? undefined,
   });
   return { ok: r.status === 200, status: r.status, body: r.body };
+}
+
+export async function fallSurveyAction(opts: {
+  dryRun: boolean;
+  variant: FallSurveyVariant;
+  /** Optional allow-list (retry-failed-only). Narrows the send; never widens. */
+  only?: string[];
+}): Promise<OpsActionResult> {
+  const email = await requireCoach();
+  if (!email) return UNAUTHORIZED;
+  const authz = authorizeOpsSend(email, { live: !opts.dryRun });
+  if (!authz.ok) return denied(authz);
+  const r = await runFallSurvey({
+    dryRun: opts.dryRun,
+    variant: opts.variant,
+    only: opts.only,
+  });
+  return {
+    ok: r.ok,
+    status: r.ok ? 200 : 503,
+    body: r as unknown as Record<string, unknown>,
+  };
 }
 
 export async function postEvalFollowupAction(
