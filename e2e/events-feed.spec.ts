@@ -32,7 +32,9 @@ function session(overrides: Partial<NgaSession> = {}): NgaSession {
     spotsLeft: 4,
     status: "Open",
     roster: [],
-    ageStats: { count: 0, minAge: null, maxAge: null },
+    // `ageStats` is nullable as a whole — "no registrants" is null, not an
+    // object with null fields.
+    ageStats: null,
     coachReminderSent: false,
     ...overrides,
   };
