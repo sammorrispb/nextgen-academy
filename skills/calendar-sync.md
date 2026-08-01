@@ -31,6 +31,7 @@ the calendar event description to claim ownership of it.
 | Camp weeks | `src/data/camps.ts` | `/calendar-sync` |
 | MVF classes (incl. adding the published fall times) | `src/data/mvf.ts` | `/calendar-sync` |
 | Fall 2026 season dates | `src/data/fall-2026.ts` | `/calendar-sync` |
+| Enrichment Collective clubs (incl. Stef's confirmed dates) | `src/data/enrichment-collective.ts` | `/calendar-sync` |
 
 ## Rules that bind any change to the feed
 
@@ -59,5 +60,36 @@ the calendar event description to claim ownership of it.
 - **League seasons** (`src/data/leagues.ts`) — a start and end date, but no
   per-session dates, no times, and `exactLocation` is empty (venue not booked).
   There is nothing schedulable yet.
-- **Enrichment Collective** after-school clubs — no confirmed schools, dates, or
-  times exist. Nothing to sync.
+- **Enrichment Collective after-school clubs** — these DO sync to the calendar,
+  but deliberately never to the feed. See below.
+
+## Enrichment Collective — calendar-only, on purpose
+
+`src/data/enrichment-collective.ts` holds the fall 2026 "Coach Sam" clubs that
+Enrichment Collective runs in MCPS schools. The calendar sync reads that file
+**directly** from the repo checkout; it is the one source that isn't the feed or
+Supabase.
+
+That exception is deliberate. EC clubs meet weekly at named elementary schools,
+so publishing a precise recurring time and place where identified young children
+gather is the risk `camps.ts` already mitigates by hiding `exactLocation` —
+except here the venue *is* the school. So the whole program stays off
+`/api/events/feed`, off `/schedule`, and off the sitemap, and the calendar blocks
+carry the **town only**, never a school name.
+
+`e2e/invariant-events-feed-egress.spec.ts` enforces the exclusion, so it survives
+someone later "helpfully" adding EC to the feed.
+
+Reading a TypeScript file at sync time is normally the fragility this whole feed
+exists to remove. It's safe *here* because the file is hand-maintained with
+explicit ISO date arrays and one fixed time per club — there is nothing to
+derive, only to read. If EC ever needs computing (recurrence rules, per-school
+variation), promote it to the feed pattern with a private access path rather
+than parsing harder.
+
+Two standing gaps in that file, both intentional:
+- **Dates are holds.** Stef confirmed days/times/towns; exact session dates are
+  still pending, so `dates` is a projected 9-week window and `status` is `hold`.
+  Not reconciled against the MCPS closure calendar.
+- **Belmont's Thursday time is unannounced**, so `startTime` is `null` and those
+  blocks ship all-day — the same never-invent-a-time rule as the MVF classes.

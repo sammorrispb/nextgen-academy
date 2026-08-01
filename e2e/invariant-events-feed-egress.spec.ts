@@ -2,6 +2,12 @@ import { test, expect } from "@playwright/test";
 import type { NgaSession } from "../src/lib/notion-sessions";
 import { buildEventsFeed } from "../src/lib/events-feed";
 import { CAMPS } from "../src/data/camps";
+import {
+  EC_CLUBS,
+  EC_PARTNER_NAME,
+  EC_PARTNER_URL,
+  ecClubTitle,
+} from "../src/data/enrichment-collective";
 
 // THE unified-feed egress invariant. GET /api/events/feed is a PUBLIC,
 // unauthenticated surface that unions four schedule sources into one payload —
@@ -97,6 +103,45 @@ test.describe("events feed — egress invariants", () => {
       expect(Object.keys(item)).not.toContain("roster");
       expect(Object.keys(item)).not.toContain("ageStats");
       expect(Object.keys(item)).not.toContain("registeredCount");
+    }
+  });
+
+  test("Enrichment Collective clubs never reach the public feed", () => {
+    // EC runs after-school clubs at named ELEMENTARY SCHOOLS. Publishing a
+    // precise recurring time and place where identified young children gather
+    // is the risk camps.ts already mitigates by hiding `exactLocation` — here
+    // the venue IS the school, so the whole program stays off public surfaces
+    // and lives only on Sam's private calendar (src/data/enrichment-collective.ts).
+    //
+    // Asserted on EC-specific strings only — never on town names, which are
+    // legitimate NGA locations and would make this spec fire spuriously the
+    // day NGA runs a session in Olney.
+    const feed = buildEventsFeed(
+      { sessions: [session()] },
+      "https://nextgenpbacademy.com",
+    );
+    const json = JSON.stringify(feed);
+
+    expect(json).not.toContain(EC_PARTNER_NAME);
+    expect(json).not.toContain(EC_PARTNER_URL);
+    expect(json).not.toContain("nga-ec:");
+    expect(json).not.toContain("Coach Sam club");
+
+    expect(EC_CLUBS.length).toBeGreaterThan(0);
+    for (const club of EC_CLUBS) {
+      expect(json).not.toContain(club.key);
+      expect(json).not.toContain(ecClubTitle(club));
+      if (club.schoolName) expect(json).not.toContain(club.schoolName);
+      // No EC session date may appear paired with an EC source marker.
+      for (const date of club.dates) {
+        expect(json).not.toContain(`nga-ec:${club.key}:${date}`);
+      }
+    }
+
+    // And no feed item may claim EC as its source.
+    for (const item of feed) {
+      expect(item.source).not.toBe("enrichment");
+      expect(item.key.startsWith("nga-ec")).toBe(false);
     }
   });
 
