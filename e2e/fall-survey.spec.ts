@@ -11,6 +11,8 @@ import {
   fallInterestConfirmationText,
 } from "../src/lib/email/fall-interest-confirmation";
 import { FALL_NO_HOLD_NOTE } from "../src/data/fall-2026";
+import { WHATSAPP_PARENT_GROUP_URL } from "../src/lib/email/whatsapp-invite";
+import { s } from "../src/lib/email/brand";
 
 const FALL_URL = "https://nextgenpbacademy.com/fall";
 
@@ -89,6 +91,31 @@ test.describe("fall survey broadcast — both variants", () => {
         expect(body).not.toMatch(/reserve your spot/i);
         expect(body).not.toMatch(/register now/i);
       }
+    });
+
+    test(`${variant}: carries the parent WhatsApp invite`, () => {
+      const html = fallSurveyHtml(input({ variant }));
+      const text = fallSurveyText(input({ variant }));
+
+      for (const body of [html, text]) {
+        expect(body).toContain(WHATSAPP_PARENT_GROUP_URL);
+        expect(body).toMatch(/whatsapp/i);
+      }
+    });
+
+    test(`${variant}: the WhatsApp invite stays a utility block, not a second CTA`, () => {
+      const html = fallSurveyHtml(input({ variant }));
+
+      // BRAND_GUIDELINES CTA hierarchy: one primary CTA per email. The survey
+      // link is it; the WhatsApp invite is an inline link inside a plain card,
+      // so it must never render with the lime CTA button styling.
+      const ctaCount = html.split(s.cta).length - 1;
+      expect(ctaCount, "more than one primary CTA button").toBe(1);
+
+      // And the one CTA is the survey, not the group.
+      const ctaIndex = html.indexOf(s.cta);
+      const ctaHref = html.slice(0, ctaIndex).lastIndexOf("href=");
+      expect(html.slice(ctaHref, ctaIndex)).toContain(FALL_URL);
     });
 
     test(`${variant}: greets the reader by first name`, () => {

@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
 import {
   FALL_END_TIME,
   FALL_NO_HOLD_NOTE,
@@ -128,6 +129,8 @@ export function fallSurveyHtml(input: FallSurveyInput): string {
       <p style="margin:8px 0 0 0;color:${c.text};font-size:14px;line-height:1.6;">${FALL_NO_HOLD_NOTE}</p>
     </div>
 
+    ${whatsappInviteHtml()}
+
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
         Coach Sam<br>
@@ -166,6 +169,8 @@ export function fallSurveyText(input: FallSurveyInput): string {
     "",
     "NO PRESSURE, NOTHING TO PAY",
     FALL_NO_HOLD_NOTE,
+    "",
+    whatsappInviteText(),
     "",
     "Coach Sam",
     "Next Gen Pickleball Academy · Link & Dink",
