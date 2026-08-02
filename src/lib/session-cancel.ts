@@ -7,6 +7,7 @@ import {
   type DropInRegistration,
 } from "@/lib/notion-dropins";
 import { setSessionStatus } from "@/lib/notion-sessions";
+import { cancelDropInByPaymentIntent } from "@/lib/cancel-dropin";
 import { getStripe } from "@/lib/stripe";
 import {
   sessionCancelledHtml,
@@ -97,6 +98,57 @@ async function refundOne(
   }
 }
 
+/**
+ * Write the roster row's terminal Refunded state ourselves instead of waiting
+ * for the charge.refunded webhook to do it.
+ *
+ * Stripe emits NO charge.refunded event when the charge was ALREADY refunded
+ * (refundOne → "already"), so the webhook never fires. Before this existed the
+ * row stayed "Confirmed" forever while the money was genuinely gone — and
+ * because `Cancellation Notified` had just flipped true, sessionNeedsCancelFanout
+ * then reported the session fully handled, so the reconcile cron skipped it
+ * permanently. Silent, unrecoverable drift between Stripe and Notion.
+ *
+ * Idempotent by way of cancelDropIn (a row already Refunded is a no-op), so the
+ * webhook firing afterwards on the "ok" path is harmless. MUST be called AFTER
+ * `Cancellation Notified` is set: cancelDropIn suppresses its own per-row
+ * confirmation on that flag, which is what keeps the parent at exactly one
+ * message.
+ */
+export async function settleRefundedRow(
+  row: DropInRegistration,
+  refunded: RowOutcome["refunded"],
+): Promise<"settled" | "skipped" | "failed"> {
+  // Only a settled refund earns the Refunded status. "error" and "no_pi" mean
+  // no money moved — claiming otherwise would hide a real unrefunded charge.
+  if (refunded !== "ok" && refunded !== "already") return "skipped";
+  if (!row.stripePaymentIntentId) return "skipped";
+
+  try {
+    const result = await cancelDropInByPaymentIntent(
+      row.stripePaymentIntentId,
+      "Refunded",
+      row.amountPaidUsd,
+    );
+    if (!result.ok) {
+      console.error(
+        "[session-cancel] refund settlement failed",
+        row.id,
+        result.reason,
+      );
+      return "failed";
+    }
+    return "settled";
+  } catch (err) {
+    console.error(
+      "[session-cancel] refund settlement threw",
+      row.id,
+      err instanceof Error ? err.message : String(err),
+    );
+    return "failed";
+  }
+}
+
 async function broadcastOne(
   resend: Resend | null,
   stripe: Stripe,
@@ -130,6 +182,11 @@ async function broadcastOne(
 
   if (row.cancellationNotified) {
     outcome.flagged = true;
+    // Still settle: this is the path a previously-stranded row takes on a
+    // re-run, and it's the only chance it has to self-heal.
+    if ((await settleRefundedRow(row, outcome.refunded)) === "failed") {
+      outcome.error = "refund settlement failed";
+    }
     return outcome;
   }
 
@@ -211,6 +268,11 @@ async function broadcastOne(
 
   if (outcome.emailSent) {
     outcome.flagged = await markDropInFlag(row.id, "Cancellation Notified");
+  }
+
+  // After the flag, so cancelDropIn's per-row confirmation stays suppressed.
+  if ((await settleRefundedRow(row, outcome.refunded)) === "failed") {
+    outcome.error = `${outcome.error ?? ""} refund settlement failed`.trim();
   }
 
   return outcome;
