@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
     dryRun?: boolean;
     only?: string[];
     includeAmbiguous?: boolean;
+    includeDdDerived?: boolean;
   } = {};
   try {
     body = await req.json();
@@ -38,9 +39,16 @@ export async function POST(req: NextRequest) {
     req.nextUrl.searchParams.get("includeAmbiguous") === "1" ||
     body.includeAmbiguous === true;
 
+  // Widens provenance only — quarantined and unsubscribed families stay
+  // suppressed inside fetchLeadOutreachRecipients regardless of this flag.
+  const includeDdDerived =
+    req.nextUrl.searchParams.get("includeDdDerived") === "1" ||
+    body.includeDdDerived === true;
+
   const result = await runCampOutreach({
     dryRun,
     includeAmbiguous,
+    includeDdDerived,
     subject: body.subject,
     only: body.only,
   });

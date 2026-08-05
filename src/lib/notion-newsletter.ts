@@ -247,3 +247,58 @@ export async function markReferralIssued(
   return true;
 }
 
+/**
+ * Every lowercased email that has unsubscribed from the newsletter.
+ *
+ * Consumed by the lead-CRM blasts. Unsubscribing is a person telling us to
+ * stop — they do not track which of our senders it applies to, and neither
+ * should we. Before this existed, someone could unsubscribe from the weekly
+ * newsletter and still be mailed by camp-outreach, because that sender reads
+ * a different database entirely.
+ *
+ * THROWS on a query failure rather than returning a partial set: a silently
+ * short suppression list re-mails people who opted out, which is exactly the
+ * failure this guards. Callers must fail the send, not proceed.
+ */
+export async function fetchUnsubscribedEmails(): Promise<Set<string>> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const db = process.env.NOTION_NEWSLETTER_DB_ID;
+  if (!notionKey || !db) {
+    throw new Error(
+      "fetchUnsubscribedEmails: NOTION_API_KEY or NOTION_NEWSLETTER_DB_ID missing — cannot verify opt-outs",
+    );
+  }
+
+  const out = new Set<string>();
+  let cursor: string | undefined;
+  do {
+    const res = await fetch(`${NOTION_API}/databases/${db}/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${notionKey}`,
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_VERSION,
+      },
+      body: JSON.stringify({
+        filter: { property: "Status", select: { equals: "Unsubscribed" } },
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `fetchUnsubscribedEmails: Notion query failed (${res.status}): ${text}`,
+      );
+    }
+    const data = await res.json();
+    for (const page of data.results ?? []) {
+      const email = (page.properties?.Email?.email ?? "").trim().toLowerCase();
+      if (email) out.add(email);
+    }
+    cursor = data.has_more ? data.next_cursor : undefined;
+  } while (cursor);
+
+  return out;
+}
+
