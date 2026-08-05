@@ -24,9 +24,19 @@ export interface LeadRow {
   quarantine?: boolean;
 }
 
+/**
+ * Why a row is off-limits. `opt_out` is a person's own decision and is
+ * absolute; `dd_derived` is a provenance policy a caller may knowingly opt
+ * into (see resolveFamilyBucket + fetchLeadOutreachRecipients). Keeping the
+ * two distinguishable is what lets a send widen to DD-derived families
+ * WITHOUT ever sweeping an opt-out back in.
+ */
+export type OffLimitsKind = "opt_out" | "dd_derived";
+
 export interface LeadClassification {
   bucket: LeadBucket;
   reason: string;
+  offLimitsKind?: OffLimitsKind;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,24 +87,33 @@ export function classifyLead(row: LeadRow): LeadClassification {
   // A parent who asked to be removed must never be mailed again, whatever their
   // Source bucket (e.g. a clean "Website" lead who replied "skip").
   if (row.quarantine) {
-    return { bucket: "off_limits", reason: "Quarantined (opted out)" };
+    return {
+      bucket: "off_limits",
+      reason: "Quarantined (opted out)",
+      offLimitsKind: "opt_out",
+    };
   }
 
   // DD-derived — off-limits for any outreach.
+  const dd = (reason: string): LeadClassification => ({
+    bucket: "off_limits",
+    reason,
+    offLimitsKind: "dd_derived",
+  });
   if (DD_SOURCES.has(row.source)) {
-    return { bucket: "off_limits", reason: `Source=${row.source}` };
+    return dd(`Source=${row.source}`);
   }
   if ((row.crEventsAttended ?? 0) > 0) {
-    return { bucket: "off_limits", reason: "CR events attended" };
+    return dd("CR events attended");
   }
   if (row.crEventHistory.trim() || row.lastCrEvent.trim()) {
-    return { bucket: "off_limits", reason: "CR event history" };
+    return dd("CR event history");
   }
   if (DD_SEASONS.has(row.season)) {
-    return { bucket: "off_limits", reason: `DD-era season (${row.season})` };
+    return dd(`DD-era season (${row.season})`);
   }
   if (DD_NOTE_RE.test(row.notes)) {
-    return { bucket: "off_limits", reason: "DD/CR mention in notes" };
+    return dd("DD/CR mention in notes");
   }
 
   // Clean own-marketing source → eligible.

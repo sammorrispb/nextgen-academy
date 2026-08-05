@@ -11,6 +11,8 @@ process.env.NOTION_PLAYER_CRM_DB_ID = "lead-db";
 delete process.env.NOTION_DB_ID;
 process.env.NOTION_SESSIONS_DB_ID = "sessions-db";
 process.env.RESEND_API_KEY = "re_test";
+// The lead blasts read the newsletter DB to honour unsubscribes across senders.
+process.env.NOTION_NEWSLETTER_DB_ID = "newsletter-db";
 
 import { POST as evalReengagementRoute } from "../src/app/api/eval-reengagement/route";
 import { POST as campOutreachRoute } from "../src/app/api/camp-outreach/route";
@@ -81,9 +83,18 @@ const LEAD_ROWS = [
   leadPage({ name: "Test Parent", email: "qa@example.org", source: "Website" }),
 ];
 
-function stubLeadDb(stub: FetchStub) {
+/** A newsletter-DB row shaped like the Unsubscribed query result. */
+function unsubPage(email: string) {
+  return { id: `nl-${email}`, properties: { Email: { email } } };
+}
+
+function stubLeadDb(stub: FetchStub, unsubscribed: string[] = []) {
   stub
     .on("/databases/lead-db/query", { results: LEAD_ROWS, has_more: false })
+    .on("/databases/newsletter-db/query", {
+      results: unsubscribed.map(unsubPage),
+      has_more: false,
+    })
     .on("api.resend.com", { id: "email_test" });
 }
 
@@ -252,6 +263,57 @@ test.describe("camp-outreach — route ↔ ops-action core parity", () => {
       expect(routeSent).not.toContain(email);
       expect(coreSent).not.toContain(email);
     }
+  });
+
+  test("a newsletter unsubscribe suppresses the lead blast too (cross-sender)", async () => {
+    // Unsubscribing is a person saying stop, not a per-sender preference. Before
+    // this, someone could unsubscribe from the weekly newsletter and still be
+    // mailed by camp-outreach, because that reads a different database.
+    stubLeadDb(stub, ["amy@example.org"]);
+    const res = await campOutreachRoute(req("/api/camp-outreach"));
+    expect(res.status).toBe(200);
+    const sent = resendRecipients(stub.calls);
+    expect(sent).not.toContain("amy@example.org");
+    expect(sent).toContain("ben@example.org");
+  });
+
+  test("includeDdDerived widens provenance but NEVER un-suppresses an opt-out", async () => {
+    // Sam's explicit Aug-2026 call: mail DD-derived families for the permission
+    // pass. Quarantined + unsubscribed families must stay out regardless.
+    stubLeadDb(stub, ["amy@example.org"]);
+    const res = await campOutreachRoute(
+      req("/api/camp-outreach", {
+        includeAmbiguous: true,
+        includeDdDerived: true,
+      }),
+    );
+    expect(res.status).toBe(200);
+    const sent = resendRecipients(stub.calls);
+
+    // DD-derived rows ARE now mailed.
+    expect(sent).toContain("dana@example.org"); // Source=CourtReserve
+    expect(sent).toContain("fay@example.org"); // CR events attended
+    // Opt-outs are not, by either mechanism.
+    expect(sent).not.toContain("evan@example.org"); // Quarantine ticked
+    expect(sent).not.toContain("amy@example.org"); // newsletter unsubscribe
+    // QA rows still excluded.
+    expect(sent).not.toContain("qa@example.org");
+  });
+
+  test("route ?includeDdDerived=1 === core({includeDdDerived:true})", async () => {
+    stubLeadDb(stub);
+    const routeRes = await campOutreachRoute(
+      req("/api/camp-outreach", { dryRun: true }, { includeDdDerived: "1" }),
+    );
+    const routeBody = await routeRes.json();
+
+    stub.reset();
+    stub.install();
+    stubLeadDb(stub);
+    const core = await runCampOutreach({ dryRun: true, includeDdDerived: true });
+
+    expect(routeBody).toEqual(core.body);
+    expect(routeBody.dd_derived_mailed).toBe(true);
   });
 });
 
