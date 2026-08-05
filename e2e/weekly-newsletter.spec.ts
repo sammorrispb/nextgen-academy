@@ -5,7 +5,7 @@ import {
   type WeeklyNewsletterInput,
 } from "../src/lib/email/weekly-newsletter";
 import { appendUtm } from "../src/lib/email/utm";
-import { CAMP_OPTIONS } from "../src/data/camps";
+import { CAMP_OPTIONS, CAMPS } from "../src/data/camps";
 
 const tip = { title: "Soft hands win", body: "Loosen the grip." };
 const ORIGIN = "https://nextgenpbacademy.com";
@@ -263,7 +263,10 @@ test.describe("weeklyNewsletterHtml", () => {
   test("renders the camp block with weeks, price tease, and a UTM-stamped /camp link", () => {
     const html = weeklyNewsletterHtml({
       ...baseInput,
-      camps: [{ weekLabel: "June 29 – July 2, 2026" }, { weekLabel: "July 20 – July 23, 2026" }],
+      camps: [
+        { weekLabel: "June 29 – July 2, 2026", publicArea: "Gaithersburg, MD" },
+        { weekLabel: "July 20 – July 23, 2026", publicArea: "Gaithersburg, MD" },
+      ],
     });
     expect(html).toContain("Summer camp");
     expect(html).toContain("ages 8+");
@@ -275,10 +278,39 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(html).toContain(`href="${ORIGIN}/camp"`);
   });
 
+  test("each camp's area comes from its own row, never a hardcoded city", () => {
+    // Load-bearing: the block used to hardcode "mornings in Gaithersburg" in
+    // the intro line, so the Aug 17–20 Rockville camp would have advertised
+    // the wrong city. Area is per-row now — a camp at a new venue can't
+    // inherit a stale one.
+    const input = {
+      ...baseInput,
+      camps: [{ weekLabel: "August 17 – August 20, 2026", publicArea: "Rockville, MD" }],
+    };
+    for (const rendered of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
+      expect(rendered).toContain("August 17 – August 20, 2026");
+      expect(rendered).toContain("Rockville, MD");
+      expect(rendered).not.toContain("Gaithersburg");
+    }
+  });
+
+  test("the upcoming-camp list matches CAMPS filtered by end date, and the Aug 17 camp is in Rockville", () => {
+    // Mirrors the cron's `CAMPS.filter((c) => c.endDate >= todayIso)` so the
+    // spec fails if camps.ts drifts (a renamed slug, a moved venue, a camp
+    // whose endDate stops covering the send week).
+    const aug = CAMPS.find((c) => c.slug === "august-17");
+    expect(aug).toBeDefined();
+    expect(aug!.endDate).toBe("2026-08-20");
+    expect(aug!.publicArea).toBe("Rockville, MD");
+    // On any date during the send week the block carries exactly this camp.
+    const upcoming = CAMPS.filter((c) => c.endDate >= "2026-08-06");
+    expect(upcoming.map((c) => c.slug)).toEqual(["august-17"]);
+  });
+
   test("no parent-facing copy uses the word 'crew'", () => {
     const html = weeklyNewsletterHtml({
       ...baseInput,
-      camps: [{ weekLabel: "June 29 – July 2, 2026" }],
+      camps: [{ weekLabel: "June 29 – July 2, 2026", publicArea: "Gaithersburg, MD" }],
       openPolls: [
         {
           title: "Sat 4pm Bethesda — Green",

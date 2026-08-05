@@ -12,7 +12,7 @@ import { fetchWeatherForSessions, type DayWeather } from "@/lib/weather";
 import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
-import { CAMP_AGE_MIN, CAMP_OPTIONS } from "@/data/camps";
+import { CAMP_AGE_MIN, CAMP_OPTIONS, CAMPS } from "@/data/camps";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -236,11 +236,16 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   const utmCampaign = `weekly-${new Date().toISOString().slice(0, 10)}`;
   const scheduleUrl = appendUtm(`${SITE_ORIGIN}/schedule`, "schedule", utmCampaign);
   const crewInterestUrl = appendUtm(`${SITE_ORIGIN}/crew`, "crew", utmCampaign);
-  // Dedicated camp block suppressed (2026-06-15): the camp is promoted via the
-  // "From Coach Sam" lead block (NGA Newsletter Drafts DB) + the /camp page, so
-  // the auto-tease was duplicating it. Re-enable by repopulating `camps` from
-  // CAMPS.filter((c) => c.endDate >= today) and re-importing CAMPS.
-  const camps: { weekLabel: string }[] = [];
+  // Re-enabled 2026-08-05. It was suppressed on 2026-06-15 as a duplicate of
+  // the "From Coach Sam" lead block, but that block is a hand-Approved Notion
+  // row inside a 7-day Drafted At window — so a camp only gets promoted on the
+  // weeks someone remembers to draft one, and the Aug 17–20 camp silently
+  // dropped out of every issue after its 2026-07-23 send. This list derives
+  // from camps.ts, so an upcoming camp can't fall off the issue.
+  const camps = CAMPS.filter((c) => c.endDate >= todayIso).map((c) => ({
+    weekLabel: c.weekLabel,
+    publicArea: c.publicArea,
+  }));
   const campUrl = appendUtm(`${SITE_ORIGIN}/camp`, "camp", utmCampaign);
   const campPriceFromUsd = Math.min(...CAMP_OPTIONS.map((o) => o.priceUsd));
 
@@ -256,13 +261,19 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     };
   }
 
+  // Camp outranks polls/summer/tip but never "open courts this week" — a
+  // bookable session in the next 9 days is the more urgent ask. On a week with
+  // no open courts (e.g. a coach-away gap) the upcoming camp is the strongest
+  // thing in the issue, so it gets the subject.
   const subject = sessions.length
     ? "Open courts this week — Next Gen"
-    : openPolls.length
-      ? "Crews forming this week — Next Gen"
-      : summerSessions.length
-        ? "Summer sessions are live — Next Gen"
-        : `Coach tip of the week — ${tip.title}`;
+    : camps.length
+      ? "Summer camp is coming up — Next Gen"
+      : openPolls.length
+        ? "Crews forming this week — Next Gen"
+        : summerSessions.length
+          ? "Summer sessions are live — Next Gen"
+          : `Coach tip of the week — ${tip.title}`;
 
   let sent = 0;
   let failed = 0;
