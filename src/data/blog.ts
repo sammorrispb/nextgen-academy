@@ -120,7 +120,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Camps and classes",
         paragraphs: [
-          "Our summer camp weeks run at Gaithersburg High School, with an August back-to-school camp at Wood MS in Rockville the week before school starts. In the fall, our MVF classes run at Apple Ridge in Montgomery Village. All of it is drop-in-priced and starts the same way: a free 30-minute evaluation.",
+          "Our summer camp weeks run at Gaithersburg High School, with an August back-to-school camp at Wood MS in Rockville the week before school starts. In the fall, our MVF classes run in Montgomery Village — the intro class at Apple Ridge, then Session I at Watkins Mill and Session II at North Creek. All of it starts the same way: a free 30-minute evaluation.",
         ],
       },
       {

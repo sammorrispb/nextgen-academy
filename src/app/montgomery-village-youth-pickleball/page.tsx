@@ -5,12 +5,12 @@ import {
   MVF_PROGRAMS,
   MVF_AGE_MIN,
   MVF_AGE_MAX,
-  MVF_VENUE,
-  MVF_VENUE_LOCALITY,
-  MVF_VENUE_REGION,
+  MVF_CLASS_CAPACITY,
   MVF_REGISTRATION_NOTE,
-  MVF_REC_GUIDE_FOOTNOTE,
+  MVF_REGISTRATION_SEARCH_URL,
+  MVF_VENUE_FOOTNOTE,
   type MvfProgram,
+  type MvfVenue,
 } from "@/data/mvf";
 import JsonLd from "@/components/JsonLd";
 import NewsletterForm from "@/components/NewsletterForm";
@@ -39,28 +39,34 @@ export const metadata: Metadata = {
   },
 };
 
-const APPLE_RIDGE_PLACE = {
-  "@type": "Place",
-  name: MVF_VENUE,
-  address: {
-    "@type": "PostalAddress",
-    addressLocality: MVF_VENUE_LOCALITY,
-    addressRegion: MVF_VENUE_REGION,
-    addressCountry: "US",
-  },
-} as const;
+function placeJsonLd(venue: MvfVenue) {
+  return {
+    "@type": "Place",
+    name: venue.name,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: venue.streetAddress,
+      addressLocality: venue.locality,
+      addressRegion: venue.region,
+      postalCode: venue.postalCode,
+      addressCountry: "US",
+    },
+  } as const;
+}
 
 function sportsEventJsonLd(program: MvfProgram) {
   return {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
-    name: program.title,
+    name: `${program.activityName} — by Next Gen Pickleball Academy`,
     sport: "Pickleball",
     description: program.description,
     startDate: program.startDate,
     endDate: program.endDate,
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    location: APPLE_RIDGE_PLACE,
+    eventStatus: "https://schema.org/EventScheduled",
+    location: placeJsonLd(program.venue),
+    maximumAttendeeCapacity: MVF_CLASS_CAPACITY,
     organizer: [
       { "@type": "Organization", name: "Montgomery Village Foundation" },
       {
@@ -77,12 +83,13 @@ function sportsEventJsonLd(program: MvfProgram) {
     },
     offers: program.prices.map((price) => ({
       "@type": "Offer",
-      name: `${program.title} — ${price.label}`,
+      name: `${program.activityName} — ${price.label}`,
       price: price.usd,
       priceCurrency: "USD",
-      url: PAGE_URL,
-      // Registration hasn't opened yet — it comes with the MVF Fall Rec Guide.
-      availability: "https://schema.org/PreOrder",
+      // Registration is open on MVF's portal — point the offer at the actual
+      // activity, not back at this marketing page.
+      url: program.registerUrl,
+      availability: "https://schema.org/InStock",
     })),
   };
 }
@@ -97,7 +104,136 @@ function formatLongDate(date: string): string {
   });
 }
 
+/**
+ * Red/Orange vs Green/Yellow only — the intro class is "All levels" and gets no
+ * chip color, so a missing entry is a deliberate fall-through, not a gap.
+ */
+const LEVEL_CHIP: Record<string, string> = {
+  "Red / Orange":
+    "bg-ngpa-skill-red/15 text-ngpa-skill-orange ring-1 ring-ngpa-skill-orange/40",
+  "Green / Yellow":
+    "bg-ngpa-skill-green/15 text-ngpa-skill-yellow ring-1 ring-ngpa-skill-yellow/40",
+};
+
+function ProgramCard({ program }: { program: MvfProgram }) {
+  const chip =
+    LEVEL_CHIP[program.levelLabel] ??
+    "bg-ngpa-teal/15 text-ngpa-teal-bright ring-1 ring-ngpa-teal/40";
+
+  return (
+    <div
+      className="bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 sm:p-7"
+      data-testid={`mvf-program-${program.key}`}
+    >
+      <div className="flex flex-wrap items-center gap-2 mb-3">
+        <span
+          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${chip}`}
+        >
+          {program.levelLabel}
+        </span>
+        <span className="font-mono text-xs text-ngpa-muted">
+          MVF #{program.activityNumber}
+        </span>
+      </div>
+
+      <h3 className="font-heading text-xl font-bold text-ngpa-white tracking-tight">
+        {program.title}
+      </h3>
+
+      <p className="text-sm font-semibold text-ngpa-teal-bright mt-2">
+        {program.classCount === 1 ? (
+          <>
+            <time dateTime={program.startDate}>{program.dateLabel}</time>
+            {" "}&middot; {program.timeLabel} &middot; 1 class
+          </>
+        ) : (
+          <>
+            Thursdays,{" "}
+            <time dateTime={program.startDate}>
+              {formatLongDate(program.startDate)}
+            </time>{" "}
+            &ndash;{" "}
+            <time dateTime={program.endDate}>
+              {formatLongDate(program.endDate)}
+            </time>{" "}
+            &middot; {program.timeLabel} &middot; {program.classCount} classes
+          </>
+        )}
+      </p>
+
+      <p className="text-sm text-ngpa-white/70 mt-1">
+        {program.venue.name} &middot; {program.venue.streetAddress},{" "}
+        {program.venue.locality}, {program.venue.region}{" "}
+        {program.venue.postalCode}
+      </p>
+
+      <p className="font-mono font-bold text-2xl text-ngpa-white mt-4">
+        {program.prices.map((price, i) => (
+          <span key={price.label}>
+            {i > 0 && (
+              <span
+                className="text-ngpa-muted text-base font-normal"
+                aria-hidden="true"
+              >
+                {" "}&middot;{" "}
+              </span>
+            )}
+            <span itemProp="price" content={String(price.usd)}>
+              ${price.usd}
+            </span>
+            <span className="text-ngpa-muted text-sm font-normal">
+              {" "}
+              {price.label === "per class"
+                ? "per class"
+                : `${price.label}, per ${program.priceUnit}`}
+            </span>
+          </span>
+        ))}
+      </p>
+
+      <p className="text-base text-ngpa-white/75 leading-relaxed mt-4">
+        {program.description}
+      </p>
+
+      <p className="text-xs text-ngpa-muted mt-3">
+        Capped at {MVF_CLASS_CAPACITY} players &middot; ages {MVF_AGE_MIN}
+        &ndash;{MVF_AGE_MAX}
+      </p>
+
+      <TrackedCTA
+        href={program.registerUrl}
+        label={`mvf_register_${program.key}`}
+        section="mvf_programs"
+        target="_blank"
+        rel="noopener noreferrer"
+        data-testid={`mvf-register-${program.key}`}
+        className="mt-5 inline-flex items-center gap-2 px-6 py-3 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+      >
+        Register on MVF&rsquo;s site
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M9 5l7 7-7 7"
+          />
+        </svg>
+      </TrackedCTA>
+    </div>
+  );
+}
+
 export default function MontgomeryVillagePage() {
+  const intro = MVF_PROGRAMS.filter((p) => p.classCount === 1);
+  const fallOne = MVF_PROGRAMS.filter((p) => p.key.startsWith("fall-1"));
+  const fallTwo = MVF_PROGRAMS.filter((p) => p.key.startsWith("fall-2"));
+
   return (
     <>
       <JsonLd
@@ -123,11 +259,22 @@ export default function MontgomeryVillagePage() {
             <span className="text-ngpa-teal">Montgomery Village</span>.
           </h1>
           <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
-            This fall, Next Gen Pickleball Academy brings its coaching to the{" "}
-            {MVF_VENUE} — an intro class in August, then two six-week Thursday
-            sessions for kids and teens ages {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX}.
-            Every level is welcome; courts are grouped by skill and age so every
-            kid gets real reps.
+            This fall, Next Gen Pickleball Academy brings its coaching to
+            Montgomery Village &mdash; an intro class in August, then two
+            six-week Thursday sessions for kids and teens ages {MVF_AGE_MIN}
+            &ndash;{MVF_AGE_MAX}. Every level is welcome; each session runs a
+            Red/Orange class and a Green/Yellow class back to back, so every kid
+            gets real reps with like-skilled players.
+          </p>
+          <p
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-ngpa-teal/15 px-4 py-2 text-sm font-bold text-ngpa-teal-bright ring-1 ring-ngpa-teal/40"
+            data-testid="mvf-registration-open-badge"
+          >
+            <span
+              className="h-2 w-2 rounded-full bg-ngpa-teal-bright"
+              aria-hidden="true"
+            />
+            Registration is open now through MVF
           </p>
           <p className="mt-4 text-sm font-bold text-ngpa-teal-bright">
             In partnership with the Montgomery Village Foundation.
@@ -135,12 +282,12 @@ export default function MontgomeryVillagePage() {
 
           <div className="mt-9 flex flex-col sm:flex-row gap-3">
             <TrackedCTA
-              href="#newsletter"
-              label="mvf_hero_newsletter"
+              href="#programs"
+              label="mvf_hero_register"
               section="mvf_hero"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-xl shadow-ngpa-teal/20"
             >
-              Get notified when registration opens
+              See classes &amp; register
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -159,95 +306,89 @@ export default function MontgomeryVillagePage() {
       </section>
 
       {/* ─── Programs ─────────────────────────── */}
-      <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
+      <section
+        id="programs"
+        className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10 scroll-mt-20"
+      >
         <div className="max-w-3xl mx-auto">
           <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
             Fall 2026 Programs
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Two ways to jump in at Apple Ridge.
+            Five ways to jump in this fall.
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
             Start with the one-evening intro class, roll into the fall sessions,
-            or do both. All classes run at the {MVF_VENUE} in Montgomery
-            Village, MD.
+            or do both. Each class is its own MVF activity &mdash; register for
+            the bracket that fits your child, or ask us and we&rsquo;ll place
+            them.
           </p>
-
-          <div className="space-y-5">
-            {MVF_PROGRAMS.map((program) => (
-              <div
-                key={program.key}
-                className="bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 sm:p-7"
-                data-testid={`mvf-program-${program.key}`}
-              >
-                <h3 className="font-heading text-xl font-bold text-ngpa-white tracking-tight">
-                  {program.title}
-                </h3>
-                <p className="text-sm font-semibold text-ngpa-teal-bright mt-2">
-                  {program.classCount === 1 ? (
-                    <>
-                      <time dateTime={program.startDate}>{program.dateLabel}</time>
-                      {program.timeLabel && <> &middot; {program.timeLabel}</>}
-                      {" "}&middot; 1 class
-                    </>
-                  ) : (
-                    <>
-                      Thursdays,{" "}
-                      <time dateTime={program.startDate}>
-                        {formatLongDate(program.startDate)}
-                      </time>{" "}
-                      &ndash;{" "}
-                      <time dateTime={program.endDate}>
-                        {formatLongDate(program.endDate)}
-                      </time>{" "}
-                      &middot; {program.classCount} classes
-                    </>
-                  )}
-                </p>
-                {program.timeLabel === null && (
-                  <p className="text-xs text-ngpa-muted mt-1">
-                    Thursdays &mdash; exact times announced in the MVF Fall Rec
-                    Guide.
-                  </p>
-                )}
-                <p className="font-mono font-bold text-2xl text-ngpa-white mt-4">
-                  {program.prices.map((price, i) => (
-                    <span key={price.label}>
-                      {i > 0 && (
-                        <span className="text-ngpa-muted text-base font-normal" aria-hidden="true">
-                          {" "}&middot;{" "}
-                        </span>
-                      )}
-                      ${price.usd}
-                      <span className="text-ngpa-muted text-sm font-normal">
-                        {" "}
-                        {price.label === "per class"
-                          ? "per class"
-                          : `${price.label}, per ${program.priceUnit}`}
-                      </span>
-                    </span>
-                  ))}
-                </p>
-                <p className="text-base text-ngpa-white/75 leading-relaxed mt-4">
-                  {program.description}
-                </p>
-              </div>
-            ))}
-          </div>
 
           {/* Registration note */}
           <div
-            className="mt-8 rounded-2xl border border-ngpa-teal/40 bg-ngpa-teal/10 p-6"
+            className="rounded-2xl border border-ngpa-teal/40 bg-ngpa-teal/10 p-6"
             data-testid="mvf-registration-note"
           >
             <p className="text-base text-ngpa-white/90 leading-relaxed">
               <strong className="font-bold text-ngpa-white">
                 How registration works:
               </strong>{" "}
-              {MVF_REGISTRATION_NOTE} Join the newsletter below and we&rsquo;ll
-              email you the moment MVF registration opens.
+              {MVF_REGISTRATION_NOTE}
             </p>
+            <TrackedCTA
+              href={MVF_REGISTRATION_SEARCH_URL}
+              label="mvf_browse_all_activities"
+              section="mvf_registration_note"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="mvf-browse-all"
+              className="mt-4 inline-flex items-center gap-2 text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors min-h-[48px]"
+            >
+              Browse all MVF youth pickleball activities &rarr;
+            </TrackedCTA>
           </div>
+
+          <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-5 tracking-tight">
+            Start here &mdash; the intro class
+          </h3>
+          <div className="space-y-5">
+            {intro.map((program) => (
+              <ProgramCard key={program.key} program={program} />
+            ))}
+          </div>
+
+          <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-2 tracking-tight">
+            Fall Session I &mdash; Watkins Mill
+          </h3>
+          <p className="text-ngpa-white/70 mb-5">
+            Six Thursdays, Sept 3 &ndash; Oct 8. Red/Orange plays first,
+            Green/Yellow follows.
+          </p>
+          <div className="space-y-5">
+            {fallOne.map((program) => (
+              <ProgramCard key={program.key} program={program} />
+            ))}
+          </div>
+
+          <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-2 tracking-tight">
+            Fall Session II &mdash; North Creek
+          </h3>
+          <p className="text-ngpa-white/70 mb-5">
+            Six Thursdays, Oct 15 &ndash; Nov 19, at a different venue &mdash;
+            same format, same coaches.
+          </p>
+          <div className="space-y-5">
+            {fallTwo.map((program) => (
+              <ProgramCard key={program.key} program={program} />
+            ))}
+          </div>
+
+          <p
+            className="mt-8 text-sm text-ngpa-white/70"
+            data-testid="mvf-venue-footnote"
+          >
+            {MVF_VENUE_FOOTNOTE}
+          </p>
         </div>
       </section>
 
@@ -258,14 +399,16 @@ export default function MontgomeryVillagePage() {
             Skill Brackets
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Every kid on the right court.
+            Not sure which class to pick?
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed">
             We coach the same Red &rarr; Orange &rarr; Green &rarr; Yellow
             pathway we use across the academy. Red and Orange players are still
             learning to rally and get into games; Green and Yellow players play
-            games and focus on strategy. Your child is assessed in the first
-            class &mdash; no tryout, no pressure, just placement.{" "}
+            games and focus on strategy. If you&rsquo;re between the two, start
+            at the intro class &mdash; we assess every kid there and tell you
+            which fall class to register for. No tryout, no pressure, just
+            placement.{" "}
             <Link
               href="/#levels"
               className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
@@ -296,18 +439,19 @@ export default function MontgomeryVillagePage() {
         <div className="relative max-w-xl mx-auto">
           <div className="text-center mb-10">
             <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-              First to Know
+              Stay in the Loop
             </p>
             <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight">
-              We&rsquo;ll email you the moment MVF registration opens.
+              Classes fill at {MVF_CLASS_CAPACITY} players.
             </h2>
             <p className="text-ngpa-white/70 mt-3 text-lg">
-              Join the free weekly newsletter — MVF registration news first,
-              plus open sessions and coach tips every Thursday.
+              Join the free weekly newsletter and we&rsquo;ll tell you when a
+              class is close to full, when the next MVF session opens, and where
+              else we&rsquo;re playing around Montgomery County.
             </p>
           </div>
           <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
-            <NewsletterForm submitLabel="Notify Me When Registration Opens →" />
+            <NewsletterForm submitLabel="Keep Me Posted →" />
           </div>
         </div>
       </section>
@@ -316,16 +460,12 @@ export default function MontgomeryVillagePage() {
       <section className="bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-            More at Apple Ridge
+            More in Montgomery Village
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-6 tracking-tight">
             Want game day too?
           </h2>
           <MvfTournamentCard />
-
-          <p className="mt-10 text-xs text-ngpa-muted/80 text-center">
-            {MVF_REC_GUIDE_FOOTNOTE}
-          </p>
         </div>
       </section>
     </>

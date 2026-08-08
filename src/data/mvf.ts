@@ -1,22 +1,77 @@
 // MVF (Montgomery Village Foundation) youth pickleball programs — marketing
-// data only. Registration is through and payable to MVF, NOT NGA Stripe, so
-// unlike `camps.ts` there are no priceEnvVar fields and no checkout coupling.
-// Prices/dates come from MVF; everything here is subject to the final MVF
-// Fall Rec Guide. Fall class times + age sub-groupings are deliberately TBD
-// (Sam's call): show only dates + prices until the Rec Guide publishes.
+// data only. Registration is through and payable to MVF via their
+// ActiveCommunities portal, NOT NGA Stripe, so unlike `camps.ts` there are no
+// priceEnvVar fields and no checkout coupling. Every program here links out to
+// its own MVF activity page.
+//
+// 2026-08-08: MVF opened enrollment (2026-08-07) and published the full Fall
+// 2026 lineup, which differs from the pre-Rec-Guide placeholders this file used
+// to carry in three ways worth remembering:
+//   1. Each fall session is TWO separate MVF activities, one per skill bracket,
+//      registered independently — not one class with brackets inside it.
+//   2. The venue MOVES. Only the Aug 27 intro is at Apple Ridge; Fall I is at
+//      Watkins Mill and Fall II is at North Creek. `venue` is therefore
+//      per-program — there is no single MVF venue constant any more.
+//   3. Times are published, so nothing here ships `timeLabel: null`.
+//
+// Prices are MVF's and are NOT published anonymously on their portal (the
+// activity API returns no fee for an unauthenticated caller), so they can't be
+// verified from here — they come from Sam via MVF. If MVF changes a fee, this
+// file is the only place to fix it.
 
 export const MVF_AGE_MIN = 8;
 export const MVF_AGE_MAX = 16;
 
-export const MVF_VENUE = "Apple Ridge Pickleball Courts";
-export const MVF_VENUE_LOCALITY = "Montgomery Village";
-export const MVF_VENUE_REGION = "MD";
+/** Browse-all entry point into MVF's registration portal. */
+export const MVF_REGISTRATION_SEARCH_URL =
+  "https://anc.apm.activecommunities.com/montgomeryvillage/activity/search?onlineSiteId=0&activity_select_param=2&drop_in=0&activity_keyword=youth%20pickleball&viewMode=list";
 
 export const MVF_REGISTRATION_NOTE =
-  "Registration opens with the MVF Fall Rec Guide — registration is through and payable to the Montgomery Village Foundation.";
+  "Registration is open now and runs through the Montgomery Village Foundation — you register and pay on MVF's site, not ours. Each class below is its own MVF activity, so register for the bracket and session you want.";
 
-export const MVF_REC_GUIDE_FOOTNOTE =
-  "Program details are subject to the final MVF Fall Rec Guide.";
+export const MVF_VENUE_FOOTNOTE =
+  "The venue changes between sessions — check the location on each class before you register.";
+
+/** Per-class cap set by MVF. A fixed capacity, never a live seat count. */
+export const MVF_CLASS_CAPACITY = 8;
+
+export interface MvfVenue {
+  /** Court name as MVF publishes it to parents. */
+  name: string;
+  /** MVF recreation area / community center the courts sit in. */
+  center: string;
+  streetAddress: string;
+  locality: string;
+  region: string;
+  postalCode: string;
+}
+
+export const APPLE_RIDGE: MvfVenue = {
+  name: "Apple Ridge Pickleball Courts",
+  center: "Apple Ridge Recreation Area",
+  streetAddress: "10101 Apple Ridge Road",
+  locality: "Montgomery Village",
+  region: "MD",
+  postalCode: "20886",
+};
+
+export const WATKINS_MILL: MvfVenue = {
+  name: "Watkins Mill Pickleball Courts",
+  center: "Watkins Mill Recreation Area",
+  streetAddress: "19501 Club Lake Road",
+  locality: "Montgomery Village",
+  region: "MD",
+  postalCode: "20886",
+};
+
+export const NORTH_CREEK: MvfVenue = {
+  name: "North Creek Pickleball Courts",
+  center: "North Creek Community Center",
+  streetAddress: "20125 Arrowhead Road",
+  locality: "Montgomery Village",
+  region: "MD",
+  postalCode: "20886",
+};
 
 export interface MvfPrice {
   /** e.g. "per class", "resident", "non-resident" */
@@ -27,14 +82,26 @@ export interface MvfPrice {
 export interface MvfProgram {
   key: string;
   title: string;
+  /**
+   * MVF's own activity title. Parents match on this in the portal, so it is
+   * quoted verbatim even though it uses MVF's Beginner/Advanced wording rather
+   * than our Red/Orange/Green/Yellow labels.
+   */
+  activityName: string;
+  /** MVF activity number, e.g. "1205.435". The other thing parents match on. */
+  activityNumber: string;
+  /** Deep link to this activity on MVF's registration portal. */
+  registerUrl: string;
+  /** Ball colors this class covers, in our labels — never Beginner/Pro synonyms. */
+  levelLabel: string;
+  venue: MvfVenue;
   /** Human date label, e.g. "Sept 3 – Oct 8, 2026". */
   dateLabel: string;
   /** ISO date-only. Same as endDate for the single intro class. */
   startDate: string;
   endDate: string;
   classCount: number;
-  /** Confirmed time, or null when MVF hasn't announced times yet. */
-  timeLabel: string | null;
+  timeLabel: string;
   prices: MvfPrice[];
   /** Suffix after each price, e.g. "class" or "session". */
   priceUnit: string;
@@ -44,7 +111,13 @@ export interface MvfProgram {
 export const MVF_PROGRAMS: MvfProgram[] = [
   {
     key: "intro",
-    title: "MVF Youth Pickleball INTRO Class – by Next Gen Pickleball",
+    title: "Youth Pickleball Intro Class",
+    activityName: "Pickleball Youth Intro Class Fall (ages 8 to 16)",
+    activityNumber: "1005.434",
+    registerUrl:
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-youth-intro-class-fall-ages-8-to-16/5792",
+    levelLabel: "All levels",
+    venue: APPLE_RIDGE,
     dateLabel: "Thursday, August 27, 2026",
     startDate: "2026-08-27",
     endDate: "2026-08-27",
@@ -53,39 +126,95 @@ export const MVF_PROGRAMS: MvfProgram[] = [
     prices: [{ label: "per class", usd: 8 }],
     priceUnit: "class",
     description:
-      "Kids learn the pickleball basics — rallying, serve and return, scoring — and get into real games. All skills welcome; courts are grouped by skill and age. We also assess your child's bracket for the Fall session classes: Red/Orange (beginner and advanced beginner) or Green/Yellow (intermediate and advanced).",
+      "Kids learn the pickleball basics — rallying, serve and return, scoring — and get into real games. All skills welcome; courts are grouped by skill and age. We also assess your child's bracket for the fall sessions: Red/Orange or Green/Yellow.",
   },
   {
-    key: "fall-1",
-    title: "MVF Youth Pickleball Classes – Fall Session I",
+    key: "fall-1-beginner",
+    title: "Fall Session I — Red / Orange",
+    activityName: "Pickleball Fall I Beginner (ages 8 to 16)",
+    activityNumber: "1205.435",
+    registerUrl:
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-i-beginner-ages-8-to-16/5790",
+    levelLabel: "Red / Orange",
+    venue: WATKINS_MILL,
     dateLabel: "Sept 3 – Oct 8, 2026",
     startDate: "2026-09-03",
     endDate: "2026-10-08",
     classCount: 6,
-    timeLabel: null,
+    timeLabel: "5:30–6:30 PM",
     prices: [
       { label: "resident", usd: 90 },
       { label: "non-resident", usd: 100 },
     ],
     priceUnit: "session",
     description:
-      "Structured, fun, focused sessions with routines that build confidence through rallying with like-skilled kids. Players are assessed in the first session and placed into one of four skill brackets (Red/Orange or Green/Yellow). Red and Orange are still learning to rally and get into games; Green and Yellow play games and focus on strategy.",
+      "For players still learning to rally and get into games. Structured, fun, focused sessions with routines that build confidence through rallying with like-skilled kids.",
   },
   {
-    key: "fall-2",
-    title: "MVF Youth Pickleball Classes – Fall Session II",
+    key: "fall-1-advanced",
+    title: "Fall Session I — Green / Yellow",
+    activityName: "Pickleball Fall I Advanced (ages 8 to 16)",
+    activityNumber: "1205.436",
+    registerUrl:
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-i-advanced-ages-8-to-16/9360",
+    levelLabel: "Green / Yellow",
+    venue: WATKINS_MILL,
+    dateLabel: "Sept 3 – Oct 8, 2026",
+    startDate: "2026-09-03",
+    endDate: "2026-10-08",
+    classCount: 6,
+    timeLabel: "6:30–7:30 PM",
+    prices: [
+      { label: "resident", usd: 90 },
+      { label: "non-resident", usd: 100 },
+    ],
+    priceUnit: "session",
+    description:
+      "For players who already play games and are ready to work on strategy — stacking points together, controlling the kitchen line, and playing smarter doubles.",
+  },
+  {
+    key: "fall-2-beginner",
+    title: "Fall Session II — Red / Orange",
+    activityName: "Pickleball Fall II Beginner (ages 8 to 16)",
+    activityNumber: "1205.440",
+    registerUrl:
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-ii-beginner-ages-8-to-16/9361",
+    levelLabel: "Red / Orange",
+    venue: NORTH_CREEK,
     dateLabel: "Oct 15 – Nov 19, 2026",
     startDate: "2026-10-15",
     endDate: "2026-11-19",
     classCount: 6,
-    timeLabel: null,
+    timeLabel: "5:30–6:30 PM",
     prices: [
       { label: "resident", usd: 90 },
       { label: "non-resident", usd: 100 },
     ],
     priceUnit: "session",
     description:
-      "Same format as Session I — structured, fun, focused sessions building confidence through rallying with like-skilled kids, in the four skill brackets (Red/Orange or Green/Yellow). Join for one session or both.",
+      "Same format as Session I, at North Creek. Join for one session or both — kids who did Session I keep building, and new players are welcome to start here.",
+  },
+  {
+    key: "fall-2-advanced",
+    title: "Fall Session II — Green / Yellow",
+    activityName: "Pickleball Fall II Advanced (ages 8 to 16)",
+    activityNumber: "1205.441",
+    registerUrl:
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-ii-advanced-ages-8-to-16/9362",
+    levelLabel: "Green / Yellow",
+    venue: NORTH_CREEK,
+    dateLabel: "Oct 15 – Nov 19, 2026",
+    startDate: "2026-10-15",
+    endDate: "2026-11-19",
+    classCount: 6,
+    timeLabel: "6:30–7:30 PM",
+    prices: [
+      { label: "resident", usd: 90 },
+      { label: "non-resident", usd: 100 },
+    ],
+    priceUnit: "session",
+    description:
+      "Game play and strategy at North Creek. Join for one session or both — Session I players keep developing, and new Green/Yellow players are welcome to start here.",
   },
 ];
 

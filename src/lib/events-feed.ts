@@ -33,7 +33,7 @@
 import type { NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { CAMPS, CAMP_OPTIONS, campDays, type Camp } from "@/data/camps";
-import { MVF_PROGRAMS, MVF_VENUE, type MvfProgram } from "@/data/mvf";
+import { MVF_PROGRAMS, type MvfProgram } from "@/data/mvf";
 import {
   FALL_SATURDAYS,
   FALL_SUNDAYS,
@@ -228,8 +228,14 @@ export function buildCampEvents(camps: Camp[], origin: string): EventFeedItem[] 
 
 /**
  * MVF programs → one item per class date, expanded weekly from `startDate`.
- * `timeLabel` is null until the MVF Fall Rec Guide publishes; those classes
- * ship as all-day items rather than inventing an hour.
+ *
+ * The venue is per-program, not per-file: MVF moves the fall sessions between
+ * Apple Ridge, Watkins Mill, and North Creek, so a single MVF venue constant
+ * would put two thirds of these classes at the wrong courts.
+ *
+ * `parseTimeRange` returning null still falls back to an all-day item. MVF has
+ * published every time for Fall 2026, so that path is unreachable today — it
+ * stays because the never-invent-a-time rule outlives this season's data.
  */
 export function buildMvfEvents(
   programs: MvfProgram[],
@@ -238,7 +244,9 @@ export function buildMvfEvents(
   const url = `${origin}/montgomery-village-youth-pickleball`;
 
   return programs.flatMap((program) => {
-    const range = program.timeLabel ? parseTimeRange(program.timeLabel) : null;
+    const range = parseTimeRange(program.timeLabel);
+    const { name, streetAddress, locality, region, postalCode } = program.venue;
+    const location = `${name}, ${streetAddress}, ${locality}, ${region} ${postalCode}`;
 
     return Array.from({ length: program.classCount }, (_, i) => {
       const date = addDaysIso(program.startDate, i * 7);
@@ -248,12 +256,12 @@ export function buildMvfEvents(
       return {
         source: "mvf" as const,
         key: `mvf:${program.key}:${date}`,
-        title: `${program.title}${suffix}${tbd}`,
+        title: `MVF ${program.title}${suffix}${tbd}`,
         date,
         startTime: range?.start ?? null,
         endTime: range?.end ?? null,
         allDay: range === null,
-        location: MVF_VENUE,
+        location,
         url,
         tentative: false,
         status: "Open" as const,

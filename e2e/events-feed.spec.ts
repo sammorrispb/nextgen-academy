@@ -164,24 +164,48 @@ test.describe("events feed — MVF", () => {
     }
   });
 
-  test("classes with no announced time ship all-day and say so", () => {
+  test("every Fall 2026 class carries its published time — none ship all-day", () => {
     const items = buildMvfEvents(MVF_PROGRAMS, ORIGIN);
 
     const intro = items.find((i) => i.key.startsWith("mvf:intro:"))!;
     expect(intro.allDay).toBe(false);
     expect(intro.startTime).toBe("6:00 PM");
     expect(intro.endTime).toBe("7:00 PM");
-    expect(intro.title).not.toContain("time TBD");
 
-    const fall = items.filter((i) => i.key.startsWith("mvf:fall-"));
-    expect(fall.length).toBeGreaterThan(0);
-    for (const item of fall) {
-      expect(item.allDay).toBe(true);
-      expect(item.startTime).toBeNull();
-      expect(item.endTime).toBeNull();
-      // Never invent an hour MVF hasn't published.
-      expect(item.title).toContain("(time TBD)");
+    // MVF published every fall time on 2026-08-07. If one of these regresses to
+    // all-day, a timeLabel in mvf.ts stopped parsing — fix the data, not this.
+    for (const item of items) {
+      expect(item.allDay).toBe(false);
+      expect(item.startTime).not.toBeNull();
+      expect(item.endTime).not.toBeNull();
+      expect(item.title).not.toContain("time TBD");
     }
+
+    const beginner = items.find((i) => i.key.startsWith("mvf:fall-1-beginner:"))!;
+    expect(beginner.startTime).toBe("5:30 PM");
+    expect(beginner.endTime).toBe("6:30 PM");
+    const advanced = items.find((i) => i.key.startsWith("mvf:fall-1-advanced:"))!;
+    expect(advanced.startTime).toBe("6:30 PM");
+    expect(advanced.endTime).toBe("7:30 PM");
+  });
+
+  test("each program lands at its own MVF venue — the fall sessions move", () => {
+    const items = buildMvfEvents(MVF_PROGRAMS, ORIGIN);
+
+    const venueFor = (prefix: string) =>
+      items.find((i) => i.key.startsWith(prefix))!.location;
+
+    expect(venueFor("mvf:intro:")).toContain("Apple Ridge");
+    expect(venueFor("mvf:fall-1-beginner:")).toContain("Watkins Mill");
+    expect(venueFor("mvf:fall-1-advanced:")).toContain("Watkins Mill");
+    expect(venueFor("mvf:fall-2-beginner:")).toContain("North Creek");
+    expect(venueFor("mvf:fall-2-advanced:")).toContain("North Creek");
+  });
+
+  test("no seat counts leak through the MVF capacity field", () => {
+    const json = JSON.stringify(buildMvfEvents(MVF_PROGRAMS, ORIGIN));
+    expect(json).not.toContain("capacity");
+    expect(json).not.toContain("registeredCount");
   });
 
   test("the MVF tournament is not emitted — it belongs to the L&D namespace", () => {
