@@ -114,9 +114,9 @@ export default function FreeEvaluationPage() {
 
               <p className="mt-6 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
                 Ages 6&ndash;16. Meet a real coach on the court. We&rsquo;ll see
-                where your child is at, recommend the right group &mdash; or, if
-                they&rsquo;re still learning to rally, a private-lesson plan to
-                get them there. Every question answered.{" "}
+                where your child is at and place them on the right group court
+                &mdash; every level has one &mdash; with private lessons if you
+                want 1:1 work alongside it. Every question answered.{" "}
                 <strong className="text-ngpa-white font-bold">No pressure. No cost.</strong>
               </p>
 

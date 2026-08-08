@@ -32,7 +32,12 @@ export const MVF_REGISTRATION_NOTE =
 export const MVF_VENUE_FOOTNOTE =
   "The venue changes between sessions — check the location on each class before you register.";
 
-/** Per-class cap set by MVF. A fixed capacity, never a live seat count. */
+/**
+ * Per-class cap. Read as `total_open` on every activity while enrollment was
+ * still zero, so it's the capacity rather than a remaining-seat count — but it
+ * is inferred, not published. It is rendered as a fixed cap and must never be
+ * treated as live availability: MVF's portal is the only real seat count.
+ */
 export const MVF_CLASS_CAPACITY = 8;
 
 export interface MvfVenue {

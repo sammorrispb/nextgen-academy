@@ -206,8 +206,8 @@ export default function LeadForm({
         </h3>
         <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
           We&rsquo;ll reach out within 24 hours to schedule a free evaluation
-          and figure out the right next step &mdash; a group level, or private
-          lessons if your child is still learning to rally.
+          and figure out the right next step &mdash; the group court for your
+          child&rsquo;s level, plus private lessons if they want 1:1 work.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a

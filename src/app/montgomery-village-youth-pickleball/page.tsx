@@ -140,6 +140,13 @@ function ProgramCard({ program }: { program: MvfProgram }) {
         {program.title}
       </h3>
 
+      {/* MVF's own activity title, verbatim. We label by ball color everywhere
+          else, but this is the string a parent has to find in MVF's portal —
+          showing our name only would leave them hunting. */}
+      <p className="text-sm text-ngpa-muted mt-1">
+        On MVF&rsquo;s site: &ldquo;{program.activityName}&rdquo;
+      </p>
+
       <p className="text-sm font-semibold text-ngpa-teal-bright mt-2">
         {program.classCount === 1 ? (
           <>
@@ -259,12 +266,12 @@ export default function MontgomeryVillagePage() {
             <span className="text-ngpa-teal">Montgomery Village</span>.
           </h1>
           <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
-            This fall, Next Gen Pickleball Academy brings its coaching to
-            Montgomery Village &mdash; an intro class in August, then two
-            six-week Thursday sessions for kids and teens ages {MVF_AGE_MIN}
-            &ndash;{MVF_AGE_MAX}. Every level is welcome; each session runs a
-            Red/Orange class and a Green/Yellow class back to back, so every kid
-            gets real reps with like-skilled players.
+            Next Gen is running youth classes in Montgomery Village this fall
+            &mdash; an intro class in August, then two six-week Thursday
+            sessions for kids and teens ages {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX}.
+            Every level is welcome: each session runs a Red/Orange class and a
+            Green/Yellow class back to back, so your child gets real reps with
+            like-skilled players.
           </p>
           <p
             className="mt-5 inline-flex items-center gap-2 rounded-full bg-ngpa-teal/15 px-4 py-2 text-sm font-bold text-ngpa-teal-bright ring-1 ring-ngpa-teal/40"
@@ -315,13 +322,13 @@ export default function MontgomeryVillagePage() {
             Fall 2026 Programs
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Five ways to jump in this fall.
+            One intro class. Two six-week sessions.
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
             Start with the one-evening intro class, roll into the fall sessions,
-            or do both. Each class is its own MVF activity &mdash; register for
-            the bracket that fits your child, or ask us and we&rsquo;ll place
-            them.
+            or do both. Each session runs a Red/Orange class and a Green/Yellow
+            class, registered separately &mdash; pick the one that fits your
+            child, or ask us and we&rsquo;ll place them.
           </p>
 
           {/* Registration note */}
@@ -442,12 +449,16 @@ export default function MontgomeryVillagePage() {
               Stay in the Loop
             </p>
             <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight">
-              Classes fill at {MVF_CLASS_CAPACITY} players.
+              More than Montgomery Village.
             </h2>
+            {/* Deliberately promises only what we actually send: MVF seat counts
+                live in MVF's portal, not ours, so we cannot alert on a filling
+                class and must not imply we will. */}
             <p className="text-ngpa-white/70 mt-3 text-lg">
-              Join the free weekly newsletter and we&rsquo;ll tell you when a
-              class is close to full, when the next MVF session opens, and where
-              else we&rsquo;re playing around Montgomery County.
+              The free weekly newsletter carries open sessions across Montgomery
+              County, a coach tip, and what&rsquo;s coming next &mdash; including
+              future MVF sessions. For seats in the classes above, MVF&rsquo;s
+              site is the live count.
             </p>
           </div>
           <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">

@@ -92,6 +92,34 @@ test.describe("/montgomery-village-youth-pickleball", () => {
     await expect(page.locator('a[href*="/api/checkout"]')).toHaveCount(0);
   });
 
+  test("never promises a seat alert we have no way to send", async ({ page }) => {
+    await page.goto(PAGE_PATH);
+    // MVF seat counts live in MVF's portal; nothing here reads them, so any
+    // copy implying we'll warn a parent that a class is filling is a promise
+    // the system cannot keep.
+    const body = (await page.locator("body").innerText()).toLowerCase();
+    for (const claim of [
+      "close to full",
+      "when a class fills",
+      "when a spot opens",
+      "alert you when",
+      "notify you when a",
+    ]) {
+      expect(body, `page must not promise: ${claim}`).not.toContain(claim);
+    }
+  });
+
+  test("shows MVF's own activity title so a parent can match it in the portal", async ({
+    page,
+  }) => {
+    await page.goto(PAGE_PATH);
+    for (const program of MVF_PROGRAMS) {
+      await expect(page.getByTestId(`mvf-program-${program.key}`)).toContainText(
+        program.activityName,
+      );
+    }
+  });
+
   test("emits SportsEvent JSON-LD for each program", async ({ page }) => {
     await page.goto(PAGE_PATH);
     const scripts = page.locator('script[type="application/ld+json"]');
