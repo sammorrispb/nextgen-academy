@@ -23,6 +23,6 @@ export const seo = {
   mvf: {
     title: "MVF Youth Pickleball in Montgomery Village, MD — Ages 8–16",
     description:
-      "Youth pickleball classes at Apple Ridge in Montgomery Village, MD — an intro class Aug 27 and two fall Thursday sessions for kids ages 8–16, coached by Next Gen.",
+      "Youth pickleball in Montgomery Village, MD — an intro class Aug 27 plus two six-week Thursday sessions for ages 8–16, coached by Next Gen. Register through MVF.",
   },
 } as const;

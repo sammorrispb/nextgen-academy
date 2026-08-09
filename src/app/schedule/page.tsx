@@ -194,15 +194,15 @@ export default async function SchedulePage() {
           >
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal-bright">
-                New &middot; Fall 2026
+                Registration open &middot; Fall 2026
               </p>
               <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
                 MVF Youth Pickleball in Montgomery Village
               </p>
               <p className="text-sm text-ngpa-muted mt-0.5">
-                Intro class Aug 27 + two fall Thursday sessions at Apple Ridge,
-                ages 8&ndash;16 &middot; registration through the Montgomery
-                Village Foundation.
+                Intro class Aug 27 at Apple Ridge + two six-week Thursday
+                sessions at Watkins Mill and North Creek, ages 8&ndash;16
+                &middot; register through the Montgomery Village Foundation.
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-teal text-ngpa-deep font-heading font-bold group-hover:bg-ngpa-teal-bright transition-colors min-h-[48px]">

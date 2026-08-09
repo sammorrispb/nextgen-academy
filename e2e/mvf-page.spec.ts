@@ -1,7 +1,11 @@
 // Browser e2e for /montgomery-village-youth-pickleball. Requires `npm run dev`.
 //   npx playwright test e2e/mvf-page.spec.ts
 import { test, expect } from "@playwright/test";
-import { MVF_PROGRAMS, MVF_TOURNAMENT } from "../src/data/mvf";
+import {
+  MVF_PROGRAMS,
+  MVF_REGISTRATION_SEARCH_URL,
+  MVF_TOURNAMENT,
+} from "../src/data/mvf";
 
 const PAGE_PATH = "/montgomery-village-youth-pickleball";
 
@@ -16,33 +20,104 @@ test.describe("/montgomery-village-youth-pickleball", () => {
     ).toBeVisible();
   });
 
-  test("renders all three program cards with titles", async ({ page }) => {
+  test("renders every program card with its title, level, and MVF number", async ({
+    page,
+  }) => {
     await page.goto(PAGE_PATH);
     for (const program of MVF_PROGRAMS) {
       const card = page.getByTestId(`mvf-program-${program.key}`);
       await expect(card).toBeVisible();
       await expect(card).toContainText(program.title);
+      await expect(card).toContainText(program.levelLabel);
+      // Parents match on the activity number in MVF's portal.
+      await expect(card).toContainText(program.activityNumber);
     }
   });
 
   test("shows the $8 intro price and $90/$100 fall session prices", async ({ page }) => {
     await page.goto(PAGE_PATH);
     await expect(page.getByTestId("mvf-program-intro")).toContainText("$8");
-    const fall1 = page.getByTestId("mvf-program-fall-1");
+    const fall1 = page.getByTestId("mvf-program-fall-1-beginner");
     await expect(fall1).toContainText("$90");
     await expect(fall1).toContainText("$100");
   });
 
-  test("fall sessions show dates but no class times (Rec Guide TBD)", async ({ page }) => {
+  test("every class shows its published time and its own venue", async ({ page }) => {
     await page.goto(PAGE_PATH);
-    const fall2 = page.getByTestId("mvf-program-fall-2");
-    await expect(fall2).toContainText(/exact times announced in the MVF Fall Rec Guide/i);
+    for (const program of MVF_PROGRAMS) {
+      const card = page.getByTestId(`mvf-program-${program.key}`);
+      await expect(card).toContainText(program.timeLabel);
+      await expect(card).toContainText(program.venue.name);
+    }
+    // The fall sessions are at different venues — a regression to one venue is
+    // the exact drift this pins.
+    await expect(page.getByTestId("mvf-program-fall-1-beginner")).toContainText(
+      "Watkins Mill",
+    );
+    await expect(page.getByTestId("mvf-program-fall-2-beginner")).toContainText(
+      "North Creek",
+    );
+    await expect(page.getByTestId("mvf-program-intro")).toContainText("Apple Ridge");
   });
 
-  test("carries the registration-through-MVF note (no NGA checkout)", async ({ page }) => {
+  test("every class links out to its own MVF activity in a new tab", async ({
+    page,
+  }) => {
     await page.goto(PAGE_PATH);
+    for (const program of MVF_PROGRAMS) {
+      const cta = page.getByTestId(`mvf-register-${program.key}`);
+      await expect(cta).toBeVisible();
+      await expect(cta).toHaveAttribute("href", program.registerUrl);
+      await expect(cta).toHaveAttribute("target", "_blank");
+      await expect(cta).toHaveAttribute("rel", /noopener/);
+    }
+  });
+
+  test("says registration is open and routes to MVF (no NGA checkout)", async ({
+    page,
+  }) => {
+    await page.goto(PAGE_PATH);
+    await expect(page.getByTestId("mvf-registration-open-badge")).toContainText(
+      /registration is open/i,
+    );
     const note = page.getByTestId("mvf-registration-note");
-    await expect(note).toContainText(/through and payable to the Montgomery Village Foundation/i);
+    await expect(note).toContainText(
+      /register and pay on MVF['’]s site, not ours/i,
+    );
+    await expect(page.getByTestId("mvf-browse-all")).toHaveAttribute(
+      "href",
+      MVF_REGISTRATION_SEARCH_URL,
+    );
+    // No NGA payment surface may appear on this page.
+    await expect(page.locator('a[href*="/api/checkout"]')).toHaveCount(0);
+  });
+
+  test("never promises a seat alert we have no way to send", async ({ page }) => {
+    await page.goto(PAGE_PATH);
+    // MVF seat counts live in MVF's portal; nothing here reads them, so any
+    // copy implying we'll warn a parent that a class is filling is a promise
+    // the system cannot keep.
+    const body = (await page.locator("body").innerText()).toLowerCase();
+    for (const claim of [
+      "close to full",
+      "when a class fills",
+      "when a spot opens",
+      "alert you when",
+      "notify you when a",
+    ]) {
+      expect(body, `page must not promise: ${claim}`).not.toContain(claim);
+    }
+  });
+
+  test("shows MVF's own activity title so a parent can match it in the portal", async ({
+    page,
+  }) => {
+    await page.goto(PAGE_PATH);
+    for (const program of MVF_PROGRAMS) {
+      await expect(page.getByTestId(`mvf-program-${program.key}`)).toContainText(
+        program.activityName,
+      );
+    }
   });
 
   test("emits SportsEvent JSON-LD for each program", async ({ page }) => {
@@ -54,9 +129,14 @@ test.describe("/montgomery-village-youth-pickleball", () => {
     expect(sportsEvents.length).toBeGreaterThanOrEqual(MVF_PROGRAMS.length);
     const joined = bodies.join("\n");
     expect(joined).toContain("Apple Ridge Pickleball Courts");
+    expect(joined).toContain("Watkins Mill Pickleball Courts");
+    expect(joined).toContain("North Creek Pickleball Courts");
     expect(joined).toContain('"price":8');
     expect(joined).toContain('"price":90');
     expect(joined).toContain('"price":100');
+    // Registration is live — offers must not still advertise PreOrder.
+    expect(joined).toContain("https://schema.org/InStock");
+    expect(joined).not.toContain("https://schema.org/PreOrder");
   });
 
   test("embeds the newsletter form as the primary CTA", async ({ page }) => {
