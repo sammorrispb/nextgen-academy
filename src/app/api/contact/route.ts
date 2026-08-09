@@ -121,6 +121,7 @@ async function createNotionRow(
         .join(", ")}`,
     );
   }
+  if (body.location) noteParts.push(`Preferred location: ${body.location}`);
   if (message) noteParts.push(`Message: "${message}"`);
   if (attribution) noteParts.push(`Attribution: ${attribution}`);
   const notesContent = noteParts.join(". ");
@@ -294,6 +295,13 @@ export async function POST(request: NextRequest) {
     </tr>`
     : "";
 
+  const locationRow = body.location
+    ? `<tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Location</td>
+      <td style="${s.tableValue}">${escapeHtml(body.location)}</td>
+    </tr>`
+    : "";
+
   const messageRow = body.message?.trim()
     ? `<tr style="${s.tableRow}">
       <td style="${s.tableLabel} vertical-align: top;">Message</td>
@@ -329,6 +337,7 @@ export async function POST(request: NextRequest) {
     </tr>
     ${phoneRow}
     ${childAgeRow}
+    ${locationRow}
     ${messageRow}
     <tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Notion CRM</td>
@@ -429,6 +438,7 @@ export async function POST(request: NextRequest) {
             ? kids.map((k) => ({ name: k.name.trim() || null, age: k.age }))
             : null,
         inquiry_message: body.message?.trim() || null,
+        location: body.location || null,
         notion_status: notionStatus,
         is_parent: PROGRAM_INTERESTS.has(interest),
         utm_content: body.utm_content ?? null,

@@ -6,11 +6,17 @@ import type {
   LeadFormData,
   LeadValidationErrors,
 } from "@/lib/validate-lead";
-import { MAX_KIDS_PER_SUBMISSION, validateLeadForm } from "@/lib/validate-lead";
+import {
+  LEAD_LOCATIONS,
+  MAX_KIDS_PER_SUBMISSION,
+  validateLeadForm,
+} from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
+
+const [MOCO_LOCATION, FREDERICK_LOCATION] = LEAD_LOCATIONS;
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -38,6 +44,7 @@ export default function LeadForm({
   const [parentName, setParentName] = useState("");
   const [contact, setContact] = useState("");
   const [kids, setKids] = useState<KidDraft[]>([emptyKid()]);
+  const [location, setLocation] = useState<string>(MOCO_LOCATION);
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<LeadValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
@@ -140,6 +147,10 @@ export default function LeadForm({
       parentName,
       contact,
       kids: kids.map((k) => ({ name: k.name.trim(), age: Number(k.age) })),
+      // Omitted for the MoCo default so existing leads keep reading
+      // "No preference" in the admin email and the Notion Location select
+      // stays clean.
+      ...(location === FREDERICK_LOCATION ? { location } : {}),
       notes: notes || undefined,
       ...trackingRef.current,
       visitor_id: getVisitorIdForForm() || null,
@@ -206,8 +217,8 @@ export default function LeadForm({
         </h3>
         <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
           We&rsquo;ll reach out within 24 hours to schedule a free evaluation
-          and figure out the right next step &mdash; a group level, or private
-          lessons if your child is still learning to rally.
+          and figure out the right next step &mdash; the group court for your
+          child&rsquo;s level, plus private lessons if they want 1:1 work.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a
@@ -371,6 +382,47 @@ export default function LeadForm({
           )}
           {errors.kids && <p className={errorClass}>{errors.kids}</p>}
         </div>
+
+        {/* Preferred area */}
+        <fieldset>
+          <legend className={labelClass}>Where would you like to play?</legend>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {LEAD_LOCATIONS.map((loc) => (
+              <label
+                key={loc}
+                className={`flex items-center gap-3 rounded-xl border px-4 py-3.5 min-h-[48px] cursor-pointer transition-all ${
+                  location === loc
+                    ? "border-ngpa-teal bg-ngpa-teal/10 text-ngpa-white"
+                    : "border-ngpa-slate/60 bg-ngpa-deep/60 text-ngpa-white/75 hover:border-ngpa-slate"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="location"
+                  value={loc}
+                  checked={location === loc}
+                  onChange={() => {
+                    setLocation(loc);
+                    markStarted();
+                  }}
+                  className="accent-ngpa-teal w-4 h-4 shrink-0"
+                />
+                <span className="text-sm font-medium leading-snug">
+                  {loc === MOCO_LOCATION ? (
+                    <>
+                      {loc}
+                      <span className="block text-xs text-ngpa-white/50 font-normal">
+                        MCPS courts, rotating
+                      </span>
+                    </>
+                  ) : (
+                    loc
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         {/* Notes — optional self-identified intent */}
         <div>

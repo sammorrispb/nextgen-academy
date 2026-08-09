@@ -389,7 +389,9 @@ export default async function Home() {
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
               Sessions rotate across Montgomery County Public Schools by demand
-              &mdash; closer to more zip codes than a single fixed venue.{" "}
+              &mdash; closer to more zip codes than a single fixed venue.
+              Private lessons are also available at The Pickle Park in
+              Frederick.{" "}
               <Link
                 href="/schedule"
                 className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"

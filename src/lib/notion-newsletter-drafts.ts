@@ -249,6 +249,34 @@ export function buildDraftsQueryFilter(cutoff: string, todayEt: string) {
 }
 
 /**
+ * The mirror image of buildDraftsQueryFilter: Approved rows the freshness
+ * window is SUPPRESSING even though their operator declared them still live.
+ *
+ * Rows stay Approved forever after a send — the 7-day Drafted At window
+ * retires them, not a status flip — so "Status = Approved" alone describes the
+ * whole historical archive and can never distinguish "shipped, done" from
+ * "still meant to ship". `Expires At` is the only column carrying that intent,
+ * which is why every leg below is load-bearing:
+ *   1. Status = Approved.
+ *   2. Drafted At BEFORE cutoff — outside the window, so it did not ship.
+ *   3. Expires At is not empty — the operator explicitly gave it a shelf-life.
+ *      Without this leg the ordinary archive floods the alert every week.
+ *   4. Expires At on_or_after todayEt — that shelf-life has not passed yet, so
+ *      the row self-clears the moment it expires.
+ * Detection only: this filter decides what gets REPORTED and never what ships.
+ */
+export function buildStrandedDraftsQueryFilter(cutoff: string, todayEt: string) {
+  return {
+    and: [
+      { property: "Status", select: { equals: "Approved" } },
+      { property: "Drafted At", date: { before: cutoff } },
+      { property: "Expires At", date: { is_not_empty: true } },
+      { property: "Expires At", date: { on_or_after: todayEt } },
+    ],
+  };
+}
+
+/**
  * THE cutoff math behind buildDraftsQueryFilter, extracted so the cron's
  * query (queryApprovedRows, evaluated at fire time) and the inbox's
  * "will this ride Thursday?" prediction (willRideThursdaySend, evaluated at
@@ -455,32 +483,101 @@ async function buildDraftFromRow(
 }
 
 /**
- * Return ALL Approved newsletter drafts within the last 7 days, oldest first.
- * The cron concatenates these into the "From Coach Sam" lead block so that
- * *every* row Sam approved in a given week ships — not just the most recent.
- * (A second Approved row — e.g. an event promo alongside the weekly drafter
- * row — used to be silently dropped by the single-row fetch.) Fails soft: any
- * Notion error returns []. Empty when nothing is approved → block stays hidden.
+ * Query the drafts DB for Approved rows the freshness window suppressed while
+ * their Expires At is still live. Fails soft to [] — a detector that can break
+ * the send would be worse than the blind spot it closes.
  */
-export async function fetchApprovedNewsletterDrafts(): Promise<
-  NewsletterDraft[]
-> {
+async function queryStrandedRows(
+  notionKey: string,
+  dbId: string,
+): Promise<string[]> {
+  const { cutoff, todayEt } = shipWindowBounds(new Date());
+  try {
+    const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${notionKey}`,
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_VERSION,
+      },
+      body: JSON.stringify({
+        filter: buildStrandedDraftsQueryFilter(cutoff, todayEt),
+        page_size: 100,
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(
+        "[notion-newsletter-drafts] stranded query failed",
+        res.status,
+      );
+      return [];
+    }
+    const data = (await res.json()) as { results?: { id: string }[] };
+    return (data.results ?? []).map((r) => r.id);
+  } catch (err) {
+    console.error("[notion-newsletter-drafts] stranded query threw", err);
+    return [];
+  }
+}
+
+/** Why the lead block looks the way it does this week. */
+export type NewsletterDraftsStatus = "ok" | "config_missing" | "query_failed";
+
+/**
+ * The lead block's outcome, not just its content. Five different things used
+ * to collapse into one bare `[]` — unset env, a Notion query error, an
+ * unreadable row body, an expired row, and a row aged out of the 7-day window
+ * — so the cron could not tell any of them apart from "Sam approved nothing"
+ * and reported ok:true for all five.
+ */
+export interface NewsletterDraftsResult {
+  /** Rows that rendered and will ship, oldest first. */
+  drafts: NewsletterDraft[];
+  status: NewsletterDraftsStatus;
+  /** Rows that PASSED the ship filter but whose body could not be read, so
+   * they were dropped — a silently SHORT lead block, not an empty one. */
+  unreadablePageIds: string[];
+  /** Approved rows with a live Expires At that the freshness window kept out
+   * of this issue. See buildStrandedDraftsQueryFilter. */
+  strandedPageIds: string[];
+}
+
+/**
+ * Return ALL Approved newsletter drafts within the last 7 days, oldest first,
+ * WITH the diagnostics the caller needs to tell an empty queue apart from a
+ * dropped announcement. The cron concatenates `drafts` into the "From Coach
+ * Sam" lead block so that *every* row Sam approved in a given week ships — not
+ * just the most recent. Still fails soft (the newsletter ships without the
+ * block rather than not at all); the difference is that the failure now has a
+ * name the cron can alert on.
+ */
+export async function fetchApprovedNewsletterDrafts(): Promise<NewsletterDraftsResult> {
   const notionKey = process.env.NOTION_API_KEY;
   const dbId = process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID;
-  if (!notionKey || !dbId) return [];
+  const nothing = { drafts: [], unreadablePageIds: [], strandedPageIds: [] };
+  if (!notionKey || !dbId) return { ...nothing, status: "config_missing" };
 
   const rows = await queryApprovedRows(notionKey, dbId, {
     pageSize: 100,
     direction: "ascending",
   });
-  if (!rows) return [];
+  if (!rows) return { ...nothing, status: "query_failed" };
 
   const drafts: NewsletterDraft[] = [];
+  const unreadablePageIds: string[] = [];
   for (const row of rows) {
     const draft = await buildDraftFromRow(row, notionKey);
     if (draft) drafts.push(draft);
+    else unreadablePageIds.push(row.id as string);
   }
-  return drafts;
+
+  return {
+    drafts,
+    status: "ok",
+    unreadablePageIds,
+    strandedPageIds: await queryStrandedRows(notionKey, dbId),
+  };
 }
 
 /**

@@ -1,4 +1,4 @@
-import { withCronAlert, type CronFailure } from "@/lib/cron-alert";
+import { withCronAlert, rollupFailure, type CronFailure } from "@/lib/cron-alert";
 import { Resend } from "resend";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { fetchActiveSubscribers } from "@/lib/notion-newsletter";
@@ -7,12 +7,16 @@ import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { signReferralToken } from "@/lib/referral-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
-import { fetchApprovedNewsletterDrafts, stampDraftsSentAt } from "@/lib/notion-newsletter-drafts";
+import {
+  fetchApprovedNewsletterDrafts,
+  stampDraftsSentAt,
+  type NewsletterDraftsResult,
+} from "@/lib/notion-newsletter-drafts";
 import { fetchWeatherForSessions, type DayWeather } from "@/lib/weather";
 import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
-import { CAMP_AGE_MIN, CAMP_OPTIONS } from "@/data/camps";
+import { CAMP_AGE_MIN, CAMP_OPTIONS, CAMPS } from "@/data/camps";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -203,18 +207,25 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   // newsletter-drafts Notion DB within the freshness window (the Wednesday
   // cloud-drafter row plus anything else Sam approved, e.g. an event promo).
   // Empty when Sam hasn't approved anything this week → block stays hidden.
-  // Fails soft on any Notion error so the cron still ships the rest.
-  let newsletterDrafts: Awaited<
-    ReturnType<typeof fetchApprovedNewsletterDrafts>
-  > = [];
+  // Still fails soft on any Notion error so the cron ships the rest of the
+  // issue — but the result now carries WHY it's empty, reported as failure
+  // signatures after the send (see the diagnostics block below).
+  let draftsResult: NewsletterDraftsResult = {
+    drafts: [],
+    status: "ok",
+    unreadablePageIds: [],
+    strandedPageIds: [],
+  };
   try {
-    newsletterDrafts = await fetchApprovedNewsletterDrafts();
+    draftsResult = await fetchApprovedNewsletterDrafts();
   } catch (err) {
     console.warn(
       "[cron/weekly-newsletter] newsletter draft fetch failed:",
       err,
     );
+    draftsResult = { ...draftsResult, status: "query_failed" };
   }
+  const newsletterDrafts = draftsResult.drafts;
   // Concatenate every approved row into the single lead-block field so all of
   // them ship, not just the latest. A thin rule separates rows; null when none
   // so the template keeps the block hidden.
@@ -236,11 +247,16 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   const utmCampaign = `weekly-${new Date().toISOString().slice(0, 10)}`;
   const scheduleUrl = appendUtm(`${SITE_ORIGIN}/schedule`, "schedule", utmCampaign);
   const crewInterestUrl = appendUtm(`${SITE_ORIGIN}/crew`, "crew", utmCampaign);
-  // Dedicated camp block suppressed (2026-06-15): the camp is promoted via the
-  // "From Coach Sam" lead block (NGA Newsletter Drafts DB) + the /camp page, so
-  // the auto-tease was duplicating it. Re-enable by repopulating `camps` from
-  // CAMPS.filter((c) => c.endDate >= today) and re-importing CAMPS.
-  const camps: { weekLabel: string }[] = [];
+  // Re-enabled 2026-08-05. It was suppressed on 2026-06-15 as a duplicate of
+  // the "From Coach Sam" lead block, but that block is a hand-Approved Notion
+  // row inside a 7-day Drafted At window — so a camp only gets promoted on the
+  // weeks someone remembers to draft one, and the Aug 17–20 camp silently
+  // dropped out of every issue after its 2026-07-23 send. This list derives
+  // from camps.ts, so an upcoming camp can't fall off the issue.
+  const camps = CAMPS.filter((c) => c.endDate >= todayIso).map((c) => ({
+    weekLabel: c.weekLabel,
+    publicArea: c.publicArea,
+  }));
   const campUrl = appendUtm(`${SITE_ORIGIN}/camp`, "camp", utmCampaign);
   const campPriceFromUsd = Math.min(...CAMP_OPTIONS.map((o) => o.priceUsd));
 
@@ -256,13 +272,19 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     };
   }
 
+  // Camp outranks polls/summer/tip but never "open courts this week" — a
+  // bookable session in the next 9 days is the more urgent ask. On a week with
+  // no open courts (e.g. a coach-away gap) the upcoming camp is the strongest
+  // thing in the issue, so it gets the subject.
   const subject = sessions.length
     ? "Open courts this week — Next Gen"
-    : openPolls.length
-      ? "Crews forming this week — Next Gen"
-      : summerSessions.length
-        ? "Summer sessions are live — Next Gen"
-        : `Coach tip of the week — ${tip.title}`;
+    : camps.length
+      ? "Summer camp is coming up — Next Gen"
+      : openPolls.length
+        ? "Crews forming this week — Next Gen"
+        : summerSessions.length
+          ? "Summer sessions are live — Next Gen"
+          : `Coach tip of the week — ${tip.title}`;
 
   let sent = 0;
   let failed = 0;
@@ -357,7 +379,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       replyTo: REPLY_TO,
-      subject: `[NGA newsletter sent · ${sent} recipients] ${subject}`,
+      // Lead-row count rides the subject so "the From Coach Sam block was
+      // empty this week" is visible at a glance in the one email Sam already
+      // opens every Thursday — no dashboard, no query.
+      subject: `[NGA newsletter sent · ${sent} recipients · lead ${newsletterDrafts.length} rows] ${subject}`,
       html: weeklyNewsletterHtml(adminInput),
       text: weeklyNewsletterText(adminInput),
     });
@@ -401,6 +426,45 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     }
   }
 
+  // The "From Coach Sam" lead block can go missing five ways, and every one of
+  // them used to look exactly like "Sam approved nothing this week". Name each
+  // one so a dropped announcement can never pass for an empty queue.
+  //
+  // This cron is NOT idempotent — there is no per-subscriber sent flag, so a
+  // re-run re-sends the whole issue to every Active subscriber. These failures
+  // red the Vercel dashboard on a run whose emails already went out, so the
+  // detail has to say so in as many words.
+  const sendNote =
+    sent > 0
+      ? "the newsletter WAS sent to every subscriber, so do NOT re-run this cron — fix the row for next week's issue"
+      : "no newsletter went out on this run";
+
+  if (draftsResult.status === "config_missing") {
+    failures.push({
+      signature: "config_missing",
+      detail: `NOTION_NEWSLETTER_DRAFTS_DB_ID is unset, so the "From Coach Sam" lead block cannot ship at all; ${sendNote}`,
+    });
+  } else if (draftsResult.status === "query_failed") {
+    failures.push({
+      signature: "newsletter_drafts_query_failed",
+      detail: `the newsletter-drafts query failed, so any Approved lead block was dropped from this issue; ${sendNote}`,
+    });
+  }
+
+  const unreadable = rollupFailure(
+    "newsletter_draft_unreadable",
+    draftsResult.unreadablePageIds,
+    `Approved draft rows were dropped because their Notion body could not be read, so the lead block shipped SHORT; ${sendNote}. Page ids`,
+  );
+  if (unreadable) failures.push(unreadable);
+
+  const stranded = rollupFailure(
+    "approved_draft_did_not_ship",
+    draftsResult.strandedPageIds,
+    `Approved draft rows are still live (Expires At has not passed) but fell outside the 7-day Drafted At window, so they did NOT ship — bump Drafted At to send next week, or flip Status to Skip to stop this alert; ${sendNote}. Page ids`,
+  );
+  if (stranded) failures.push(stranded);
+
   const summary = {
     has_sessions: sessions.length > 0,
     session_groups: sessions.length,
@@ -411,6 +475,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     has_newsletter_lead: newsletterDrafts.length > 0,
     newsletter_lead_rows: newsletterDrafts.length,
     newsletter_lead_sections: newsletterLeadSections,
+    newsletter_lead_status: draftsResult.status,
+    newsletter_lead_unreadable: draftsResult.unreadablePageIds.length,
+    newsletter_lead_stranded: draftsResult.strandedPageIds.length,
     subscribers: subscribers.length,
     sent,
     failed,

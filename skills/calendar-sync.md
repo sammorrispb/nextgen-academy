@@ -29,7 +29,7 @@ the calendar event description to claim ownership of it.
 | Weekly venues, times, levels | `src/data/recurring-templates.ts` | `/calendar-sync` |
 | A one-off session, or a cancellation | NGA Sessions Notion DB | `/calendar-sync` |
 | Camp weeks | `src/data/camps.ts` | `/calendar-sync` |
-| MVF classes (incl. adding the published fall times) | `src/data/mvf.ts` | `/calendar-sync` |
+| MVF classes (venues, times, brackets, registration links) | `src/data/mvf.ts` | `/calendar-sync` |
 | Fall 2026 season dates | `src/data/fall-2026.ts` | `/calendar-sync` |
 | Enrichment Collective clubs (incl. Stef's confirmed dates) | `src/data/enrichment-collective.ts` | `/calendar-sync` |
 
@@ -41,9 +41,13 @@ the calendar event description to claim ownership of it.
   `e2e/invariant-events-feed-egress.spec.ts` — extend it, don't weaken it, when
   adding a source (see `skills/add-invariant-test.md`).
 - **Never invent a time.** An event whose hour isn't published ships
-  `allDay: true` with `(time TBD)` in the title. This is why the 12 MVF fall
-  classes are all-day: `MVF_PROGRAMS.timeLabel` is `null` until the MVF Fall Rec
-  Guide publishes.
+  `allDay: true` with `(time TBD)` in the title. No MVF class uses that path any
+  more — MVF published every Fall 2026 time when enrollment opened 2026-08-07 —
+  but Belmont's EC club still does, and the rule outlives any one season's data.
+- **MVF venues are per-program, not per-file.** Only the Aug 27 intro is at
+  Apple Ridge; Fall I is at Watkins Mill and Fall II is at North Creek. Each
+  fall session is also two separate MVF activities (Red/Orange 5:30 PM,
+  Green/Yellow 6:30 PM), so a session is two calendar blocks per Thursday.
 - **Keys must stay stable.** A key is a promise to the calendar that this item is
   the same real-world event as last run. Changing key derivation orphans every
   event built from the old scheme — the sync's adoption step softens that, but

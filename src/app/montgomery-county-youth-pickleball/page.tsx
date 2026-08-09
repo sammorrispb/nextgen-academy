@@ -129,8 +129,9 @@ export default function MontgomeryCountyPage() {
           <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Next Gen Pickleball Academy is a youth pickleball academy for kids
             ages 6&ndash;16, serving families across Montgomery County.
-            Small-group sessions for kids who can rally, and private lessons
-            for anyone still learning. We reach families in Bethesda, Potomac,
+            Group sessions run a court for every level &mdash; Red, Orange,
+            Green, and Yellow &mdash; with private lessons available at any
+            level. We reach families in Bethesda, Potomac,
             Chevy Chase, Kensington, Silver Spring, Gaithersburg, and the
             broader DMV &mdash; with a clear pathway to tournament play.
           </p>
