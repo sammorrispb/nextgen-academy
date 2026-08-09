@@ -44,6 +44,27 @@ export interface NewsletterOpenPoll {
 
 export interface WeeklyNewsletterInput {
   parentFirst: string;
+  /**
+   * MVF tournament highlight — the top block until the event. Null hides it;
+   * the cron gates on date (through the rain date) via `mvfTournamentIsUpcoming`.
+   * Prices are the real MVF registration fees (already public on the register
+   * page), so this block may quote them — camps precedent, not the teased
+   * drop-in price. Registration is on Link & Dink's surface, never NGA's.
+   */
+  mvfTournament: {
+    title: string;
+    dateLabel: string;
+    timeLabel: string;
+    venueLine: string; // "Apple Ridge Pickleball Courts, Montgomery Village"
+    ageMin: number;
+    format: string;
+    bracketsLabel: string; // "Playing / Competing / Tournament Level"
+    priceResidentUsd: number;
+    priceNonResidentUsd: number;
+    rainDateLabel: string;
+    /** UTM-stamped register URL (p3.linkanddink.com). */
+    url: string;
+  } | null;
   sessions: NewsletterSessionGroup[];
   /**
    * Open summer sessions beyond the weekly window — surfaced in a dedicated
@@ -117,6 +138,7 @@ function pollProgressLabel(p: NewsletterOpenPoll): string {
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
+    mvfTournament,
     sessions,
     summerSessions,
     openPolls,
@@ -140,6 +162,20 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const hasPolls = openPolls.length > 0;
   const hasNews = news.length > 0;
   const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
+
+  // MVF tournament highlight — leads the issue until the event so no family
+  // hears about tournament day after it happened. Registration is on Link &
+  // Dink; this card only links out.
+  const mvfBlock = mvfTournament
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Tournament day &mdash; Sept 5</p>
+      <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(mvfTournament.title)}</p>
+      <p style="margin:0 0 8px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(mvfTournament.dateLabel)}, ${escape(mvfTournament.timeLabel)} at ${escape(mvfTournament.venueLine)}. Ages ${mvfTournament.ageMin}+ &mdash; ${escape(mvfTournament.format.toLowerCase())}, so every pair gets a full morning of games. Brackets: ${escape(mvfTournament.bracketsLabel)}.</p>
+      <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;">$${mvfTournament.priceResidentUsd} resident &middot; $${mvfTournament.priceNonResidentUsd} non-resident, per player &middot; partner required &middot; rain date ${escape(mvfTournament.rainDateLabel)}.</p>
+      <p style="margin:14px 0 0 0;"><a href="${mvfTournament.url}" style="${s.link}font-weight:700;text-decoration:none;">Register with your partner &rarr;</a></p>
+    </div>`
+    : "";
 
   const sessionBlock = hasSessions
     ? `
@@ -303,6 +339,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <h1 style="${s.heading} margin:0 0 16px 0;">Where to play, ${escape(parentFirst)}.</h1>
     <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions.</p>
 
+    ${mvfBlock}
+
     ${sessionBlock}
 
     ${summerBlock}
@@ -342,6 +380,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
+    mvfTournament,
     sessions,
     summerSessions,
     openPolls,
@@ -365,6 +404,17 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
     "",
   ];
+
+  if (mvfTournament) {
+    lines.push(
+      "Tournament day — Sept 5:",
+      `${mvfTournament.title}`,
+      `${mvfTournament.dateLabel}, ${mvfTournament.timeLabel} at ${mvfTournament.venueLine}. Ages ${mvfTournament.ageMin}+ — ${mvfTournament.format.toLowerCase()}, so every pair gets a full morning of games. Brackets: ${mvfTournament.bracketsLabel}.`,
+      `$${mvfTournament.priceResidentUsd} resident · $${mvfTournament.priceNonResidentUsd} non-resident, per player · partner required · rain date ${mvfTournament.rainDateLabel}.`,
+      `Register with your partner: ${mvfTournament.url}`,
+      "",
+    );
+  }
 
   if (sessions.length > 0) {
     lines.push(
