@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
 import {
+  LEAD_LOCATIONS,
   MAX_KIDS_PER_SUBMISSION,
   normalizeKids,
   validateLeadForm,
 } from "../src/lib/validate-lead";
+import { validateContactForm } from "../src/lib/validate-contact";
 
 // Pure-function specs — these don't need a dev server. Run with:
 //   npx playwright test e2e/validate-lead.spec.ts --project=desktop
@@ -89,5 +91,55 @@ test.describe("validateLeadForm — kids[] payload", () => {
     const errs = validateLeadForm({ ...base });
     expect(errs.childAge).toBeTruthy();
     expect(errs["kids.0.age"]).toBeUndefined();
+  });
+});
+
+test.describe("validateLeadForm — location allowlist", () => {
+  const base = {
+    parentName: "Patrick Casey",
+    contact: "pat@example.com",
+    kids: [{ name: "Cameron", age: 7 }],
+  };
+
+  test("every LEAD_LOCATIONS value passes", () => {
+    for (const location of LEAD_LOCATIONS) {
+      expect(validateLeadForm({ ...base, location })).toEqual({});
+    }
+  });
+
+  test("Frederick uses the exact Notion select string", () => {
+    // One canonical literal (em dash included) everywhere, or the Notion
+    // Location select forks into near-identical options.
+    expect(LEAD_LOCATIONS).toContain("Frederick — The Pickle Park");
+  });
+
+  test("an unknown location is rejected", () => {
+    const errs = validateLeadForm({ ...base, location: "elsewhere" });
+    expect(errs.location).toBeTruthy();
+  });
+
+  test("absent location stays valid (legacy + MoCo-default path)", () => {
+    expect(validateLeadForm({ ...base })).toEqual({});
+  });
+});
+
+test.describe("validateContactForm — location allowlist", () => {
+  const base = {
+    name: "Patrick Casey",
+    email: "pat@example.com",
+    interest: "private-lessons" as const,
+    kids: [{ name: "Cameron", age: 7 }],
+  };
+
+  test("accepts LEAD_LOCATIONS values and absence", () => {
+    for (const location of LEAD_LOCATIONS) {
+      expect(validateContactForm({ ...base, location })).toEqual({});
+    }
+    expect(validateContactForm({ ...base })).toEqual({});
+  });
+
+  test("rejects an unknown location", () => {
+    const errs = validateContactForm({ ...base, location: "elsewhere" });
+    expect(errs.location).toBeTruthy();
   });
 });

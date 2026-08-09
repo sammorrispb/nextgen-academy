@@ -1,4 +1,5 @@
 import {
+  LEAD_LOCATIONS,
   MAX_KIDS_PER_SUBMISSION,
   normalizeKids,
   type Kid,
@@ -51,6 +52,10 @@ export interface ContactFormData {
   // existing API consumer keeps working.
   kids?: Kid[];
   childAge?: string;
+  // Optional preferred area for private lessons (shares the LEAD_LOCATIONS
+  // allowlist with the lead form). Carried in Notes — the contact path writes
+  // no Location property.
+  location?: string;
   message?: string;
   // Attribution — captured client-side, never validated.
   utm_source?: string;
@@ -127,6 +132,13 @@ export function validateContactForm(
         }
       });
     }
+  }
+
+  if (
+    data.location &&
+    !(LEAD_LOCATIONS as readonly string[]).includes(data.location)
+  ) {
+    errors.location = "Please choose a valid location";
   }
 
   if (data.message && data.message.length > MESSAGE_MAX) {
