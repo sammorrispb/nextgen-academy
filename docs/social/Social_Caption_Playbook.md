@@ -111,7 +111,7 @@ better than yesterday, evaluate, growth, family, next gen.
 - Ages **6–16 is strict** — no under-6, no "we'll make an exception."
 
 **CTA hierarchy — one primary CTA per post:**
-- **Cold / awareness post →** Get a Free Evaluation → "link in bio"
+- **Cold / awareness post →** Book a Free Evaluation → "link in bio"
   (`/free-evaluation`).
 - **Dated session-fill post →** Save your spot → "link in bio" (`/schedule`),
   with a free evaluation as the soft inline fallback for first-timers.
@@ -133,7 +133,7 @@ the emoji + hashtag rules above.
 > a crew that pushes them. A clear pathway from first paddle touch to
 > tournament-ready play.
 >
-> Curious if your kid's ready? Start with a free evaluation — link in bio.
+> Curious if your kid's ready? Book a free evaluation — link in bio.
 >
 > Better than yesterday — together.
 >

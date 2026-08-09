@@ -245,7 +245,7 @@ Mobile-first. iPhone SE (375px) is the minimum supported viewport.
 - **Spacing base unit:** 4px. Token names map directly: `spacing.s-4` =
   16px.
 - **Tap targets:** 48×48px minimum, 8px minimum between adjacent targets.
-- **Thumb-zone rule:** Primary CTAs ("Get a Free Evaluation," "Register")
+- **Thumb-zone rule:** Primary CTAs ("Book a Free Evaluation," "Register")
   live in the bottom 20% of the mobile viewport — the natural thumb reach.
   There's a fixed `StickyMobileCTA` for this.
 - **Breakpoints:** 375 (sm) · 768 (md) · 1024 (lg) · 1280 (xl) · 1536

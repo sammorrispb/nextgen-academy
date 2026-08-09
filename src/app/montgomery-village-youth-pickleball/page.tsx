@@ -5,7 +5,6 @@ import {
   MVF_PROGRAMS,
   MVF_AGE_MIN,
   MVF_AGE_MAX,
-  MVF_CLASS_CAPACITY,
   MVF_REGISTRATION_NOTE,
   MVF_REGISTRATION_SEARCH_URL,
   MVF_VENUE_FOOTNOTE,
@@ -66,7 +65,6 @@ function sportsEventJsonLd(program: MvfProgram) {
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     eventStatus: "https://schema.org/EventScheduled",
     location: placeJsonLd(program.venue),
-    maximumAttendeeCapacity: MVF_CLASS_CAPACITY,
     organizer: [
       { "@type": "Organization", name: "Montgomery Village Foundation" },
       {
@@ -203,8 +201,8 @@ function ProgramCard({ program }: { program: MvfProgram }) {
       </p>
 
       <p className="text-xs text-ngpa-muted mt-3">
-        Capped at {MVF_CLASS_CAPACITY} players &middot; ages {MVF_AGE_MIN}
-        &ndash;{MVF_AGE_MAX}
+        Small-group classes &middot; ages {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX}
+        &middot; live availability on MVF&rsquo;s site
       </p>
 
       <TrackedCTA

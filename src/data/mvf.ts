@@ -14,10 +14,11 @@
 //      per-program — there is no single MVF venue constant any more.
 //   3. Times are published, so nothing here ships `timeLabel: null`.
 //
-// Prices are MVF's and are NOT published anonymously on their portal (the
-// activity API returns no fee for an unauthenticated caller), so they can't be
-// verified from here — they come from Sam via MVF. If MVF changes a fee, this
-// file is the only place to fix it.
+// Prices are MVF's. Their portal API returns no fee to an unauthenticated
+// caller, but the published 2026 Fall Recreation Guide
+// (montgomeryvillage.com download id 937, p. 15) carries them — every price,
+// activity number, venue, date and time below was verified against it
+// 2026-08-09. If MVF changes a fee, this file is the only place to fix it.
 
 export const MVF_AGE_MIN = 8;
 export const MVF_AGE_MAX = 16;
@@ -27,18 +28,10 @@ export const MVF_REGISTRATION_SEARCH_URL =
   "https://anc.apm.activecommunities.com/montgomeryvillage/activity/search?onlineSiteId=0&activity_select_param=2&drop_in=0&activity_keyword=youth%20pickleball&viewMode=list";
 
 export const MVF_REGISTRATION_NOTE =
-  "Registration is open now and runs through the Montgomery Village Foundation — you register and pay on MVF's site, not ours. Each class below is its own MVF activity, so register for the bracket and session you want.";
+  "Registration is open now and runs through the Montgomery Village Foundation — you register and pay on MVF's site, not ours. Each class below is its own MVF activity, so register for the bracket and session you want. Heads up: MVF raises registration fees by 10% starting three days before each session's first class, so registering early saves a little too.";
 
 export const MVF_VENUE_FOOTNOTE =
   "The venue changes between sessions — check the location on each class before you register.";
-
-/**
- * Per-class cap. Read as `total_open` on every activity while enrollment was
- * still zero, so it's the capacity rather than a remaining-seat count — but it
- * is inferred, not published. It is rendered as a fixed cap and must never be
- * treated as live availability: MVF's portal is the only real seat count.
- */
-export const MVF_CLASS_CAPACITY = 8;
 
 export interface MvfVenue {
   /** Court name as MVF publishes it to parents. */

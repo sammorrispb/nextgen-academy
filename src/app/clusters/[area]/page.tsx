@@ -165,7 +165,7 @@ export default async function ClusterPage({ params }: ClusterRouteProps) {
               href="/free-evaluation"
               className="font-semibold text-ngpa-teal-bright underline-offset-2 hover:underline"
             >
-              Start with a free evaluation
+              Book a free evaluation
             </Link>
             {" "}— we&apos;ll place them on the pathway and tell you whether a
             cluster or private lessons fit best right now.

@@ -88,7 +88,7 @@ export default function HowItWorks() {
             section="how_it_works"
             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors text-base shadow-lg shadow-ngpa-teal/20 min-h-[48px]"
           >
-            Start with a free evaluation
+            Book a Free Evaluation
             <svg
               className="w-4 h-4"
               fill="none"
