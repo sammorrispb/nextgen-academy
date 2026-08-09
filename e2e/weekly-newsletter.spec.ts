@@ -6,12 +6,14 @@ import {
 } from "../src/lib/email/weekly-newsletter";
 import { appendUtm } from "../src/lib/email/utm";
 import { CAMP_OPTIONS, CAMPS } from "../src/data/camps";
+import { MVF_TOURNAMENT, mvfTournamentIsUpcoming } from "../src/data/mvf";
 
 const tip = { title: "Soft hands win", body: "Loosen the grip." };
 const ORIGIN = "https://nextgenpbacademy.com";
 
 const baseInput: WeeklyNewsletterInput = {
   parentFirst: "Lauren",
+  mvfTournament: null,
   sessions: [
     {
       dateLong: "Saturday, May 23",
@@ -305,6 +307,80 @@ test.describe("weeklyNewsletterHtml", () => {
     // On any date during the send week the block carries exactly this camp.
     const upcoming = CAMPS.filter((c) => c.endDate >= "2026-08-06");
     expect(upcoming.map((c) => c.slug)).toEqual(["august-17"]);
+  });
+
+  // ---- MVF tournament highlight (top block until the event) ----
+
+  // Mirrors the cron's projection of MVF_TOURNAMENT.
+  const mvfInput: WeeklyNewsletterInput = {
+    ...baseInput,
+    mvfTournament: {
+      title: "MVF Pickleball Tournament by Link and Dink",
+      dateLabel: "Saturday, September 5, 2026",
+      timeLabel: "8:30 AM – 3:00 PM",
+      venueLine: "Apple Ridge Pickleball Courts, Montgomery Village",
+      ageMin: 9,
+      format: "Same-partner round robin into single elimination",
+      bracketsLabel: "Playing / Competing / Tournament Level",
+      priceResidentUsd: 25,
+      priceNonResidentUsd: 35,
+      rainDateLabel: "Sunday, September 6",
+      url: "https://p3.linkanddink.com/popup/mvf-pickleball-tournament-2026?utm_source=newsletter",
+    },
+  };
+
+  test("renders the tournament block in HTML and text with date, brackets, real prices, and rain date", () => {
+    for (const rendered of [weeklyNewsletterHtml(mvfInput), weeklyNewsletterText(mvfInput)]) {
+      expect(rendered).toContain("MVF Pickleball Tournament by Link and Dink");
+      expect(rendered).toContain("Saturday, September 5, 2026");
+      expect(rendered).toContain("Playing / Competing / Tournament Level");
+      expect(rendered).toContain("$25");
+      expect(rendered).toContain("$35");
+      expect(rendered).toContain("partner required");
+      expect(rendered).toContain("Sunday, September 6");
+      expect(rendered).toContain(
+        "https://p3.linkanddink.com/popup/mvf-pickleball-tournament-2026?utm_source=newsletter",
+      );
+    }
+  });
+
+  test("the tournament block leads the issue — above the sessions block", () => {
+    const html = weeklyNewsletterHtml(mvfInput);
+    expect(html.indexOf("Tournament day")).toBeGreaterThan(-1);
+    expect(html.indexOf("Tournament day")).toBeLessThan(
+      html.indexOf("This week&rsquo;s sessions"),
+    );
+    // Same when there are no open sessions (fallback card).
+    const noSessions = weeklyNewsletterHtml({ ...mvfInput, sessions: [] });
+    expect(noSessions.indexOf("Tournament day")).toBeLessThan(
+      noSessions.indexOf("No open sessions this week"),
+    );
+  });
+
+  test("hides the tournament block entirely when null", () => {
+    expect(weeklyNewsletterHtml(baseInput)).not.toContain("Tournament day");
+    expect(weeklyNewsletterText(baseInput)).not.toContain("Tournament day");
+  });
+
+  test("mvfTournamentIsUpcoming promotes through the rain date, then stops", () => {
+    expect(mvfTournamentIsUpcoming("2026-08-13")).toBe(true);
+    expect(mvfTournamentIsUpcoming("2026-09-05")).toBe(true);
+    expect(mvfTournamentIsUpcoming("2026-09-06")).toBe(true);
+    expect(mvfTournamentIsUpcoming("2026-09-07")).toBe(false);
+  });
+
+  test("MVF tournament data matches the live L&D event (drift guard)", () => {
+    // The brackets label must match what L&D's registration actually offers
+    // (community-os migration 20260801161136 fixed the stale
+    // Advanced Beginner / Intermediate / Advanced set).
+    expect([...MVF_TOURNAMENT.brackets]).toEqual([
+      "Playing",
+      "Competing",
+      "Tournament Level",
+    ]);
+    expect(MVF_TOURNAMENT.rainDate).toBe("2026-09-06");
+    expect(MVF_TOURNAMENT.venue.name).toBe("Apple Ridge Pickleball Courts");
+    expect(MVF_TOURNAMENT.prices.map((p) => p.usd)).toEqual([25, 35]);
   });
 
   test("no parent-facing copy uses the word 'crew'", () => {

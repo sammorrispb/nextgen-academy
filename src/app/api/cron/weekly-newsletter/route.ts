@@ -17,6 +17,7 @@ import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
 import { CAMP_AGE_MIN, CAMP_OPTIONS, CAMPS } from "@/data/camps";
+import { MVF_TOURNAMENT, mvfTournamentIsUpcoming } from "@/data/mvf";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -260,6 +261,25 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   const campUrl = appendUtm(`${SITE_ORIGIN}/camp`, "camp", utmCampaign);
   const campPriceFromUsd = Math.min(...CAMP_OPTIONS.map((o) => o.priceUsd));
 
+  // MVF tournament highlight — tops every issue through the rain date, then
+  // drops out on its own. Derived from mvf.ts so it can't fall off the issue
+  // the way a hand-drafted Notion row can.
+  const mvfTournament = mvfTournamentIsUpcoming(todayIso)
+    ? {
+        title: MVF_TOURNAMENT.title,
+        dateLabel: MVF_TOURNAMENT.dateLabel,
+        timeLabel: MVF_TOURNAMENT.timeLabel,
+        venueLine: `${MVF_TOURNAMENT.venue.name}, ${MVF_TOURNAMENT.venue.locality}`,
+        ageMin: MVF_TOURNAMENT.ageMin,
+        format: MVF_TOURNAMENT.format,
+        bracketsLabel: MVF_TOURNAMENT.brackets.join(" / "),
+        priceResidentUsd: MVF_TOURNAMENT.prices[0].usd,
+        priceNonResidentUsd: MVF_TOURNAMENT.prices[1].usd,
+        rainDateLabel: MVF_TOURNAMENT.rainDateLabel,
+        url: appendUtm(MVF_TOURNAMENT.url, "mvf-tournament", utmCampaign),
+      }
+    : null;
+
   const resendApiKey = process.env.RESEND_API_KEY;
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
   if (!resend) {
@@ -308,6 +328,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
 
     const input = {
       parentFirst,
+      mvfTournament,
       sessions,
       summerSessions,
       openPolls,
@@ -355,6 +376,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   try {
     const adminInput = {
       parentFirst: "Coach",
+      mvfTournament,
       sessions,
       summerSessions,
       openPolls,
