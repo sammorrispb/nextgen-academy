@@ -32,7 +32,7 @@ export default function MvfTournamentCard() {
       </p>
       <p className="text-sm text-ngpa-muted mt-2 leading-relaxed">
         <time dateTime={MVF_TOURNAMENT.date}>{MVF_TOURNAMENT.dateLabel}</time>,{" "}
-        {MVF_TOURNAMENT.timeLabel} at Apple Ridge &middot; ages{" "}
+        {MVF_TOURNAMENT.timeLabel} at {MVF_TOURNAMENT.venue.name} &middot; ages{" "}
         {MVF_TOURNAMENT.ageMin}+ &middot; {MVF_TOURNAMENT.format.toLowerCase()}{" "}
         &middot; {MVF_TOURNAMENT.brackets.join(" / ")} brackets. Rain date{" "}
         <time dateTime={MVF_TOURNAMENT.rainDate}>

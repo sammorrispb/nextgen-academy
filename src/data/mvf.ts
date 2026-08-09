@@ -226,8 +226,10 @@ export const MVF_TOURNAMENT = {
   rainDateLabel: "Sunday, September 6",
   timeLabel: "8:30 AM – 3:00 PM",
   ageMin: 9,
+  venue: APPLE_RIDGE,
   format: "Same-partner round robin into single elimination",
-  brackets: ["Advanced Beginner", "Intermediate", "Advanced"],
+  // L&D's live bracket set (registration offers exactly these three divisions).
+  brackets: ["Playing", "Competing", "Tournament Level"],
   prices: [
     { label: "resident", usd: 25 },
     { label: "non-resident", usd: 35 },
@@ -235,3 +237,8 @@ export const MVF_TOURNAMENT = {
   priceUnit: "player",
   url: "https://p3.linkanddink.com/popup/mvf-pickleball-tournament-2026",
 } as const;
+
+/** Promote the tournament through its rain date (ET-calendar inclusive). */
+export function mvfTournamentIsUpcoming(todayIso: string): boolean {
+  return todayIso <= MVF_TOURNAMENT.rainDate;
+}
