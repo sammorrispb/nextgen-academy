@@ -3,9 +3,9 @@ import { test, expect } from "@playwright/test";
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {
-  test("has primary Book a free 30-min evaluation CTA linking to #contact-form", async ({ page }) => {
+  test("has primary Book a Free 30-Minute Evaluation CTA linking to #contact-form", async ({ page }) => {
     await page.goto("/");
-    const btn = page.locator("section").first().getByRole("link", { name: /Book a free 30-min evaluation/ });
+    const btn = page.locator("section").first().getByRole("link", { name: /Book a Free 30-Minute Evaluation/ });
     await expect(btn).toBeVisible();
     await expect(btn).toHaveAttribute("href", "#contact-form");
   });

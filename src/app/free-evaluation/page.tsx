@@ -174,7 +174,7 @@ export default function FreeEvaluationPage() {
               <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
                 <div className="px-5 pt-6 pb-3 text-center">
                   <p className="font-heading text-xl font-black text-ngpa-white tracking-tight">
-                    Schedule your free evaluation
+                    Book your free evaluation
                   </p>
                   <p className="text-ngpa-white/65 text-sm mt-1.5">
                     We&rsquo;ll call or text within 24 hours to schedule.

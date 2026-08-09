@@ -202,7 +202,7 @@ export default function Navbar() {
                 }}
                 className="mt-3 mx-1 px-5 py-3.5 bg-ngpa-teal text-ngpa-deep text-base font-bold rounded-full text-center hover:bg-ngpa-teal-bright transition-colors"
               >
-                Get Free Evaluation
+                Book a Free Evaluation
               </a>
             </div>
           </div>

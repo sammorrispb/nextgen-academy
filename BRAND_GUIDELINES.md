@@ -182,7 +182,7 @@ Primary CTA — Registration:
   aria-label="Register for [Program Name]"
   data-action="registration"
   data-program-id="[id]">
-  Get a Free Evaluation
+  Book a Free Evaluation
 </button>
 
 Secondary — Informational:
@@ -274,7 +274,7 @@ BOTTOM 20% ✅  POWER ZONE — Primary CTAs always here
 Bottom nav bar: always fixed, always visible, never hidden on primary flows.
 
 ### Thumb-Zone Rules
-1. "Get a Free Evaluation" and "Register" CTAs must live in the Power Zone on mobile
+1. "Book a Free Evaluation" and "Register" CTAs must live in the Power Zone on mobile
 2. Minimum tap target: 48×48px (WCAG 2.5.5)
 3. Minimum spacing between adjacent tap targets: 8px
 4. Fixed bottom navigation on mobile — no hamburger on primary registration flows
@@ -388,7 +388,16 @@ Tone — Kids: playful, clear, actionable
 Tone — Parents: reassuring, transparent, progress-oriented
 Tone — Partners: turnkey, credentialed, outcome-focused
 
-Primary CTA (always): Get a Free Evaluation
+Primary CTA (always): Book a Free Evaluation
+Allowed variants (canonicalized 2026-08-09 — don't invent new ones):
+- "Book a Free 30-Minute Evaluation" — long form where the duration earns its
+  space (homepage hero, city-page heroes).
+- "Free Evaluation" — short form for space-constrained surfaces only (navbar
+  pill, sticky mobile CTA).
+- First-person form submits stay first-person ("Book my free evaluation",
+  "Request my free evaluation").
+- Inline prose links use sentence case with the same verb ("book a free
+  evaluation") — never title case mid-sentence.
 Secondary CTAs: View Schedule · See the Pathway · Meet the Coaches
 
 ---

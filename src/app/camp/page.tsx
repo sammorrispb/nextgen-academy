@@ -246,7 +246,7 @@ export default function CampIndexPage() {
               href="/free-evaluation"
               className="text-ngpa-teal-bright font-semibold hover:underline"
             >
-              Start with a free evaluation
+              Book a free evaluation
             </Link>{" "}
             and we&rsquo;ll place your child at the right level.
           </p>
