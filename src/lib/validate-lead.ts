@@ -12,8 +12,9 @@ export interface LeadFormData {
   // an empty name (Notion gets the "Child of X" placeholder).
   kids?: Kid[];
   childAge?: string;
-  // Optional free-text — UI no longer collects it, but the API still forwards
-  // it to Notion + Hub if a caller (e.g. legacy form, server) supplies one.
+  // Optional preferred area. Collected again as of 2026-08 (Frederick launch)
+  // via the LeadForm radio; allowlisted against LEAD_LOCATIONS because the
+  // value lands in a Notion select — junk strings would auto-create options.
   location?: string;
   // Optional "anything we should know?" textarea. Used to capture
   // self-identified intent (private vs group, skill level, urgency) so Sam
@@ -38,6 +39,11 @@ export type LeadValidationErrors = Partial<Record<string, string>>;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export const MAX_KIDS_PER_SUBMISSION = 4;
 const NAME_MAX = 40;
+
+export const LEAD_LOCATIONS = [
+  "Montgomery County",
+  "Frederick — The Pickle Park",
+] as const;
 
 export function normalizeKids(data: Partial<LeadFormData>): Kid[] {
   if (Array.isArray(data.kids) && data.kids.length > 0) {
@@ -71,6 +77,13 @@ export function validateLeadForm(
     if (!isEmail && !isPhone) {
       errors.contact = "Please enter a valid email or 10-digit phone number";
     }
+  }
+
+  if (
+    data.location &&
+    !(LEAD_LOCATIONS as readonly string[]).includes(data.location)
+  ) {
+    errors.location = "Please choose a valid location";
   }
 
   const usedLegacyPayload =

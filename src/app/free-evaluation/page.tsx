@@ -276,6 +276,16 @@ export default function FreeEvaluationPage() {
               your evaluation.
             </p>
           </div>
+          <div className="mt-4 bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
+            <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
+              Also in Frederick.
+            </h3>
+            <p className="text-base text-ngpa-white/70 leading-relaxed">
+              Private lessons run at The Pickle Park in Frederick. Pick
+              &ldquo;Frederick&rdquo; on the form above and we&rsquo;ll set up a
+              time.
+            </p>
+          </div>
           <p className="mt-10 text-center text-base text-ngpa-white/65">
             Questions?{" "}
             <a

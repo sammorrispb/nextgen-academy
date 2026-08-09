@@ -12,11 +12,13 @@ import type {
   ContactInterest,
   ContactValidationErrors,
 } from "@/lib/validate-contact";
-import { MAX_KIDS_PER_SUBMISSION } from "@/lib/validate-lead";
+import { LEAD_LOCATIONS, MAX_KIDS_PER_SUBMISSION } from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
+
+const [MOCO_LOCATION, FREDERICK_LOCATION] = LEAD_LOCATIONS;
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -44,6 +46,7 @@ export default function ContactForm() {
     "free-evaluation",
   );
   const [kids, setKids] = useState<KidDraft[]>([emptyKid()]);
+  const [location, setLocation] = useState<string>(MOCO_LOCATION);
   const [message, setMessage] = useState("");
   const [errors, setErrors] = useState<ContactValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
@@ -156,6 +159,11 @@ export default function ContactForm() {
       email,
       phone: phone || undefined,
       interest,
+      // Only private lessons run in Frederick; omitted for the MoCo default
+      // so existing submissions stay byte-identical.
+      ...(interest === "private-lessons" && location === FREDERICK_LOCATION
+        ? { location }
+        : {}),
       message: message || undefined,
       ...trackingRef.current,
       visitor_id: getVisitorIdForForm() || null,
@@ -443,6 +451,48 @@ export default function ContactForm() {
             )}
             {errors.kids && <p className={errorClass}>{errors.kids}</p>}
           </div>
+        )}
+
+        {interest === "private-lessons" && (
+          <fieldset>
+            <legend className={labelClass}>Where would you like to play?</legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {LEAD_LOCATIONS.map((loc) => (
+                <label
+                  key={loc}
+                  className={`flex items-center gap-3 rounded-xl border px-4 py-3.5 min-h-[48px] cursor-pointer transition-all ${
+                    location === loc
+                      ? "border-ngpa-teal bg-ngpa-teal/10 text-ngpa-white"
+                      : "border-ngpa-slate/60 bg-ngpa-deep/60 text-ngpa-white/75 hover:border-ngpa-slate"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="location"
+                    value={loc}
+                    checked={location === loc}
+                    onChange={() => {
+                      setLocation(loc);
+                      markStarted();
+                    }}
+                    className="accent-ngpa-teal w-4 h-4 shrink-0"
+                  />
+                  <span className="text-sm font-medium leading-snug">
+                    {loc === MOCO_LOCATION ? (
+                      <>
+                        {loc}
+                        <span className="block text-xs text-ngpa-white/50 font-normal">
+                          MCPS courts, rotating
+                        </span>
+                      </>
+                    ) : (
+                      loc
+                    )}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
         )}
 
         <div>
