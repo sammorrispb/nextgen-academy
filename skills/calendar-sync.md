@@ -43,7 +43,8 @@ the calendar event description to claim ownership of it.
 - **Never invent a time.** An event whose hour isn't published ships
   `allDay: true` with `(time TBD)` in the title. No MVF class uses that path any
   more — MVF published every Fall 2026 time when enrollment opened 2026-08-07 —
-  but Belmont's EC club still does, and the rule outlives any one season's data.
+  but the Belmont and Sherwood EC clubs still do, and the rule outlives any one
+  season's data.
 - **MVF venues are per-program, not per-file.** Only the Aug 27 intro is at
   Apple Ridge; Fall I is at Watkins Mill and Fall II is at North Creek. Each
   fall session is also two separate MVF activities (Red/Orange 5:30 PM,
@@ -91,9 +92,11 @@ derive, only to read. If EC ever needs computing (recurrence rules, per-school
 variation), promote it to the feed pattern with a private access path rather
 than parsing harder.
 
-Two standing gaps in that file, both intentional:
-- **Dates are holds.** Stef confirmed days/times/towns; exact session dates are
-  still pending, so `dates` is a projected 9-week window and `status` is `hold`.
-  Not reconciled against the MCPS closure calendar.
-- **Belmont's Thursday time is unannounced**, so `startTime` is `null` and those
-  blocks ship all-day — the same never-invent-a-time rule as the MVF classes.
+Dates are CONFIRMED as of 2026-08-09 (Stef's Fall 2026 schedule PDF): five
+clubs, Mon Brookeville / Tue Derwood / Wed Silver Spring / Thu Olney (Belmont)
+/ Fri Sandy Spring, with real MCPS-reconciled session dates — the gaps in each
+club's date list are school closures, so a "missing" week is not an error. One
+standing gap, intentional:
+- **Belmont's Thursday and Sherwood's Friday times are unannounced**, so their
+  `startTime` is `null` and those blocks ship all-day — the same
+  never-invent-a-time rule as the MVF classes.
