@@ -43,8 +43,8 @@ the calendar event description to claim ownership of it.
 - **Never invent a time.** An event whose hour isn't published ships
   `allDay: true` with `(time TBD)` in the title. No MVF class uses that path any
   more — MVF published every Fall 2026 time when enrollment opened 2026-08-07 —
-  but the Belmont and Sherwood EC clubs still do, and the rule outlives any one
-  season's data.
+  and as of 2026-08-13 no EC club does either (every club time is published) —
+  but the rule outlives any one season's data.
 - **MVF venues are per-program, not per-file.** Only the Aug 27 intro is at
   Apple Ridge; Fall I is at Watkins Mill and Fall II is at North Creek. Each
   fall session is also two separate MVF activities (Red/Orange 5:30 PM,
@@ -92,11 +92,10 @@ derive, only to read. If EC ever needs computing (recurrence rules, per-school
 variation), promote it to the feed pattern with a private access path rather
 than parsing harder.
 
-Dates are CONFIRMED as of 2026-08-09 (Stef's Fall 2026 schedule PDF): five
-clubs, Mon Brookeville / Tue Derwood / Wed Silver Spring / Thu Olney (Belmont)
-/ Fri Sandy Spring, with real MCPS-reconciled session dates — the gaps in each
-club's date list are school closures, so a "missing" week is not an error. One
-standing gap, intentional:
-- **Belmont's Thursday and Sherwood's Friday times are unannounced**, so their
-  `startTime` is `null` and those blocks ship all-day — the same
-  never-invent-a-time rule as the MVF classes.
+The schedule is CONFIRMED (Stef's Fall 2026 schedule PDF, updated revision
+2026-08-13): five clubs, Mon Brookeville / Tue Derwood / Wed Silver Spring /
+Thu Olney (Belmont) / Fri Sandy Spring, with real MCPS-reconciled session
+dates — the gaps in each club's date list are school closures, so a "missing"
+week is not an error. Every club now has a published time (Mon/Tue/Thu
+3:30–4:30 PM, Wed/Fri 4:00–5:00 PM), so no EC block ships all-day any more —
+but the never-invent-a-time rule stands for any future club without one.

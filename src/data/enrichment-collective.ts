@@ -23,17 +23,19 @@
 // exactly how `MVF_AGE_MIN = 8` narrows in its own file rather than moving an
 // academy-wide constant. Do not propagate `ageMin: 5` to any NGA surface.
 //
-// DATES CONFIRMED 2026-08-09 — Stef's Fall 2026 schedule PDF, which supersedes
-// the July hold email in three ways: (1) session dates are real and already
-// reconciled against the MCPS 2026–27 calendar ("no clubs when MCPS is closed
-// or has an early release" — the gaps in each list are those closures, so do
-// NOT "fix" a missing week); (2) the Derwood and Silver Spring clubs SWAPPED
-// weekdays vs. the hold (Candlewood/Derwood is now Tuesday, Rosemary
-// Hills/Silver Spring now Wednesday) — times follow the SCHOOL, not the
-// weekday (dismissal time is the school's; Sam confirmed 2026-08-09); and
-// (3) there is a fifth club: Sherwood ES, Fridays — Sam's weekday afternoons
-// are now booked Mon–Fri all fall. The PDF names no times, so Belmont and
-// Sherwood stay `startTime: null` (all-day blocks) until Stef announces them.
+// SCHEDULE CONFIRMED — Stef's Fall 2026 schedule PDF (updated revision,
+// 2026-08-13), which supersedes the July hold email in three ways: (1) session
+// dates are real and already reconciled against the MCPS 2026–27 calendar
+// ("no clubs when MCPS is closed or has an early release" — the gaps in each
+// list are those closures, so do NOT "fix" a missing week); (2) the Derwood
+// and Silver Spring clubs SWAPPED weekdays vs. the hold (Candlewood/Derwood is
+// now Tuesday, Rosemary Hills/Silver Spring now Wednesday); and (3) there is a
+// fifth club: Sherwood ES, Fridays — Sam's weekday afternoons are now booked
+// Mon–Fri all fall. The updated revision publishes every club's time (each is
+// dismissal + 5–10 min: 3:25 dismissal → 3:30–4:30 club, 3:50 → 4:00–5:00),
+// replacing the slightly-earlier times from the July email — so nothing here
+// ships `startTime: null` any more, though the all-day rule stands for any
+// future club whose time isn't published.
 
 /** Registration, payment, insurance and releases all sit with the partner. */
 export const EC_PARTNER_NAME = "Enrichment Collective";
@@ -74,7 +76,7 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Monday",
     town: "Brookeville, MD",
     schoolName: "Greenwood ES",
-    startTime: "3:20 PM",
+    startTime: "3:30 PM",
     endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
@@ -96,7 +98,7 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Tuesday",
     town: "Derwood, MD",
     schoolName: "Candlewood ES",
-    startTime: "3:20 PM",
+    startTime: "3:30 PM",
     endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
@@ -119,7 +121,7 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Wednesday",
     town: "Silver Spring, MD",
     schoolName: "Rosemary Hills ES",
-    startTime: "3:50 PM",
+    startTime: "4:00 PM",
     endTime: "5:00 PM",
     // PreK–2 school. See the AGE FLOOR note at the top of this file: this is
     // an Enrichment Collective program, and it does not change NGA's 6–16 rule.
@@ -146,10 +148,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Thursday",
     town: "Olney, MD",
     schoolName: "Belmont",
-    // Stef's PDF confirms the dates but still names no hour. Null keeps the
-    // calendar block all-day instead of inventing a time.
-    startTime: null,
-    endTime: null,
+    startTime: "3:30 PM",
+    endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
     status: "confirmed",
@@ -166,16 +166,15 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-11-19",
     ],
     notes:
-      "10 sessions. Time not yet announced. Nov 5 collides with the GSA activation (Nov 5–7) and MVF Fall Session II — needs resolving with Stef.",
+      "10 sessions. Nov 5 collides with the GSA activation (Nov 5–7) and MVF Fall Session II — needs resolving with Stef.",
   },
   {
     key: "sandy-spring-fri",
     weekdayLabel: "Friday",
     town: "Sandy Spring, MD",
     schoolName: "Sherwood ES",
-    // New in the confirmed PDF — no time announced yet.
-    startTime: null,
-    endTime: null,
+    startTime: "4:00 PM",
+    endTime: "5:00 PM",
     ageMin: 7,
     ageMax: null,
     status: "confirmed",
