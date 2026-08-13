@@ -122,8 +122,10 @@ test.describe("recurring templates (weekend move 2026-07-21)", () => {
     expect(active.map((t) => t.titleBase)).toEqual(["Wood Wednesday Ages 8–11"]);
     const [wed] = active;
     expect(wed.weekday).toBe(3);
-    expect(wed.startTime).toBe("5:00 PM");
-    expect(wed.endTime).toBe("6:00 PM");
+    // 5:30, not 5:00 — the Rosemary Hills EC club ends 5:00 PM in Silver
+    // Spring on Wednesdays from Sept 16, so 5:00 at Wood isn't drivable.
+    expect(wed.startTime).toBe("5:30 PM");
+    expect(wed.endTime).toBe("6:30 PM");
     expect(wed.levels).toEqual(["Red", "Orange"]);
     expect(wed.location).toContain("Earle B. Wood");
     expect(wed.publicArea).toBe("Rockville, MD");
