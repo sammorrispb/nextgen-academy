@@ -23,14 +23,19 @@
 // `MVF_AGE_MIN = 8` narrows in its own file rather than moving an academy-wide
 // constant. Do not propagate `ageMin: 5` to any NGA surface.
 //
-// DATES ARE HOLDS, NOT CONFIRMED. Stef has confirmed the days, times and towns;
-// exact session dates are still "coming asap" and the Thursday time is
-// unannounced. `EC_CLUBS[].dates` is a PROJECTED 9-week window (mid-Sept →
-// second week of November, per Stef's description) so Sam's afternoons are
-// blocked and can't be double-booked. They are NOT reconciled against the MCPS
-// 2026–27 closure calendar — Nov 3 is Election Day and is commonly a closure.
-// Replace each `dates` array with Stef's real dates and flip `status` to
-// "confirmed" when they land; the calendar sync updates in place on the key.
+// DATES CONFIRMED 2026-08-13 from EC's published "Fall 2026 After School
+// Enrichment Clubs" schedule (Stef's PDF): five clubs now (Friday added),
+// every time published, every session date written out. Per EC's footer the
+// dates already follow the MCPS 2026–27 calendar (no clubs on closures/early
+// release) — which is why some weeks are skipped (e.g. no Mon 9/21, no
+// Tue 11/3, no Fri 10/16).
+//
+// KEY STABILITY: the Mon–Thu keys predate this confirmation and are named for
+// the towns of the ORIGINAL July hold schedule, but the day→school mapping
+// changed when EC finalized (Tuesday is now Candlewood/Derwood; Wednesday is
+// now RHES/Silver Spring). The keys are the calendar-mirror identity and the
+// sync updates blocks in place on them, so they deliberately keep their old
+// names — the school/town FIELDS are the truth, not the key text.
 
 /** Registration, payment, insurance and releases all sit with the partner. */
 export const EC_PARTNER_NAME = "Enrichment Collective";
@@ -67,40 +72,42 @@ export interface EcClub {
 
 export const EC_CLUBS: readonly EcClub[] = [
   {
+    // Key predates the confirmed schedule (see KEY STABILITY above) —
+    // Greenwood ES sits in Brookeville, on the Olney border.
     key: "olney-mon",
     weekdayLabel: "Monday",
-    town: "Olney, MD",
-    schoolName: null,
-    startTime: "3:20 PM",
+    town: "Brookeville, MD",
+    schoolName: "Greenwood ES",
+    startTime: "3:30 PM",
     endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
-    status: "hold",
+    status: "confirmed",
     dates: [
       "2026-09-14",
-      "2026-09-21",
       "2026-09-28",
       "2026-10-05",
       "2026-10-12",
       "2026-10-19",
       "2026-10-26",
-      "2026-11-02",
       "2026-11-09",
+      "2026-11-16",
     ],
-    notes: "School not yet named by Enrichment Collective.",
+    notes:
+      "8 sessions. Dismissal 3:25 PM. No club 9/21 or 11/2 (MCPS calendar).",
   },
   {
+    // Key predates the confirmed schedule — Tuesday is now Candlewood ES in
+    // Derwood, not the Silver Spring K–2 school (that club moved to Wednesday).
     key: "silver-spring-tue",
     weekdayLabel: "Tuesday",
-    town: "Silver Spring, MD",
-    schoolName: null,
-    startTime: "3:50 PM",
-    endTime: "5:00 PM",
-    // K–2 school. See the AGE FLOOR note at the top of this file: this is an
-    // Enrichment Collective program, and it does not change NGA's 6–16 rule.
-    ageMin: 5,
-    ageMax: 8,
-    status: "hold",
+    town: "Derwood, MD",
+    schoolName: "Candlewood ES",
+    startTime: "3:30 PM",
+    endTime: "4:30 PM",
+    ageMin: 7,
+    ageMax: null,
+    status: "confirmed",
     dates: [
       "2026-09-15",
       "2026-09-22",
@@ -109,22 +116,24 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-10-13",
       "2026-10-20",
       "2026-10-27",
-      "2026-11-03",
       "2026-11-10",
     ],
-    notes:
-      "K–2 school — intro-to-pickleball format for 5–8 year olds. Nov 3 is Election Day; verify against the MCPS calendar.",
+    notes: "8 sessions. Dismissal 3:25 PM. No club 11/3 (Election Day).",
   },
   {
+    // Key predates the confirmed schedule — Wednesday is now RHES (as EC
+    // abbreviates it) in Silver Spring. Believed to be the K–2 school the
+    // 5–8 intro format was agreed for (2026-07-23 thread) — the AGE FLOOR
+    // note at the top of this file applies; confirm the band with Stef.
     key: "derwood-wed",
     weekdayLabel: "Wednesday",
-    town: "Derwood, MD",
-    schoolName: null,
-    startTime: "3:20 PM",
-    endTime: "4:30 PM",
-    ageMin: 7,
-    ageMax: null,
-    status: "hold",
+    town: "Silver Spring, MD",
+    schoolName: "RHES",
+    startTime: "4:00 PM",
+    endTime: "5:00 PM",
+    ageMin: 5,
+    ageMax: 8,
+    status: "confirmed",
     dates: [
       "2026-09-16",
       "2026-09-23",
@@ -135,21 +144,21 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-10-28",
       "2026-11-04",
       "2026-11-11",
+      "2026-11-18",
     ],
-    notes: "School not yet named by Enrichment Collective.",
+    notes:
+      "10 sessions. Dismissal 3:50 PM. Ends 5:00 PM — abuts the Wood Wednesday 5–6 PM NGA block; travel makes a 5:00 Wood start impossible on club days.",
   },
   {
     key: "belmont-thu",
     weekdayLabel: "Thursday",
     town: "Olney, MD",
     schoolName: "Belmont",
-    // Stef confirmed the day ("hold Thursdays for Belmont") but not the hour.
-    // Null keeps the calendar block all-day instead of inventing a time.
-    startTime: null,
-    endTime: null,
+    startTime: "3:30 PM",
+    endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
-    status: "hold",
+    status: "confirmed",
     dates: [
       "2026-09-17",
       "2026-09-24",
@@ -160,9 +169,33 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-10-29",
       "2026-11-05",
       "2026-11-12",
+      "2026-11-19",
     ],
     notes:
-      "Time not yet announced. Nov 5 collides with the GSA activation (Nov 5–7) and MVF Fall Session II — needs resolving with Stef.",
+      "10 sessions. Dismissal 3:25 PM. Nov 5 still collides with the GSA activation (Nov 5–7) and MVF Fall Session II — resolve with Stef.",
+  },
+  {
+    key: "sherwood-fri",
+    weekdayLabel: "Friday",
+    town: "Silver Spring, MD",
+    schoolName: "Sherwood ES",
+    startTime: "4:00 PM",
+    endTime: "5:00 PM",
+    ageMin: 7,
+    ageMax: null,
+    status: "confirmed",
+    dates: [
+      "2026-09-25",
+      "2026-10-02",
+      "2026-10-09",
+      "2026-10-23",
+      "2026-10-30",
+      "2026-11-06",
+      "2026-11-13",
+      "2026-11-20",
+    ],
+    notes:
+      "8 sessions — added in EC's confirmed schedule (2026-08-13). Dismissal 3:50 PM. No club 10/16 (MCPS calendar); starts 9/25, not 9/18.",
   },
 ];
 
