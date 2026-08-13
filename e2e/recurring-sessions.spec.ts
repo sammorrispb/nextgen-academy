@@ -42,7 +42,7 @@ function template(titleBase: string): RecurringTemplate {
 // file's current active flags. (Mon/Tue/Wed = all four levels, Thu = Green/
 // Yellow → 4+4+4+2 = 14 rows/week.)
 const WEEKNIGHT_FIXTURE: RecurringTemplate[] = RECURRING_TEMPLATES.filter(
-  (t) => t.weekday >= 1 && t.weekday <= 4,
+  (t) => t.weekday >= 1 && t.weekday <= 4 && !t.active, // the retired four, not the Wed 8–11 block
 ).map((t) => ({ ...t, active: true }));
 
 /** A Notion query result page carrying just what the dedup matcher reads.
@@ -113,12 +113,23 @@ test.describe("upcomingWeekday", () => {
 });
 
 test.describe("recurring templates (weekend move 2026-07-21)", () => {
-  test("nothing auto-seeds right now — every template is inactive (Aug weekend block is hand-seeded)", () => {
-    // The Aug 2026 weekend run has holes the weekly cron can't express (Sam is
-    // away Aug 8–16; the block starts Aug 1), so it's hand-seeded in Notion and
-    // all templates stay inactive. Flip the weekend templates active to resume
-    // open-ended auto-seeding once the cadence runs gap-free.
-    expect(RECURRING_TEMPLATES.every((t) => t.active === false)).toBe(true);
+  test("exactly one template auto-seeds — the Wednesday ages 8–11 block (added 2026-08-13)", () => {
+    // Weekend + retired weeknight templates stay inactive (the Aug 2026
+    // weekend block was hand-seeded; see the data file header). The one
+    // active template is the Wednesday 5–6 PM ages 8–11 block at Wood, and
+    // its startsOn keeps the cron from back-filling August Wednesdays.
+    const active = RECURRING_TEMPLATES.filter((t) => t.active);
+    expect(active.map((t) => t.titleBase)).toEqual(["Wood Wednesday Ages 8–11"]);
+    const [wed] = active;
+    expect(wed.weekday).toBe(3);
+    expect(wed.startTime).toBe("5:00 PM");
+    expect(wed.endTime).toBe("6:00 PM");
+    expect(wed.levels).toEqual(["Red", "Orange"]);
+    expect(wed.location).toContain("Earle B. Wood");
+    expect(wed.publicArea).toBe("Rockville, MD");
+    expect(wed.startsOn).toBe("2026-09-02");
+    expect(dayOfWeek(wed.startsOn!)).toBe(3);
+    expect(validateTemplate(wed)).toEqual([]);
   });
 
   test("weekend format: Wood Sat + Walter Johnson Sun, Red/Orange 6–7 then Green/Yellow 7–8", () => {
@@ -147,7 +158,9 @@ test.describe("recurring templates (weekend move 2026-07-21)", () => {
   });
 
   test("retired weeknight templates are retained (row-family idempotency) but inactive", () => {
-    const weeknights = RECURRING_TEMPLATES.filter((t) => t.weekday >= 1 && t.weekday <= 4);
+    const weeknights = RECURRING_TEMPLATES.filter(
+      (t) => t.weekday >= 1 && t.weekday <= 4 && !t.active, // the Wed 8–11 block is active, not retired
+    );
     expect(weeknights.map((t) => t.titleBase)).toEqual([
       "Ridgeview Monday Evening",
       "Redland Tuesday Evening",
@@ -479,6 +492,25 @@ test.describe("ensureWeeklyTemplates", () => {
     ).toContain("levels");
     expect(validateTemplate({ ...good, startTime: "1830" }).join(" ")).toContain("startTime");
     expect(validateTemplate({ ...good, endTime: "" }).join(" ")).toContain("endTime");
+    // startsOn is optional, but when present it must be a real ISO date.
+    expect(validateTemplate({ ...good, startsOn: "2026-09-02" })).toEqual([]);
+    expect(validateTemplate({ ...good, startsOn: "9/2/2026" }).join(" ")).toContain("startsOn");
+  });
+
+  test("startsOn trims occurrences before a template's first session (no back-fill)", async () => {
+    stub.on(`/databases/${SESSIONS_DB}/query`, EMPTY_QUERY).on("/pages", { id: "new" });
+    // Fri 2026-07-03 → Tuesdays 7/7, 7/14, 7/21; startsOn 7/14 drops the 7th.
+    const tue: RecurringTemplate = {
+      ...template("Redland Tuesday Evening"),
+      active: true,
+      startsOn: "2026-07-14",
+    };
+    const result = await ensureWeeklyTemplates(TODAY, 3, { templates: [tue], throttleMs: 0 });
+    const dates = [...new Set(result.created.map((c) => c.slice(0, 10)))].sort();
+    expect(dates).toEqual(["2026-07-14", "2026-07-21"]);
+    expect(result.created).toHaveLength(8); // 2 weeks x 4 levels
+    // startsOn never widens the window — nothing past the requested weeks.
+    expect(dates.every((d) => d <= "2026-07-21")).toBe(true);
   });
 
   test("429 on create → ONE retry with backoff; retry success counts as created (F9)", async () => {
