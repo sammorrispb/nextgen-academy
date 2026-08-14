@@ -42,6 +42,15 @@ export interface Camp {
   publicArea: string;
   /** Exact venue — admin/roster only, never public. Empty until booked. */
   exactLocation: string;
+  /**
+   * Venue display header for registered-family surfaces (reminder email,
+   * checkout confirmation, /camp/success), e.g.
+   * "Gaithersburg High School — outdoor courts". Lives here so no email
+   * template hardcodes a venue — the Aug 2026 reminder shipped a Gaithersburg
+   * header over the Wood MS address because this used to be inlined.
+   * Post-payment only, same posture as exactLocation.
+   */
+  venueLine: string;
 }
 
 // Camp is ages 8+ (distinct from the academy's general 6–16 range) — the
@@ -79,6 +88,7 @@ export const CAMPS: Camp[] = [
     makeupDate: "2026-07-03",
     publicArea: "Gaithersburg, MD",
     exactLocation: "Gaithersburg HS, 314 South Frederick Ave, Gaithersburg, MD 20877",
+    venueLine: "Gaithersburg High School — outdoor courts",
   },
   {
     slug: "july-20",
@@ -89,6 +99,7 @@ export const CAMPS: Camp[] = [
     makeupDate: "2026-07-24",
     publicArea: "Gaithersburg, MD",
     exactLocation: "Gaithersburg HS, 314 South Frederick Ave, Gaithersburg, MD 20877",
+    venueLine: "Gaithersburg High School — outdoor courts",
   },
   {
     // Back-to-school half-day camp the week before MCPS starts (first day
@@ -101,6 +112,7 @@ export const CAMPS: Camp[] = [
     makeupDate: "2026-08-21",
     publicArea: "Rockville, MD",
     exactLocation: "Earle B. Wood Middle School, 14615 Bauer Dr, Rockville, MD 20853",
+    venueLine: "Earle B. Wood Middle School — tennis courts",
   },
 ];
 
