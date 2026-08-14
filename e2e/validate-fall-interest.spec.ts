@@ -19,7 +19,7 @@ function youthOnly(
     childFirstName: "Ava",
     childAge: "10",
     childLevel: "Green",
-    days: ["Saturday"],
+    days: ["Sunday"],
     commitment: "Yes — full season, paid up front",
     ...over,
   };
@@ -88,10 +88,10 @@ test.describe("validateFallInterest — shared fields", () => {
     expect(validateFallInterest(bad).track).toBeTruthy();
   });
 
-  test("at least one day answer is required — including 'Neither works'", () => {
+  test("a day answer is required — including 'Sunday doesn't work'", () => {
     expect(validateFallInterest(youthOnly({ days: [] })).days).toBeTruthy();
     expect(
-      validateFallInterest(youthOnly({ days: ["Neither works"] })).days,
+      validateFallInterest(youthOnly({ days: ["Sunday doesn't work"] })).days,
     ).toBeUndefined();
   });
 

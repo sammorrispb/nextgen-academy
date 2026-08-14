@@ -1,18 +1,18 @@
 // Fall 2026 season config — the single source of truth for the /fall feedback
-// survey, its confirmation email, and the broadcast that drives traffic to it.
+// survey, its confirmation email, the broadcast that drives traffic to it, and
+// the events feed's fall items.
 //
-// Two programs share one window at one venue: the NGA youth season (coached
-// practice hour + rotating-partner round robin hour) and the Link & Dink adult
-// round robin (two hours of rotating-partner play, no practice hour). Parents
-// are encouraged to play in the adult block while their kid is on the next
-// court.
+// SHAPE DECIDED (Sam, 2026-08-14): Sundays only at Wood MS, Sept 20 – Oct 25 —
+// Green Ball 1:00–2:30 PM, then Yellow Ball 2:30–4:00 PM, with rain dates held
+// on Nov 1 and Nov 8. The earlier Saturday+Sunday 5–7 PM concept the survey
+// originally sized is superseded. The Link & Dink adult round robin remains on
+// the survey as its own track (its exact slot is still being worked out).
 //
-// NOTHING HERE IS BOOKABLE YET. This is a demand-sizing survey: the court
-// permit covers fewer players than `SLOTS_PER_GROUP` x the group count, and
-// there is no Stripe product for a season. Per the standing NGA rule, no price
-// is quoted anywhere — we ask what a season would be WORTH to a family instead
-// (PRICE_BANDS below). Do not add a dollar figure to this file, the /fall page,
-// or either email until a real Stripe product exists.
+// NOTHING HERE IS BOOKABLE YET. There is no Stripe product for a season. Per
+// the standing NGA rule, no price is quoted anywhere — we ask what a season
+// would be WORTH to a family instead (PRICE_BANDS below). Do not add a dollar
+// figure to this file, the /fall page, or either email until a real Stripe
+// product exists.
 
 export type FallTrack = "youth" | "adult";
 
@@ -47,12 +47,11 @@ export const FALL_ADULT_BRACKETS: readonly FallAdultBracket[] = [
   "Tournament Level",
 ] as const;
 
-export type FallDay = "Saturday" | "Sunday" | "Neither works";
+export type FallDay = "Sunday" | "Sunday doesn't work";
 
 export const FALL_DAYS: readonly FallDay[] = [
-  "Saturday",
   "Sunday",
-  "Neither works",
+  "Sunday doesn't work",
 ] as const;
 
 export type FallCommitment =
@@ -100,11 +99,17 @@ export interface FallProgram {
 /** Slots available in each color group / bracket. First come, first serve. */
 export const SLOTS_PER_GROUP = 9;
 
-export const FALL_SEASON_WEEKS = 8;
+export const FALL_SEASON_WEEKS = 6;
 
-/** Session window, both days. */
-export const FALL_START_TIME = "5:00 PM";
-export const FALL_END_TIME = "7:00 PM";
+/** Overall Sunday window — Green then Yellow back-to-back. */
+export const FALL_START_TIME = "1:00 PM";
+export const FALL_END_TIME = "4:00 PM";
+
+/** The two Sunday blocks, in play order. */
+export const FALL_YOUTH_BLOCKS = [
+  { level: "Green", startTime: "1:00 PM", endTime: "2:30 PM" },
+  { level: "Yellow", startTime: "2:30 PM", endTime: "4:00 PM" },
+] as const;
 
 export const FALL_VENUE =
   "Earle B. Wood Middle School Tennis Courts, 14615 Bauer Dr, Rockville, MD 20853";
@@ -115,44 +120,34 @@ export const FALL_PUBLIC_AREA = "Rockville, MD";
 export const FALL_VENUE_SHORT = "Earle B. Wood Middle School";
 
 /**
- * The 8 Saturdays and 8 Sundays, ISO date-only. Written out rather than
- * computed: date arithmetic on a UTC build server is the exact footgun the repo
- * rule warns about, and a season is a hand-checked calendar decision anyway.
+ * The 6 Sundays, ISO date-only. Written out rather than computed: date
+ * arithmetic on a UTC build server is the exact footgun the repo rule warns
+ * about, and a season is a hand-checked calendar decision anyway.
  */
-export const FALL_SATURDAYS = [
-  "2026-09-12",
-  "2026-09-19",
-  "2026-09-26",
-  "2026-10-03",
-  "2026-10-10",
-  "2026-10-17",
-  "2026-10-24",
-  "2026-10-31",
-] as const;
-
 export const FALL_SUNDAYS = [
-  "2026-09-13",
   "2026-09-20",
   "2026-09-27",
   "2026-10-04",
   "2026-10-11",
   "2026-10-18",
   "2026-10-25",
-  "2026-11-01",
 ] as const;
 
+/** Held only in case a Sunday washes out — not part of the season proper. */
+export const FALL_RAIN_DATES = ["2026-11-01", "2026-11-08"] as const;
+
 /** Human range for copy, e.g. email subject lines and page headers. */
-export const FALL_SEASON_LABEL = "September 12 – November 1, 2026";
+export const FALL_SEASON_LABEL = "September 20 – October 25, 2026";
 
 export const FALL_PROGRAMS: readonly FallProgram[] = [
   {
     track: "youth",
     name: "Next Gen Youth Fall Season",
-    who: "Kids 6–16, grouped by ball color",
+    who: "Kids 6–16 — Green and Yellow Ball this season",
     format:
-      "Two hours: one hour of coached practice, then one hour of rotating-partner round robin.",
+      "Ninety minutes per color group — coached practice, then a rotating-partner round robin. Green Ball 1:00–2:30 PM, Yellow Ball 2:30–4:00 PM.",
     groupNoun: "color group",
-    groups: FALL_YOUTH_LEVELS,
+    groups: ["Green", "Yellow"],
   },
   {
     track: "adult",
@@ -177,4 +172,4 @@ export function fallProgram(track: FallTrack): FallProgram {
  * broadcast so the promise can't drift between surfaces.
  */
 export const FALL_NO_HOLD_NOTE =
-  "Filling this out doesn't hold a spot — there's nothing to register for yet. We're sizing real demand before we book the courts, and you'll hear from us first when it opens.";
+  "Filling this out doesn't hold a spot — registration isn't open yet, and you'll hear from us first when it is.";

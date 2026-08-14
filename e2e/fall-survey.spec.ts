@@ -35,15 +35,17 @@ test.describe("fall survey broadcast — both variants", () => {
       const text = fallSurveyText(input({ variant }));
 
       for (const body of [html, text]) {
-        // Venue, days, window, length.
+        // Venue, days, window, length. Saturdays were dropped when the season
+        // reshaped to Sundays-only (2026-08-14) — a Saturday mention is a
+        // regression to the superseded shape.
         expect(body).toContain("Earle B. Wood");
-        expect(body).toContain("Saturday");
+        expect(body).not.toContain("Saturday");
         expect(body).toContain("Sunday");
-        expect(body).toContain("5:00 PM");
-        expect(body).toContain("7:00 PM");
-        expect(body).toContain("September 12");
-        expect(body).toContain("November 1");
-        expect(body).toContain("8 weeks");
+        expect(body).toContain("1:00 PM");
+        expect(body).toContain("4:00 PM");
+        expect(body).toContain("September 20");
+        expect(body).toContain("October 25");
+        expect(body).toContain("6 weeks");
         // Terms.
         expect(body).toContain("9 ");
         expect(body).toMatch(/first come/i);
@@ -61,8 +63,10 @@ test.describe("fall survey broadcast — both variants", () => {
       for (const body of [html, text]) {
         expect(body).toContain("Next Gen Youth Fall Season");
         expect(body).toContain("Link & Dink Fall Round Robin");
-        // Youth format: practice hour then round robin hour.
-        expect(body).toMatch(/one hour of coached practice/i);
+        // Youth format: 90-minute block per color group with the Sunday split.
+        expect(body).toMatch(/ninety minutes per color group/i);
+        expect(body).toContain("Green Ball 1:00–2:30 PM");
+        expect(body).toContain("Yellow Ball 2:30–4:00 PM");
         // Adult format: no practice hour.
         expect(body).toMatch(/no practice hour/i);
       }
@@ -172,14 +176,14 @@ test.describe("fall interest confirmation", () => {
   const base = {
     firstName: "Sam",
     tracks: ["youth"] as ("youth" | "adult")[],
-    days: ["Saturday"],
+    days: ["Sunday"],
     commitment: "Yes — full season, paid up front",
     subListInterest: true,
   };
 
   test("reflects back what the respondent told us", () => {
     const text = fallInterestConfirmationText(base);
-    expect(text).toContain("Saturday");
+    expect(text).toContain("Sunday");
     expect(text).toContain("Yes — full season, paid up front");
     expect(text).toMatch(/sub list/i);
   });

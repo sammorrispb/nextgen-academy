@@ -35,7 +35,7 @@ import { publicLocation } from "@/lib/session-location";
 import { CAMPS, CAMP_OPTIONS, campDays, type Camp } from "@/data/camps";
 import { MVF_PROGRAMS, type MvfProgram } from "@/data/mvf";
 import {
-  FALL_SATURDAYS,
+  FALL_RAIN_DATES,
   FALL_SUNDAYS,
   FALL_START_TIME,
   FALL_END_TIME,
@@ -271,31 +271,37 @@ export function buildMvfEvents(
 }
 
 /**
- * Fall 2026 season → one item per season date, flagged `tentative`. Nothing is
- * bookable: the court permit isn't secured and there's no Stripe product, so
- * these are holds that downstream surfaces must label as such.
+ * Fall 2026 season → one confirmed item per Sunday (Green 1:00–2:30, Yellow
+ * 2:30–4:00 back-to-back = one 1–4 PM block a mirror can hold), plus a
+ * flagged hold on each rain date — those only run if a Sunday washes out, so
+ * they stay `tentative` and downstream surfaces must label them as such.
  */
 export function buildFallEvents(origin: string): EventFeedItem[] {
-  const days: Array<{ label: "saturday" | "sunday"; dates: readonly string[] }> = [
-    { label: "saturday", dates: FALL_SATURDAYS },
-    { label: "sunday", dates: FALL_SUNDAYS },
-  ];
+  const shared = (date: string) => ({
+    source: "fall" as const,
+    key: `nga-fall:sunday:${date}`,
+    date,
+    startTime: FALL_START_TIME,
+    endTime: FALL_END_TIME,
+    allDay: false,
+    location: FALL_VENUE,
+    url: `${origin}/fall`,
+  });
 
-  return days.flatMap(({ label, dates }) =>
-    dates.map((date) => ({
-      source: "fall" as const,
-      key: `nga-fall:${label}:${date}`,
-      title: `[TENTATIVE] NGA Fall Season — ${label === "saturday" ? "Saturday" : "Sunday"}`,
-      date,
-      startTime: FALL_START_TIME,
-      endTime: FALL_END_TIME,
-      allDay: false,
-      location: FALL_VENUE,
-      url: `${origin}/fall`,
+  return [
+    ...FALL_SUNDAYS.map((date) => ({
+      ...shared(date),
+      title: "NGA Fall Season — Green & Yellow",
+      tentative: false,
+      status: "Open" as const,
+    })),
+    ...FALL_RAIN_DATES.map((date) => ({
+      ...shared(date),
+      title: "[TENTATIVE] NGA Fall Season — rain date hold",
       tentative: true,
       status: "Tentative" as const,
     })),
-  );
+  ];
 }
 
 /**

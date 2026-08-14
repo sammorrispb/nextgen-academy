@@ -144,7 +144,7 @@ export function validateFallInterest(
   }
 
   if (!data.days || data.days.length === 0) {
-    errors.days = "Let us know which days work — or that neither does";
+    errors.days = "Let us know if Sunday works — or that it doesn't";
   } else if (!data.days.every((d) => FALL_DAYS.includes(d))) {
     errors.days = "Some days aren't valid";
   }

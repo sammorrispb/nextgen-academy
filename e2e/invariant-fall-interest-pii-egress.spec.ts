@@ -33,7 +33,7 @@ function body(over: Record<string, unknown> = {}): string {
     childFirstName: CHILD_NAME,
     childAge: "10",
     childLevel: "Green",
-    days: ["Saturday", "Sunday"],
+    days: ["Sunday"],
     commitment: "Yes — full season, paid up front",
     subListInterest: true,
     youthPriceBand: "$20–25 an hour",
