@@ -163,6 +163,9 @@ export function validateTemplate(template: RecurringTemplate): string[] {
   if (!TIME_RE.test(template.endTime ?? "")) {
     problems.push(`endTime ${JSON.stringify(template.endTime)} is not "H:MM AM/PM"`);
   }
+  if (template.startsOn !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(template.startsOn)) {
+    problems.push(`startsOn ${JSON.stringify(template.startsOn)} is not "YYYY-MM-DD"`);
+  }
   return problems;
 }
 
@@ -390,8 +393,15 @@ export async function ensureWeeklyTemplates(
   }
 
   const active = valid.filter((t) => t.active);
+  // startsOn trims occurrences before a template's first session (ISO strings
+  // compare lexicographically) — the window does NOT extend past `weeks`.
   const datesByTemplate = new Map<RecurringTemplate, string[]>(
-    active.map((t) => [t, upcomingWeekday(t.weekday, todayIso, weeks)]),
+    active.map((t) => [
+      t,
+      upcomingWeekday(t.weekday, todayIso, weeks).filter(
+        (d) => !t.startsOn || d >= t.startsOn,
+      ),
+    ]),
   );
   const allDates = [...new Set([...datesByTemplate.values()].flat())].sort();
   result.dates = allDates;

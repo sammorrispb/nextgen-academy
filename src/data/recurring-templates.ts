@@ -49,6 +49,10 @@ export interface RecurringTemplate {
   endTime: string;
   /** Levels this evening seeds — one row (= one court) per level. */
   levels: readonly SessionLevel[];
+  /** ISO date (YYYY-MM-DD). When set, the seeder skips occurrences before
+   * this date — how a template activates ahead of its first session without
+   * the Monday cron back-filling earlier weeks. Omit for open-ended. */
+  startsOn?: string;
   /** Soft-launch court count per level row (may auto-expand — see
    * computeRegistrationIncrement). */
   courtCount: number;
@@ -59,6 +63,31 @@ export interface RecurringTemplate {
 }
 
 export const RECURRING_TEMPLATES: readonly RecurringTemplate[] = [
+  // ── Wednesday ages 8–11 block (added 2026-08-13, first session Sept 2) ───
+  // The one ACTIVE template. Sits between the afternoon school clubs and the
+  // Wednesday Link & Dink night: Red & Orange courts for kids 8–11 who are
+  // newer to the game. 5:30 (not 5:00) because the Rosemary Hills EC club runs
+  // to 5:00 PM in Silver Spring from Sept 16 on — 5:30 leaves the drive to
+  // Wood and hands off into the 6:30 L&D night. `startsOn` keeps the Monday
+  // cron from back-filling August Wednesdays.
+  {
+    weekday: 3,
+    titleBase: "Wood Wednesday Ages 8–11",
+    legacyTitlePrefixes: ["Wood Wednesday Ages 8–11"],
+    location:
+      "Earle B. Wood Middle School Tennis Courts, 14615 Bauer Dr, Rockville, MD 20853",
+    publicArea: "Rockville, MD",
+    startTime: "5:30 PM",
+    endTime: "6:30 PM",
+    levels: ["Red", "Orange"],
+    courtCount: 1,
+    maxCourts: 1,
+    startsOn: "2026-09-02",
+    notes:
+      "Ages 8–11 Wednesday block for newer players: Red & Orange, 5:30–6:30 PM. Venue: Earle B. Wood MS tennis courts.",
+    active: true,
+  },
+
   // ── Weekend format (current) ─────────────────────────────────────────────
   // Earle B. Wood MS — Saturdays. Red/Orange share the 6–7 court; Green/Yellow
   // the 7–8 court. active:false — Aug 2026 is hand-seeded (see file header).

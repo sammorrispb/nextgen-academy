@@ -22,12 +22,13 @@ import {
 const SESSION_ROW_ID = "11111111-1111-1111-1111-111111111111";
 
 // The weeknight templates were retired to `active: false` in the 2026-07-21
-// weekend move, so NO live template is active and the F5 seeder-managed guard
-// is dormant. The guard LOGIC is unchanged and still fires the moment a
-// template is active again, so the pure tests below inject an active-weeknight
-// fixture to keep pinning it (title + level + weekday + active must ALL match).
+// weekend move. The guard LOGIC is unchanged, so the pure tests below inject
+// an active-weeknight fixture to keep pinning it (title + level + weekday +
+// active must ALL match). Since 2026-08-13 one LIVE template is active again
+// (the Wood Wednesday Ages 8–11 block) — excluded here so the fixture stays
+// exactly the retired four.
 const WEEKNIGHT_FIXTURE = RECURRING_TEMPLATES.filter(
-  (t) => t.weekday >= 1 && t.weekday <= 4,
+  (t) => t.weekday >= 1 && t.weekday <= 4 && !t.active,
 ).map((t) => ({ ...t, active: true }));
 
 // ── Notion drop-in page factory (shape pageToDropIn reads) ──
@@ -153,10 +154,16 @@ test.describe("isSeederManagedRow (pure, F5) — title+level+weekday must ALL ma
     ).toBe(false);
   });
 
-  test("with all live templates retired (inactive), nothing is seeder-managed", () => {
-    // Default templates arg = the live RECURRING_TEMPLATES, all inactive now.
+  test("live templates: retired rows unmanaged, the active Wed 8–11 block managed", () => {
+    // Default templates arg = the live RECURRING_TEMPLATES. Retired weeknight
+    // + weekend rows stay unmanaged; the Wood Wednesday Ages 8–11 block
+    // (active since 2026-08-13) is seeder-managed on its own weekday/levels.
     expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" })).toBe(false);
     expect(isSeederManagedRow({ title: "Wood Saturday Evening — Red", date: "2026-08-01" })).toBe(false);
+    expect(isSeederManagedRow({ title: "Wood Wednesday Ages 8–11 — Red", date: "2026-09-02" })).toBe(true);
+    // Wrong weekday or a level the template doesn't seed → not managed.
+    expect(isSeederManagedRow({ title: "Wood Wednesday Ages 8–11 — Red", date: "2026-09-03" })).toBe(false);
+    expect(isSeederManagedRow({ title: "Wood Wednesday Ages 8–11 — Green", date: "2026-09-02" })).toBe(false);
   });
 
   test("non-recurring titles / bad dates are never managed", () => {
