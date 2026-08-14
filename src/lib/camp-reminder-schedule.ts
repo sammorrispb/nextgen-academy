@@ -67,13 +67,14 @@ export function formatCampWeekday(iso: string): string {
 }
 
 /**
- * The "Where" block, resolved from camps.ts exactLocation — identical shape to
- * emailCampParent in the webhook (the exact venue is a closed post-payment
- * surface and NEVER travels through Stripe metadata). Falls back to the broad
- * public area if a camp has no exact venue set yet.
+ * The "Where" block, resolved from camps.ts venueLine + exactLocation —
+ * identical shape to emailCampParent in the webhook (the exact venue is a
+ * closed post-payment surface and NEVER travels through Stripe metadata).
+ * The address line is exactLocation minus its leading "<venue name>," segment.
+ * Falls back to the broad public area if a camp has no exact venue set yet.
  */
 export function resolveCampWhere(camp: Camp): string {
   return camp.exactLocation
-    ? `Gaithersburg High School — outdoor courts\n${camp.exactLocation.replace(/^Gaithersburg HS,\s*/, "")}`
-    : `${camp.publicArea || "Gaithersburg, MD"} — we'll email the exact site before camp starts.`;
+    ? `${camp.venueLine}\n${camp.exactLocation.replace(/^[^,]+,\s*/, "")}`
+    : `${camp.publicArea || "Montgomery County, MD"} — we'll email the exact site before camp starts.`;
 }

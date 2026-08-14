@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
 import { findCampBySlug } from "@/data/camps";
+import { resolveCampWhere } from "@/lib/camp-reminder-schedule";
 
 export const metadata: Metadata = {
   title: "Camp Confirmed · Next Gen Pickleball Academy",
@@ -23,7 +24,7 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
   let campWeek = "";
   let optionLabel = "";
   let amountPaid = "";
-  let exactLocation = "";
+  let campWhere = "";
 
   if (cs && process.env.STRIPE_SECRET_KEY) {
     try {
@@ -37,7 +38,12 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
       amountPaid = ((checkout.amount_total ?? 0) / 100).toFixed(2);
       // Closed, post-payment surface (robots: noindex) — safe to reveal the
       // exact venue, looked up from camps.ts (never from Stripe metadata).
-      exactLocation = findCampBySlug(String(m.camp_slug ?? ""))?.exactLocation ?? "";
+      const camp = findCampBySlug(String(m.camp_slug ?? ""));
+      if (camp) {
+        campWhere = camp.exactLocation
+          ? `${resolveCampWhere(camp).replace("\n", ", ")}. We're outdoors — there's shade and a water cooler, and we play rain or shine.`
+          : resolveCampWhere(camp);
+      }
     } catch (err) {
       console.error("[camp/success] failed to load checkout", err);
     }
@@ -70,9 +76,7 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
             )}
             <p className="text-sm text-ngpa-muted mt-1">
               <span className="text-ngpa-white font-semibold">Where: </span>
-              {exactLocation
-                ? "Gaithersburg High School — outdoor courts, 314 South Frederick Ave, Gaithersburg, MD 20877. We're outdoors — there's shade and a water cooler, and we play rain or shine."
-                : "Gaithersburg, MD — we'll email the exact site before camp."}
+              {campWhere || "We'll email the exact site before camp."}
             </p>
             {amountPaid && amountPaid !== "0.00" && (
               <p className="text-sm text-ngpa-muted mt-1">

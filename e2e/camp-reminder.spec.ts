@@ -174,6 +174,19 @@ test.describe("camp-reminder schedule helpers", () => {
     // Exact venue comes from camps.ts, never Stripe metadata.
     expect(where).not.toContain("undefined");
   });
+
+  // Regression: the Aug 2026 back-to-school reminder shipped a hardcoded
+  // Gaithersburg header above the Wood MS address. The venue header must come
+  // from each camp's venueLine, never from a template constant.
+  test("resolveCampWhere uses each camp's own venue — never another camp's", () => {
+    const camp = findCampBySlug("august-17")!;
+    const where = resolveCampWhere(camp);
+    expect(where).toContain("Earle B. Wood Middle School — tennis courts");
+    expect(where).toContain("14615 Bauer Dr, Rockville, MD 20853");
+    expect(where).not.toContain("Gaithersburg");
+    // The address line must not repeat the venue name (it's the header).
+    expect(where.split("\n")[1]).not.toContain("Earle B. Wood");
+  });
 });
 
 test.describe("collectPaidCampSessions", () => {
