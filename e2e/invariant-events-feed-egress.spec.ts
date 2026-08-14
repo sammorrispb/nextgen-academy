@@ -60,10 +60,12 @@ test.describe("events feed — egress invariants", () => {
     );
     const json = JSON.stringify(feed);
 
-    // No camp's hidden venue string ships anywhere in the payload.
+    // No camp's hidden venue string ships anywhere in the payload —
+    // neither the full address nor the venueLine display header (it names
+    // the school just as precisely).
     for (const camp of CAMPS) {
-      if (!camp.exactLocation) continue;
-      expect(json).not.toContain(camp.exactLocation);
+      if (camp.exactLocation) expect(json).not.toContain(camp.exactLocation);
+      if (camp.venueLine) expect(json).not.toContain(camp.venueLine);
     }
 
     // Every camp item carries the broad public area and nothing address-like.
