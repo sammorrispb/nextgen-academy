@@ -1,7 +1,7 @@
 /**
  * Fall 2026 Sunday season — the CONFIRMED season the one-click poll email asks
- * about. Distinct from src/data/fall-2026.ts (the earlier Sat+Sun demand-sizing
- * survey, which deliberately quoted no price because nothing was decided):
+ * about. Distinct from src/data/fall-2026.ts (the /fall demand-sizing survey,
+ * which now carries the same Sunday shape but deliberately quotes no price):
  * Sam set these terms on 2026-08-14 — real dates, real price, real caps — so
  * this file DOES carry the dollar figure, and the poll asks for a commitment
  * signal (In / Interested / Out), not a valuation.

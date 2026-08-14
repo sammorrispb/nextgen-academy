@@ -10,7 +10,7 @@ import {
   timeToMinutes,
 } from "../src/lib/events-feed";
 import { MVF_PROGRAMS } from "../src/data/mvf";
-import { FALL_SATURDAYS, FALL_SUNDAYS } from "../src/data/fall-2026";
+import { FALL_RAIN_DATES, FALL_SUNDAYS } from "../src/data/fall-2026";
 
 const ORIGIN = "https://nextgenpbacademy.com";
 
@@ -215,17 +215,36 @@ test.describe("events feed — MVF", () => {
 });
 
 test.describe("events feed — Fall 2026", () => {
-  test("every season date ships as a flagged hold", () => {
+  test("every confirmed Sunday ships as a real block", () => {
     const items = buildFallEvents(ORIGIN);
-    expect(items).toHaveLength(FALL_SATURDAYS.length + FALL_SUNDAYS.length);
+    expect(items).toHaveLength(FALL_SUNDAYS.length + FALL_RAIN_DATES.length);
 
-    for (const item of items) {
+    const sundays = new Set<string>(FALL_SUNDAYS);
+    const confirmed = items.filter((i) => sundays.has(i.date));
+    expect(confirmed).toHaveLength(FALL_SUNDAYS.length);
+
+    for (const item of confirmed) {
+      expect(item.tentative).toBe(false);
+      expect(item.status).toBe("Open");
+      expect(item.title).not.toContain("[TENTATIVE]");
+      expect(item.startTime).toBe("1:00 PM");
+      expect(item.endTime).toBe("4:00 PM");
+      expect(item.url).toBe(`${ORIGIN}/fall`);
+    }
+  });
+
+  test("rain dates stay flagged holds", () => {
+    const items = buildFallEvents(ORIGIN);
+    const rain = new Set<string>(FALL_RAIN_DATES);
+    const holds = items.filter((i) => rain.has(i.date));
+    expect(holds).toHaveLength(FALL_RAIN_DATES.length);
+
+    for (const item of holds) {
       expect(item.tentative).toBe(true);
       expect(item.status).toBe("Tentative");
       expect(item.title).toContain("[TENTATIVE]");
-      expect(item.startTime).toBe("5:00 PM");
-      expect(item.endTime).toBe("7:00 PM");
-      expect(item.url).toBe(`${ORIGIN}/fall`);
+      expect(item.startTime).toBe("1:00 PM");
+      expect(item.endTime).toBe("4:00 PM");
     }
   });
 });
@@ -247,10 +266,11 @@ test.describe("events feed — whole payload", () => {
     }
   });
 
-  test("only the fall season is tentative", () => {
+  test("tentative items are only the fall rain-date holds", () => {
     const feed = buildEventsFeed({ sessions: [session()] }, ORIGIN);
+    const rain = new Set<string>(FALL_RAIN_DATES);
     for (const item of feed) {
-      expect(item.tentative).toBe(item.source === "fall");
+      expect(item.tentative).toBe(item.source === "fall" && rain.has(item.date));
     }
   });
 });

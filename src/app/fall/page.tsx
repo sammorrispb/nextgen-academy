@@ -20,7 +20,7 @@ import {
 export const metadata: Metadata = {
   title: "Fall 2026 — does this schedule work? | Next Gen Pickleball Academy",
   description:
-    "We're planning 8 weeks of Saturday and Sunday evening pickleball at Wood Middle School — a youth season and an adult round robin. Tell us if it works before we book the courts.",
+    "Six Sundays of youth pickleball at Wood Middle School this fall — Green Ball 1:00–2:30 PM, Yellow Ball 2:30–4:00 PM — plus an adult round robin track. Tell us what works for your family.",
   robots: { index: false, follow: false },
 };
 
@@ -36,15 +36,15 @@ export default function FallPage() {
             Would this fall work for you?
           </h1>
           <p className="text-lg text-ngpa-white/80 leading-relaxed mb-6">
-            We&rsquo;re looking at {FALL_SEASON_WEEKS} weeks at{" "}
-            {FALL_VENUE_SHORT} in {FALL_PUBLIC_AREA} —{" "}
+            We&rsquo;re running {FALL_SEASON_WEEKS} weeks at {FALL_VENUE_SHORT}{" "}
+            in {FALL_PUBLIC_AREA} —{" "}
             <strong className="text-ngpa-white">
-              Saturdays and Sundays, {FALL_START_TIME}&ndash;{FALL_END_TIME}
+              Sundays, {FALL_START_TIME}&ndash;{FALL_END_TIME}: Green Ball
+              1:00&ndash;2:30 PM, Yellow Ball 2:30&ndash;4:00 PM
             </strong>
-            , running{" "}
-            <time dateTime="2026-09-12">{FALL_SEASON_LABEL}</time>. Two programs
-            in the same window, so a family can come together and everybody
-            plays.
+            , running <time dateTime="2026-09-20">{FALL_SEASON_LABEL}</time>{" "}
+            (rain dates Nov 1 and Nov 8). Plus an adult round robin track, so a
+            family can come together and everybody plays.
           </p>
           <p className="text-sm text-ngpa-white/60 leading-relaxed">
             {FALL_NO_HOLD_NOTE}
@@ -126,7 +126,8 @@ export default function FallPage() {
               </li>
             </ul>
             <p className="text-sm text-ngpa-white/55 mt-5">
-              Venue: {FALL_VENUE}
+              Venue: {FALL_VENUE}. Rain dates: Sundays November 1 and
+              November 8.
             </p>
           </div>
         </div>

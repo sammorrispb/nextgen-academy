@@ -140,20 +140,20 @@ export default function FallInterestForm() {
 
   function toggleDay(day: FallDay) {
     setForm((prev) => {
-      // "Neither works" is mutually exclusive with picking a day — holding both
-      // would make the answer unreadable.
-      if (day === "Neither works") {
+      // "Sunday doesn't work" is mutually exclusive with "Sunday" — holding
+      // both would make the answer unreadable.
+      if (day === "Sunday doesn't work") {
         return {
           ...prev,
-          days: prev.days.includes(day) ? [] : ["Neither works"],
+          days: prev.days.includes(day) ? [] : ["Sunday doesn't work"],
         };
       }
-      const withoutNeither = prev.days.filter((d) => d !== "Neither works");
+      const withoutNo = prev.days.filter((d) => d !== "Sunday doesn't work");
       return {
         ...prev,
-        days: withoutNeither.includes(day)
-          ? withoutNeither.filter((d) => d !== day)
-          : [...withoutNeither, day],
+        days: withoutNo.includes(day)
+          ? withoutNo.filter((d) => d !== day)
+          : [...withoutNo, day],
       };
     });
     clearError("days");
@@ -441,8 +441,8 @@ export default function FallInterestForm() {
                 </span>
               </label>
               <span className={hintClass}>
-                {FALL_SEASON_WEEKS} weeks, two hours a session. We haven&rsquo;t
-                set a price — your answer helps us set a fair one.
+                {FALL_SEASON_WEEKS} weeks, 90 minutes a session. We
+                haven&rsquo;t set a price — your answer helps us set a fair one.
               </span>
               <select
                 id="youthPriceBand"
@@ -505,7 +505,7 @@ export default function FallInterestForm() {
                 </span>
               </label>
               <span className={hintClass}>
-                {FALL_SEASON_WEEKS} weeks, two hours a session. No price set yet.
+                {FALL_SEASON_WEEKS} weeks. No price set yet.
               </span>
               <select
                 id="adultPriceBand"
@@ -528,9 +528,10 @@ export default function FallInterestForm() {
         )}
 
         <fieldset>
-          <legend className={labelClass}>Which days work?</legend>
+          <legend className={labelClass}>Does Sunday work?</legend>
           <span className={hintClass}>
-            Both evenings run 5:00&ndash;7:00 PM at Wood Middle School.
+            Sunday afternoons at Wood Middle School — Green Ball
+            1:00&ndash;2:30 PM, Yellow Ball 2:30&ndash;4:00 PM.
           </span>
           <div id="days" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {FALL_DAYS.map((day) => {
