@@ -29,6 +29,7 @@ import {
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import { findCampBySlug } from "@/data/camps";
+import { resolveCampWhere } from "@/lib/camp-reminder-schedule";
 import { buildCampConfirmationEmail } from "@/lib/email/camp-confirmation";
 import { syncCampRoster } from "@/lib/notion-camp-roster";
 import {
@@ -601,7 +602,7 @@ async function emailCampParent(session: Stripe.Checkout.Session) {
   // isn't set yet ("until booked"), preserving the old "we'll email it" line.
   const camp = findCampBySlug(metaString(m, "camp_slug"));
   const location = camp?.exactLocation
-    ? `Gaithersburg High School — outdoor courts\n${camp.exactLocation.replace(/^Gaithersburg HS,\s*/, "")}`
+    ? resolveCampWhere(camp)
     : `${metaString(m, "public_area") || "Gaithersburg, MD"} — we'll email the exact site before camp starts.`;
 
   const { subject, text } = buildCampConfirmationEmail({
