@@ -14,6 +14,11 @@
 // figure to this file, the /fall page, or either email until a real Stripe
 // product exists.
 
+import {
+  PICKLEBALL_COURTS_PER_TENNIS_COURT,
+  PLAYERS_PER_PICKLEBALL_COURT,
+} from "./venue-parking";
+
 export type FallTrack = "youth" | "adult";
 
 /** Youth ball colors — the NGA ladder. Never renamed to Beginner/Pro. */
@@ -96,8 +101,24 @@ export interface FallProgram {
   groups: readonly string[];
 }
 
-/** Slots available in each color group / bracket. First come, first serve. */
-export const SLOTS_PER_GROUP = 9;
+/**
+ * Tennis courts NGA reserves from CUPF for each Sunday session (Sam, 2026-08-15).
+ * Green and Yellow run back-to-back, so one court covers the whole 1–4 PM block.
+ */
+export const FALL_TENNIS_COURTS_PER_SESSION = 1;
+
+/**
+ * Slots available in each color group / bracket. First come, first serve.
+ *
+ * DERIVED from the court booking rather than typed, because it drifted once:
+ * this file advertised 9 while `fall-poll-2026.ts` sold 8, and 9 doesn't fit on
+ * one court anyway (2 pickleball courts × 4 players). Book a second court and
+ * the seat count follows on its own.
+ */
+export const SLOTS_PER_GROUP =
+  FALL_TENNIS_COURTS_PER_SESSION *
+  PICKLEBALL_COURTS_PER_TENNIS_COURT *
+  PLAYERS_PER_PICKLEBALL_COURT;
 
 export const FALL_SEASON_WEEKS = 6;
 
