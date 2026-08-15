@@ -11,6 +11,13 @@
  * capacity is N × 8 players — set the Notion "Court count" to the *pickleball*
  * count (2 × tennis) so the Capacity formula (courts × 4) lands right.
  *
+ * CUPF HALF-RULE: `tennisCourts` below is the venue's PHYSICAL court count, but
+ * CUPF only rents half the courts at a school — the rest stay open for public
+ * walk-on play. So the most you can actually reserve at a venue is
+ * `floor(tennisCourts / 2)`: 3 at Wood, 4 at Gaithersburg, 1 at Ridgeview.
+ * Capacity helpers below deliberately compute against the physical count (what
+ * the venue holds), NOT the bookable half — size a session off the half.
+ *
  * Parking tips are shown to parents next to the (satellite) map; keyed by a
  * substring of the Notion `Location` string (same match style as venue-lookup).
  * A venue with no entry hides the parking block — never guess parking for a
@@ -22,7 +29,10 @@ export const PICKLEBALL_COURTS_PER_TENNIS_COURT = 2; // one each side of the net
 export const PLAYERS_PER_PICKLEBALL_COURT = 4;
 
 export interface Venue {
-  /** Pickleball-lined tennis courts rentable here (0 = nothing to rent). */
+  /**
+   * Pickleball-lined tennis courts AT this venue (0 = nothing to rent). This is
+   * the physical count, not the bookable half — see the CUPF half-rule above.
+   */
   tennisCourts: number;
   /** Parking guidance shown to parents. */
   tip: string;
@@ -100,10 +110,10 @@ const VENUES: Record<string, Venue> = {
   // public pickleball courts to the north are Bauer Drive Local Park (parks
   // dept): free, lit, busy, and NOT reservable. See `note`.
   wood: {
-    tennisCourts: 6, // → 12 pickleball → 48 cap
+    tennisCourts: 6, // physical; CUPF permits half → 3 bookable → 6 pickleball
     confirmCount: true,
     tip: "Enter off Bauer Dr and park in the main Earle B. Wood MS lot. Our tennis courts are on the east side of the campus, past the building — a 3–4 minute walk. Don't head for the pickleball courts up by the Bauer Drive Community Recreation Center; those are the public park's, not ours.",
-    note: "Fall 2026 season venue (Sundays, Sept 20 – Oct 25). NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players. Separately, Bauer Drive Local Park to the north has 6 dedicated, lit public pickleball courts: FREE and high-traffic but NOT reservable, first-come only. Usable Mt-Zion-style for a free public session (~24 cap) and great for visibility, but you can't guarantee availability there.",
+    note: "Fall 2026 season venue (Sundays, Sept 20 – Oct 25). NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players — with room to grow to 3 (see the half-rule note above): 6 pickleball courts, 24 players a group. Change `FALL_TENNIS_COURTS_PER_SESSION` in `fall-2026.ts` and the seat count follows. Separately, Bauer Drive Local Park to the north has 6 dedicated, lit public pickleball courts: FREE and high-traffic but NOT reservable, first-come only. Usable Mt-Zion-style for a free public session (~24 cap) and great for visibility, but you can't guarantee availability there.",
     draft: true,
   },
 };
