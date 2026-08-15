@@ -28,7 +28,7 @@ function webhookRequest(payload: string): NextRequest {
   });
 }
 
-for (const kind of ["camp", "league", "cluster"] as const) {
+for (const kind of ["camp", "league", "cluster", "fall"] as const) {
   test(`kind=${kind} checkout never touches the drop-in roster DB`, async () => {
     // Catch-alls only — each handler's own DB envs are unset, so they
     // env-gracefully skip their writes; what matters is the dropins DB.
