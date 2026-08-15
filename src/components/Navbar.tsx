@@ -9,6 +9,7 @@ import { trackEvent } from "@/lib/funnelClient";
 const links = [
   { href: "#levels", label: "Programs" },
   { href: "/schedule", label: "Schedule" },
+  { href: "/fall", label: "Fall Season" },
   { href: "/camp", label: "Camp" },
   { href: "/montgomery-village-youth-pickleball", label: "MVF Classes" },
   { href: "/league", label: "League" },

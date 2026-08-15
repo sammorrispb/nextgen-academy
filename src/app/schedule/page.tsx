@@ -185,6 +185,33 @@ export default async function SchedulePage() {
         </div>
       </section>
 
+      {/* ─── Fall 2026 season callout ──── */}
+      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-6">
+        <div className="max-w-3xl mx-auto">
+          <Link
+            href="/fall"
+            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/10 p-5 sm:p-6 hover:border-ngpa-lime transition-colors"
+          >
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
+                New &middot; Fall 2026 Season
+              </p>
+              <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
+                Six Sundays at Earle B. Wood MS in Rockville
+              </p>
+              <p className="text-sm text-ngpa-muted mt-0.5">
+                Sept 20 &ndash; Oct 25 &middot; Green Ball 1:00&ndash;2:30 PM,
+                Yellow Ball 2:30&ndash;4:00 PM &middot; $225 per player, 8 spots
+                per group.
+              </p>
+            </div>
+            <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
+              See the season &rarr;
+            </span>
+          </Link>
+        </div>
+      </section>
+
       {/* ─── MVF Montgomery Village callout ──── */}
       <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-6">
         <div className="max-w-3xl mx-auto">
