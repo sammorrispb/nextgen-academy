@@ -92,12 +92,18 @@ const VENUES: Record<string, Venue> = {
     tip: "Park in the main lot off Raven Rock Dr on the southeast side of the school. The 2 tennis courts are at the north end of the campus by the ball fields — a 4–5 minute walk around the building, so arrive a few minutes early.",
     draft: true,
   },
-
-  // ── Free public option (not a CUPF rental) ──
+  // Two DIFFERENT court clusters share this address, and conflating them is the
+  // mistake this entry used to make: it recorded the park's courts, reported
+  // nothing rentable, and sent parents to the wrong lot. The school's 6 tennis
+  // courts (east side of campus) are the CUPF rental — that's what NGA permits
+  // for the Fall 2026 Sundays and what the Aug camp ran on. The 6 dedicated
+  // public pickleball courts to the north are Bauer Drive Local Park (parks
+  // dept): free, lit, busy, and NOT reservable. See `note`.
   wood: {
-    tennisCourts: 0, // nothing rentable here
-    note: "Earle B. Wood MS sits next to 6 dedicated, lit public pickleball courts (Bauer Drive / Earle B. Wood Park, parks dept). They're FREE and high-traffic but NOT reservable — first-come only. Usable Mt-Zion-style for a free public session (~24 cap across 6 courts) and great for visibility, but you can't guarantee court availability.",
-    tip: "Park in the lot off Bauer Dr by the Bauer Drive Community Recreation Center. The 6 public pickleball courts are on the east side of the campus — a short walk. Expect other players; courts are first-come.",
+    tennisCourts: 6, // → 12 pickleball → 48 cap
+    confirmCount: true,
+    tip: "Enter off Bauer Dr and park in the main Earle B. Wood MS lot. Our tennis courts are on the east side of the campus, past the building — a 3–4 minute walk. Don't head for the pickleball courts up by the Bauer Drive Community Recreation Center; those are the public park's, not ours.",
+    note: "Fall 2026 season venue (Sundays, Sept 20 – Oct 25). NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players. Separately, Bauer Drive Local Park to the north has 6 dedicated, lit public pickleball courts: FREE and high-traffic but NOT reservable, first-come only. Usable Mt-Zion-style for a free public session (~24 cap) and great for visibility, but you can't guarantee availability there.",
     draft: true,
   },
 };
