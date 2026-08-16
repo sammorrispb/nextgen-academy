@@ -19,6 +19,11 @@ import { cancelFallByPaymentIntent } from "../src/lib/cancel-fall";
 
 const PI = "pi_fall_probe";
 
+/** Stripe fires charge.refunded for PARTIAL refunds too — `refunded` is true
+ *  only when the whole charge came back. These model both shapes. */
+const FULL = { fullyRefunded: true, amountRefundedUsd: 225 };
+const PARTIAL = { fullyRefunded: false, amountRefundedUsd: 50 };
+
 function fallRow(status: "Confirmed" | "Refunded" | "Cancelled" = "Confirmed") {
   return {
     id: "fall-row-1",
@@ -42,7 +47,7 @@ test("a refunded fall registration flips the roster row, which frees the seat", 
     .install();
 
   try {
-    const result = await cancelFallByPaymentIntent(PI);
+    const result = await cancelFallByPaymentIntent(PI, FULL);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.status).toBe("Refunded");
@@ -67,7 +72,7 @@ test("the parent gets a cancellation email, not silence", async () => {
     .install();
 
   try {
-    const result = await cancelFallByPaymentIntent(PI);
+    const result = await cancelFallByPaymentIntent(PI, FULL);
     expect(result.ok && result.emailSent).toBe(true);
 
     const send = stub.calls.find((c) => c.url.includes("api.resend.com"));
@@ -89,7 +94,7 @@ test("webhook redelivery is idempotent — no second flip, no second email", asy
     .install();
 
   try {
-    const result = await cancelFallByPaymentIntent(PI);
+    const result = await cancelFallByPaymentIntent(PI, FULL);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.idempotent).toBe(true);
@@ -107,7 +112,7 @@ test("an unknown Payment Intent is reported, never silently swallowed", async ()
     .install();
 
   try {
-    const result = await cancelFallByPaymentIntent("pi_does_not_exist");
+    const result = await cancelFallByPaymentIntent("pi_does_not_exist", FULL);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toBe("not_found");
@@ -124,7 +129,7 @@ test("webhook tries drop-in first and only falls through on not_found", () => {
 
   const dropIn = src.indexOf("cancelDropInByPaymentIntent(piId");
   const guard = src.indexOf('result.reason === "not_found"');
-  const fall = src.indexOf("cancelFallByPaymentIntent(piId)");
+  const fall = src.indexOf("cancelFallByPaymentIntent(piId,");
 
   expect(dropIn, "drop-in lookup must exist").toBeGreaterThan(-1);
   expect(guard, "fall path must be guarded on not_found").toBeGreaterThan(-1);
@@ -132,4 +137,113 @@ test("webhook tries drop-in first and only falls through on not_found", () => {
 
   expect(dropIn).toBeLessThan(guard);
   expect(guard).toBeLessThan(fall);
+});
+
+// ── Partial-refund safety ────────────────────────────────────────────────────
+// Stripe fires charge.refunded on ANY refund; `charge.refunded` is true only
+// when the charge came back in full. Treating a partial refund as a season
+// cancellation would pull a kid off the roster over a fee adjustment AND email
+// the parent the wrong dollar amount. Caught in retro review of PR #282.
+
+test("a PARTIAL refund never flips the row and never sends cancellation copy", async () => {
+  const stub = new FetchStub()
+    .on("/databases/fall-regs-db/query", { results: [fallRow("Confirmed")] })
+    .on("/pages/fall-row-1", { id: "fall-row-1" })
+    .on("api.resend.com", { id: "email_1" })
+    .install();
+
+  try {
+    const result = await cancelFallByPaymentIntent(PI, PARTIAL);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe("partial_refund");
+
+    // The seat must stay occupied — the family is still enrolled.
+    expect(stub.calls.some((c) => c.method === "PATCH")).toBe(false);
+
+    // Exactly one email may go out, and it must be the ADMIN alert, never the
+    // parent-facing cancellation. The alert names the family in its body so Sam
+    // knows who it's about — what matters is the RECIPIENT.
+    const sends = stub.calls.filter((c) => c.url.includes("api.resend.com"));
+    expect(sends.length).toBe(1);
+    const payload = JSON.parse(sends[0].body) as {
+      to: string;
+      bcc?: string;
+      subject: string;
+    };
+    expect(payload.to).toBe("nextgenacademypb@gmail.com");
+    expect(payload.bcc).toBeUndefined();
+    expect(payload.subject).toContain("Partial refund");
+  } finally {
+    stub.uninstall();
+  }
+});
+
+test("a full refund emails the AMOUNT STRIPE ACTUALLY RETURNED, not the row's price", async () => {
+  const stub = new FetchStub()
+    .on("/databases/fall-regs-db/query", { results: [fallRow("Confirmed")] })
+    .on("/pages/fall-row-1", { id: "fall-row-1" })
+    .on("api.resend.com", { id: "email_1" })
+    .install();
+
+  try {
+    // A goodwill/adjusted full-cancellation that returned less than the sticker price.
+    const result = await cancelFallByPaymentIntent(PI, {
+      fullyRefunded: true,
+      amountRefundedUsd: 180,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.refundedUsd).toBe(180);
+
+    const send = stub.calls.find((c) => c.url.includes("api.resend.com"));
+    expect(send!.body).toContain("180.00");
+    expect(send!.body).not.toContain("225.00");
+  } finally {
+    stub.uninstall();
+  }
+});
+
+test("a Cancelled (no-refund) row still reconciles when a goodwill refund lands", async () => {
+  const stub = new FetchStub()
+    .on("/databases/fall-regs-db/query", { results: [fallRow("Cancelled")] })
+    .on("/pages/fall-row-1", { id: "fall-row-1" })
+    .on("api.resend.com", { id: "email_1" })
+    .install();
+
+  try {
+    const result = await cancelFallByPaymentIntent(PI, FULL);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    // Money moved, so the row must move Cancelled → Refunded and the parent
+    // must be told — not silently swallowed as "already terminal".
+    expect(result.status).toBe("Refunded");
+    expect(result.idempotent).toBeFalsy();
+    expect(stub.calls.some((c) => c.method === "PATCH")).toBe(true);
+  } finally {
+    stub.uninstall();
+  }
+});
+
+test("a refund that can't be reconciled to the roster PAGES the admin", async () => {
+  const stub = new FetchStub()
+    .on("/databases/fall-regs-db/query", { results: [fallRow("Confirmed")] })
+    .onDynamic(/\/pages\/fall-row-1/, () => ({ status: 500, json: { message: "boom" } }))
+    .on("api.resend.com", { id: "email_1" })
+    .install();
+
+  try {
+    const result = await cancelFallByPaymentIntent(PI, FULL);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toBe("update_failed");
+
+    // Stripe already returned the money; a stuck-Confirmed row with nobody told
+    // is the exact failure this whole path exists to close.
+    const alert = stub.calls.find((c) => c.url.includes("api.resend.com"));
+    expect(alert, "admin must be paged on an unreconciled refund").toBeTruthy();
+    expect(alert!.body).toContain("nextgenacademypb@gmail.com");
+  } finally {
+    stub.uninstall();
+  }
 });

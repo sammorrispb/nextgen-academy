@@ -1069,7 +1069,13 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   // un-emailed. Same failure the drop-in path above was rewritten to close.
   // Only reached when the drop-in lookup misses, so drop-in behavior is unchanged.
   if (result.reason === "not_found") {
-    const fall = await cancelFallByPaymentIntent(piId);
+    // charge.refunded fires for PARTIAL refunds too — `charge.refunded` is true
+    // only when the whole charge came back. Pass what Stripe actually did so a
+    // partial refund can't be read as a season cancellation.
+    const fall = await cancelFallByPaymentIntent(piId, {
+      fullyRefunded: charge.refunded === true,
+      amountRefundedUsd: (charge.amount_refunded ?? 0) / 100,
+    });
     if (fall.ok) {
       return NextResponse.json({ received: true, refunded: true, fall: true, ...fall });
     }

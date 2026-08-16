@@ -59,13 +59,46 @@ export type CancelFallResult =
     }
   | {
       ok: false;
-      reason: "not_found" | "no_key" | "update_failed" | "refund_failed";
+      reason:
+        | "not_found"
+        | "no_key"
+        | "update_failed"
+        | "refund_failed"
+        | "partial_refund";
       message: string;
     };
 
 /** Already terminal → nothing to do. Keeps webhook redelivery safe. */
 function isTerminal(status: string): boolean {
   return status === "Refunded" || status === "Cancelled";
+}
+
+/**
+ * Page Sam when a refund can't be reconciled to the roster. Stripe has already
+ * returned the money at this point, so a stuck row with nobody told is the
+ * exact failure this whole path exists to close — it must never be a bare
+ * console.error. Fail-soft: an alert failure can't make things worse.
+ */
+async function alertAdmin(subject: string, body: string): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) return false;
+  try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_EMAIL,
+      replyTo: REPLY_TO,
+      subject,
+      text: body,
+    });
+    if (error) {
+      console.error("[cancel-fall] admin alert rejected", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[cancel-fall] admin alert threw", err);
+    return false;
+  }
 }
 
 async function issueRefund(
@@ -211,9 +244,26 @@ export async function cancelFallRegistration(
   return { ok: true, pageId: row.pageId, status, refundedUsd, emailSent };
 }
 
-/** Payment-Intent entrypoint used by the charge.refunded webhook branch. */
+/** What Stripe actually did, read off the Charge — never inferred from the row. */
+export interface ObservedRefund {
+  /** Stripe's `charge.refunded` — true ONLY when the whole charge came back. */
+  fullyRefunded: boolean;
+  /** Stripe's `charge.amount_refunded`, in dollars. */
+  amountRefundedUsd: number;
+}
+
+/**
+ * Payment-Intent entrypoint used by the charge.refunded webhook branch.
+ *
+ * Stripe fires `charge.refunded` for PARTIAL refunds too, so the observed
+ * refund must be passed in rather than assumed. Treating a partial refund as a
+ * cancellation would pull a child off the roster over a fee adjustment and tell
+ * the parent they got the full season price back. The amount emailed is always
+ * what Stripe returned, never the row's sticker price.
+ */
 export async function cancelFallByPaymentIntent(
   paymentIntentId: string,
+  refund: ObservedRefund,
 ): Promise<CancelFallResult> {
   // The money already moved (Stripe told us), so never try to refund again —
   // just reconcile the roster and tell the parent.
@@ -221,11 +271,25 @@ export async function cancelFallByPaymentIntent(
   if (!row) {
     return { ok: false, reason: "not_found", message: "No fall roster row for that PI" };
   }
-  if (isTerminal(row.status)) {
+
+  // PARTIAL refund → the family is still enrolled. Touch nothing, page Sam.
+  if (!refund.fullyRefunded) {
+    const message = `Partial refund of $${refund.amountRefundedUsd.toFixed(2)} on fall registration for ${row.childFirstName} (${row.group}, ${row.parentEmail}). The roster row was left Confirmed — they are STILL ENROLLED and still hold a seat. If this was meant to cancel the registration, do it through /api/cancel-fall-registration so the seat frees and the parent is emailed.`;
+    await alertAdmin(
+      `[NGA] Partial refund on a fall registration — no action taken`,
+      message,
+    );
+    return { ok: false, reason: "partial_refund", message };
+  }
+
+  // Only "Refunded" is terminal here. A row already "Cancelled" (withdrawn with
+  // no refund, per policy) that later receives a goodwill refund must still
+  // reconcile to Refunded and tell the parent — money moved.
+  if (row.status === "Refunded") {
     return {
       ok: true,
       pageId: row.pageId,
-      status: row.status as FallCancelStatus,
+      status: "Refunded",
       refundedUsd: 0,
       idempotent: true,
       emailSent: false,
@@ -234,15 +298,17 @@ export async function cancelFallByPaymentIntent(
 
   const updated = await updateFallRegStatus(row.pageId, "Refunded");
   if (!updated) {
-    return { ok: false, reason: "update_failed", message: "Roster row did not flip" };
+    const message = `Stripe refunded $${refund.amountRefundedUsd.toFixed(2)} for ${row.childFirstName} (${row.group}, ${row.parentEmail}) but the Notion roster row did NOT flip. The seat is still counted as Confirmed and cannot be resold, and the parent has NOT been emailed. Flip row ${row.pageId} to Refunded by hand.`;
+    await alertAdmin(`[NGA] Fall refund could not be reconciled to the roster`, message);
+    return { ok: false, reason: "update_failed", message };
   }
 
-  const emailSent = await sendCancellationEmail(row, row.amountPaidUsd);
+  const emailSent = await sendCancellationEmail(row, refund.amountRefundedUsd);
   return {
     ok: true,
     pageId: row.pageId,
     status: "Refunded",
-    refundedUsd: row.amountPaidUsd,
+    refundedUsd: refund.amountRefundedUsd,
     emailSent,
   };
 }
