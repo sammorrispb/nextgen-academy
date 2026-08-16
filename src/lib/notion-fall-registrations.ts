@@ -123,6 +123,111 @@ export async function findFallRegByCheckoutId(
   return data.results.length > 0;
 }
 
+/** A roster row, resolved far enough to cancel it and email the parent. */
+export interface FallRegistrationLookup {
+  pageId: string;
+  parentName: string;
+  parentEmail: string;
+  childFirstName: string;
+  group: string;
+  status: string;
+  amountPaidUsd: number;
+  stripeCheckoutSessionId: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toLookup(page: any): FallRegistrationLookup {
+  const p = page.properties ?? {};
+  return {
+    pageId: page.id,
+    parentName: p["Parent Name"]?.title?.[0]?.plain_text ?? "",
+    parentEmail: p["Parent Email"]?.email ?? "",
+    childFirstName: p["Child First Name"]?.rich_text?.[0]?.plain_text ?? "",
+    group: p["Group"]?.select?.name ?? "",
+    status: p["Status"]?.select?.name ?? "",
+    amountPaidUsd: p["Amount Paid"]?.number ?? 0,
+    stripeCheckoutSessionId:
+      p["Stripe Checkout Session ID"]?.rich_text?.[0]?.plain_text ?? "",
+  };
+}
+
+async function findFallRegBy(
+  property: "Stripe Payment Intent ID" | "Stripe Checkout Session ID",
+  value: string,
+): Promise<FallRegistrationLookup | null> {
+  const env = notionEnv();
+  if (!env || !value) return null;
+
+  try {
+    const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
+      method: "POST",
+      headers: headers(env.notionKey),
+      body: JSON.stringify({
+        filter: { property, rich_text: { equals: value } },
+        page_size: 1,
+      }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      console.error(
+        `[notion-fall-registrations] lookup by ${property} failed ${res.status}`,
+      );
+      return null;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (await res.json()) as { results: any[] };
+    return data.results[0] ? toLookup(data.results[0]) : null;
+  } catch (err) {
+    console.error("[notion-fall-registrations] lookup threw", err);
+    return null;
+  }
+}
+
+/**
+ * Resolve a roster row from the Payment Intent. The PI is the durable key on a
+ * refund — the same lesson cancelDropInByPaymentIntent was rewritten for, where
+ * a Checkout-Session re-lookup could come back empty and silently skip the flip.
+ */
+export async function findFallRegByPaymentIntent(
+  paymentIntentId: string,
+): Promise<FallRegistrationLookup | null> {
+  return findFallRegBy("Stripe Payment Intent ID", paymentIntentId);
+}
+
+/** Resolve a roster row from the Checkout Session id (admin path). */
+export async function findFallRegByCheckoutSessionId(
+  checkoutSessionId: string,
+): Promise<FallRegistrationLookup | null> {
+  return findFallRegBy("Stripe Checkout Session ID", checkoutSessionId);
+}
+
+/**
+ * Flip a roster row's Status. Only "Confirmed" rows occupy a seat (the capacity
+ * guard filters on it), so moving a row to Refunded/Cancelled frees the seat
+ * with no separate decrement — unlike the drop-in roster, which keeps its own
+ * Registered count.
+ */
+export async function updateFallRegStatus(
+  pageId: string,
+  status: "Confirmed" | "Refunded" | "Cancelled",
+): Promise<boolean> {
+  const env = notionEnv();
+  if (!env) return false;
+
+  const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
+    method: "PATCH",
+    headers: headers(env.notionKey),
+    body: JSON.stringify({ properties: { Status: { select: { name: status } } } }),
+  });
+  if (!res.ok) {
+    console.error(
+      `[notion-fall-registrations] status update failed ${res.status}: ${await res.text()}`,
+    );
+    return false;
+  }
+  return true;
+}
+
 // Capacity + duplicate guard input for /api/checkout-fall. Fail-OPEN (empty
 // list) on any Notion problem — same posture as the cluster roster: an
 // oversold seat or duplicate registration is a refundable mistake, but a

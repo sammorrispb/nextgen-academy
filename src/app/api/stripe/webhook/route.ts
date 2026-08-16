@@ -11,6 +11,7 @@ import {
 } from "@/lib/notion-dropins";
 import { sessionToSlug } from "@/lib/session-slug";
 import { cancelDropInByPaymentIntent } from "@/lib/cancel-dropin";
+import { cancelFallByPaymentIntent } from "@/lib/cancel-fall";
 import { buildDropInIcs } from "@/lib/email/ics";
 import {
   bookingConfirmationHtml,
@@ -1058,10 +1059,30 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
   // (Dashboard / MCP / admin API) with the row stuck on Confirmed and the parent
   // un-emailed. cancelDropIn(...) is idempotent, so webhook redelivery is safe.
   const result = await cancelDropInByPaymentIntent(piId, "Refunded");
-  if (!result.ok) {
-    return NextResponse.json({ received: true, skipped: result.reason });
+  if (result.ok) {
+    return NextResponse.json({ received: true, refunded: true, ...result });
   }
-  return NextResponse.json({ received: true, refunded: true, ...result });
+
+  // Not a drop-in. Fall season registrations keep their own roster (kind=fall),
+  // and a Confirmed row is what occupies one of the 8 seats — so an out-of-band
+  // refund that never flips the row leaves the seat unsellable and the parent
+  // un-emailed. Same failure the drop-in path above was rewritten to close.
+  // Only reached when the drop-in lookup misses, so drop-in behavior is unchanged.
+  if (result.reason === "not_found") {
+    // charge.refunded fires for PARTIAL refunds too — `charge.refunded` is true
+    // only when the whole charge came back. Pass what Stripe actually did so a
+    // partial refund can't be read as a season cancellation.
+    const fall = await cancelFallByPaymentIntent(piId, {
+      fullyRefunded: charge.refunded === true,
+      amountRefundedUsd: (charge.amount_refunded ?? 0) / 100,
+    });
+    if (fall.ok) {
+      return NextResponse.json({ received: true, refunded: true, fall: true, ...fall });
+    }
+    return NextResponse.json({ received: true, skipped: fall.reason });
+  }
+
+  return NextResponse.json({ received: true, skipped: result.reason });
 }
 
 async function emailClusterAdmin(session: Stripe.Checkout.Session) {
