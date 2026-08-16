@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import InlineWaiverStep from "@/components/InlineWaiverStep";
 import {
   CAMP_OPTIONS,
   campDays,
@@ -12,6 +13,7 @@ import {
   type CampFormData,
   type CampValidationErrors,
 } from "@/lib/validate-camp";
+import { isWaiverRequired } from "@/lib/waiver-required";
 
 type FormStatus = "idle" | "submitting" | "redirecting" | "error";
 
@@ -50,6 +52,7 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
   const [errors, setErrors] = useState<CampValidationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
+  const [waiverNeeded, setWaiverNeeded] = useState(false);
 
   const camp = findCampBySlug(campSlug);
   const days = camp ? campDays(camp) : [];
@@ -67,7 +70,6 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setServerError("");
 
     const allErrors = validateCampForm(form);
     if (Object.keys(allErrors).length > 0) {
@@ -77,6 +79,13 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
       return;
     }
 
+    await startCheckout();
+  }
+
+  // Split out of handleSubmit so the inline waiver step can resume checkout
+  // with the form state it never let go of — no re-typing, no re-validation.
+  async function startCheckout() {
+    setServerError("");
     setStatus("submitting");
     try {
       const res = await fetch("/api/checkout-camp", {
@@ -85,9 +94,10 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      // One-time waiver gate: bounce to the prefilled sign page, then back here.
-      if (res.status === 409 && data.code === "waiver_required" && data.signUrl) {
-        window.location.href = data.signUrl as string;
+      // One-time waiver gate: sign it in place, then resume checkout here.
+      if (isWaiverRequired(res.status, data)) {
+        setWaiverNeeded(true);
+        setStatus("idle");
         return;
       }
       if (!res.ok) {
@@ -115,11 +125,28 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
   const busy = status === "submitting" || status === "redirecting";
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="bg-ngpa-panel/85 backdrop-blur rounded-2xl p-6 sm:p-8 border border-ngpa-slate/60 shadow-xl shadow-black/20"
-    >
+    <>
+      {waiverNeeded && (
+        <InlineWaiverStep
+          parentName={form.parentName}
+          email={form.email}
+          phone={form.phone}
+          continueLabel="payment"
+          onSigned={() => {
+            setWaiverNeeded(false);
+            void startCheckout();
+          }}
+          onCancel={() => setWaiverNeeded(false)}
+        />
+      )}
+      {/* Hidden, never unmounted — the registration survives the waiver step. */}
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className={`bg-ngpa-panel/85 backdrop-blur rounded-2xl p-6 sm:p-8 border border-ngpa-slate/60 shadow-xl shadow-black/20${
+          waiverNeeded ? " hidden" : ""
+        }`}
+      >
       {serverError && (
         <div className="bg-ngpa-red/10 border border-ngpa-red/30 rounded-lg p-4 mb-6">
           <p className="text-ngpa-red text-sm font-medium">{serverError}</p>
@@ -380,6 +407,7 @@ export default function CampRegisterForm({ campSlug }: CampRegisterFormProps) {
         Secure checkout by Stripe. We&rsquo;ll email your camp confirmation and
         share the exact location before camp starts.
       </p>
-    </form>
+      </form>
+    </>
   );
 }

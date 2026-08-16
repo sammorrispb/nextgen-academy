@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import InlineWaiverStep from "@/components/InlineWaiverStep";
 import {
   FALL_SEASON_GROUPS,
   FALL_SEASON_SPOTS_PER_GROUP,
@@ -11,6 +12,7 @@ import {
   type FallRegistrationData,
   type FallRegistrationErrors,
 } from "@/lib/validate-fall-registration";
+import { isWaiverRequired } from "@/lib/waiver-required";
 
 // Season REGISTRATION form — the full-pay checkout surface that replaced the
 // FallInterestForm survey once the season's terms were set. Structural mirror
@@ -48,6 +50,7 @@ export default function FallRegistrationForm({
   const [errors, setErrors] = useState<FallRegistrationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
+  const [waiverNeeded, setWaiverNeeded] = useState(false);
 
   function update<K extends keyof FallRegistrationData>(
     field: K,
@@ -65,7 +68,6 @@ export default function FallRegistrationForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setServerError("");
 
     const allErrors = validateFallRegistration(form);
     if (Object.keys(allErrors).length > 0) {
@@ -75,6 +77,13 @@ export default function FallRegistrationForm({
       return;
     }
 
+    await startCheckout();
+  }
+
+  // Split out of handleSubmit so the inline waiver step can resume checkout
+  // with the form state it never let go of — no re-typing, no re-validation.
+  async function startCheckout() {
+    setServerError("");
     setStatus("submitting");
     try {
       const res = await fetch("/api/checkout-fall", {
@@ -88,9 +97,10 @@ export default function FallRegistrationForm({
         return;
       }
       const data = await res.json();
-      // One-time waiver gate: bounce to the prefilled sign page, then back here.
-      if (res.status === 409 && data.code === "waiver_required" && data.signUrl) {
-        window.location.href = data.signUrl as string;
+      // One-time waiver gate: sign it in place, then resume checkout here.
+      if (isWaiverRequired(res.status, data)) {
+        setWaiverNeeded(true);
+        setStatus("idle");
         return;
       }
       if (!res.ok) {
@@ -135,11 +145,28 @@ export default function FallRegistrationForm({
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      noValidate
-      className="bg-ngpa-panel/85 backdrop-blur rounded-2xl p-6 sm:p-8 border border-ngpa-slate/60 shadow-xl shadow-black/20"
-    >
+    <>
+      {waiverNeeded && (
+        <InlineWaiverStep
+          parentName={form.parentName}
+          email={form.email}
+          phone={form.phone}
+          continueLabel="payment"
+          onSigned={() => {
+            setWaiverNeeded(false);
+            void startCheckout();
+          }}
+          onCancel={() => setWaiverNeeded(false)}
+        />
+      )}
+      {/* Hidden, never unmounted — the registration survives the waiver step. */}
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className={`bg-ngpa-panel/85 backdrop-blur rounded-2xl p-6 sm:p-8 border border-ngpa-slate/60 shadow-xl shadow-black/20${
+          waiverNeeded ? " hidden" : ""
+        }`}
+      >
       {serverError && (
         <div className="bg-ngpa-red/10 border border-ngpa-red/30 rounded-lg p-4 mb-6">
           <p className="text-ngpa-red text-sm font-medium">{serverError}</p>
@@ -386,6 +413,7 @@ export default function FallRegistrationForm({
         Secure checkout by Stripe. We&rsquo;ll email your season confirmation
         with every date and everything to bring.
       </p>
-    </form>
+      </form>
+    </>
   );
 }
