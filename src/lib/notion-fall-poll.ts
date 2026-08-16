@@ -136,11 +136,44 @@ export async function fetchActiveFamilies(): Promise<ActiveFamiliesResult> {
   };
 }
 
+const ACTION_FOR: Record<string, FallPollAction> = {
+  In: "in",
+  Interested: "interested",
+  Out: "out",
+};
+
+/**
+ * The FIRST address of a Parent Email cell, lowercased.
+ *
+ * A handful of CRM rows carry several comma-joined addresses in one cell, and
+ * the poll token is minted from the first one (see the `contains` query below)
+ * — so the first address is the one that actually received the link and tapped
+ * it. Mailing the raw cell would produce a malformed recipient; mailing the
+ * others would reach someone who never saw the poll.
+ */
+export function primaryParentEmail(cell: string): string {
+  return firstEmail(cell ?? "").toLowerCase();
+}
+
 export interface RecordPollResult {
   ok: boolean;
   rowsUpdated: number;
   /** True when the address matched no CRM row. */
   notFound: boolean;
+  /**
+   * The answer these rows held BEFORE this write, or null if unanswered.
+   * The registration-link send keys off this: only a transition INTO "in"
+   * earns an email, so a re-tap of the same link mails nothing. Using the
+   * poll value itself as the sent-flag avoids a second Notion property —
+   * and Notion never auto-creates properties, only select options.
+   */
+  previous: FallPollAction | null;
+  /**
+   * The family's parent name as the CRM holds it, for greeting them in any
+   * follow-up mail. Never derive a greeting from the email local-part — it
+   * renders "Thanks jeffwhitey" to a paying parent.
+   */
+  parentName: string | null;
 }
 
 export async function recordFallPollResponse(
@@ -150,7 +183,13 @@ export async function recordFallPollResponse(
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) {
     console.error("[fall-poll] NOTION_API_KEY missing");
-    return { ok: false, rowsUpdated: 0, notFound: false };
+    return {
+      ok: false,
+      rowsUpdated: 0,
+      notFound: false,
+      previous: null,
+      parentName: null,
+    };
   }
   const db = playerCrmDbId();
   const normalized = email.trim().toLowerCase();
@@ -158,6 +197,8 @@ export async function recordFallPollResponse(
   // `contains`, not `equals`: a handful of CRM rows carry several comma-joined
   // addresses in one email cell, and the token is minted from the first one.
   const pageIds: string[] = [];
+  let previous: FallPollAction | null = null;
+  let parentName: string | null = null;
   let cursor: string | undefined;
   do {
     const res = await fetch(`${NOTION_API}/databases/${db}/query`, {
@@ -172,15 +213,40 @@ export async function recordFallPollResponse(
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.error(`[fall-poll] query failed (${res.status}): ${text}`);
-      return { ok: false, rowsUpdated: 0, notFound: false };
+      return {
+        ok: false,
+        rowsUpdated: 0,
+        notFound: false,
+        previous: null,
+        parentName: null,
+      };
     }
     const data = await res.json();
-    for (const page of data.results ?? []) if (page.id) pageIds.push(page.id);
+    for (const page of data.results ?? []) {
+      if (!page.id) continue;
+      pageIds.push(page.id);
+      // All of a family's rows are stamped together, so the first row carrying
+      // an answer speaks for the family.
+      if (previous === null) {
+        const name = page.properties?.[FALL_POLL_PROPERTY]?.select?.name;
+        if (name && ACTION_FOR[name]) previous = ACTION_FOR[name];
+      }
+      if (parentName === null) {
+        const pn = readPlainText(page.properties?.["Parent Name"]).trim();
+        if (pn) parentName = pn;
+      }
+    }
     cursor = data.has_more ? data.next_cursor : undefined;
   } while (cursor);
 
   if (pageIds.length === 0) {
-    return { ok: true, rowsUpdated: 0, notFound: true };
+    return {
+      ok: true,
+      rowsUpdated: 0,
+      notFound: true,
+      previous: null,
+      parentName: null,
+    };
   }
 
   let updated = 0;
@@ -206,5 +272,11 @@ export async function recordFallPollResponse(
   // Partial success is NOT ok: a stale duplicate row would show the wrong
   // answer to whoever reads that row first — the caller must tell the parent
   // we couldn't save it rather than show a false confirmation.
-  return { ok: failed === 0, rowsUpdated: updated, notFound: false };
+  return {
+    ok: failed === 0,
+    rowsUpdated: updated,
+    notFound: false,
+    previous,
+    parentName,
+  };
 }

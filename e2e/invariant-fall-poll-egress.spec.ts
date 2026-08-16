@@ -313,7 +313,10 @@ test.describe("fall-poll click capture — GET never writes, POST writes only to
     expect(stub.calls).toHaveLength(0);
   });
 
-  test("a confirmed POST records the answer on every family row — Notion only", async () => {
+  // Egress from the POST leg widened deliberately when send-on-confirm landed:
+  // an IN answer now also mails the registration link (Resend). Notion + Resend
+  // is the whole allowed set — nothing else, and never from the GET leg.
+  test("a confirmed POST records the answer on every family row — Notion + Resend only", async () => {
     installWorld(stub, {
       crm: [crmRow(ACTIVE_EMAIL, "Active Fam"), crmRow(ACTIVE_EMAIL, "Dupe row")],
     });
@@ -322,7 +325,9 @@ test.describe("fall-poll click capture — GET never writes, POST writes only to
 
     expect(res.status).toBe(200);
     for (const call of stub.calls) {
-      expect(new URL(call.url).host).toBe("api.notion.com");
+      expect(ALLOWED_HOSTS, `unexpected egress to ${call.url}`).toContain(
+        new URL(call.url).host,
+      );
     }
     const patches = stub.calls.filter((c) => c.method === "PATCH");
     expect(patches).toHaveLength(2);
@@ -330,6 +335,17 @@ test.describe("fall-poll click capture — GET never writes, POST writes only to
       expect(patch.body).toContain("Fall 2026 Poll");
       expect(patch.body).toContain('"In"');
     }
+    // One family, one registration link — not one per row.
+    expect(stub.callsTo("api.resend.com")).toHaveLength(1);
+  });
+
+  test("a confirmed OUT records the answer and mails NOTHING", async () => {
+    installWorld(stub, { crm: [crmRow(ACTIVE_EMAIL, "Active Fam")] });
+    const token = signFallPollToken(ACTIVE_EMAIL, "out")!;
+    const res = await pollPOST(postReq("out", token));
+
+    expect(res.status).toBe(200);
+    expect(stub.callsTo("api.resend.com")).toHaveLength(0);
   });
 
   test("a token minted for one answer cannot be posted as another", async () => {
