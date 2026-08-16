@@ -36,6 +36,10 @@
 // replacing the slightly-earlier times from the July email — so nothing here
 // ships `startTime: null` any more, though the all-day rule stands for any
 // future club whose time isn't published.
+//
+// UPDATE 2026-08-16 (Sam): the Friday club moved from Sherwood ES (Sandy
+// Spring) to Olney ES (Olney), 3:30–4:30 PM — superseding the Friday line of
+// the 2026-08-13 PDF. Session dates are unchanged.
 
 /** Registration, payment, insurance and releases all sit with the partner. */
 export const EC_PARTNER_NAME = "Enrichment Collective";
@@ -169,12 +173,15 @@ export const EC_CLUBS: readonly EcClub[] = [
       "10 sessions. Nov 5 collides with the GSA activation (Nov 5–7) and MVF Fall Session II — needs resolving with Stef.",
   },
   {
+    // Key predates the 2026-08-16 move to Olney ES (the club started life at
+    // Sherwood ES, Sandy Spring) and is kept so existing calendar blocks
+    // update in place on their key — same rule as `olney-mon` above.
     key: "sandy-spring-fri",
     weekdayLabel: "Friday",
-    town: "Sandy Spring, MD",
-    schoolName: "Sherwood ES",
-    startTime: "4:00 PM",
-    endTime: "5:00 PM",
+    town: "Olney, MD",
+    schoolName: "Olney ES",
+    startTime: "3:30 PM",
+    endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
     status: "confirmed",
@@ -189,7 +196,7 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-11-20",
     ],
     notes:
-      "8 sessions. New fifth club, first announced in the confirmed PDF. Starts a week+ after the others (9/25); no club 10/16.",
+      "8 sessions. New fifth club, first announced in the confirmed PDF; moved from Sherwood ES (Sandy Spring) to Olney ES 2026-08-16, same dates. Starts a week+ after the others (9/25); no club 10/16.",
   },
 ];
 
