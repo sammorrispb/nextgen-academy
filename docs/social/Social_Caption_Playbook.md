@@ -9,6 +9,13 @@ like AI.
 `src/data/site.ts` (handles, tagline, boilerplate). If anything here ever
 conflicts with the brand guide, the brand guide wins — update this file.
 
+**Last verified against the live product: 2026-08-16.** This file drifted once
+already: it was written 2026-06-11, the all-levels policy changed 2026-06-18, and
+the stale Yellow Ball rule was still here two months later when the Fall 2026
+season shipped a publicly-registerable Yellow Ball group. **When a policy or a
+product changes, update this file in the same session** — a caption playbook that
+contradicts the live site is worse than no playbook.
+
 > Audience: parents of kids ages **6–16** in **Montgomery County, MD**.
 > Parent register: reassuring, transparent, progress-oriented.
 
@@ -103,11 +110,25 @@ better than yesterday, evaluate, growth, family, next gen.
 
 **Words/things we ban:**
 - Hype without proof, sarcasm, insider slang, jargon.
-- **No hard prices.** Never quote $25/monthly. The only live price is the $20
-  drop-in, and it lives on `/schedule`, not in captions. Tease, don't quote.
+- **Never quote a price that isn't live and on-page.** The rule is about
+  accuracy, not secrecy — a price a parent can't go verify doesn't belong in a
+  caption. Prices that ARE live may be quoted: the $20 drop-in (`/schedule`) and
+  the $225 Fall 2026 season (`/fall`). Never quote the legacy $25/monthly — no
+  such product exists. When in doubt, check the page first; if the number isn't
+  rendered there, don't put it in a caption.
 - **Skill levels are Red / Orange / Green / Yellow** — never "Beginner / Pro."
-- **Yellow Ball is invite-only** — never a public "register for Yellow Ball"
-  CTA. Route tournament-track interest to `/yellowball/inquiry`.
+- **"Yellow Ball" means two different things — always disambiguate.**
+  - *Yellow Ball skill group* — a level band in group play and seasons
+    (e.g. the Fall 2026 season's 2:30–4:00 group). **Publicly registerable.**
+    Since 2026-06-18 every public group session runs a court per level and
+    welcomes all four (`BRAND_GUIDELINES.md` "Who We Serve").
+  - *Yellow Ball tournament track* — **invite-only.** Never a public "register"
+    CTA; route interest to `/yellowball/inquiry`.
+
+  In captions, write **"Yellow Ball group"** with its time attached, never bare
+  "Yellow Ball." On long-form posts (FB, YouTube) add one explicit line so a
+  tournament-track parent can't read an open season group as the invite-only
+  track opening up.
 - Ages **6–16 is strict** — no under-6, no "we'll make an exception."
 
 **CTA hierarchy — one primary CTA per post:**
@@ -115,7 +136,14 @@ better than yesterday, evaluate, growth, family, next gen.
   (`/free-evaluation`).
 - **Dated session-fill post →** Save your spot → "link in bio" (`/schedule`),
   with a free evaluation as the soft inline fallback for first-timers.
+- **Dated season post →** Grab your spot → "link in bio" (`/fall` for Fall 2026).
+  Seasons are capped and dated, so the register CTA outranks the evaluation.
 - Set the actual bio link to match whichever CTA the post uses.
+
+**"Link in bio" is a single link.** A post may name only ONE bio destination. If
+the copy wants a secondary action (a free evaluation for first-timers), phrase it
+as an inline reply-or-ask — *"Not sure which group fits? Say so when you
+register"* — never as a second "link in bio."
 
 ---
 
@@ -245,11 +273,12 @@ as the regional default, **not** `#MontgomeryCountyMD` (too long, lower reach).
 - [ ] TikTok only: keyword is on-screen (first 2–3s) and spoken early; caption leads with the literal topic, not a teaser.
 - [ ] Emoji: 1–3, functional only, none from the wrong sport, none replacing a word.
 - [ ] Hashtags: **≤3 on Facebook**, 3–5 on Instagram, 3–5 on TikTok, local-first.
-- [ ] One primary CTA, matching the post type (eval vs. save-your-spot).
-- [ ] Bio link points where the CTA says.
-- [ ] No hard prices quoted.
+- [ ] One primary CTA, matching the post type (eval vs. save-your-spot vs. season register).
+- [ ] Bio link points where the CTA says — and only ONE "link in bio" per post.
+- [ ] Any price quoted is live and rendered on the page it links to.
 - [ ] Skill levels named Red/Orange/Green/Yellow if mentioned.
-- [ ] No public Yellow Ball registration CTA.
+- [ ] "Yellow Ball" disambiguated — "Yellow Ball group" + time for a season/level
+      band; tournament-track interest still routes to `/yellowball/inquiry`.
 - [ ] Ages 6–16 framing intact.
 - [ ] Tagline signoff present: *Better than yesterday — together.*
 
