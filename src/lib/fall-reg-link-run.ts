@@ -34,6 +34,8 @@ const NOTION_VERSION = "2022-06-28";
 
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
+/** BCC, never CC — a parent must never see another family's address. */
+const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
 
 /** ~3.3/sec, under Resend's 5/sec cap. */
 const THROTTLE_MS = 300;
@@ -108,6 +110,7 @@ export async function sendFallRegistrationLink(
       from: FROM_EMAIL,
       replyTo: REPLY_TO,
       to: email,
+      bcc: ADMIN_EMAIL,
       subject: fallRegistrationLinkSubject(),
       html: fallRegistrationLinkHtml({ firstName }),
       text: fallRegistrationLinkText({ firstName }),

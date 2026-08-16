@@ -15,7 +15,10 @@ import {
 } from "../src/lib/notion-fall-poll";
 import { signFallPollToken } from "../src/lib/fall-poll-token";
 import { POST as pollPOST } from "../src/app/api/fall-poll/route";
-import { runFallRegLinkOutreach } from "../src/lib/fall-reg-link-run";
+import {
+  runFallRegLinkOutreach,
+  sendFallRegistrationLink,
+} from "../src/lib/fall-reg-link-run";
 import { POST as regLinkPOST } from "../src/app/api/fall-reg-link/route";
 import {
   FALL_REGISTRATION_URL,
@@ -251,6 +254,34 @@ test.describe("fall registration link — template", () => {
       expect(part).toContain(FALL_POLL_VENUE);
       expect(part).toContain("Dana");
     }
+  });
+
+  // BRAND_GUIDELINES.md §Signature standard + §Plain-text fallback parity:
+  // every parent-facing send carries the Coach Sam signoff AND a tagline/EASE
+  // line above it, in BOTH parts.
+  test("carries the Coach Sam signoff and the tagline in both parts", () => {
+    const html = fallRegistrationLinkHtml({ firstName: "Dana" });
+    const text = fallRegistrationLinkText({ firstName: "Dana" });
+
+    for (const part of [html, text]) {
+      expect(part).toContain("Coach Sam");
+      expect(part).toContain("Next Gen Pickleball Academy");
+      expect(part).toContain("better than yesterday, together");
+    }
+  });
+
+  // §Delivery: parent-facing transactional sends BCC the academy inbox —
+  // never CC, which would expose one family's address to another.
+  test("sends BCC the academy inbox and never CC", async () => {
+    stub.on(RESEND, { id: "email_test" }).install();
+
+    await sendFallRegistrationLink("parent@regspec.org", "Dana");
+
+    const sends = stub.callsTo(RESEND);
+    expect(sends).toHaveLength(1);
+    const body = JSON.parse(sends[0].body);
+    expect(body.bcc).toBe("nextgenacademypb@gmail.com");
+    expect(body.cc).toBeUndefined();
   });
 
   test("is pure — renders with no network at all", () => {

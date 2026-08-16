@@ -63,8 +63,8 @@ export function fallRegistrationLinkHtml(
 
     <p style="margin:0 0 20px 0;color:${c.text};font-size:15px;line-height:1.65;">
       You said <strong style="color:${c.accentLime};">IN</strong> for the fall season, so here&rsquo;s
-      the registration link. Spots are <strong>first come, first serve</strong> and there are only
-      ${FALL_POLL_SPOTS_PER_GROUP} per group, so it&rsquo;s worth doing now rather than later.
+      the registration link. Spots are <strong>first come, first serve</strong> &mdash;
+      ${FALL_POLL_SPOTS_PER_GROUP} per group &mdash; so grabbing yours now is the safest bet.
     </p>
 
     <div style="${s.cardAccent}">
@@ -91,9 +91,18 @@ export function fallRegistrationLinkHtml(
       just reply to this email and Coach Sam will sort it out by hand.
     </p>
 
-    <p style="margin:0;color:${c.muted};font-size:12px;line-height:1.6;">
+    <p style="margin:0 0 24px 0;color:${c.muted};font-size:12px;line-height:1.6;">
       Changed your mind? No problem &mdash; reply and let us know, and we&rsquo;ll free the spot up.
     </p>
+
+    <div style="${s.footer}">
+      <p style="margin:0 0 6px 0;color:${c.text};font-size:14px;line-height:1.6;">
+        See you on the court &mdash; better than yesterday, together.
+      </p>
+      <p style="margin:0;color:${c.text};font-size:14px;font-weight:700;">
+        Coach Sam &middot; Next Gen Pickleball Academy
+      </p>
+    </div>
   </div>
 </body>
 </html>`;
@@ -108,7 +117,7 @@ export function fallRegistrationLinkText(
     `Thanks ${firstName} — let's lock the spot.`,
     ``,
     `You said IN for the fall season, so here's the registration link. Spots are`,
-    `first come, first serve and there are only ${FALL_POLL_SPOTS_PER_GROUP} per group.`,
+    `first come, first serve — ${FALL_POLL_SPOTS_PER_GROUP} per group — so grabbing yours now is the safest bet.`,
     ``,
     `WHAT YOU'RE SIGNING UP FOR`,
     `${FALL_POLL_SEASON_WEEKS} ${FALL_POLL_DAY_LABEL} at ${FALL_POLL_VENUE}`,
@@ -122,5 +131,8 @@ export function fallRegistrationLinkText(
     `trouble, just reply to this email and Coach Sam will sort it out by hand.`,
     ``,
     `Changed your mind? Reply and let us know, and we'll free the spot up.`,
+    ``,
+    `See you on the court — better than yesterday, together.`,
+    `Coach Sam · Next Gen Pickleball Academy`,
   ].join("\n");
 }
