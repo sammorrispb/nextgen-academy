@@ -12,6 +12,7 @@ export default defineConfig({
     "**/cluster-attribution.spec.ts",
     "**/clusters-pages.spec.ts",
     "**/contact-form.spec.ts",
+    "**/fall-waiver-inline.spec.ts",
     "**/homepage.spec.ts",
     "**/mvf-page.spec.ts",
     "**/newsletter.spec.ts",

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import InlineWaiverStep from "@/components/InlineWaiverStep";
 import type { NgaSession } from "@/lib/notion-sessions";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
@@ -11,6 +12,7 @@ import {
   type RsvpValidationErrors,
 } from "@/lib/validate-rsvp";
 import { getUtm } from "@/lib/funnelClient";
+import { isWaiverRequired } from "@/lib/waiver-required";
 
 const FIELD_INPUT =
   "w-full rounded-lg bg-ngpa-deep/80 border border-ngpa-slate/60 text-ngpa-white px-3 py-2.5 text-base placeholder:text-ngpa-white/40 focus:outline-none focus:border-ngpa-teal focus:ring-1 focus:ring-ngpa-teal transition-colors";
@@ -25,6 +27,11 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<RsvpValidationErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  // The validated payload, held so the waiver step can resume checkout. These
+  // inputs are UNCONTROLLED, so the form is hidden rather than unmounted and
+  // the retry posts this snapshot instead of re-reading an off-screen DOM.
+  const [pending, setPending] = useState<RsvpFormData | null>(null);
+  const [waiverNeeded, setWaiverNeeded] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -72,6 +79,15 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
     setErrors(ve);
     if (Object.keys(ve).length > 0) return;
 
+    const payload = data as RsvpFormData;
+    setPending(payload);
+    await startCheckout(payload);
+  }
+
+  // Split out of onSubmit so the inline waiver step can resume checkout from
+  // the captured payload — nothing the parent typed is re-read or retyped.
+  async function startCheckout(data: RsvpFormData) {
+    setServerError(null);
     setSubmitting(true);
     try {
       const res = await fetch("/api/checkout", {
@@ -85,9 +101,10 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
         code?: string;
         signUrl?: string;
       };
-      // One-time waiver gate: bounce to the prefilled sign page, then back here.
-      if (res.status === 409 && json.code === "waiver_required" && json.signUrl) {
-        window.location.href = json.signUrl;
+      // One-time waiver gate: sign it in place, then resume checkout here.
+      if (isWaiverRequired(res.status, json)) {
+        setWaiverNeeded(true);
+        setSubmitting(false);
         return;
       }
       if (!res.ok || !json.url) {
@@ -106,7 +123,10 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setWaiverNeeded(false);
+          setOpen(true);
+        }}
         disabled={disabled}
         className={
           fullWidth
@@ -127,7 +147,12 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
           role="dialog"
           aria-modal="true"
           aria-labelledby="reserve-title"
-          onClick={() => setOpen(false)}
+          // A stray backdrop tap mid-waiver would discard the reservation the
+          // parent already filled in, so the dismiss is suspended until they
+          // either sign or explicitly go back.
+          onClick={() => {
+            if (!waiverNeeded) setOpen(false);
+          }}
         >
           <div className="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div
@@ -163,7 +188,25 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                 </button>
               </div>
 
-              <form onSubmit={onSubmit}>
+              {waiverNeeded && pending && (
+                <div className="px-5 py-5">
+                  <InlineWaiverStep
+                    parentName={pending.parentName}
+                    email={pending.email}
+                    phone={pending.phone}
+                    continueLabel="payment"
+                    onSigned={() => {
+                      setWaiverNeeded(false);
+                      void startCheckout(pending);
+                    }}
+                    onCancel={() => setWaiverNeeded(false)}
+                  />
+                </div>
+              )}
+
+              {/* Hidden, never unmounted — these inputs are uncontrolled, so
+                  unmounting would wipe what the parent typed. */}
+              <form onSubmit={onSubmit} className={waiverNeeded ? "hidden" : ""}>
                 <div className="px-5 py-5 space-y-4">
                   <Field label="Parent name" error={errors.parentName}>
                     <input

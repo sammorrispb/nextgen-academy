@@ -5,8 +5,12 @@
 
 export { hasWaiverOnFile } from "./notion-waivers";
 
-/** Discriminator the client forms check on a 409 to trigger the sign redirect. */
-export const WAIVER_REQUIRED_CODE = "waiver_required";
+/**
+ * Discriminator the client forms check on a 409 to open the inline waiver step.
+ * Defined in the client-safe ./waiver-required so the forms can compare on the
+ * same string without importing this module's Notion dependency.
+ */
+export { WAIVER_REQUIRED_CODE } from "./waiver-required";
 
 export const WAIVER_REQUIRED_MESSAGE =
   "Please sign the one-time waiver before registering — it only takes a minute and covers every NGA program.";
