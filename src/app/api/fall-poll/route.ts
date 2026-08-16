@@ -5,6 +5,7 @@ import {
   type FallPollAction,
 } from "@/lib/fall-poll-token";
 import { recordFallPollResponse } from "@/lib/notion-fall-poll";
+import { sendFallRegistrationLink } from "@/lib/fall-reg-link-run";
 import {
   FALL_POLL_DAY_LABEL,
   FALL_POLL_SEASON_LABEL,
@@ -104,6 +105,21 @@ export async function POST(req: NextRequest) {
   if (!email) return invalidLinkPage();
 
   const result = await recordFallPollResponse(email, action);
+
+  // Close the handoff the confirmation copy promises. Only a transition INTO
+  // "in" earns the link: a re-tap of the same answer (prior === "in") mails
+  // nothing, which is what keeps a second device or a re-opened email from
+  // double-mailing. Best-effort and non-blocking on purpose — the answer is
+  // already recorded, so a Resend blip must not tell the parent we failed.
+  if (result.ok && !result.notFound && action === "in" && result.previous !== "in") {
+    const firstName = (result.parentName ?? "").trim().split(/\s+/)[0] || "there";
+    const sent = await sendFallRegistrationLink(email, firstName);
+    if (!sent) {
+      console.error(
+        `[fall-poll] recorded IN for ${email} but the registration link did NOT send — follow up by hand`,
+      );
+    }
+  }
 
   if (result.notFound) {
     return page(
