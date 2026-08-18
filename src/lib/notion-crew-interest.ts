@@ -287,3 +287,108 @@ export async function markCrewInterestFlag(
   }
   return true;
 }
+
+/**
+ * A waiting family reduced to the four aggregate fields the coach calendar
+ * needs. This is a DELIBERATELY NARROWER projection than
+ * ActionableCrewInterest above: the follow-up cron mails parents, so it needs
+ * names and contact details; the calendar only counts, so it must never load
+ * them. Widening this shape (a "contact them" button is one line) reopens a
+ * minor-PII surface — e2e/invariant-coach-calendar-pii-egress.spec.ts fails if
+ * a name or contact field starts coming through.
+ */
+export interface CrewInterestDemandRow {
+  childLevel: CrewLevel;
+  childBirthYear: number;
+  preferredDays: CrewDay[];
+  preferredArea: string;
+}
+
+export interface CrewInterestDemandResult {
+  rows: CrewInterestDemandRow[];
+  /** false when the DB isn't configured or the query failed — NOT "zero demand". */
+  ok: boolean;
+  /** true when MAX_DEMAND_PAGES was hit; surfaced in the UI, never swallowed. */
+  truncated: boolean;
+}
+
+const MAX_DEMAND_PAGES = 10;
+
+/**
+ * Every still-actionable Crew Interest row, counts-only. Reuses
+ * ACTIONABLE_STATUSES because that IS unmet demand: a family Sam already
+ * routed to a poll (Polled/Closed) is no longer waiting for a crew.
+ *
+ * Paginates, unlike fetchActionableCrewInterest — the calendar aggregates the
+ * whole table, and a silent first-100 cut would understate demand exactly
+ * where it matters most.
+ */
+export async function fetchCrewInterestDemand(): Promise<CrewInterestDemandResult> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_CREW_INTEREST_DB_ID;
+  if (!notionKey || !dbId) return { rows: [], ok: false, truncated: false };
+
+  const rows: CrewInterestDemandRow[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_DEMAND_PAGES; page++) {
+    const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${notionKey}`,
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_VERSION,
+      },
+      body: JSON.stringify({
+        filter: {
+          or: ACTIONABLE_STATUSES.map((s) => ({
+            property: "Status",
+            select: { equals: s },
+          })),
+        },
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      }),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      console.error(
+        "[notion-crew-interest] fetchDemand failed",
+        res.status,
+        await res.text().catch(() => ""),
+      );
+      return { rows, ok: false, truncated: false };
+    }
+
+    const data = (await res.json()) as {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      results: any[];
+      has_more?: boolean;
+      next_cursor?: string | null;
+    };
+
+    for (const notionPage of data.results) {
+      const props = notionPage.properties ?? {};
+      rows.push({
+        childLevel: (props["Child Level"]?.select?.name ??
+          "Green") as CrewLevel,
+        childBirthYear:
+          typeof props["Child Birth Year"]?.number === "number"
+            ? props["Child Birth Year"].number
+            : 0,
+        preferredDays: (props["Preferred Days"]?.multi_select ?? []).map(
+          (o: { name: string }) => o.name,
+        ) as CrewDay[],
+        preferredArea: plain(props["Preferred Location"]),
+      });
+    }
+
+    if (!data.has_more || !data.next_cursor) {
+      return { rows, ok: true, truncated: false };
+    }
+    cursor = data.next_cursor;
+  }
+
+  return { rows, ok: true, truncated: true };
+}
