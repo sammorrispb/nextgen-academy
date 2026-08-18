@@ -123,6 +123,12 @@ export default async function CoachDashboard() {
           Confirm an eval →
         </Link>
         <Link
+          href="/coach/calendar"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
+        >
+          Calendar &amp; demand &rarr;
+        </Link>
+        <Link
           href="/coach/players"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
         >

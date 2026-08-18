@@ -764,3 +764,116 @@ export async function decrementSessionRegistered(
     status: newStatus,
   };
 }
+
+/**
+ * A session row reduced to what a calendar cell needs. Deliberately NOT
+ * NgaSession: it has no `roster` and no `ageStats`, so the range read below
+ * never loads a child first name into the process at all — the calendar's
+ * privacy posture is structural, not a rendering convention.
+ */
+export interface CalendarSessionRow {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  level: SessionLevel | null;
+  location: string;
+  publicArea: string;
+  capacity: number;
+  registeredCount: number;
+  status: NgaSession["status"];
+}
+
+export interface SessionsInRangeResult {
+  rows: CalendarSessionRow[];
+  /** false when the DB isn't configured or the query failed — NOT "no sessions". */
+  ok: boolean;
+  truncated: boolean;
+}
+
+const MAX_RANGE_PAGES = 5;
+
+/**
+ * Every session row in an ARBITRARY date window, for the coach calendar.
+ *
+ * Differs from fetchUpcomingSessions in three ways it needs to: the window is
+ * explicit rather than anchored on `now` (so past and far-future months
+ * render), Cancelled rows are KEPT (a pulled evening is exactly what a coach
+ * scanning a month needs to see), and there is no roster batch.
+ */
+export async function fetchSessionsInRange(
+  fromIso: string,
+  toIso: string,
+): Promise<SessionsInRangeResult> {
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_SESSIONS_DB_ID;
+  if (!notionKey || !dbId) return { rows: [], ok: false, truncated: false };
+
+  const rows: CalendarSessionRow[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < MAX_RANGE_PAGES; page++) {
+    const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${notionKey}`,
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_VERSION,
+      },
+      body: JSON.stringify({
+        filter: {
+          and: [
+            { property: "Date", date: { on_or_after: fromIso } },
+            { property: "Date", date: { on_or_before: toIso } },
+          ],
+        },
+        sorts: [{ property: "Date", direction: "ascending" }],
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      }),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      console.error(
+        "[notion-sessions] fetchSessionsInRange failed",
+        res.status,
+        await res.text().catch(() => ""),
+      );
+      return { rows, ok: false, truncated: false };
+    }
+
+    const data = (await res.json()) as {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      results: any[];
+      has_more?: boolean;
+      next_cursor?: string | null;
+    };
+
+    for (const notionPage of data.results) {
+      const props = notionPage.properties ?? {};
+      const courtCount = readNumber(props["Court count"]) || 1;
+      rows.push({
+        id: notionPage.id as string,
+        title: readPlainText(props["Session"]),
+        date: props["Date"]?.date?.start ?? "",
+        startTime: readPlainText(props["Start time"]),
+        endTime: readPlainText(props["End time"]),
+        level: readSelect(props["Level"]) as SessionLevel | null,
+        location: readPlainText(props["Location"]),
+        publicArea: readPlainText(props["Public Area"]),
+        capacity: readFormulaNumber(props["Capacity"]) || courtCount * 4,
+        registeredCount: readNumber(props["Registered count"]),
+        status: (readSelect(props["Status"]) as NgaSession["status"]) ?? "Open",
+      });
+    }
+
+    if (!data.has_more || !data.next_cursor) {
+      return { rows, ok: true, truncated: false };
+    }
+    cursor = data.next_cursor;
+  }
+
+  return { rows, ok: true, truncated: true };
+}
