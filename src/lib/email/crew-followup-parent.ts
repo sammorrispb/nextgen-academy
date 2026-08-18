@@ -1,5 +1,6 @@
 import { c, s } from "./brand";
 import type { CrewSessionLine } from "./crew-session-lines";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * 7-day re-engagement to a parent whose Crew Interest submission hasn't matched
@@ -99,6 +100,7 @@ export function crewFollowupParentHtml(input: CrewFollowupParentInput): string {
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         Reply to this email any time &mdash; that&rsquo;s the fastest way to reach Sam.
       </p>
@@ -148,6 +150,8 @@ export function crewFollowupParentText(input: CrewFollowupParentInput): string {
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `Reply to this email any time — that's the fastest way to reach Sam.`,
   ].join("\n");

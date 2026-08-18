@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * One-time re-engagement email to existing eval leads, inviting them to opt
@@ -58,6 +59,7 @@ export function evalReengagementHtml(input: EvalReengagementInput): string {
         See you on the court &mdash; better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         You're getting this because you inquired about Next Gen. Not interested? Reply "skip" and we'll close the loop.
       </p>
@@ -86,6 +88,8 @@ export function evalReengagementText(input: EvalReengagementInput): string {
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `You're getting this because you inquired about Next Gen. Not interested? Reply "skip" and we'll close the loop.`,
   ].join("\n");

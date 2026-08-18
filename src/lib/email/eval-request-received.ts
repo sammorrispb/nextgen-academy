@@ -11,6 +11,7 @@
 import { c, s } from "./brand";
 import { site } from "@/data/site";
 import { escapeHtml } from "@/lib/html";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 export interface EvalRequestReceivedInput {
   parentFirst: string;
@@ -53,6 +54,7 @@ export function evalRequestReceivedHtml(input: EvalRequestReceivedInput): string
     invite. Nothing else to do right now — that time is held for you while we
     confirm.
   </p>
+      ${signatureExtrasHtml()}
   <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
       Need a different time, or have a question? Reply to this email or text
@@ -82,6 +84,8 @@ export function evalRequestReceivedText(input: EvalRequestReceivedInput): string
     "",
     "See you on the court - better than yesterday, together.",
     "Coach Sam · Next Gen Pickleball Academy",
+    "",
+    signatureExtrasText(),
     "nextgenpbacademy.com",
   ].join("\n");
 }

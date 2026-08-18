@@ -1,5 +1,4 @@
 import { c, s } from "./brand";
-import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
 import {
   FALL_POLL_DAY_LABEL,
   FALL_POLL_GROUPS,
@@ -9,6 +8,7 @@ import {
   FALL_POLL_SPOTS_PER_GROUP,
   FALL_POLL_VENUE,
 } from "@/data/fall-poll-2026";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * The Fall 2026 season announcement + one-click poll, to ACTIVE families only.
@@ -70,7 +70,8 @@ export function fallPollInviteHtml(input: FallPollInviteInput): string {
       <p style="margin:0 0 24px 0;color:${c.muted};font-size:12px;line-height:1.6;">
         Tapping IN doesn&rsquo;t charge you anything &mdash; Coach Sam follows up
         with payment details, and spots are first come, first serve.
-      </p>`
+      </p>
+      ${signatureExtrasHtml()}`
     : `<p style="margin:0 0 24px 0;color:${c.text};font-size:15px;line-height:1.65;">
         <strong>Just reply to this email with one word</strong> &mdash; IN, INTERESTED,
         or OUT &mdash; and we&rsquo;ll take it from there.
@@ -105,7 +106,6 @@ export function fallPollInviteHtml(input: FallPollInviteInput): string {
 
     ${pollBlock}
 
-    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
@@ -155,10 +155,11 @@ export function fallPollInviteText(input: FallPollInviteInput): string {
 
   lines.push(
     "",
-    whatsappInviteText(),
     "",
     "Coach Sam",
     "Next Gen Pickleball Academy",
+    "",
+    signatureExtrasText(),
     "",
     `Questions? Just reply. Don't want season emails? Reply "skip" and we'll stop.`,
   );

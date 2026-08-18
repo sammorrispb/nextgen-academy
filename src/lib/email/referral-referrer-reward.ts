@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface ReferralReferrerRewardInput {
   parentFirst: string;
@@ -63,6 +64,7 @@ export function referralReferrerRewardHtml(
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         Single-use, no expiration. Reply to this email if you have any trouble using it.
       </p>
@@ -96,6 +98,8 @@ export function referralReferrerRewardText(
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `Single-use, no expiration. Reply to this email if you have any trouble using it.`,
   ].join("\n");

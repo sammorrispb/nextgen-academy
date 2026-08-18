@@ -1,3 +1,4 @@
+import { signatureExtrasText } from "./signature";
 /**
  * Fall 2026 season registration confirmation — the parent's "you're in"
  * email. Plain-text only, pure builder (mirrors camp-confirmation.ts) so the
@@ -92,6 +93,8 @@ export function buildFallSeasonConfirmationEmail(
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 
   return { subject, text };

@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * Fall season cancellation confirmation. Fired by cancelFallRegistration()
@@ -66,6 +67,8 @@ export function fallCancellationText(input: FallCancellationInput): string {
     ``,
     `Coach Sam`,
     `Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     `301-325-4731`,
   ].join("\n");
 }
@@ -115,6 +118,7 @@ export function fallCancellationHtml(input: FallCancellationInput): string {
       Next Gen Pickleball Academy<br>
       301-325-4731
     </p>
+      ${signatureExtrasHtml()}
   </div>
 </body>
 </html>`;

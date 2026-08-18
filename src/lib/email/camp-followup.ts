@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * Camp conclusion follow-up — the "that's a wrap" email to every family whose
@@ -120,6 +121,7 @@ ${nextCampHtml}
         See you on the court &mdash; better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>
@@ -159,6 +161,8 @@ export function campFollowupText(input: CampFollowupInput): string {
     "",
     "See you on the court — better than yesterday, together.",
     "Coach Sam · Next Gen Pickleball Academy",
+    "",
+    signatureExtrasText(),
   );
   return lines.join("\n");
 }

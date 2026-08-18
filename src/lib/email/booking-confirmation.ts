@@ -1,6 +1,6 @@
 import { c, s } from "./brand";
-import { whatsappInviteHtml } from "./whatsapp-invite";
 import { fillLabel } from "@/lib/fill-meter";
+import { signatureExtrasHtml } from "./signature";
 
 export interface ConfirmationFill {
   registered: number;
@@ -132,13 +132,13 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
 
     ${referralBlock}
 
-    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
         See you on the court &mdash; better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>

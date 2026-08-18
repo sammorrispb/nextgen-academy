@@ -2,6 +2,7 @@ import { c, s } from "./brand";
 import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
 import { fillLabel, fillBar } from "@/lib/fill-meter";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /** One open time slot within a date+location group. */
 export interface NewsletterSessionSlot {
@@ -279,6 +280,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     ? `
     <div style="${s.cardAccent}">
       <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">From Coach Sam this week</p>
+      ${signatureExtrasHtml()}
       ${newsletterLeadHtml}
     </div>`
     : "";
@@ -528,6 +530,8 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   lines.push(
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `You're getting this because you joined the Next Gen newsletter.`,
     `Unsubscribe: ${unsubscribeUrl}`,
