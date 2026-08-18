@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * Back-to-school camp outreach + permission pass to the lead CRM.
@@ -96,6 +97,7 @@ export function campOutreachHtml(input: CampOutreachInput): string {
     <p style="margin:20px 0 0 0;color:${c.text};line-height:1.55;">
       Not sure it's the right level? Just reply to this email (or text Coach Sam at 301-325-4731) and we'll figure out the right fit &mdash; or start with a free evaluation.
     </p>
+      ${signatureExtrasHtml()}
 
     ${choiceBlock}
 
@@ -149,6 +151,8 @@ export function campOutreachText(input: CampOutreachInput): string {
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `You're getting this because you inquired about Next Gen.`,
     ...(oneClick ? [`Unsubscribe: ${optOutUrl}`] : []),

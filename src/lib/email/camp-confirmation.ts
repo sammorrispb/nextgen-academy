@@ -1,3 +1,4 @@
+import { signatureExtrasText } from "./signature";
 /**
  * Summer Camp registration confirmation — the parent's "you're registered"
  * email. Plain-text only (matches the existing inline body the Stripe webhook
@@ -67,6 +68,8 @@ export function buildCampConfirmationEmail(input: CampConfirmationInput): {
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 
   return { subject, text };

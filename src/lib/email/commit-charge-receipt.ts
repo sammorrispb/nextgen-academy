@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface CommitChargeReceiptInput {
   parentFirst: string;
@@ -67,6 +68,7 @@ export function commitChargeReceiptHtml(input: CommitChargeReceiptInput): string
         See you on court.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         Manage your 4-week commit (pause, change card, cancel): <a href="${manageUrl}" style="${s.link}">link</a>
       </p>
@@ -93,6 +95,8 @@ export function commitChargeReceiptText(input: CommitChargeReceiptInput): string
     `Manage your 4-week commit: ${input.manageUrl}`,
     "",
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 }
 

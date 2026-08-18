@@ -7,7 +7,7 @@
 import { c, s } from "./brand";
 import { site } from "@/data/site";
 import { escapeHtml } from "@/lib/html";
-import { whatsappInviteHtml } from "./whatsapp-invite";
+import { signatureExtrasHtml } from "./signature";
 
 export const LEAD_CONFIRMATION_SUBJECT =
   "Thanks for Reaching Out — Next Gen Pickleball Academy";
@@ -35,6 +35,7 @@ export function leadConfirmationHtml(input: LeadConfirmationInput): string {
     <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.6;">
       Want to get your child’s free evaluation scheduled? Request any open time that works for you — Coach Sam confirms within 24 hours, then your confirmation and calendar invite land in your inbox.
     </p>
+      ${signatureExtrasHtml()}
     <a href="${BOOK_URL}" style="${s.cta}">Pick your eval time →</a>
   </div>
   <div style="${s.card}">
@@ -43,7 +44,6 @@ export function leadConfirmationHtml(input: LeadConfirmationInput): string {
       Check out our <a href="https://nextgenpbacademy.com/schedule" style="${s.link} font-weight: 600;">upcoming sessions</a> to see what’s available.
     </p>
   </div>
-  ${input.isFirstTimer ? whatsappInviteHtml() : ""}
   <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
       Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.

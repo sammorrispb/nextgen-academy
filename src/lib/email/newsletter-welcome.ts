@@ -1,5 +1,5 @@
 import { c, s } from "./brand";
-import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface NewsletterWelcomeInput {
   parentFirst: string;
@@ -80,13 +80,13 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
 
     ${referralBlock}
 
-    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         We&rsquo;ll only send you where to play and how your kid gets better. If you&rsquo;d rather we stop, just reply &ldquo;skip&rdquo; and we&rsquo;ll take you off the list.
       </p>
@@ -135,10 +135,11 @@ export function newsletterWelcomeText(input: NewsletterWelcomeInput): string {
   }
 
   lines.push(
-    whatsappInviteText(),
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `We'll only send you where to play and how your kid gets better. If you'd rather we stop, just reply "skip" and we'll take you off the list.`,
   );

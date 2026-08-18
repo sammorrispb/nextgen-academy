@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface PollVoteConfirmationInput {
   parentFirst: string;
@@ -40,6 +41,7 @@ export function pollVoteConfirmationHtml(
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>
@@ -55,6 +57,8 @@ export function pollVoteConfirmationText(input: PollVoteConfirmationInput): stri
     `We'll text the group when ${input.minPartySize} players are locked in and the crew is a go. You'll get a follow-up with the first session date and a link to book session 1.`,
     "",
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 }
 

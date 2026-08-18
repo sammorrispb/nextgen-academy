@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * Summer Camp cancellation + refund confirmation. Camps are a separate product
@@ -86,6 +87,7 @@ export function campCancellationHtml(input: CampCancellationInput): string {
         Thanks for letting us know early &mdash; better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>
@@ -111,6 +113,8 @@ export function campCancellationText(input: CampCancellationInput): string {
     "",
     `Thanks for letting us know early — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 }
 

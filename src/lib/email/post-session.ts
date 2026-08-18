@@ -1,5 +1,5 @@
 import { c, s } from "./brand";
-import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface PostSessionInput {
   parentFirst: string;
@@ -71,13 +71,13 @@ ${
     : ""
 }
 
-    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         We send this one note after each session. If you&rsquo;d rather we skip the recap, just reply &ldquo;skip&rdquo; and we&rsquo;ll stop.
       </p>
@@ -115,10 +115,11 @@ export function postSessionText(input: PostSessionInput): string {
   }
   lines.push(
     "",
-    whatsappInviteText(),
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `We send this one note after each session. If you'd rather we skip the recap, just reply "skip" and we'll stop.`,
   );

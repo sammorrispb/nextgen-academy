@@ -1,5 +1,4 @@
 import { c, s } from "./brand";
-import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
 import {
   FALL_END_TIME,
   FALL_NO_HOLD_NOTE,
@@ -11,6 +10,7 @@ import {
   SLOTS_PER_GROUP,
   type FallProgram,
 } from "@/data/fall-2026";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * The fall-season feedback broadcast. One template, two variants:
@@ -129,13 +129,13 @@ export function fallSurveyHtml(input: FallSurveyInput): string {
       <p style="margin:8px 0 0 0;color:${c.text};font-size:14px;line-height:1.6;">${FALL_NO_HOLD_NOTE}</p>
     </div>
 
-    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
         Coach Sam<br>
         Next Gen Pickleball Academy &middot; Link &amp; Dink
       </p>
+      ${signatureExtrasHtml()}
       ${unsubBlock}
     </div>
   </div>
@@ -170,9 +170,10 @@ export function fallSurveyText(input: FallSurveyInput): string {
     "NO PRESSURE, NOTHING TO PAY",
     FALL_NO_HOLD_NOTE,
     "",
-    whatsappInviteText(),
     "",
     "Coach Sam",
+    "",
+    signatureExtrasText(),
     "Next Gen Pickleball Academy · Link & Dink",
   );
 

@@ -204,8 +204,14 @@ test.describe("Comms templates — post-session re-book", () => {
     const html = postSessionHtml(post);
     // Brand-rule check. "Dinking" in the rendered output without a parent
     // gloss is a violation — bare jargon is banned for parent-facing copy.
-    expect(html.toLowerCase()).not.toMatch(/dinking|\bdink\b/);
-    expect(html.toLowerCase()).not.toMatch(/third shot|\berne\b|\batp\b/);
+    // The sibling brand name "Link & Dink" is a proper noun, not jargon: the
+    // rule exists to stop an unglossed SHOT name reaching a parent, and every
+    // recipient-facing email now carries the L&D community invite by Sam's
+    // call (2026-08-17). Strip the brand name before the jargon scan so the
+    // guard keeps its teeth on the thing it was actually written for.
+    const scanned = html.toLowerCase().replace(/link &amp; dink|link & dink/g, "");
+    expect(scanned).not.toMatch(/dinking|\bdink\b/);
+    expect(scanned).not.toMatch(/third shot|\berne\b|\batp\b/);
   });
 
   test("plain-text fallback: parity on headline, pathway list, signoff, skip-cue", () => {

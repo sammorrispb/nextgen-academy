@@ -5,6 +5,7 @@ import {
   WAIVER_INTRO,
   WAIVER_SECTIONS,
 } from "@/data/waiver";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 // The signed-waiver confirmation email. The parent's record copy: it carries
 // the FULL waiver text they agreed to plus the signed name/date/version, so the
@@ -75,6 +76,7 @@ export function waiverConfirmationHtml(input: WaiverConfirmationInput): string {
     <p style="margin: 0; font-size: 14px; font-weight: 700; color: ${c.text};">
       Coach Sam · Next Gen Pickleball Academy
     </p>
+      ${signatureExtrasHtml()}
     <p style="margin: 10px 0 0; font-size: 12px; color: ${c.muted};">
       Questions about this waiver? Just reply to this email.
     </p>
@@ -103,6 +105,8 @@ export function waiverConfirmationText(input: WaiverConfirmationInput): string {
     `That's the paperwork handled — now the fun part. See you on the court, ready to work: better than yesterday, together.`,
     ``,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     ``,
     `Questions about this waiver? Just reply to this email.`,
   ].join("\n");

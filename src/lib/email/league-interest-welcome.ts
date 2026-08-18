@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface LeagueInterestWelcomeInput {
   parentFirst: string;
@@ -77,6 +78,7 @@ export function leagueInterestWelcomeHtml(
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         Reply to this email any time &mdash; that&rsquo;s the fastest way to reach Sam.
       </p>
@@ -111,6 +113,8 @@ export function leagueInterestWelcomeText(
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `Reply to this email any time — that's the fastest way to reach Sam.`,
   ].join("\n");

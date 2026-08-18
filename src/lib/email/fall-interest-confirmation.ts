@@ -7,6 +7,7 @@ import {
   FALL_VENUE_SHORT,
   type FallTrack,
 } from "@/data/fall-2026";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 export interface FallInterestConfirmationInput {
   firstName: string;
@@ -95,6 +96,7 @@ export function fallInterestConfirmationHtml(
         Coach Sam<br>
         Next Gen Pickleball Academy
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>
@@ -132,6 +134,8 @@ export function fallInterestConfirmationText(
     "",
     "Coach Sam",
     "Next Gen Pickleball Academy",
+    "",
+    signatureExtrasText(),
   );
 
   return lines.join("\n");
