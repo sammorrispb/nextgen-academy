@@ -1,5 +1,10 @@
 import { c, s } from "./brand";
-import { signatureExtrasHtml, signatureExtrasText } from "./signature";
+import {
+  phoneLineHtml,
+  phoneLineText,
+  whatsappGroupsTopHtml,
+  whatsappGroupsTopText,
+} from "./signature";
 
 interface NewsletterWelcomeInput {
   parentFirst: string;
@@ -66,6 +71,8 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
       <li>Coach tips and the occasional &ldquo;how your kid gets better&rdquo; note</li>
     </ul>
 
+    ${whatsappGroupsTopHtml()}
+
     <div style="${s.actionCallout}">
       <p style="${s.actionLabel}">Start playing</p>
       <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
@@ -86,7 +93,7 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
-      ${signatureExtrasHtml()}
+      ${phoneLineHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         We&rsquo;ll only send you where to play and how your kid gets better. If you&rsquo;d rather we stop, just reply &ldquo;skip&rdquo; and we&rsquo;ll take you off the list.
       </p>
@@ -107,6 +114,8 @@ export function newsletterWelcomeText(input: NewsletterWelcomeInput): string {
     `- This week's drop-in session times, before they fill`,
     `- The crews forming now — vote in the slots that work for your kid`,
     `- Coach tips and the occasional "how your kid gets better" note`,
+    "",
+    whatsappGroupsTopText(),
     "",
     `Start playing — sessions cap at 4 players per court and the good times fill fast.`,
     `See this week's sessions: ${input.scheduleUrl}`,
@@ -139,7 +148,7 @@ export function newsletterWelcomeText(input: NewsletterWelcomeInput): string {
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
     "",
-    signatureExtrasText(),
+    phoneLineText(),
     "",
     `We'll only send you where to play and how your kid gets better. If you'd rather we stop, just reply "skip" and we'll take you off the list.`,
   );

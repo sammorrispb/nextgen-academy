@@ -2,7 +2,12 @@ import { c, s } from "./brand";
 import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
 import { fillLabel, fillBar } from "@/lib/fill-meter";
-import { signatureExtrasHtml, signatureExtrasText } from "./signature";
+import {
+  phoneLineHtml,
+  phoneLineText,
+  whatsappGroupsTopHtml,
+  whatsappGroupsTopText,
+} from "./signature";
 
 /** One open time slot within a date+location group. */
 export interface NewsletterSessionSlot {
@@ -280,7 +285,6 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     ? `
     <div style="${s.cardAccent}">
       <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">From Coach Sam this week</p>
-      ${signatureExtrasHtml()}
       ${newsletterLeadHtml}
     </div>`
     : "";
@@ -341,6 +345,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <h1 style="${s.heading} margin:0 0 16px 0;">Where to play, ${escape(parentFirst)}.</h1>
     <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions.</p>
 
+    ${whatsappGroupsTopHtml()}
+
     ${mvfBlock}
 
     ${sessionBlock}
@@ -369,6 +375,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
         See you on the court &mdash; better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${phoneLineHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         You&rsquo;re getting this because you joined the Next Gen newsletter.
         <a href="${unsubscribeUrl}" style="color:${c.muted};text-decoration:underline;">Unsubscribe</a>.
@@ -404,6 +411,8 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     `Where to play, ${parentFirst}.`,
     "",
     `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
+    "",
+    whatsappGroupsTopText(),
     "",
   ];
 
@@ -531,7 +540,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
     "",
-    signatureExtrasText(),
+    phoneLineText(),
     "",
     `You're getting this because you joined the Next Gen newsletter.`,
     `Unsubscribe: ${unsubscribeUrl}`,

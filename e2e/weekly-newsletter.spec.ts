@@ -7,6 +7,11 @@ import {
 import { appendUtm } from "../src/lib/email/utm";
 import { CAMP_OPTIONS, CAMPS } from "../src/data/camps";
 import { MVF_TOURNAMENT, mvfTournamentIsUpcoming } from "../src/data/mvf";
+import {
+  COACH_PHONE_DISPLAY,
+  WHATSAPP_LD_GROUP_URL,
+  WHATSAPP_NGA_GROUP_URL,
+} from "../src/lib/email/signature";
 
 const tip = { title: "Soft hands win", body: "Loosen the grip." };
 const ORIGIN = "https://nextgenpbacademy.com";
@@ -479,5 +484,52 @@ test.describe("weeklyNewsletterText", () => {
     expect(text).toContain("Sat 4pm Bethesda — Green");
     expect(text).toContain(`${ORIGIN}/poll/sat-4pm-green`);
     expect(text).toContain("None of those fit?");
+  });
+});
+
+test.describe("weekly newsletter — community WhatsApp invites", () => {
+  // Regression: the HTML used to compose the invites INSIDE the conditional
+  // "From Coach Sam this week" lead card, so a week with no Approved Notion
+  // draft — the normal week — shipped with no WhatsApp link at all, while the
+  // plain-text part had them in the footer. baseInput sets no lead draft.
+  test("both invites ship even when no lead draft is approved", () => {
+    const html = weeklyNewsletterHtml(baseInput);
+    const text = weeklyNewsletterText(baseInput);
+    for (const url of [WHATSAPP_NGA_GROUP_URL, WHATSAPP_LD_GROUP_URL]) {
+      expect(html.split(url).length - 1, `${url} once in html`).toBe(1);
+      expect(text.split(url).length - 1, `${url} once in text`).toBe(1);
+    }
+  });
+
+  test("the invites sit above the sessions block, not in the footer", () => {
+    const html = weeklyNewsletterHtml(baseInput);
+    const sessions = html.indexOf("This week&rsquo;s sessions");
+    expect(sessions).toBeGreaterThan(-1);
+    for (const url of [WHATSAPP_NGA_GROUP_URL, WHATSAPP_LD_GROUP_URL]) {
+      expect(html.indexOf(url)).toBeLessThan(sessions);
+    }
+
+    const text = weeklyNewsletterText(baseInput);
+    const textSessions = text.indexOf("This week's sessions");
+    expect(textSessions).toBeGreaterThan(-1);
+    for (const url of [WHATSAPP_NGA_GROUP_URL, WHATSAPP_LD_GROUP_URL]) {
+      expect(text.indexOf(url)).toBeLessThan(textSessions);
+    }
+  });
+
+  test("the footer keeps Coach Sam's phone", () => {
+    expect(weeklyNewsletterHtml(baseInput)).toContain(COACH_PHONE_DISPLAY);
+    expect(weeklyNewsletterText(baseInput)).toContain(COACH_PHONE_DISPLAY);
+  });
+
+  test("an approved lead draft does not add a second copy", () => {
+    const html = weeklyNewsletterHtml({
+      ...baseInput,
+      newsletterLeadHtml: "<p>Draft copy.</p>",
+      newsletterLeadText: "Draft copy.",
+    });
+    for (const url of [WHATSAPP_NGA_GROUP_URL, WHATSAPP_LD_GROUP_URL]) {
+      expect(html.split(url).length - 1, `${url} once in html`).toBe(1);
+    }
   });
 });
