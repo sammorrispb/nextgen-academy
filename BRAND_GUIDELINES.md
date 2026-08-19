@@ -472,13 +472,22 @@ These are utility, not CTAs. The host email already owns one primary CTA
 - **Discoverability:** never publish the invite URL on the public website
   (no footer, no landing page, no `/contact`). Invites travel only inside
   parent-facing transactional or first-touch emails.
-- **Gating:** first-touch only. Send once per parent across all NGA email
-  surfaces. Re-prompting returning families erodes the "earned, not
-  scraped" signal. The `isFirstTimeParent(contact)` helper in
-  `src/lib/notion-player-lookup.ts` is the canonical gate.
+- **Gating:** none — SUPERSEDED 2026-08-17 (Sam). Both community invites
+  ride on every recipient-facing email via `signatureExtras*` in
+  `src/lib/email/signature.ts`; internal/ops mail carries neither. The old
+  first-touch rule (and the `isFirstTimeParent` gate in
+  `src/lib/notion-player-lookup.ts`) still governs the standalone
+  `whatsapp-invite.ts` card, which now only ships on the yellowball lead
+  reply and the Stripe webhook email.
+- **Placement:** footer, EXCEPT in newsletters. A newsletter is long and the
+  bottom is the part fewest readers reach, so the weekly newsletter and the
+  newsletter welcome carry `whatsappGroupsTopHtml()` near the top and keep
+  only `phoneLineHtml()` in the footer (Sam, 2026-08-19). It is a MOVE, not
+  an addition — the same two links must never render twice in one email.
 - **Visual weight:** render as a quiet utility block (`s.card`, muted
   label), not an action callout (`s.actionCallout` / `s.cardAccent` are
-  reserved for the host email's primary CTA).
+  reserved for the host email's primary CTA). This holds at the top of a
+  newsletter too — moving the block up must not promote it to a CTA.
 - **CTA hierarchy:** the invite link is inline, no `→` arrow, no chip
   styling. The arrow rule (Maps gets the arrow, everything else is
   utility) applies edge-to-edge — a second arrow in the same email is a

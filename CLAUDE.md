@@ -150,6 +150,17 @@ Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src
 Promo codes work at checkout because `/api/checkout/route.ts` already passes `allow_promotion_codes: true` to Stripe Checkout. No `STRIPE_REFERRAL_PRICE_ID` env var is needed — the coupon mints inline. Failure of any step is logged + swallowed so a Notion blip never blocks the user's success page or triggers a Stripe webhook retry storm.
 
 ### Weekly newsletter blocks (per issue)
+**Community WhatsApp invites lead the issue (2026-08-19).** Both groups render as a
+quiet utility card (`whatsappGroupsTopHtml()` in `src/lib/email/signature.ts`) directly
+under the hero, above every content block; the footer keeps only `phoneLineHtml()`.
+It is a MOVE, not an addition — the same two links must never appear twice in one email,
+so `weekly-newsletter.ts` and `newsletter-welcome.ts` are the only recipient-facing
+templates that do NOT compose `signatureExtras*`. This also fixed a real defect: the
+signature block used to be composed INSIDE the conditional "From Coach Sam" lead card,
+so any week without an Approved Notion draft shipped HTML with no WhatsApp link at all
+while the plain-text part had them. Pinned by `e2e/invariant-email-signature.spec.ts`
+(rendered, not grepped) + the invite tests in `e2e/weekly-newsletter.spec.ts`.
+
 On top of the open sessions, the Thursday cron (`/api/cron/weekly-newsletter`) now renders four new blocks (`src/lib/email/weekly-newsletter.ts`):
 - **Forming crews now** — up to 5 Open polls from `fetchOpenPolls()`, each with day/time/location/level + Yes-vote progress label, linking to `/poll/<slug>`. Hidden when none.
 - **Crew interest CTA** — always renders; copy adapts to whether polls are present ("None of these fit?" vs "Want a regular crew?").
