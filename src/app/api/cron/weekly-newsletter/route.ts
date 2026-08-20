@@ -16,11 +16,26 @@ import { fetchWeatherForSessions, type DayWeather } from "@/lib/weather";
 import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
-import { CAMP_AGE_MIN, CAMP_OPTIONS, CAMPS } from "@/data/camps";
+import { CAMP_AGE_MIN, CAMP_OPTIONS, upcomingCamps } from "@/data/camps";
 import { MVF_TOURNAMENT, mvfTournamentIsUpcoming } from "@/data/mvf";
+import {
+  FALL_PUBLIC_AREA,
+  FALL_SEASON_LABEL,
+  FALL_SEASON_WEEKS,
+  FALL_SUNDAYS,
+  FALL_VENUE_SHORT,
+} from "@/data/fall-2026";
+import {
+  FALL_SEASON_GROUPS,
+  FALL_SEASON_PRICE_USD,
+  FALL_SEASON_SPOTS_PER_GROUP,
+  FALL_SEASON_TITLE,
+} from "@/data/fall-season-2026";
+import { countFallRegistrations } from "@/lib/notion-fall-registrations";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
+  type NewsletterFallGroup,
   type NewsletterOpenPoll,
   type NewsletterSessionGroup,
 } from "@/lib/email/weekly-newsletter";
@@ -153,6 +168,66 @@ function weatherNote(dw: DayWeather): string {
   return `${dw.summary}${temp}`;
 }
 
+/**
+ * Fall-season block input, or null when the season shouldn't be promoted.
+ *
+ * Gated on the same flag /fall reads, so the email can never advertise a
+ * checkout that returns 503, and on the season's own last Sunday so the block
+ * retires itself without anyone remembering to pull it.
+ *
+ * Seat counts come from the live roster and fail SOFT: `countFallRegistrations`
+ * returns null on a Notion miss, and the template falls back to the group size
+ * rather than printing a seat count that might be wrong.
+ */
+async function loadFallSeason(
+  todayIso: string,
+  utmCampaign: string,
+): Promise<{
+  title: string;
+  seasonLabel: string;
+  weeks: number;
+  venueLine: string;
+  priceUsd: number;
+  groups: NewsletterFallGroup[];
+  url: string;
+} | null> {
+  if (process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN !== "true") return null;
+  const lastSunday = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
+  if (todayIso > lastSunday) return null;
+
+  const groups: NewsletterFallGroup[] = [];
+  for (const option of FALL_SEASON_GROUPS) {
+    const taken = await countFallRegistrations(option.group);
+    groups.push({
+      label: option.label,
+      timeLabel: option.timeLabel,
+      spotsLeft:
+        taken === null
+          ? null
+          : Math.max(0, FALL_SEASON_SPOTS_PER_GROUP - taken),
+      spotsPerGroup: FALL_SEASON_SPOTS_PER_GROUP,
+    });
+  }
+
+  return {
+    title: FALL_SEASON_TITLE,
+    seasonLabel: FALL_SEASON_LABEL,
+    weeks: FALL_SEASON_WEEKS,
+    venueLine: `${FALL_VENUE_SHORT}, ${FALL_PUBLIC_AREA}`,
+    priceUsd: FALL_SEASON_PRICE_USD,
+    groups,
+    url: appendUtm(`${SITE_ORIGIN}/fall`, "fall-season", utmCampaign),
+  };
+}
+
+/** True while at least one fall group still has a seat we know about. */
+function fallHasOpenSeats(
+  fallSeason: { groups: NewsletterFallGroup[] } | null,
+): boolean {
+  if (!fallSeason) return false;
+  return fallSeason.groups.some((g) => g.spotsLeft === null || g.spotsLeft > 0);
+}
+
 export const GET = withCronAlert("weekly-newsletter", async () => {
   const failures: CronFailure[] = [];
   const tip = pickWeeklyTip();
@@ -164,13 +239,11 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     allSessions,
     (s) => s.date >= todayIso && s.date <= weekEndIso,
   );
-  // Summer promo — Open sessions beyond the weekly window whose date falls in
-  // June/July/August. Month-on-the-date-string keeps it timezone-safe.
-  const summerSessions = groupSessions(allSessions, (s) => {
-    if (s.date <= weekEndIso) return false;
-    const month = s.date.slice(5, 7);
-    return month === "06" || month === "07" || month === "08";
-  });
+  // Plan-ahead block — every Open session past the weekly window, out to the
+  // 30-day registration horizon `fetchUpcomingSessions` already applies. The
+  // month filter this replaces ("06"/"07"/"08") was written for a summer promo
+  // and would silently hide every September date from here on.
+  const laterSessions = groupSessions(allSessions, (s) => s.date > weekEndIso);
   // County-level forecast scoped to each session's actual hours, rolled up to
   // the worst window per date. Fails soft — a miss (NWS down or date beyond the
   // ~6.5-day hourly horizon) just leaves the group without a note.
@@ -254,7 +327,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   // weeks someone remembers to draft one, and the Aug 17–20 camp silently
   // dropped out of every issue after its 2026-07-23 send. This list derives
   // from camps.ts, so an upcoming camp can't fall off the issue.
-  const camps = CAMPS.filter((c) => c.endDate >= todayIso).map((c) => ({
+  // `upcomingCamps` drops a camp once it starts, not once it ends: the Aug 20
+  // 2026 issue promoted the Aug 17–20 camp on its final morning because this
+  // used to filter on `endDate >= todayIso`.
+  const camps = upcomingCamps(todayIso).map((c) => ({
     weekLabel: c.weekLabel,
     publicArea: c.publicArea,
   }));
@@ -280,6 +356,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       }
     : null;
 
+  // Fall season — the lead block and, while seats remain, the subject line.
+  const fallSeason = await loadFallSeason(todayIso, utmCampaign);
+
   const resendApiKey = process.env.RESEND_API_KEY;
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
   if (!resend) {
@@ -292,19 +371,23 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     };
   }
 
-  // Camp outranks polls/summer/tip but never "open courts this week" — a
-  // bookable session in the next 9 days is the more urgent ask. On a week with
-  // no open courts (e.g. a coach-away gap) the upcoming camp is the strongest
-  // thing in the issue, so it gets the subject.
-  const subject = sessions.length
-    ? "Open courts this week — Next Gen"
-    : camps.length
-      ? "Summer camp is coming up — Next Gen"
-      : openPolls.length
-        ? "Crews forming this week — Next Gen"
-        : summerSessions.length
-          ? "Summer sessions are live — Next Gen"
-          : `Coach tip of the week — ${tip.title}`;
+  // The fall season outranks even "open courts this week" — the one thing here
+  // a family can't get a second chance at. Eight seats a group, sold once, and
+  // the door shuts when the first Sunday arrives; a drop-in they skip this week
+  // simply runs again next week. It steps aside the moment both groups fill.
+  // Below that, camp outranks polls/plan-ahead/tip but never open courts — a
+  // bookable session in the next 9 days is the more urgent ask.
+  const subject = fallHasOpenSeats(fallSeason)
+    ? "Fall season registration is open — Next Gen"
+    : sessions.length
+      ? "Open courts this week — Next Gen"
+      : camps.length
+        ? "Camp is coming up — Next Gen"
+        : openPolls.length
+          ? "Crews forming this week — Next Gen"
+          : laterSessions.length
+            ? "New dates on the calendar — Next Gen"
+            : `Coach tip of the week — ${tip.title}`;
 
   let sent = 0;
   let failed = 0;
@@ -328,9 +411,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
 
     const input = {
       parentFirst,
+      fallSeason,
       mvfTournament,
       sessions,
-      summerSessions,
+      laterSessions,
       openPolls,
       news,
       newsletterLeadHtml,
@@ -376,9 +460,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   try {
     const adminInput = {
       parentFirst: "Coach",
+      fallSeason,
       mvfTournament,
       sessions,
-      summerSessions,
+      laterSessions,
       openPolls,
       news,
       newsletterLeadHtml,
@@ -490,7 +575,11 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   const summary = {
     has_sessions: sessions.length > 0,
     session_groups: sessions.length,
-    summer_groups: summerSessions.length,
+    later_groups: laterSessions.length,
+    fall_registration_open: fallSeason !== null,
+    fall_spots_left: fallSeason
+      ? fallSeason.groups.map((g) => `${g.label}:${g.spotsLeft ?? "unknown"}`).join(" ")
+      : "",
     open_polls: openPolls.length,
     news_items: news.length,
     news_marked_used: newsMarkedUsed,
