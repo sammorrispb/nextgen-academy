@@ -41,8 +41,18 @@ function template(titleBase: string): RecurringTemplate {
 // inject an active-weeknight fixture so they test the loop, not the data
 // file's current active flags. (Mon/Tue/Wed = all four levels, Thu = Green/
 // Yellow → 4+4+4+2 = 14 rows/week.)
-const WEEKNIGHT_FIXTURE: RecurringTemplate[] = RECURRING_TEMPLATES.filter(
-  (t) => t.weekday >= 1 && t.weekday <= 4 && !t.active, // the retired four, not the Wed 8–11 block
+//
+// Selected BY NAME, not by `!active`: since 2026-08-23 every template is
+// inactive, so a `!active` weekday filter also swept in the Wed ages 8–11
+// block (weekday 3) and silently made this a 16-row fixture.
+const RETIRED_WEEKNIGHT_TITLES: readonly string[] = [
+  "Ridgeview Monday Evening",
+  "Redland Tuesday Evening",
+  "Westland Wednesday Evening",
+  "Shannon Thursday Evening",
+];
+const WEEKNIGHT_FIXTURE: RecurringTemplate[] = RECURRING_TEMPLATES.filter((t) =>
+  RETIRED_WEEKNIGHT_TITLES.includes(t.titleBase),
 ).map((t) => ({ ...t, active: true }));
 
 /** A Notion query result page carrying just what the dedup matcher reads.
@@ -113,14 +123,21 @@ test.describe("upcomingWeekday", () => {
 });
 
 test.describe("recurring templates (weekend move 2026-07-21)", () => {
-  test("exactly one template auto-seeds — the Wednesday ages 8–11 block (added 2026-08-13)", () => {
-    // Weekend + retired weeknight templates stay inactive (the Aug 2026
-    // weekend block was hand-seeded; see the data file header). The one
-    // active template is the Wednesday 5–6 PM ages 8–11 block at Wood, and
-    // its startsOn keeps the cron from back-filling August Wednesdays.
-    const active = RECURRING_TEMPLATES.filter((t) => t.active);
-    expect(active.map((t) => t.titleBase)).toEqual(["Wood Wednesday Ages 8–11"]);
-    const [wed] = active;
+  test("NO template auto-seeds — every one is inactive (drop-ins cancelled 2026-08-23)", () => {
+    // Sam cancelled every upcoming drop-in row on 2026-08-23, so no template
+    // may seed new ones. Row-family idempotency only stops the cron
+    // resurrecting dates ALREADY seeded — an active template would still
+    // stock fresh OPEN rows past the cancelled run and reopen a schedule
+    // meant to be dark. Flip one back to `active: true` to resume.
+    expect(RECURRING_TEMPLATES.filter((t) => t.active)).toEqual([]);
+  });
+
+  test("Wednesday ages 8–11 block is retained and still valid (added 2026-08-13)", () => {
+    // Retained though inactive: its rows are already seeded, and the seeder
+    // matches them by title for row-family idempotency, so deleting the
+    // template would let a future run resurrect a cancelled Wednesday.
+    const wed = template("Wood Wednesday Ages 8–11");
+    expect(wed.active).toBe(false);
     expect(wed.weekday).toBe(3);
     // 5:30, not 5:00 — the Rosemary Hills EC club ends 5:00 PM in Silver
     // Spring on Wednesdays from Sept 16, so 5:00 at Wood isn't drivable.
@@ -160,8 +177,10 @@ test.describe("recurring templates (weekend move 2026-07-21)", () => {
   });
 
   test("retired weeknight templates are retained (row-family idempotency) but inactive", () => {
-    const weeknights = RECURRING_TEMPLATES.filter(
-      (t) => t.weekday >= 1 && t.weekday <= 4 && !t.active, // the Wed 8–11 block is active, not retired
+    // By name, not `!active`: every template is inactive since 2026-08-23,
+    // so a weekday filter would also match the Wed ages 8–11 block.
+    const weeknights = RECURRING_TEMPLATES.filter((t) =>
+      RETIRED_WEEKNIGHT_TITLES.includes(t.titleBase),
     );
     expect(weeknights.map((t) => t.titleBase)).toEqual([
       "Ridgeview Monday Evening",
