@@ -154,16 +154,22 @@ test.describe("isSeederManagedRow (pure, F5) — title+level+weekday must ALL ma
     ).toBe(false);
   });
 
-  test("live templates: retired rows unmanaged, the active Wed 8–11 block managed", () => {
-    // Default templates arg = the live RECURRING_TEMPLATES. Retired weeknight
-    // + weekend rows stay unmanaged; the Wood Wednesday Ages 8–11 block
-    // (active since 2026-08-13) is seeder-managed on its own weekday/levels.
+  test("live templates: NO row is seeder-managed — every template is inactive", () => {
+    // Default templates arg = the live RECURRING_TEMPLATES. Since the
+    // 2026-08-23 drop-in cancellation every template is `active: false`, so
+    // the seeder creates nothing and no row can be ghosted by a move — the
+    // reschedule block correctly lifts everywhere (see the "a deactivated
+    // template reschedules normally" case above).
     expect(isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" })).toBe(false);
     expect(isSeederManagedRow({ title: "Wood Saturday Evening — Red", date: "2026-08-01" })).toBe(false);
-    expect(isSeederManagedRow({ title: "Wood Wednesday Ages 8–11 — Red", date: "2026-09-02" })).toBe(true);
-    // Wrong weekday or a level the template doesn't seed → not managed.
+    expect(isSeederManagedRow({ title: "Wood Wednesday Ages 8–11 — Red", date: "2026-09-02" })).toBe(false);
+    // Still false for the wrong weekday / an unseeded level, as before.
     expect(isSeederManagedRow({ title: "Wood Wednesday Ages 8–11 — Red", date: "2026-09-03" })).toBe(false);
     expect(isSeederManagedRow({ title: "Wood Wednesday Ages 8–11 — Green", date: "2026-09-02" })).toBe(false);
+    // The guard itself still works when a template IS active (fixture arg).
+    expect(
+      isSeederManagedRow({ title: "Redland Tuesday Evening — Red", date: "2026-07-07" }, WEEKNIGHT_FIXTURE),
+    ).toBe(true);
   });
 
   test("non-recurring titles / bad dates are never managed", () => {
