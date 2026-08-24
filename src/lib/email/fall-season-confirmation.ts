@@ -84,6 +84,8 @@ export function buildFallSeasonConfirmationEmail(
     "",
     `Paid: $${amountUsd} (full season).`,
     "",
+    `That holds ${childFirst}'s spot for all six Sundays, so it's non-refundable if you withdraw. If we ever have to cancel sessions we can't make up on a rain date, we refund the ones we didn't run.`,
+    "",
     `What to bring each week:`,
     `- Refillable water bottle`,
     `- Court shoes (no flat-soled sneakers)`,

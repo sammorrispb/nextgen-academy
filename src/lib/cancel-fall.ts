@@ -11,7 +11,13 @@ import {
   fallCancellationText,
   fallCancellationSubject,
 } from "@/lib/email/fall-cancellation";
-import { fallRefundPolicyFor, todayET } from "@/lib/fall-refund-policy";
+import {
+  fallRefundPolicyFor,
+  fallProratedRefundCents,
+  todayET,
+  type FallRefundPolicy,
+  type FallCancelReason,
+} from "@/lib/fall-refund-policy";
 import { findFallSeasonGroup } from "@/data/fall-season-2026";
 
 /**
@@ -45,7 +51,13 @@ export interface CancelFallInput {
    * Override the policy's refund decision. Omit to let
    * fallRefundPolicyFor(todayET()) decide — that's the intended path.
    */
-  refund?: "full" | "none";
+  refund?: FallRefundPolicy;
+  /**
+   * Who is cancelling. Defaults to a parent withdrawing (no refund under the
+   * current terms). Pass "nga_cancelled" when NGA cannot deliver the sessions —
+   * that prorates the undelivered ones back, whatever terms they bought under.
+   */
+  reason?: FallCancelReason;
 }
 
 export type CancelFallResult =
@@ -103,11 +115,14 @@ async function alertAdmin(subject: string, body: string): Promise<boolean> {
 
 async function issueRefund(
   paymentIntentId: string,
+  /** Omit for the whole charge; set for an NGA-cancelled prorated refund. */
+  amountCents?: number,
 ): Promise<{ ok: true; usd: number } | { ok: false; message: string }> {
   try {
     const stripe = getStripe();
     const refund = await stripe.refunds.create({
       payment_intent: paymentIntentId,
+      ...(amountCents !== undefined ? { amount: amountCents } : {}),
     });
     return { ok: true, usd: (refund.amount ?? 0) / 100 };
   } catch (err) {
@@ -190,10 +205,34 @@ export async function cancelFallRegistration(
     };
   }
 
-  const decision = input.refund ?? fallRefundPolicyFor(todayET());
+  const today = todayET();
+  const decision =
+    input.refund ??
+    fallRefundPolicyFor(today, {
+      registeredOnIso: row.registeredOnIso || undefined,
+      reason: input.reason,
+    });
+
+  // "prorated" only ever comes from an NGA-side cancellation. Before the season
+  // starts every session is still owed, so this equals a full refund.
+  const proratedCents =
+    decision === "prorated"
+      ? fallProratedRefundCents(today, Math.round(row.amountPaidUsd * 100))
+      : 0;
+
+  if (decision === "prorated" && proratedCents <= 0) {
+    // Every session was delivered — there is nothing to give back, and issuing
+    // a $0 refund would email the parent a refund cue for no money.
+    return {
+      ok: false,
+      reason: "refund_failed",
+      message:
+        "NGA-cancelled after the last session — nothing left to prorate; cancel by hand if this is intentional.",
+    };
+  }
 
   let refundedUsd = 0;
-  if (decision === "full") {
+  if (decision === "full" || decision === "prorated") {
     const pi =
       paymentIntentId ??
       (await (async () => {
@@ -216,7 +255,10 @@ export async function cancelFallRegistration(
       };
     }
 
-    const refund = await issueRefund(pi);
+    const refund = await issueRefund(
+      pi,
+      decision === "prorated" ? proratedCents : undefined,
+    );
     if (!refund.ok) {
       // Do NOT flip the row — an un-refunded parent must stay on the roster so
       // the failure is visible and retryable rather than silently swallowed.
@@ -225,7 +267,8 @@ export async function cancelFallRegistration(
     refundedUsd = refund.usd;
   }
 
-  const status: FallCancelStatus = decision === "full" ? "Refunded" : "Cancelled";
+  const status: FallCancelStatus =
+    refundedUsd > 0 || decision === "full" ? "Refunded" : "Cancelled";
 
   const updated = await updateFallRegStatus(row.pageId, status);
   if (!updated) {

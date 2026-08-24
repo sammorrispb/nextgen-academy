@@ -384,6 +384,15 @@ export default function FallRegistrationForm({
           — if a Sunday washes out, we make it up.
         </p>
 
+        {/* Refund terms, stated where the money is taken — fall-refund-policy.ts
+            is the code that enforces exactly this. */}
+        <p className="text-sm text-ngpa-white/70">
+          Registering holds your player&rsquo;s spot for the whole season, so
+          it&rsquo;s <strong className="text-ngpa-white">non-refundable</strong>{" "}
+          if you withdraw. If we have to cancel sessions we can&rsquo;t make up
+          on a rain date, we refund the ones we didn&rsquo;t run.
+        </p>
+
         {/* SMS consent */}
         <div>
           <label className="flex items-start gap-3 cursor-pointer">

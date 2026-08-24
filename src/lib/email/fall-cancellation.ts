@@ -48,7 +48,7 @@ export function fallCancellationText(input: FallCancellationInput): string {
 
   const moneyLine = refunded
     ? `We've refunded $${refundedUsd} to your original payment method. Card refunds usually land in 5–10 business days.`
-    : `The season has already started, so this one isn't refundable — that's the policy you agreed to at registration, and I want to be straight about it rather than leave you wondering.`;
+    : `The season has already started, so this one isn't refundable — the spot was held for the full season either way. I'd rather be straight about it than leave you wondering.`;
 
   return [
     `Hi ${parentFirst},`,
@@ -79,7 +79,7 @@ export function fallCancellationHtml(input: FallCancellationInput): string {
 
   const moneyLine = refunded
     ? `We&rsquo;ve refunded <strong style="color:${c.accentLime};">$${esc(refundedUsd)}</strong> to your original payment method. Card refunds usually land in 5&ndash;10 business days.`
-    : `The season has already started, so this one isn&rsquo;t refundable &mdash; that&rsquo;s the policy you agreed to at registration, and I want to be straight about it rather than leave you wondering.`;
+    : `The season has already started, so this one isn&rsquo;t refundable &mdash; the spot was held for the full season either way. I&rsquo;d rather be straight about it than leave you wondering.`;
 
   return `<!DOCTYPE html>
 <html>

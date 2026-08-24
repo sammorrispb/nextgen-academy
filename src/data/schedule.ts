@@ -3,9 +3,12 @@ export interface Season {
   dates: string;
 }
 
+// The LAST entry is what /schedule renders in its hero badge, so a stale tail
+// ships a stale season on the page. Add the new season here when it opens.
 export const seasons: Season[] = [
   { label: "Spring 2026", dates: "April 11 – June 15" },
   { label: "Summer 2026", dates: "June – July 2026" },
+  { label: "Fall 2026", dates: "September – November" },
 ];
 
 /**
