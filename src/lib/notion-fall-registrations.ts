@@ -133,6 +133,12 @@ export interface FallRegistrationLookup {
   status: string;
   amountPaidUsd: number;
   stripeCheckoutSessionId: string;
+  /**
+   * Notion `created_time` as an ISO date (`YYYY-MM-DD`). The refund policy keys
+   * the no-refund cutoff off WHEN the family registered, so this has to travel
+   * with the row — see fall-refund-policy.ts.
+   */
+  registeredOnIso: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -148,6 +154,10 @@ function toLookup(page: any): FallRegistrationLookup {
     amountPaidUsd: p["Amount Paid"]?.number ?? 0,
     stripeCheckoutSessionId:
       p["Stripe Checkout Session ID"]?.rich_text?.[0]?.plain_text ?? "",
+    // Slice, never Date-parse: `YYYY-MM-DD` off the front of Notion's ISO
+    // timestamp keeps this timezone-stable on a UTC build server.
+    registeredOnIso:
+      typeof page.created_time === "string" ? page.created_time.slice(0, 10) : "",
   };
 }
 

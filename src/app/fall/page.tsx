@@ -106,6 +106,13 @@ export default async function FallPage() {
             &middot; {FALL_SEASON_SPOTS_PER_GROUP} spots per group, first come
             first serve.
           </p>
+          <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed">
+            The season is a full-season commitment paid up front, and it&rsquo;s
+            non-refundable once you register &mdash; your player&rsquo;s spot is
+            held for all six Sundays. If a Sunday washes out we use the rain
+            dates, and if we ever have to cancel sessions outright, we refund
+            what we didn&rsquo;t run.
+          </p>
         </div>
       </section>
 
