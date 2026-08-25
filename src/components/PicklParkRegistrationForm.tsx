@@ -224,6 +224,18 @@ export default function PicklParkRegistrationForm({
             })}
           </div>
           {errors.group && <p className={errorClass}>{errors.group}</p>}
+          <p className="text-xs text-ngpa-white/55 mt-2">
+            Not sure which color?{" "}
+            <a
+              href="/levels"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+            >
+              See the levels guide
+            </a>
+            .
+          </p>
         </fieldset>
 
         {/* Parent */}

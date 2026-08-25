@@ -131,7 +131,7 @@ export default async function PicklParkPage() {
             The season at a glance
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-3">
             {PICKLPARK_SEASON_GROUPS.map((option) => (
               <article
                 key={option.group}
@@ -141,7 +141,12 @@ export default async function PicklParkPage() {
                   Saturdays {option.timeLabel}
                 </p>
                 <h3 className="font-heading text-xl sm:text-2xl font-black text-ngpa-white tracking-tight mb-3">
-                  {option.label}
+                  <a
+                    href="/levels"
+                    className="hover:text-ngpa-teal transition-colors"
+                  >
+                    {option.label}
+                  </a>
                 </h3>
                 <p className="text-ngpa-white/80 leading-relaxed">
                   A full hour — coached practice, then the round robin.{" "}
@@ -150,6 +155,16 @@ export default async function PicklParkPage() {
               </article>
             ))}
           </div>
+          <p className="text-sm text-ngpa-white/60 leading-relaxed mb-6">
+            Not sure which color fits your player?{" "}
+            <a
+              href="/levels"
+              className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+            >
+              See what Green and Yellow Ball mean
+            </a>
+            .
+          </p>
 
           <div className="bg-ngpa-slate/40 rounded-2xl border border-ngpa-slate/60 p-6 sm:p-7">
             <h3 className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-4">
