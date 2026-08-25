@@ -19,6 +19,11 @@
 // (montgomeryvillage.com download id 937, p. 15) carries them — every price,
 // activity number, venue, date and time below was verified against it
 // 2026-08-09. If MVF changes a fee, this file is the only place to fix it.
+//
+// 2026-08-25: MVF renamed all five activities with a "Youth Pickleball" prefix
+// and the portal's URL slugs changed to match (activity IDs and numbers are
+// unchanged). activityName + registerUrl below were re-verified against the
+// live portal API that day; dates, times, venues and ages all still match.
 
 export const MVF_AGE_MIN = 8;
 export const MVF_AGE_MAX = 16;
@@ -110,10 +115,10 @@ export const MVF_PROGRAMS: MvfProgram[] = [
   {
     key: "intro",
     title: "Youth Pickleball Intro Class",
-    activityName: "Pickleball Youth Intro Class Fall (ages 8 to 16)",
+    activityName: "Youth Pickleball Intro Class Fall (ages 8 to 16)",
     activityNumber: "1005.434",
     registerUrl:
-      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-youth-intro-class-fall-ages-8-to-16/5792",
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/youth-pickleball-intro-class-fall-ages-8-to-16/5792",
     levelLabel: "All levels",
     venue: APPLE_RIDGE,
     dateLabel: "Thursday, August 27, 2026",
@@ -129,10 +134,10 @@ export const MVF_PROGRAMS: MvfProgram[] = [
   {
     key: "fall-1-beginner",
     title: "Fall Session I — Red / Orange",
-    activityName: "Pickleball Fall I Beginner (ages 8 to 16)",
+    activityName: "Youth Pickleball Fall I Beginner (ages 8 to 16)",
     activityNumber: "1205.435",
     registerUrl:
-      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-i-beginner-ages-8-to-16/5790",
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/youth-pickleball-fall-i-beginner-ages-8-to-16/5790",
     levelLabel: "Red / Orange",
     venue: WATKINS_MILL,
     dateLabel: "Sept 3 – Oct 8, 2026",
@@ -151,10 +156,10 @@ export const MVF_PROGRAMS: MvfProgram[] = [
   {
     key: "fall-1-advanced",
     title: "Fall Session I — Green / Yellow",
-    activityName: "Pickleball Fall I Advanced (ages 8 to 16)",
+    activityName: "Youth Pickleball Fall I Advanced (ages 8 to 16)",
     activityNumber: "1205.436",
     registerUrl:
-      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-i-advanced-ages-8-to-16/9360",
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/youth-pickleball-fall-i-advanced-ages-8-to-16/9360",
     levelLabel: "Green / Yellow",
     venue: WATKINS_MILL,
     dateLabel: "Sept 3 – Oct 8, 2026",
@@ -173,10 +178,10 @@ export const MVF_PROGRAMS: MvfProgram[] = [
   {
     key: "fall-2-beginner",
     title: "Fall Session II — Red / Orange",
-    activityName: "Pickleball Fall II Beginner (ages 8 to 16)",
+    activityName: "Youth Pickleball Fall II Beginner (ages 8 to 16)",
     activityNumber: "1205.440",
     registerUrl:
-      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-ii-beginner-ages-8-to-16/9361",
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/youth-pickleball-fall-ii-beginner-ages-8-to-16/9361",
     levelLabel: "Red / Orange",
     venue: NORTH_CREEK,
     dateLabel: "Oct 15 – Nov 19, 2026",
@@ -195,10 +200,10 @@ export const MVF_PROGRAMS: MvfProgram[] = [
   {
     key: "fall-2-advanced",
     title: "Fall Session II — Green / Yellow",
-    activityName: "Pickleball Fall II Advanced (ages 8 to 16)",
+    activityName: "Youth Pickleball Fall II Advanced (ages 8 to 16)",
     activityNumber: "1205.441",
     registerUrl:
-      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/pickleball-fall-ii-advanced-ages-8-to-16/9362",
+      "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/youth-pickleball-fall-ii-advanced-ages-8-to-16/9362",
     levelLabel: "Green / Yellow",
     venue: NORTH_CREEK,
     dateLabel: "Oct 15 – Nov 19, 2026",
