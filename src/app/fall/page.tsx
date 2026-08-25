@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import FallRegistrationForm from "@/components/FallRegistrationForm";
+import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import JsonLd from "@/components/JsonLd";
 import {
   FALL_RAIN_DATES,
@@ -227,6 +228,11 @@ export default async function FallPage() {
           )}
         </div>
       </section>
+
+      <CommunityGroupsCard
+        section="fall_community"
+        className="bg-ngpa-navy py-14 sm:py-16 px-4 sm:px-6"
+      />
     </div>
   );
 }
