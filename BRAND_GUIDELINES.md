@@ -469,9 +469,18 @@ Every HTML email ships with a plain-text body. The fallback MUST include:
 These are utility, not CTAs. The host email already owns one primary CTA
 (arrow + chip) — a community invite must not compete with it.
 
-- **Discoverability:** never publish the invite URL on the public website
-  (no footer, no landing page, no `/contact`). Invites travel only inside
-  parent-facing transactional or first-touch emails.
+- **Discoverability:** SUPERSEDED 2026-08-25 (Sam). The old rule was "never
+  publish the invite URL on the public website (no footer, no landing page,
+  no `/contact`)". Both invites now ship as **labelled CTAs on public web
+  surfaces** — `CommunityGroupsCard` on `/`, `/schedule`, `/crew`, `/fall`
+  plus a footer link, mirroring the pairing every recipient-facing email has
+  carried since 2026-08-19. The rule had already diverged from reality:
+  `site.whatsapp` has been rendered on the homepage for months, which
+  `agent-log.md` flagged on 2026-08-19 as needing Sam's call. This is that
+  call. What did NOT change: the **Privacy** bullet below still binds, so web
+  copy names the shared room the same way email copy does; and the placement,
+  visual-weight, and CTA-hierarchy rules in this section remain **email-only**
+  — a web CTA is allowed to be a button, which in an email it is not.
 - **Gating:** none — SUPERSEDED 2026-08-17 (Sam). Both community invites
   ride on every recipient-facing email via `signatureExtras*` in
   `src/lib/email/signature.ts`; internal/ops mail carries neither. The old

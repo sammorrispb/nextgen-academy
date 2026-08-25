@@ -6,6 +6,7 @@ import { seasons } from "@/data/schedule";
 import SectionHeading from "@/components/SectionHeading";
 import CTABanner from "@/components/CTABanner";
 import CrewPathway from "@/components/CrewPathway";
+import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import RegistrationNotice from "@/components/RegistrationNotice";
 import SessionCard from "@/components/SessionCard";
 import SessionGroupCard from "@/components/SessionGroupCard";
@@ -285,6 +286,8 @@ export default async function SchedulePage() {
           <CrewPathway />
         </div>
       </section>
+
+      <CommunityGroupsCard section="schedule_community" />
 
       <CTABanner
         heading="Questions about registration?"

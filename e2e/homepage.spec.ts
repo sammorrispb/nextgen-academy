@@ -304,13 +304,33 @@ test.describe("FAQ", () => {
 // ─── Contact Strip ────────────────────────────────
 
 test.describe("Contact Strip", () => {
-  test("shows email, phone, Instagram, WhatsApp", async ({ page }) => {
+  test("shows email, phone, Instagram", async ({ page }) => {
     await page.goto("/");
     const contact = page.locator("#contact");
     await expect(contact.getByRole("link", { name: "Email" })).toBeVisible();
     await expect(contact.getByRole("link", { name: /301-325-4731/ })).toBeVisible();
     await expect(contact.getByRole("link", { name: "Instagram" })).toBeVisible();
-    await expect(contact.getByRole("link", { name: "WhatsApp" })).toBeVisible();
+  });
+
+  // The group used to be the 4th pill here, labelled just "WhatsApp" — a social
+  // icon, not an ask. It is now a labelled CTA card above the strip, so the
+  // invite is NOT also a pill: one link per group per section.
+  test("carries the community-groups CTA, not a bare WhatsApp pill", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    const contact = page.locator("#contact");
+    await expect(
+      contact.getByRole("link", { name: /Join Next Gen parents on WhatsApp/i }),
+    ).toBeVisible();
+    await expect(
+      contact.getByRole("link", { name: /Link & Dink on WhatsApp/i }),
+    ).toBeVisible();
+    // `exact` matters: the default substring match would happily match the two
+    // CTAs above and never catch the pill coming back.
+    await expect(
+      contact.getByRole("link", { name: "WhatsApp", exact: true }),
+    ).toHaveCount(0);
   });
 
   test("shows MCPS framing in contact panel", async ({ page }) => {
