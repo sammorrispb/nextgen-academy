@@ -1,5 +1,9 @@
-const NOTION_API = "https://api.notion.com/v1";
-const NOTION_VERSION = "2022-06-28";
+import {
+  NOTION_API,
+  NOTION_VERSION,
+  classifyNotionFailure as classifyNotionFailureShared,
+  createNotionPageSourceFailSoft,
+} from "./notion-utils";
 
 export interface DropInRow {
   parentName: string;
@@ -49,12 +53,10 @@ export interface DropInRow {
  */
 export type CreateDropInResult = "ok" | "transient" | "permanent";
 
-// Map a failed Notion HTTP status to a retry policy. 429 (rate limit) and 5xx
-// (server error) are worth retrying; every other 4xx is deterministic — the
-// same request will fail identically, so retrying only wastes attempts.
-export function classifyNotionFailure(status: number): "transient" | "permanent" {
-  return status === 429 || status >= 500 ? "transient" : "permanent";
-}
+// Retry policy for a failed Notion status. The implementation moved to
+// notion-utils (the fail-soft create needs it too); re-exported here because
+// this is where every existing caller imports it from.
+export const classifyNotionFailure = classifyNotionFailureShared;
 
 // Detailed variant. Callers that treat the row as the source of truth (the
 // Stripe webhook) use the classification to decide whether to fail-and-retry
@@ -127,53 +129,18 @@ export async function createDropInRegistrationResult(
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const postPage = (props: Record<string, any>) =>
-    fetch(`${NOTION_API}/pages`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${notionKey}`,
-        "Content-Type": "application/json",
-        "Notion-Version": NOTION_VERSION,
-      },
-      body: JSON.stringify({ parent: { database_id: dbId }, properties: props }),
-    });
-
-  let res = await postPage(properties);
-
-  // Fail-soft on the optional `Source` attribution column. A deterministic
-  // rejection that names Source — e.g. the column doesn't exist (the 2026-06-13
-  // Landon incident: #174 shipped a Source write before the Notion property was
-  // created, so every drop-in 400'd and stranded paid parents unregistered) —
-  // must not block the core roster row, which is the source of truth for
-  // reminders, check-in, and cancel refunds. Drop Source and retry once:
-  // attribution is best-effort, the registration is not.
-  if (
-    !res.ok &&
-    "Source" in properties &&
-    classifyNotionFailure(res.status) === "permanent"
-  ) {
-    const bodyText = await res.text().catch(() => "");
-    if (bodyText.includes("Source")) {
-      console.error(
-        "[notion-dropins] create rejected on Source — retrying without attribution so the row still lands",
-        res.status,
-        bodyText,
-      );
-      const withoutSource = { ...properties };
-      delete withoutSource.Source;
-      res = await postPage(withoutSource);
-    } else {
-      console.error("[notion-dropins] create failed", res.status, bodyText);
-      return classifyNotionFailure(res.status);
-    }
-  }
+  const { res, bodyText } = await createNotionPageSourceFailSoft({
+    notionKey,
+    databaseId: dbId,
+    properties,
+    logPrefix: "[notion-dropins]",
+  });
 
   if (!res.ok) {
     console.error(
       "[notion-dropins] create failed",
       res.status,
-      await res.text().catch(() => ""),
+      bodyText || (await res.text().catch(() => "")),
     );
     return classifyNotionFailure(res.status);
   }

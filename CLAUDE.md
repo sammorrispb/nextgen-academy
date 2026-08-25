@@ -338,6 +338,7 @@ Always route outbound links through these — they handle UTM/`ref` stamping con
 - **All program dates use `<time datetime="YYYY-MM-DD">`** and prices use `itemprop="price" content="N"` (numeric, no `$`). This is for AI/scheduler parsing — see BRAND_GUIDELINES "AI-PARSING OPTIMIZATION".
 - **Yellow Ball is invite-only.** No public registration link, no `mailto:` CTAs — route all interest to `/yellowball/inquiry`. `verify-funnel.mjs` enforces this.
 - **No third-party pixels.** GA4, Meta Pixel, `@vercel/analytics`, `gtag`, `fbq` are explicitly banned — `verify-funnel.mjs` greps for them.
+- **A lead-capture row never dies for its attribution.** Every funnel write stamps a `Source` select from `attributedSource()`, and a Notion DB whose schema lacks that property 400s the WHOLE create — twice now a real family was lost this way (2026-06-13 drop-ins, 2026-08-25 waitlist). Create funnel rows through `createNotionPageSourceFailSoft()` (`src/lib/notion-utils.ts`), which retries once without `Source` and reports that it did; only a Source-named rejection is retried, so a genuinely broken write still surfaces. Adopted by `/api/waitlist` + `notion-dropins`; `/api/{contact,lead,schools-lead}` still POST raw (their DBs do have the property) — move them over when next editing.
 - Don't add comments that describe what code does. Add a comment only when the *why* isn't obvious (e.g. the CR API shape unwrap, the `remindersSent[]` git-as-audit-trail decision).
 
 ## Environment Variables
