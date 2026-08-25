@@ -147,6 +147,39 @@ test.describe("events feed — egress invariants", () => {
     }
   });
 
+  test("picklpark season items: stable nga-pp keys, no counts, makeup date flagged tentative", () => {
+    const feed = buildEventsFeed(
+      { sessions: [] },
+      "https://nextgenpbacademy.com",
+    );
+    const items = feed.filter((i) => i.source === "picklpark");
+
+    // 6 confirmed Saturdays + 1 tentative makeup hold.
+    expect(items).toHaveLength(7);
+    for (const item of items) {
+      expect(item.key).toMatch(/^nga-pp:saturday:\d{4}-\d{2}-\d{2}$/);
+      expect(item.url).toBe("https://nextgenpbacademy.com/picklpark");
+      // The Pickl Park is a public commercial facility — the address may ship,
+      // but never any per-item registration data.
+      expect(Object.keys(item)).not.toContain("registeredCount");
+      expect(Object.keys(item)).not.toContain("roster");
+      expect(item.location).toContain("The Pickl Park");
+    }
+
+    const holds = items.filter((i) => i.tentative);
+    expect(holds).toHaveLength(1);
+    expect(holds[0].status).toBe("Tentative");
+    expect(holds[0].title).toContain("[TENTATIVE]");
+
+    const confirmed = items.filter((i) => !i.tentative);
+    expect(confirmed).toHaveLength(6);
+    for (const item of confirmed) {
+      expect(item.startTime).toBe("1:00 PM");
+      expect(item.endTime).toBe("3:00 PM");
+      expect(item.allDay).toBe(false);
+    }
+  });
+
   test("no item carries a null-ish location or a relative url", () => {
     const feed = buildEventsFeed(
       { sessions: [session()] },

@@ -10,6 +10,12 @@ import {
 } from "./fixtures/stripe-sessions";
 
 setWebhookTestEnv();
+// The Pickl Park season roster is a sanctioned NEW egress destination for
+// child fields (hostile-review pass 2026-08-25): same Notion+Resend-only path
+// as the fall roster, different DB. Set its env so the kind=picklpark branch
+// below actually writes — an unset env would fail-soft and prove nothing.
+const TEST_PICKLPARK_DB = "db-picklpark-test";
+process.env.NOTION_PICKLPARK_REGS_DB_ID = TEST_PICKLPARK_DB;
 
 import { POST } from "../src/app/api/stripe/webhook/route";
 
@@ -94,6 +100,54 @@ test.describe("child PII egress (registration path)", () => {
     const text = JSON.stringify(await res.json());
     expect(text).not.toContain(CHILD_NAME);
     expect(text).not.toContain(CHILD_YEAR);
+  });
+
+  test("picklpark season path: child fields reach only Notion + Resend, roster row lands in the Pickl Park DB", async () => {
+    stub
+      .on(`databases/${TEST_PICKLPARK_DB}/query`, { results: [] })
+      .on("api.notion.com/v1/pages", { id: "notion-page-created" })
+      .on("api.notion.com", { results: [] })
+      .on("api.resend.com", { id: "email_test" })
+      .install();
+
+    const payload = checkoutEvent(
+      dropInSession({
+        id: "cs_egress_picklpark",
+        metadata: {
+          // kind=picklpark routes to the Pickl Park roster branch; the drop-in
+          // session_id key must not be read there.
+          kind: "picklpark",
+          group: "Green",
+          group_label: "Green Ball",
+          group_time: "1:00–2:00 PM",
+          season_title: "Next Gen Pickl Park Saturday Season",
+          season_label: "October 3 – November 7, 2026",
+          venue: "The Pickl Park, 355 Ballenger Center Dr, Frederick, MD 21703",
+          parent_email: "parent@example.com",
+          emergency_name: "Emergency Person",
+          emergency_phone: "3015550143",
+          allergies: "",
+          child_first_name: CHILD_NAME,
+          child_birth_year: CHILD_YEAR,
+        },
+      }),
+    );
+    await POST(webhookRequest(payload)).catch(() => undefined);
+
+    expect(stub.calls.length).toBeGreaterThan(0);
+    for (const call of stub.calls) {
+      const host = new URL(call.url).host;
+      expect(ALLOWED_HOSTS, `unexpected egress to ${call.url}`).toContain(host);
+    }
+
+    // The Pickl Park roster (the sanctioned destination) received the child…
+    const creates = stub.callsTo("/v1/pages");
+    expect(creates.length).toBeGreaterThanOrEqual(1);
+    const rosterCreate = creates.find((c) =>
+      c.body?.includes(TEST_PICKLPARK_DB),
+    );
+    expect(rosterCreate, "roster create must target the Pickl Park DB").toBeTruthy();
+    expect(rosterCreate?.body).toContain(CHILD_NAME);
   });
 
   test("open-brain ingest is not reached when its env is unset (no shadow egress)", async () => {

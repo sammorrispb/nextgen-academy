@@ -24,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/montgomery-village-youth-pickleball`, lastModified, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/schedule`, lastModified, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/fall`, lastModified, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${base}/picklpark`, lastModified, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/camp`, lastModified, changeFrequency: "weekly", priority: 0.8 },
     ...CAMPS.map((camp) => ({
       url: `${base}/camp/${camp.slug}`,
