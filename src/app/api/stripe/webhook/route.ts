@@ -33,6 +33,16 @@ import {
 } from "@/lib/notion-fall-registrations";
 import { buildFallSeasonConfirmationEmail } from "@/lib/email/fall-season-confirmation";
 import { FALL_RAIN_DATES, FALL_SUNDAYS } from "@/data/fall-2026";
+import { cancelPicklParkByPaymentIntent } from "@/lib/cancel-picklpark";
+import {
+  createPicklParkRegistrationResult,
+  findPicklParkRegByCheckoutId,
+} from "@/lib/notion-picklpark-registrations";
+import { buildPicklParkSeasonConfirmationEmail } from "@/lib/email/picklpark-season-confirmation";
+import {
+  PICKLPARK_MAKEUP_DATES,
+  PICKLPARK_SATURDAYS,
+} from "@/data/picklpark-2026";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import { findCampBySlug } from "@/data/camps";
@@ -344,6 +354,14 @@ export async function POST(req: NextRequest) {
   // the critical path here.
   if (metaString(session.metadata ?? {}, "kind") === "fall") {
     return handleFallCheckout(session);
+  }
+
+  // Pickl Park Saturday season registrations carry kind=picklpark and follow
+  // the fall pattern exactly: a dedicated roster DB that doubles as the
+  // idempotency key, whose Confirmed count gates /api/checkout-picklpark's
+  // 8-seat cap — so the row create is the critical path here too.
+  if (metaString(session.metadata ?? {}, "kind") === "picklpark") {
+    return handlePicklParkCheckout(session);
   }
 
   const m = session.metadata ?? {};
@@ -1046,6 +1064,156 @@ async function handleFallCheckout(session: Stripe.Checkout.Session) {
   return NextResponse.json({ received: true, fall: true, rosterFailed });
 }
 
+async function emailPicklParkAdmin(
+  session: Stripe.Checkout.Session,
+  rosterFailed: boolean,
+) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const birthYear = Number(metaString(m, "child_birth_year")) || 0;
+  const age = birthYear ? `${new Date().getFullYear() - birthYear}` : "?";
+
+  const subject = `New PICKL PARK SEASON reg: ${metaString(m, "child_first_name")} — ${metaString(m, "group_label")}`;
+  const lines = [
+    `Season: ${metaString(m, "season_title")} — ${metaString(m, "season_label")}`,
+    `Group: ${metaString(m, "group_label")} (${metaString(m, "group_time")})`,
+    "",
+    `Parent: ${metaString(m, "parent_name")}`,
+    `Email: ${payerEmail(session) || metaString(m, "parent_email")}`,
+    `Phone: ${metaString(m, "parent_phone")}`,
+    `Player: ${metaString(m, "child_first_name")} (age ${age})`,
+    `Emergency: ${metaString(m, "emergency_name")} · ${metaString(m, "emergency_phone")}`,
+    `Allergies/medical: ${metaString(m, "allergies") || "none listed"}`,
+    "",
+    `Paid: $${amount}`,
+    `Stripe: ${session.id}`,
+    ...(rosterFailed
+      ? [
+          "",
+          "⚠️ ROSTER WRITE FAILED (permanent) — this registration is NOT in the Pickl Park Registrations DB. Backfill the row by hand or the seat count undersells the cap.",
+        ]
+      : []),
+  ];
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_NOTIFY,
+    subject,
+    text: lines.join("\n"),
+  });
+  if (error)
+    console.error("[stripe-webhook] picklpark admin email rejected", error);
+}
+
+async function emailPicklParkParent(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = payerEmail(session);
+  if (!apiKey) return;
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
+
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const { subject, text } = buildPicklParkSeasonConfirmationEmail({
+    parentFirst: metaString(m, "parent_name").split(/\s+/)[0] || "there",
+    childFirst: metaString(m, "child_first_name") || "your player",
+    groupLabel: metaString(m, "group_label") || "your group",
+    timeLabel: metaString(m, "group_time"),
+    amountUsd: ((session.amount_total ?? 0) / 100).toFixed(2),
+    venue: metaString(m, "venue"),
+    saturdays: PICKLPARK_SATURDAYS,
+    makeupDates: PICKLPARK_MAKEUP_DATES,
+  });
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    bcc: ADMIN_EMAIL,
+    replyTo: REPLY_TO,
+    subject,
+    text,
+  });
+  if (error)
+    console.error("[stripe-webhook] picklpark parent email rejected", error);
+}
+
+async function handlePicklParkCheckout(session: Stripe.Checkout.Session) {
+  const m = session.metadata ?? {};
+
+  // The roster row IS the idempotency key — a redelivered event no-ops here.
+  if (await findPicklParkRegByCheckoutId(session.id)) {
+    return NextResponse.json({ received: true, idempotent: true });
+  }
+
+  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
+  const created = await createPicklParkRegistrationResult({
+    parentName: metaString(m, "parent_name"),
+    parentEmail,
+    parentPhone: metaString(m, "parent_phone"),
+    childFirstName: metaString(m, "child_first_name"),
+    childBirthYear: Number(metaString(m, "child_birth_year")) || 0,
+    group: metaString(m, "group"),
+    amountPaidUsd: (session.amount_total ?? 0) / 100,
+    stripeCheckoutSessionId: session.id,
+    stripePaymentIntentId:
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : (session.payment_intent?.id ?? null),
+    smsConsent: metaString(m, "sms_consent") === "true",
+    smsConsentText: metaString(m, "sms_consent_text"),
+    emergencyName: metaString(m, "emergency_name"),
+    emergencyPhone: metaString(m, "emergency_phone"),
+    allergies: metaString(m, "allergies"),
+  });
+
+  if (created === "transient") {
+    // 500 → Stripe redelivers; the idempotency check makes the retry safe.
+    return NextResponse.json(
+      { error: "picklpark roster write failed (transient)" },
+      { status: 500 },
+    );
+  }
+  // "permanent": same posture as fall — the family keeps their seat; a
+  // mis-schema'd Notion DB at launch must not claw back a real registration.
+  // The admin email flags the missing row for a hand backfill.
+  const rosterFailed = created === "permanent";
+
+  after(async () => {
+    await Promise.allSettled([
+      emailPicklParkAdmin(session, rosterFailed),
+      emailPicklParkParent(session),
+      syncPlayerFromDropIn({
+        parentName: metaString(m, "parent_name"),
+        parentEmail,
+        parentPhone: metaString(m, "parent_phone"),
+        childFirstName: metaString(m, "child_first_name"),
+        childBirthYear: Number(metaString(m, "child_birth_year")) || 0,
+        sessionDate: PICKLPARK_SATURDAYS[0],
+        location: metaString(m, "venue"),
+      }),
+      ingestToOpenBrain({
+        business: "nga",
+        source: "nga_picklpark_registration",
+        name: metaString(m, "parent_name"),
+        email: parentEmail || undefined,
+        phone: metaString(m, "parent_phone") || undefined,
+        interest: `${metaString(m, "season_title")} (${metaString(m, "group_label")})`,
+        metadata: {
+          season_label: metaString(m, "season_label"),
+          group: metaString(m, "group"),
+          child_first_name: metaString(m, "child_first_name"),
+          child_birth_year: Number(metaString(m, "child_birth_year")) || 0,
+          amount_paid_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
+          stripe_session: session.id,
+        },
+      }),
+    ]);
+  });
+
+  return NextResponse.json({ received: true, picklpark: true, rosterFailed });
+}
+
 async function handleChargeRefunded(charge: Stripe.Charge) {
   const piId =
     typeof charge.payment_intent === "string"
@@ -1078,6 +1246,28 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
     });
     if (fall.ok) {
       return NextResponse.json({ received: true, refunded: true, fall: true, ...fall });
+    }
+
+    // Not fall either. The Pickl Park season keeps its own roster (kind=
+    // picklpark) with the same Confirmed-row-holds-a-seat semantics, so the
+    // same reconcile applies. Only reached when both prior lookups miss, so
+    // drop-in and fall behavior are unchanged. A partial_refund verdict from
+    // the fall leg already paged Sam — don't re-run the search past a roster
+    // that actually matched the PI.
+    if (fall.reason === "not_found") {
+      const picklpark = await cancelPicklParkByPaymentIntent(piId, {
+        fullyRefunded: charge.refunded === true,
+        amountRefundedUsd: (charge.amount_refunded ?? 0) / 100,
+      });
+      if (picklpark.ok) {
+        return NextResponse.json({
+          received: true,
+          refunded: true,
+          picklpark: true,
+          ...picklpark,
+        });
+      }
+      return NextResponse.json({ received: true, skipped: picklpark.reason });
     }
     return NextResponse.json({ received: true, skipped: fall.reason });
   }

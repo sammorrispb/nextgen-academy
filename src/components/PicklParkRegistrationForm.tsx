@@ -3,32 +3,31 @@
 import { useState } from "react";
 import InlineWaiverStep from "@/components/InlineWaiverStep";
 import {
-  FALL_SEASON_GROUPS,
-  FALL_SEASON_SPOTS_PER_GROUP,
-  type FallSeasonGroup,
-} from "@/data/fall-season-2026";
+  PICKLPARK_SEASON_GROUPS,
+  PICKLPARK_SEASON_SPOTS_PER_GROUP,
+  type PicklParkSeasonGroup,
+} from "@/data/picklpark-season-2026";
 import {
-  validateFallRegistration,
-  type FallRegistrationData,
-  type FallRegistrationErrors,
-} from "@/lib/validate-fall-registration";
+  validatePicklParkRegistration,
+  type PicklParkRegistrationData,
+  type PicklParkRegistrationErrors,
+} from "@/lib/validate-picklpark-registration";
 import { isWaiverRequired } from "@/lib/waiver-required";
 
-// Season REGISTRATION form — the full-pay checkout surface that replaced the
-// FallInterestForm survey once the season's terms were set. Structural mirror
-// of LeagueSeasonForm: same field set + a11y patterns + Stripe-redirect
-// handleSubmit. Posts to /api/checkout-fall, which is ENV-GATED — until
-// STRIPE_FALL_SEASON_PRICE_ID is set it returns 503 ("registration isn't open
-// yet"), surfaced here as a calm message rather than an error.
+// Pickl Park Saturday season registration form — structural mirror of
+// FallRegistrationForm (same field set + a11y patterns + Stripe-redirect
+// handleSubmit). Posts to /api/checkout-picklpark, which is ENV-GATED — until
+// STRIPE_PICKLPARK_SEASON_PRICE_ID is set it returns 503 ("registration isn't
+// open yet"), surfaced here as a calm message rather than an error.
 
 type FormStatus = "idle" | "submitting" | "redirecting" | "error" | "closed";
 
-interface FallRegistrationFormProps {
+interface PicklParkRegistrationFormProps {
   /** Confirmed-seat count per group; null = unknown (count hidden). */
-  spotsTaken: Partial<Record<FallSeasonGroup, number | null>>;
+  spotsTaken: Partial<Record<PicklParkSeasonGroup, number | null>>;
 }
 
-function emptyForm(): FallRegistrationData {
+function emptyForm(): PicklParkRegistrationData {
   return {
     group: "",
     parentName: "",
@@ -43,18 +42,18 @@ function emptyForm(): FallRegistrationData {
   };
 }
 
-export default function FallRegistrationForm({
+export default function PicklParkRegistrationForm({
   spotsTaken,
-}: FallRegistrationFormProps) {
-  const [form, setForm] = useState<FallRegistrationData>(emptyForm);
-  const [errors, setErrors] = useState<FallRegistrationErrors>({});
+}: PicklParkRegistrationFormProps) {
+  const [form, setForm] = useState<PicklParkRegistrationData>(emptyForm);
+  const [errors, setErrors] = useState<PicklParkRegistrationErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
   const [waiverNeeded, setWaiverNeeded] = useState(false);
 
-  function update<K extends keyof FallRegistrationData>(
+  function update<K extends keyof PicklParkRegistrationData>(
     field: K,
-    value: FallRegistrationData[K],
+    value: PicklParkRegistrationData[K],
   ) {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -69,7 +68,7 @@ export default function FallRegistrationForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    const allErrors = validateFallRegistration(form);
+    const allErrors = validatePicklParkRegistration(form);
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
       const first = Object.keys(allErrors)[0];
@@ -86,7 +85,7 @@ export default function FallRegistrationForm({
     setServerError("");
     setStatus("submitting");
     try {
-      const res = await fetch("/api/checkout-fall", {
+      const res = await fetch("/api/checkout-picklpark", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -178,14 +177,14 @@ export default function FallRegistrationForm({
         <fieldset>
           <legend className={labelClass}>Your player&rsquo;s color group</legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="group">
-            {FALL_SEASON_GROUPS.map((option) => {
+            {PICKLPARK_SEASON_GROUPS.map((option) => {
               const taken = spotsTaken[option.group];
               const soldOut =
                 typeof taken === "number" &&
-                taken >= FALL_SEASON_SPOTS_PER_GROUP;
+                taken >= PICKLPARK_SEASON_SPOTS_PER_GROUP;
               const spotsLeft =
                 typeof taken === "number"
-                  ? Math.max(0, FALL_SEASON_SPOTS_PER_GROUP - taken)
+                  ? Math.max(0, PICKLPARK_SEASON_SPOTS_PER_GROUP - taken)
                   : null;
               const selected = form.group === option.group;
               return (
@@ -213,11 +212,11 @@ export default function FallRegistrationForm({
                     </span>
                   </span>
                   <span className="text-sm text-ngpa-white/70 pl-8">
-                    Sundays {option.timeLabel}
+                    Saturdays {option.timeLabel}
                     {soldOut
                       ? " · Sold out"
                       : spotsLeft !== null
-                        ? ` · ${spotsLeft} of ${FALL_SEASON_SPOTS_PER_GROUP} spots left`
+                        ? ` · ${spotsLeft} of ${PICKLPARK_SEASON_SPOTS_PER_GROUP} spots left`
                         : ""}
                   </span>
                 </label>
@@ -392,17 +391,17 @@ export default function FallRegistrationForm({
             liability waiver and photo release
           </a>{" "}
           covers your player for every NGA program. If you haven&rsquo;t signed
-          yet, we&rsquo;ll ask you to before checkout. Rain dates are built in
-          — if a Sunday washes out, we make it up.
+          yet, we&rsquo;ll ask you to before checkout. A makeup date is built in
+          — if a Saturday can&rsquo;t run, we make it up.
         </p>
 
-        {/* Refund terms, stated where the money is taken — fall-refund-policy.ts
-            is the code that enforces exactly this. */}
+        {/* Refund terms, stated where the money is taken —
+            picklpark-refund-policy.ts is the code that enforces exactly this. */}
         <p className="text-sm text-ngpa-white/70">
           Registering holds your player&rsquo;s spot for the whole season, so
           it&rsquo;s <strong className="text-ngpa-white">non-refundable</strong>{" "}
           if you withdraw. If we have to cancel sessions we can&rsquo;t make up
-          on a rain date, we refund the ones we didn&rsquo;t run.
+          on the makeup date, we refund the ones we didn&rsquo;t run.
         </p>
 
         {/* SMS consent */}

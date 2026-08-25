@@ -41,8 +41,15 @@ import {
   FALL_END_TIME,
   FALL_VENUE,
 } from "@/data/fall-2026";
+import {
+  PICKLPARK_MAKEUP_DATES,
+  PICKLPARK_SATURDAYS,
+  PICKLPARK_START_TIME,
+  PICKLPARK_END_TIME,
+  PICKLPARK_VENUE,
+} from "@/data/picklpark-2026";
 
-export type EventFeedSource = "session" | "camp" | "mvf" | "fall";
+export type EventFeedSource = "session" | "camp" | "mvf" | "fall" | "picklpark";
 
 export interface EventFeedItem {
   source: EventFeedSource;
@@ -305,6 +312,40 @@ export function buildFallEvents(origin: string): EventFeedItem[] {
 }
 
 /**
+ * Pickl Park Fall 2026 Saturday season → one confirmed item per Saturday
+ * (Green 1:00–2:00, Yellow 2:00–3:00 back-to-back = one 1–3 PM block a mirror
+ * can hold), plus a flagged hold on the makeup date. The venue is a public
+ * commercial facility, so the full address ships — same posture as FALL_VENUE.
+ */
+export function buildPicklParkEvents(origin: string): EventFeedItem[] {
+  const shared = (date: string) => ({
+    source: "picklpark" as const,
+    key: `nga-pp:saturday:${date}`,
+    date,
+    startTime: PICKLPARK_START_TIME,
+    endTime: PICKLPARK_END_TIME,
+    allDay: false,
+    location: PICKLPARK_VENUE,
+    url: `${origin}/picklpark`,
+  });
+
+  return [
+    ...PICKLPARK_SATURDAYS.map((date) => ({
+      ...shared(date),
+      title: "NGA Pickl Park Season — Green & Yellow",
+      tentative: false,
+      status: "Open" as const,
+    })),
+    ...PICKLPARK_MAKEUP_DATES.map((date) => ({
+      ...shared(date),
+      title: "[TENTATIVE] NGA Pickl Park Season — makeup date hold",
+      tentative: true,
+      status: "Tentative" as const,
+    })),
+  ];
+}
+
+/**
  * The whole feed, date-ascending. Pure: takes already-fetched sessions so it's
  * unit-testable without Notion.
  */
@@ -319,5 +360,6 @@ export function buildEventsFeed(
     ...buildCampEvents(CAMPS, origin),
     ...buildMvfEvents(MVF_PROGRAMS, origin),
     ...buildFallEvents(origin),
+    ...buildPicklParkEvents(origin),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
 }

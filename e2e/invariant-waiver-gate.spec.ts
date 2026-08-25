@@ -122,6 +122,7 @@ test.describe("all paid checkout routes — gate precedes Stripe (source invaria
     "checkout-league/route.ts",
     "checkout-cluster/route.ts",
     "checkout-fall/route.ts",
+    "checkout-picklpark/route.ts",
   ];
 
   for (const rel of ROUTES) {

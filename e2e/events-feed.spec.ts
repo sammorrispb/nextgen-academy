@@ -11,6 +11,7 @@ import {
 } from "../src/lib/events-feed";
 import { MVF_PROGRAMS } from "../src/data/mvf";
 import { FALL_RAIN_DATES, FALL_SUNDAYS } from "../src/data/fall-2026";
+import { PICKLPARK_MAKEUP_DATES } from "../src/data/picklpark-2026";
 
 const ORIGIN = "https://nextgenpbacademy.com";
 
@@ -266,11 +267,15 @@ test.describe("events feed — whole payload", () => {
     }
   });
 
-  test("tentative items are only the fall rain-date holds", () => {
+  test("tentative items are only the fall rain-date and picklpark makeup holds", () => {
     const feed = buildEventsFeed({ sessions: [session()] }, ORIGIN);
     const rain = new Set<string>(FALL_RAIN_DATES);
+    const makeup = new Set<string>(PICKLPARK_MAKEUP_DATES);
     for (const item of feed) {
-      expect(item.tentative).toBe(item.source === "fall" && rain.has(item.date));
+      expect(item.tentative).toBe(
+        (item.source === "fall" && rain.has(item.date)) ||
+          (item.source === "picklpark" && makeup.has(item.date)),
+      );
     }
   });
 });
