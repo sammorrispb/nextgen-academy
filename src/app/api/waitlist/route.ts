@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EMAIL_RE } from "@/lib/notion-utils";
+import { EMAIL_RE, createNotionPageSourceFailSoft } from "@/lib/notion-utils";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { site } from "@/data/site";
@@ -9,9 +9,6 @@ import { attributedSource } from "@/lib/attribution";
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
-
-const NOTION_API = "https://api.notion.com/v1";
-const NOTION_VERSION = "2022-06-28";
 
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
@@ -84,6 +81,7 @@ function validate(body: WaitlistBody): Record<string, string> {
 async function createWaitlistEntry(body: Required<WaitlistBody>): Promise<{
   id?: string;
   error?: string;
+  droppedSource?: boolean;
 }> {
   const notionKey = process.env.NOTION_API_KEY;
   const waitlistDb = process.env.NOTION_WAITLIST_DB_ID;
@@ -107,25 +105,23 @@ async function createWaitlistEntry(body: Required<WaitlistBody>): Promise<{
   if (email) properties["Parent Email"] = { email };
   if (phone) properties["Parent Phone"] = { phone_number: phone };
 
-  const res = await fetch(`${NOTION_API}/pages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": NOTION_VERSION,
-    },
-    body: JSON.stringify({
-      parent: { database_id: waitlistDb },
-      properties,
-    }),
+  // Source is best-effort attribution; the waitlist row is not. If Notion
+  // rejects the create because of Source (the 2026-08-25 miss: this DB never
+  // gained the property, so a real signup emailed fine and never landed),
+  // retry without it rather than lose the family.
+  const { res, bodyText, droppedSource } = await createNotionPageSourceFailSoft({
+    notionKey,
+    databaseId: waitlistDb,
+    properties,
+    logPrefix: "[waitlist]",
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    const text = bodyText || (await res.text().catch(() => ""));
     return { error: `Notion waitlist create failed (${res.status}): ${text}` };
   }
   const data = await res.json();
-  return { id: data.id };
+  return { id: data.id, droppedSource };
 }
 
 export async function POST(request: NextRequest) {
@@ -168,7 +164,13 @@ export async function POST(request: NextRequest) {
   if (process.env.NOTION_API_KEY && process.env.NOTION_WAITLIST_DB_ID) {
     try {
       const result = await createWaitlistEntry(required);
-      notionStatus = result.id ? "created" : `failed: ${result.error}`;
+      // Say so when attribution was dropped — a silent "created" would hide
+      // the schema drift that the retry papered over.
+      notionStatus = result.id
+        ? result.droppedSource
+          ? "created (without Source — add a Source property to the waitlist DB)"
+          : "created"
+        : `failed: ${result.error}`;
       if (result.error) console.error("[waitlist]", result.error);
     } catch (err) {
       notionStatus = "error";

@@ -37,3 +37,92 @@ export const PLAYER_CRM_DB_ID_FALLBACK = "1e5e34c258384c6cb5f3e846543ecfc7";
 export function playerCrmDbId(): string {
   return process.env.NOTION_PLAYER_CRM_DB_ID || PLAYER_CRM_DB_ID_FALLBACK;
 }
+
+// ---------------------------------------------------------------------------
+// Page-create fail-soft (shared with notion-dropins, waitlist)
+// ---------------------------------------------------------------------------
+
+export const NOTION_API = "https://api.notion.com/v1";
+export const NOTION_VERSION = "2022-06-28";
+
+/**
+ * Map a failed Notion HTTP status to a retry policy. 429 (rate limit) and 5xx
+ * (server error) are worth retrying; every other 4xx is deterministic — the
+ * same request will fail identically, so retrying only wastes attempts.
+ *
+ * Lives here (not in notion-dropins) so the fail-soft below can use it without
+ * a cycle; notion-dropins re-exports it, which is where existing callers and
+ * `e2e/notion-dropins.spec.ts` still import it from.
+ */
+export function classifyNotionFailure(status: number): "transient" | "permanent" {
+  return status === 429 || status >= 500 ? "transient" : "permanent";
+}
+
+/**
+ * POST a page create, failing soft on the optional `Source` attribution column.
+ *
+ * A deterministic rejection that names Source — the property doesn't exist on
+ * that database, or its type drifted — must never cost us the row itself. This
+ * has now bitten twice:
+ *   - 2026-06-13 (the Landon incident): #174 shipped a Source write to the
+ *     drop-ins DB before the property existed, 400ing every create and leaving
+ *     paid parents unregistered.
+ *   - 2026-08-25: the same write on the waitlist DB, whose schema never gained
+ *     a Source property — the signup emailed fine and vanished from Notion.
+ * So the retry is shared rather than re-inlined per route: attribution is
+ * best-effort, the row it decorates is not.
+ *
+ * Returns the LAST response, the first failure's body (already consumed, so
+ * callers log this instead of re-reading `res`), and whether Source was
+ * dropped — surface that flag, it is the only signal that the schema drifted.
+ */
+export async function createNotionPageSourceFailSoft(args: {
+  notionKey: string;
+  databaseId: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  properties: Record<string, any>;
+  /** Log tag, e.g. "[waitlist]". */
+  logPrefix: string;
+}): Promise<{ res: Response; bodyText: string; droppedSource: boolean }> {
+  const { notionKey, databaseId, properties, logPrefix } = args;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const postPage = (props: Record<string, any>) =>
+    fetch(`${NOTION_API}/pages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${notionKey}`,
+        "Content-Type": "application/json",
+        "Notion-Version": NOTION_VERSION,
+      },
+      body: JSON.stringify({
+        parent: { database_id: databaseId },
+        properties: props,
+      }),
+    });
+
+  const res = await postPage(properties);
+  if (
+    res.ok ||
+    !("Source" in properties) ||
+    classifyNotionFailure(res.status) === "transient"
+  ) {
+    return { res, bodyText: "", droppedSource: false };
+  }
+
+  const bodyText = await res.text().catch(() => "");
+  // Only a Source-named rejection is retried — anything else (a bad Status
+  // option, a wrong title property) must stay visible, not be masked.
+  if (!bodyText.includes("Source")) {
+    return { res, bodyText, droppedSource: false };
+  }
+
+  console.error(
+    `${logPrefix} Notion create rejected on Source — retrying without attribution so the row still lands`,
+    res.status,
+    bodyText,
+  );
+  const withoutSource = { ...properties };
+  delete withoutSource.Source;
+  return { res: await postPage(withoutSource), bodyText, droppedSource: true };
+}
