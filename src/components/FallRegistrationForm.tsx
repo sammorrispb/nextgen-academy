@@ -225,6 +225,18 @@ export default function FallRegistrationForm({
             })}
           </div>
           {errors.group && <p className={errorClass}>{errors.group}</p>}
+          <p className="text-xs text-ngpa-white/55 mt-2">
+            Not sure which color?{" "}
+            <a
+              href="/levels"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+            >
+              See the levels guide
+            </a>
+            .
+          </p>
         </fieldset>
 
         {/* Parent */}
@@ -382,6 +394,15 @@ export default function FallRegistrationForm({
           covers your player for every NGA program. If you haven&rsquo;t signed
           yet, we&rsquo;ll ask you to before checkout. Rain dates are built in
           — if a Sunday washes out, we make it up.
+        </p>
+
+        {/* Refund terms, stated where the money is taken — fall-refund-policy.ts
+            is the code that enforces exactly this. */}
+        <p className="text-sm text-ngpa-white/70">
+          Registering holds your player&rsquo;s spot for the whole season, so
+          it&rsquo;s <strong className="text-ngpa-white">non-refundable</strong>{" "}
+          if you withdraw. If we have to cancel sessions we can&rsquo;t make up
+          on a rain date, we refund the ones we didn&rsquo;t run.
         </p>
 
         {/* SMS consent */}

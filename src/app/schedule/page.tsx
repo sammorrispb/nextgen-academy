@@ -6,6 +6,7 @@ import { seasons } from "@/data/schedule";
 import SectionHeading from "@/components/SectionHeading";
 import CTABanner from "@/components/CTABanner";
 import CrewPathway from "@/components/CrewPathway";
+import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import RegistrationNotice from "@/components/RegistrationNotice";
 import SessionCard from "@/components/SessionCard";
 import SessionGroupCard from "@/components/SessionGroupCard";
@@ -135,16 +136,16 @@ export default async function SchedulePage() {
             Schedule &amp; Registration
           </p>
           <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight max-w-3xl">
-            Drop-in sessions on rotating Montgomery County courts.
+            Youth pickleball across Montgomery County.
           </h2>
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
-            $20 per 1-hour drop-in slot. Each pickleball court is capped at 4
-            players.
+            Seasons, weekly classes, and free evaluations for kids 6&ndash;16 at
+            every level &mdash; Red, Orange, Green, and Yellow Ball. Every court
+            is capped at 4 players, so nobody stands in line.
           </p>
           <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
-            Sessions are outdoors &mdash; if we cancel for weather, you get an
-            automatic full refund. Otherwise registrations are non-refundable,
-            so please register only when you&rsquo;re confident you can attend.
+            Not sure where your player fits? Start with a free evaluation
+            &mdash; we&rsquo;ll place them on the right court and go from there.
           </p>
 
           <div className="mt-7 inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-teal/30">
@@ -159,34 +160,8 @@ export default async function SchedulePage() {
       </section>
 
       {/* ─── Sessions ─────────────────────────── */}
-      {/* ─── Summer Camp callout ─────────────── */}
-      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16">
-        <div className="max-w-3xl mx-auto">
-          <Link
-            href="/camp"
-            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-teal/40 bg-ngpa-teal/10 p-5 sm:p-6 hover:border-ngpa-teal transition-colors"
-          >
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal-bright">
-                New · Summer 2026
-              </p>
-              <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                Summer Pickleball Camp in Gaithersburg
-              </p>
-              <p className="text-sm text-ngpa-muted mt-0.5">
-                Two weeks (Jun 29 &amp; Jul 20), ages 8 &amp; up &middot; full &amp;
-                half-day options &middot; small groups.
-              </p>
-            </div>
-            <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-teal text-ngpa-deep font-heading font-bold group-hover:bg-ngpa-teal-bright transition-colors min-h-[48px]">
-              See camp &rarr;
-            </span>
-          </Link>
-        </div>
-      </section>
-
       {/* ─── Fall 2026 season callout ──── */}
-      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-6">
+      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16">
         <div className="max-w-3xl mx-auto">
           <Link
             href="/fall"
@@ -311,6 +286,8 @@ export default async function SchedulePage() {
           <CrewPathway />
         </div>
       </section>
+
+      <CommunityGroupsCard section="schedule_community" />
 
       <CTABanner
         heading="Questions about registration?"

@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * "Camp starts Monday" reminder — the Friday-before-camp email to every
@@ -111,6 +112,7 @@ export function campReminderHtml(input: CampReminderInput): string {
         See you on the court &mdash; better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>
@@ -146,6 +148,8 @@ export function campReminderText(input: CampReminderInput): string {
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 }
 

@@ -120,6 +120,21 @@ export function findCampBySlug(slug: string): Camp | undefined {
   return CAMPS.find((c) => c.slug === slug);
 }
 
+/**
+ * Camps still worth promoting on `todayIso` — the ones that haven't started.
+ *
+ * Deliberately STRICTER than "hasn't ended". Marketing surfaces used to filter
+ * on `endDate >= today`, which kept a camp in the Thursday newsletter on its
+ * own final morning: the Aug 20 2026 issue promoted the Aug 17–20 camp hours
+ * after the last kid went home. A camp mid-week isn't a thing a parent can act
+ * on either — only the Friday makeup morning is left, and that one isn't
+ * bookable. Promote a camp until it begins; after that it's roster work, not
+ * marketing.
+ */
+export function upcomingCamps(todayIso: string, camps: Camp[] = CAMPS): Camp[] {
+  return camps.filter((c) => c.startDate > todayIso);
+}
+
 export function findCampOption(key: string): CampOption | undefined {
   return CAMP_OPTIONS.find((o) => o.key === key);
 }

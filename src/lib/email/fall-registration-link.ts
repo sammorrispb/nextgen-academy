@@ -8,6 +8,7 @@ import {
   FALL_POLL_SPOTS_PER_GROUP,
   FALL_POLL_VENUE,
 } from "@/data/fall-poll-2026";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 /**
  * The "you said IN — here's how to lock the spot" email.
@@ -90,6 +91,7 @@ export function fallRegistrationLinkHtml(
       Registration and payment happen in one go. If the link gives you any trouble,
       just reply to this email and Coach Sam will sort it out by hand.
     </p>
+      ${signatureExtrasHtml()}
 
     <p style="margin:0 0 24px 0;color:${c.muted};font-size:12px;line-height:1.6;">
       Changed your mind? No problem &mdash; reply and let us know, and we&rsquo;ll free the spot up.
@@ -134,5 +136,7 @@ export function fallRegistrationLinkText(
     ``,
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 }

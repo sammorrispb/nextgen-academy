@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface CommitConfirmationInput {
   parentFirst: string;
@@ -49,6 +50,7 @@ export function commitConfirmationHtml(input: CommitConfirmationInput): string {
         Stoked to have you in the crew.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>
@@ -66,6 +68,8 @@ export function commitConfirmationText(input: CommitConfirmationInput): string {
     `Manage your commit: ${input.manageUrl}`,
     "",
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 }
 

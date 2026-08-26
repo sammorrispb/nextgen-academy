@@ -150,6 +150,37 @@ Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src
 Promo codes work at checkout because `/api/checkout/route.ts` already passes `allow_promotion_codes: true` to Stripe Checkout. No `STRIPE_REFERRAL_PRICE_ID` env var is needed — the coupon mints inline. Failure of any step is logged + swallowed so a Notion blip never blocks the user's success page or triggers a Stripe webhook retry storm.
 
 ### Weekly newsletter blocks (per issue)
+**Community WhatsApp invites lead the issue (2026-08-19).** Both groups render as a
+quiet utility card (`whatsappGroupsTopHtml()` in `src/lib/email/signature.ts`) directly
+under the hero, above every content block; the footer keeps only `phoneLineHtml()`.
+It is a MOVE, not an addition — the same two links must never appear twice in one email,
+so `weekly-newsletter.ts` and `newsletter-welcome.ts` are the only recipient-facing
+templates that do NOT compose `signatureExtras*`. This also fixed a real defect: the
+signature block used to be composed INSIDE the conditional "From Coach Sam" lead card,
+so any week without an Approved Notion draft shipped HTML with no WhatsApp link at all
+while the plain-text part had them. Pinned by `e2e/invariant-email-signature.spec.ts`
+(rendered, not grepped) + the invite tests in `e2e/weekly-newsletter.spec.ts`.
+
+**The fall season leads the issue while registration is open (2026-08-20).** The Aug 20
+issue shipped with no fall block at all while `/fall` was live with all 16 seats unsold,
+and it led instead with a camp that had ended that morning. The season block sits above
+even the MVF tournament card and owns the subject line (`fallHasOpenSeats`) until both
+groups fill — it is the one thing in the email a family can only buy once. It renders
+from `fall-2026.ts` + `fall-season-2026.ts` (so it can't fall off the way an Approved
+Notion row can), gated on the same `NEXT_PUBLIC_FALL_REGISTRATION_OPEN` flag `/fall`
+reads plus the season's own last Sunday, so it retires itself. It quotes the real $225
+(a live Stripe product — the no-quoting rule targets prices that don't exist yet). Seat
+counts come from the live roster and fail SOFT: a null from `countFallRegistrations`
+prints the group size, never a fabricated count.
+
+**Two stale-content rules the same issue taught us.** (1) Camps come from
+`upcomingCamps(todayIso)` — `startDate > today`, NOT `endDate >= today`, which kept a
+camp in the issue on its own final morning. (2) The plan-ahead block (`laterSessions`,
+formerly `summerSessions`) carries **season-neutral copy and no month filter**. "Summer
+sessions are live" fed by a June/July/August filter pitched a summer promo in late
+August and would have hidden every September date outright. A season word in a template
+that ships every week is a bug with a delay on it.
+
 On top of the open sessions, the Thursday cron (`/api/cron/weekly-newsletter`) now renders four new blocks (`src/lib/email/weekly-newsletter.ts`):
 - **Forming crews now** — up to 5 Open polls from `fetchOpenPolls()`, each with day/time/location/level + Yes-vote progress label, linking to `/poll/<slug>`. Hidden when none.
 - **Crew interest CTA** — always renders; copy adapts to whether polls are present ("None of these fit?" vs "Want a regular crew?").
@@ -174,6 +205,8 @@ One-time (re-runnable) outreach inviting existing eval leads to opt into the new
 The post-camp thank-you to every family whose camper just finished a camp week: a Google-review ask (the one primary CTA, link from `NGA_GOOGLE_REVIEW_URL`), a copy-paste share blurb for neighborhood listservs / Facebook / WhatsApp groups, and a register link for the next camp on the calendar. `?secret=$NGA_ADMIN_SECRET`-gated, manual (no cron). Engine in `src/lib/camp-followup-run.ts` (route/lib split like camp-reminder): reads paid registrations for the concluded camp straight from Stripe (`collectPaidCampSessions`), dedupes to ONE email per parent (multi-kid families get "Ava & Max"), sends via Resend (BCC admin, replyTo `nextgenacademypb@gmail.com`) + a counts-only admin QA copy. Template `src/lib/email/camp-followup.ts`. Body (JSON, all optional): `slug` (defaults to the latest concluded camp per ET today), `dryRun`, `only` (re-run failures), `reviewUrl` (overrides the env var). **No sent-flag column — a repeated live run re-sends; always `{"dryRun": true}` first.** Live sends refuse until `NGA_GOOGLE_REVIEW_URL` (or `reviewUrl`) is set, so a broken review button never ships. The share blurb is pasted publicly, so it carries only the next camp's `publicArea` — never `exactLocation` (pinned by `e2e/camp-followup.spec.ts` + `e2e/invariant-camp-followup-egress.spec.ts`; child first names egress to Resend only, addressed to the parent).
 
 ### Fall 2026 season survey (`/fall` + `POST /api/fall-interest` + `POST /api/fall-survey`)
+**SUPERSEDED IN PART (PR #280): `/fall` is now the season REGISTRATION page, not the demand-sizing survey.** A real Stripe price backs `/api/checkout-fall`, so on that surface the noindex posture and the no-price rule are both lifted and $225 (`FALL_SEASON_PRICE_USD` in `src/data/fall-season-2026.ts`) is quoted — the no-quoting rule targets prices that don't exist yet, and this one does. `FallInterestForm` retired with the conversion. The rest of this section (season config, the derived seat math, the `/api/fall-survey` broadcast) still stands; read "the form asks what a season is worth" below as history.
+
 **Season shape decided 2026-08-14 (Sam):** **Sundays only at Earle B. Wood Middle School, Sept 20 – Oct 25 (6 Sundays) — Green Ball 1:00–2:30 PM, Yellow Ball 2:30–4:00 PM, rain dates Nov 1 + Nov 8.** This supersedes the Saturday+Sunday 5–7 PM concept the survey originally sized. The **Link & Dink adult round robin** stays on the survey as its own track (slot TBD; parents encouraged to join). **8 slots per group, first come first serve, full-season commitment paid up front, with a sub list for week-to-week.**
 
 - **Season config is `src/data/fall-2026.ts`** — venue, the 6 Sunday ISO dates + `FALL_RAIN_DATES` (written out, never computed: date arithmetic on a UTC build server is the documented footgun), both program definitions, `FALL_YOUTH_BLOCKS` (the Green/Yellow Sunday split), `SLOTS_PER_GROUP`, and the price bands. The page, the form, the confirmation email, the broadcast, and the events feed all render from it; editing the season is a one-file change.
@@ -305,6 +338,7 @@ Always route outbound links through these — they handle UTM/`ref` stamping con
 - **All program dates use `<time datetime="YYYY-MM-DD">`** and prices use `itemprop="price" content="N"` (numeric, no `$`). This is for AI/scheduler parsing — see BRAND_GUIDELINES "AI-PARSING OPTIMIZATION".
 - **Yellow Ball is invite-only.** No public registration link, no `mailto:` CTAs — route all interest to `/yellowball/inquiry`. `verify-funnel.mjs` enforces this.
 - **No third-party pixels.** GA4, Meta Pixel, `@vercel/analytics`, `gtag`, `fbq` are explicitly banned — `verify-funnel.mjs` greps for them.
+- **A lead-capture row never dies for its attribution.** Every funnel write stamps a `Source` select from `attributedSource()`, and a Notion DB whose schema lacks that property 400s the WHOLE create — twice now a real family was lost this way (2026-06-13 drop-ins, 2026-08-25 waitlist). Create funnel rows through `createNotionPageSourceFailSoft()` (`src/lib/notion-utils.ts`), which retries once without `Source` and reports that it did; only a Source-named rejection is retried, so a genuinely broken write still surfaces. Adopted by `/api/waitlist` + `notion-dropins`; `/api/{contact,lead,schools-lead}` still POST raw (their DBs do have the property) — move them over when next editing.
 - Don't add comments that describe what code does. Add a comment only when the *why* isn't obvious (e.g. the CR API shape unwrap, the `remindersSent[]` git-as-audit-trail decision).
 
 ## Environment Variables

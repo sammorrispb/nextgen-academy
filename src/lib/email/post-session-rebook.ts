@@ -1,5 +1,5 @@
 import { c, s } from "./brand";
-import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface RebookInput {
   parentFirst: string;
@@ -51,13 +51,13 @@ export function postSessionRebookHtml(input: RebookInput): string {
       If something came up that we should know about &mdash; scheduling, fit, anything &mdash; just reply to this email. We&rsquo;re here to help ${escape(childFirst)} keep climbing.
     </p>
 
-    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         We send this one note after a missed session. If you&rsquo;d rather we skip it, just reply &ldquo;skip&rdquo; and we&rsquo;ll stop.
       </p>
@@ -83,10 +83,11 @@ export function postSessionRebookText(input: RebookInput): string {
     "",
     `If something came up that we should know about — scheduling, fit, anything — just reply to this email. We're here to help ${input.childFirst} keep climbing.`,
     "",
-    whatsappInviteText(),
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `We send this one note after a missed session. If you'd rather we skip it, just reply "skip" and we'll stop.`,
   ].join("\n");

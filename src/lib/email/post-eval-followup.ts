@@ -1,5 +1,6 @@
 import { site } from "@/data/site";
 import { c, s } from "./brand";
+import { signatureExtrasHtml } from "./signature";
 
 /**
  * Post-eval "next steps" email — the coach-to-parent recap after a free
@@ -150,6 +151,7 @@ export function buildPostEvalFollowupHtml(args: PostEvalEmailArgs): string {
       <span style="color: ${c.muted};">Co-Founder &amp; Head Coach, Next Gen Pickleball Academy</span><br/>
       <a href="${site.website}" style="${s.link}">nextgenpbacademy.com</a>
     </p>
+      ${signatureExtrasHtml()}
   </div>
 </div>`;
 }

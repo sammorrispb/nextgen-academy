@@ -1,7 +1,7 @@
 import { c, s } from "./brand";
 import type { Cluster } from "@/data/clusters";
 import type { CrewSessionLine } from "./crew-session-lines";
-import { whatsappInviteHtml, whatsappInviteText } from "./whatsapp-invite";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface CrewInterestWelcomeInput {
   parentFirst: string;
@@ -114,13 +114,13 @@ export function crewInterestWelcomeHtml(input: CrewInterestWelcomeInput): string
       </p>
     </div>
 
-    ${whatsappInviteHtml()}
 
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
         Better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         Reply to this email any time &mdash; that&rsquo;s the fastest way to reach Sam.
       </p>
@@ -188,10 +188,11 @@ export function crewInterestWelcomeText(input: CrewInterestWelcomeInput): string
     "",
     `See open sessions: ${newsletterUrl}`,
     "",
-    whatsappInviteText(),
     "",
     `Better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
     "",
     `Reply to this email any time — that's the fastest way to reach Sam.`,
   ].join("\n");

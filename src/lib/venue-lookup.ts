@@ -1,6 +1,7 @@
 /**
- * Infers a Montgomery County, MD city/area from a free-text Notion
- * `Location` field (e.g. "Sherwood HS Tennis Courts" → "Sandy Spring").
+ * Infers a city/area from a free-text Notion `Location` field (e.g.
+ * "Sherwood HS Tennis Courts" → "Sandy Spring"). Mostly Montgomery County;
+ * Frederick entered the table with The Pickl Park partner venue (2026-08).
  *
  * Used by both UpcomingSessions rendering and per-session Event JSON-LD.
  * Sam can extend the keyword table as new venues come online.
@@ -9,6 +10,7 @@
 const CITY_KEYWORDS: Record<string, string> = {
   // Direct city names
   rockville: "Rockville",
+  frederick: "Frederick",
   "north bethesda": "North Bethesda",
   bethesda: "Bethesda",
   potomac: "Potomac",
@@ -36,6 +38,8 @@ const CITY_KEYWORDS: Record<string, string> = {
   "quince orchard": "Gaithersburg",
   "b-cc": "Bethesda",
   "bethesda-chevy chase": "Bethesda",
+  // Partner venues
+  "pickl park": "Frederick",
 };
 
 export function inferCity(location: string): string | null {

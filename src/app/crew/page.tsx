@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { Metadata } from "next";
 import CrewInterestForm from "@/components/CrewInterestForm";
+import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import JsonLd from "@/components/JsonLd";
 import { site } from "@/data/site";
 
@@ -170,6 +171,11 @@ export default function CrewPage() {
           </p>
         </div>
       </section>
+
+      <CommunityGroupsCard
+        section="crew_community"
+        className="bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10"
+      />
     </>
   );
 }

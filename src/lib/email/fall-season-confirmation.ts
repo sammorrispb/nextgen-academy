@@ -1,3 +1,4 @@
+import { signatureExtrasText } from "./signature";
 /**
  * Fall 2026 season registration confirmation — the parent's "you're in"
  * email. Plain-text only, pure builder (mirrors camp-confirmation.ts) so the
@@ -83,6 +84,8 @@ export function buildFallSeasonConfirmationEmail(
     "",
     `Paid: $${amountUsd} (full season).`,
     "",
+    `That holds ${childFirst}'s spot for all six Sundays, so it's non-refundable if you withdraw. If we ever have to cancel sessions we can't make up on a rain date, we refund the ones we didn't run.`,
+    "",
     `What to bring each week:`,
     `- Refillable water bottle`,
     `- Court shoes (no flat-soled sneakers)`,
@@ -92,6 +95,8 @@ export function buildFallSeasonConfirmationEmail(
     "",
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 
   return { subject, text };

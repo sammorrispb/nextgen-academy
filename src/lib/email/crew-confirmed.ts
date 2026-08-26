@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface CrewConfirmedInput {
   parentFirst: string;
@@ -46,6 +47,7 @@ export function crewConfirmedHtml(input: CrewConfirmedInput): string {
         See you on court.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${signatureExtrasHtml()}
     </div>
   </div>
 </body>
@@ -63,6 +65,8 @@ export function crewConfirmedText(input: CrewConfirmedInput): string {
     `After that first session you'll get a one-tap option to lock in the next 4 weeks — same time, same court, same crew. Skip a week any time.`,
     "",
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    signatureExtrasText(),
   ].join("\n");
 }
 

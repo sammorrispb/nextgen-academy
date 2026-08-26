@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { secretEquals } from "@/lib/secret-compare";
 import { cancelFallRegistration } from "@/lib/cancel-fall";
-import { fallRefundPolicyFor, todayET } from "@/lib/fall-refund-policy";
+import {
+  fallRefundPolicyFor,
+  fallProratedRefundCents,
+  todayET,
+  type FallRefundPolicy,
+  type FallCancelReason,
+} from "@/lib/fall-refund-policy";
 import { findFallRegByPaymentIntent, findFallRegByCheckoutSessionId } from "@/lib/notion-fall-registrations";
 
 export const runtime = "nodejs";
@@ -9,8 +15,14 @@ export const runtime = "nodejs";
 interface CancelFallBody {
   paymentIntentId?: string;
   checkoutSessionId?: string;
-  /** Override the date-based policy. Omit to let the policy decide. */
-  refund?: "full" | "none";
+  /** Override the policy outright. Omit to let the policy decide. */
+  refund?: FallRefundPolicy;
+  /**
+   * Who is cancelling. Defaults to a parent withdrawing. Pass "nga_cancelled"
+   * when NGA can't deliver the sessions — that prorates the undelivered ones
+   * back regardless of the terms the family registered under.
+   */
+  reason?: FallCancelReason;
   /** Preview the decision without refunding or flipping anything. */
   dryRun?: boolean;
 }
@@ -43,17 +55,37 @@ export async function POST(req: NextRequest) {
   }
 
   const today = todayET();
-  const decision = body.refund ?? fallRefundPolicyFor(today);
+
+  // The decision needs the row: the no-refund cutoff keys off WHEN the family
+  // registered, so previewing without the row would show the wrong answer for
+  // exactly the families whose terms differ.
+  const row = paymentIntentId
+    ? await findFallRegByPaymentIntent(paymentIntentId)
+    : await findFallRegByCheckoutSessionId(checkoutSessionId!);
+
+  const decision =
+    body.refund ??
+    fallRefundPolicyFor(today, {
+      registeredOnIso: row?.registeredOnIso || undefined,
+      reason: body.reason,
+    });
 
   const dryRun = body.dryRun === true || req.nextUrl.searchParams.get("dryRun") === "1";
   if (dryRun) {
-    const row = paymentIntentId
-      ? await findFallRegByPaymentIntent(paymentIntentId)
-      : await findFallRegByCheckoutSessionId(checkoutSessionId!);
     return NextResponse.json({
       dryRun: true,
       today,
       decision,
+      reason: body.reason ?? "parent_withdrawal",
+      wouldRefundUsd:
+        decision === "full"
+          ? (row?.amountPaidUsd ?? 0)
+          : decision === "prorated"
+            ? fallProratedRefundCents(
+                today,
+                Math.round((row?.amountPaidUsd ?? 0) * 100),
+              ) / 100
+            : 0,
       found: Boolean(row),
       // No child PII beyond the first name already on the roster row.
       row: row
@@ -63,6 +95,7 @@ export async function POST(req: NextRequest) {
             group: row.group,
             status: row.status,
             amountPaidUsd: row.amountPaidUsd,
+            registeredOnIso: row.registeredOnIso,
           }
         : null,
     });
@@ -71,7 +104,10 @@ export async function POST(req: NextRequest) {
   const result = await cancelFallRegistration({
     paymentIntentId,
     checkoutSessionId,
-    refund: decision,
+    // Only forward an EXPLICIT operator override — otherwise let the engine
+    // apply the policy against the row it looks up, so the two can't drift.
+    refund: body.refund,
+    reason: body.reason,
   });
 
   if (!result.ok) {

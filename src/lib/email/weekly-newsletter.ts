@@ -2,6 +2,12 @@ import { c, s } from "./brand";
 import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
 import { fillLabel, fillBar } from "@/lib/fill-meter";
+import {
+  phoneLineHtml,
+  phoneLineText,
+  whatsappGroupsTopHtml,
+  whatsappGroupsTopText,
+} from "./signature";
 
 /** One open time slot within a date+location group. */
 export interface NewsletterSessionSlot {
@@ -42,8 +48,43 @@ export interface NewsletterOpenPoll {
   yesCount: number;
 }
 
+/** One bookable group within the fall-season block. */
+export interface NewsletterFallGroup {
+  /** "Green Ball" — canonical ball-color label, never a synonym. */
+  label: string;
+  /** "1:00–2:30 PM" */
+  timeLabel: string;
+  /** Seats still open, or null when the roster count couldn't be read. */
+  spotsLeft: number | null;
+  /** Full build-out of the group (the court math in fall-2026.ts). */
+  spotsPerGroup: number;
+}
+
 export interface WeeklyNewsletterInput {
   parentFirst: string;
+  /**
+   * Fall season registration — the top block while registration is open, ahead
+   * of even the tournament card. A season is the one thing in this email a
+   * family can only buy once: 8 seats a group, full-season commitment, and the
+   * door closes when the first Sunday arrives. A drop-in they miss this week
+   * runs again next week; a season they miss is gone until next fall.
+   *
+   * The price is real (a live Stripe product), so this block quotes it — the
+   * no-quoting rule targets prices that don't exist yet. Null hides the block;
+   * the cron gates on the registration flag and the season's own end date.
+   */
+  fallSeason: {
+    title: string;
+    /** "September 20 – October 25, 2026" */
+    seasonLabel: string;
+    weeks: number;
+    /** "Earle B. Wood Middle School, Rockville, MD" */
+    venueLine: string;
+    priceUsd: number;
+    groups: NewsletterFallGroup[];
+    /** UTM-stamped /fall registration URL. */
+    url: string;
+  } | null;
   /**
    * MVF tournament highlight — the top block until the event. Null hides it;
    * the cron gates on date (through the rain date) via `mvfTournamentIsUpcoming`.
@@ -67,12 +108,18 @@ export interface WeeklyNewsletterInput {
   } | null;
   sessions: NewsletterSessionGroup[];
   /**
-   * Open summer sessions beyond the weekly window — surfaced in a dedicated
-   * "summer is live" promo block so parents can plan ahead and sign up early.
+   * Open sessions beyond the weekly window, so parents can plan ahead.
    * Empty hides the block. Registration for any given date still opens 30 days
    * out on /schedule; this block is the heads-up + sign-up nudge.
+   *
+   * Was `summerSessions` with "Summer sessions are live" copy and a June/July/
+   * August date filter. Both went stale on their own: the Aug 20 2026 issue
+   * pitched "lock in your summer spot" for a single Aug 30 date with school
+   * starting the 25th, and the month filter would have hidden every September
+   * date outright. A season word in a template that ships every week is a bug
+   * with a delay on it — keep this block's copy season-neutral.
    */
-  summerSessions: NewsletterSessionGroup[];
+  laterSessions: NewsletterSessionGroup[];
   openPolls: NewsletterOpenPoll[];
   /** Approved youth-pickleball news items from the scraper queue. Empty hides the block. */
   news: NewsletterNewsItem[];
@@ -135,12 +182,31 @@ function pollProgressLabel(p: NewsletterOpenPoll): string {
   return `${p.yesCount} in · need ${need} more to lock it in`;
 }
 
+/**
+ * Seat line for one fall group. A null count means the roster read failed —
+ * fall back to the group size rather than inventing a number, because "3 spots
+ * left" that isn't true is worse than no urgency at all.
+ */
+export function fallSpotsLabel(g: NewsletterFallGroup): string {
+  if (g.spotsLeft === null) return `${g.spotsPerGroup} spots`;
+  if (g.spotsLeft <= 0) return "Full — ask about the sub list";
+  // "8 of 8 spots left" reads like a typo on an untouched group; a scarcity
+  // count only earns its place once someone has actually taken a seat.
+  if (g.spotsLeft >= g.spotsPerGroup) return `${g.spotsPerGroup} spots open`;
+  return `${g.spotsLeft} of ${g.spotsPerGroup} spots left`;
+}
+
+function fallGroupLine(g: NewsletterFallGroup): string {
+  return `Sundays ${g.timeLabel} · ${fallSpotsLabel(g)}`;
+}
+
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
+    fallSeason,
     mvfTournament,
     sessions,
-    summerSessions,
+    laterSessions,
     openPolls,
     news,
     newsletterLeadHtml,
@@ -157,11 +223,31 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     campPriceFromUsd,
   } = input;
   const hasSessions = sessions.length > 0;
-  const hasSummer = summerSessions.length > 0;
+  const hasLater = laterSessions.length > 0;
   const hasCamps = camps.length > 0;
   const hasPolls = openPolls.length > 0;
   const hasNews = news.length > 0;
   const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
+
+  // Fall season — the lead block while registration is open. Derived from the
+  // season data files by the cron, so (like camps and the tournament) it can't
+  // fall off the issue the way a hand-drafted Notion row can.
+  const fallBlock = fallSeason
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Fall season &mdash; registration is open</p>
+      <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(fallSeason.title)} &mdash; ${escape(fallSeason.seasonLabel)}</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${fallSeason.weeks} Sundays at ${escape(fallSeason.venueLine)}. Coached practice first, then a rotating-partner round robin &mdash; so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.</p>
+      ${fallSeason.groups
+        .map(
+          (g) =>
+            `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;"><strong>${escape(g.label)}</strong> &mdash; <span style="color:${c.muted};">${escape(fallGroupLine(g))}</span></p>`,
+        )
+        .join("")}
+      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">$${fallSeason.priceUsd} per player for the full season &middot; first come, first serve. Can&rsquo;t make all ${fallSeason.weeks}? Reply and we&rsquo;ll put you on the sub list.</p>
+      <p style="margin:14px 0 0 0;"><a href="${fallSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">Register for the season &rarr;</a></p>
+    </div>`
+    : "";
 
   // MVF tournament highlight — leads the issue until the event so no family
   // hears about tournament day after it happened. Registration is on Link &
@@ -208,22 +294,21 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">No open sessions this week &mdash; but new ones post regularly. <a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">Check the schedule &rarr;</a></p>
     </div>`;
 
-  // Summer promo block — Open sessions beyond the weekly window. Lists each
-  // date+location so parents can plan ahead, with a single sign-up CTA to the
-  // schedule. Spots aren't shown here (registration opens 30 days out, so the
-  // count isn't meaningful yet); this is a "summer is live, claim your dates"
-  // nudge. Hidden when there are no upcoming summer sessions.
-  const summerBlock = hasSummer
+  // Open sessions past the weekly window. Lists each date+location so parents
+  // can plan ahead, with a single sign-up CTA to the schedule. Spots aren't
+  // shown (registration opens 30 days out, so the count isn't meaningful yet).
+  // Copy stays season-neutral on purpose — see `laterSessions` above.
+  const laterBlock = hasLater
     ? `
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Summer sessions are live</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Summer dates are on the calendar &mdash; lock in your kid&rsquo;s spot before they fill. Registration for each date opens 30 days ahead.</p>
-      ${summerSessions
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Further out on the calendar</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Planning ahead? These dates are already on the calendar. Registration for each one opens 30 days out.</p>
+      ${laterSessions
         .map(
           (g) => `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;">${escape(g.dateLong)} &mdash; <span style="color:${c.muted};">${escape(g.location)}</span></p>`,
         )
         .join("")}
-      <p style="margin:14px 0 0 0;"><a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">Sign up for summer &rarr;</a></p>
+      <p style="margin:14px 0 0 0;"><a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">See the full schedule &rarr;</a></p>
     </div>`
     : "";
 
@@ -339,11 +424,15 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <h1 style="${s.heading} margin:0 0 16px 0;">Where to play, ${escape(parentFirst)}.</h1>
     <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions.</p>
 
+    ${whatsappGroupsTopHtml()}
+
+    ${fallBlock}
+
     ${mvfBlock}
 
     ${sessionBlock}
 
-    ${summerBlock}
+    ${laterBlock}
 
     ${campBlock}
 
@@ -367,6 +456,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
         See you on the court &mdash; better than yesterday, together.<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
+      ${phoneLineHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         You&rsquo;re getting this because you joined the Next Gen newsletter.
         <a href="${unsubscribeUrl}" style="color:${c.muted};text-decoration:underline;">Unsubscribe</a>.
@@ -380,9 +470,10 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
+    fallSeason,
     mvfTournament,
     sessions,
-    summerSessions,
+    laterSessions,
     openPolls,
     news,
     newsletterLeadText,
@@ -403,7 +494,27 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     "",
     `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
     "",
+    whatsappGroupsTopText(),
+    "",
   ];
+
+  if (fallSeason) {
+    lines.push(
+      "Fall season — registration is open:",
+      `${fallSeason.title} — ${fallSeason.seasonLabel}`,
+      `${fallSeason.weeks} Sundays at ${fallSeason.venueLine}. Coached practice first, then a rotating-partner round robin — so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.`,
+      "",
+    );
+    for (const g of fallSeason.groups) {
+      lines.push(`  ${g.label} — ${fallGroupLine(g)}`);
+    }
+    lines.push(
+      "",
+      `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.`,
+      `Register for the season: ${fallSeason.url}`,
+      "",
+    );
+  }
 
   if (mvfTournament) {
     lines.push(
@@ -441,16 +552,16 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     );
   }
 
-  if (summerSessions.length > 0) {
+  if (laterSessions.length > 0) {
     lines.push(
-      "Summer sessions are live:",
-      "Summer dates are on the calendar — lock in your kid's spot before they fill. Registration for each date opens 30 days ahead.",
+      "Further out on the calendar:",
+      "Planning ahead? These dates are already on the calendar. Registration for each one opens 30 days out.",
       "",
     );
-    for (const g of summerSessions) {
+    for (const g of laterSessions) {
       lines.push(`  ${g.dateLong} — ${g.location}`);
     }
-    lines.push("", `Sign up for summer: ${scheduleUrl}`, "");
+    lines.push("", `See the full schedule: ${scheduleUrl}`, "");
   }
 
   if (camps.length > 0) {
@@ -528,6 +639,8 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   lines.push(
     `See you on the court — better than yesterday, together.`,
     `Coach Sam · Next Gen Pickleball Academy`,
+    "",
+    phoneLineText(),
     "",
     `You're getting this because you joined the Next Gen newsletter.`,
     `Unsubscribe: ${unsubscribeUrl}`,
