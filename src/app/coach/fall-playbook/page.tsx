@@ -36,6 +36,7 @@ import {
   gamesFor,
   ritualFor,
 } from "@/data/fall-season-plan-2026";
+import { findDiagram } from "@/data/court-diagrams";
 import PrintButton from "./PrintButton";
 
 // Internal coach ops tool — not a marketing page, not linked from public nav,
@@ -112,12 +113,180 @@ function Section({
   );
 }
 
+
+const DIAGRAM_CSS = `.c-surf{fill:#132038;stroke:#8A99C5}
+.c-kitch{fill:#273D68}
+.c-line,.c-linestroke{stroke:#8A99C5}
+.c-net{stroke:#EEF2FF}
+.c-netfill{fill:#EEF2FF}
+.c-netband{fill:#EEF2FF;opacity:.13}
+.c-bg{fill:#0B1424}
+.c-inkstroke{stroke:#EEF2FF}
+.c-inkfill{fill:#EEF2FF}
+.c-mutedfill{fill:#8A99C5}
+.c-mutedstroke{stroke:#8A99C5}
+.c-chip{fill:#0B1424;opacity:.92}
+.c-ball{stroke:#AADC00}
+.c-ballfill{fill:#AADC00}
+.c-move{stroke:#00D4FF}
+.c-movefill{fill:#00D4FF}
+@media print{
+.c-surf{fill:#fff;stroke:#444}
+.c-kitch{fill:#e6ecf5}
+.c-line,.c-linestroke{stroke:#6b7a99}
+.c-net{stroke:#111}.c-netfill{fill:#111}.c-netband{fill:#111;opacity:.10}
+.c-bg{fill:#fff}.c-inkstroke{stroke:#111}.c-inkfill{fill:#111}
+.c-mutedfill{fill:#555}.c-mutedstroke{stroke:#777}
+.c-chip{fill:#fff;opacity:.94}
+.c-ball{stroke:#5F7D00}.c-ballfill{fill:#5F7D00}
+.c-move{stroke:#00688F}.c-movefill{fill:#00688F}
+}`;
+
+/** Skill Stack block order → its generated diagram. */
+const BLOCK_DIAGRAM: Record<number, string> = {
+  1: "k2k",
+  2: "slinky",
+  3: "drops",
+  4: "volleys",
+  5: "kitchen-play",
+  6: "serve",
+};
+
+/** Game slug → its generated diagram. Games with no diagram render none. */
+const GAME_DIAGRAM: Record<string, string> = {
+  "kitchen-game": "kitchen-game",
+  "seven-eleven": "seven-eleven",
+  "skinny-singles": "skinny",
+  "king-of-the-court": "king",
+  squirrel: "squirrel",
+  jailbreak: "jailbreak",
+};
+
+/**
+ * A generated court diagram. `svg` is build-time constant from
+ * scripts/build-court-diagrams.mjs — generated markup, never user input, and
+ * pinned by e2e/court-diagrams.spec.ts to contain no script, no foreignObject
+ * and no inline event handlers. It has to be injected as markup rather than
+ * authored as JSX so one generator can own the court geometry for every figure.
+ */
+function Diagram({ id, wide = false }: { id: string; wide?: boolean }) {
+  const d = findDiagram(id);
+  if (!d) return null;
+  return (
+    <figure className={`m-0 ${wide ? "" : "mx-auto"}`}>
+      <svg
+        viewBox={d.viewBox}
+        role="img"
+        aria-label={d.aria}
+        className={`block w-full h-auto mx-auto ${wide ? "max-w-[640px]" : "max-w-[320px]"}`}
+        dangerouslySetInnerHTML={{ __html: d.svg }}
+      />
+      <figcaption className="mt-3 text-xs leading-snug text-ngpa-muted print:text-gray-600 text-center mx-auto max-w-[52ch]">
+        {d.claim}
+      </figcaption>
+    </figure>
+  );
+}
+
+/**
+ * The ball-rules panel. Unlike every other diagram this one is NOT generated:
+ * it reads BALL_RULES at render time, so the serve dots, the enforced-kitchen
+ * band and the lane can never disagree with the rules the rest of the page
+ * prints. A hardcoded serve count in a picture is drift with a delay on it.
+ */
+function BallRulesPanel() {
+  const m = 4;
+  const w = 20 * m;
+  const h = 44 * m;
+  const HUE: Record<string, string> = {
+    red: "#FF4040",
+    orange: "#FF8C00",
+    green: "#00C853",
+    yellow: "#FFD600",
+  };
+  return (
+    <figure className="m-0">
+      <svg
+        viewBox="0 0 620 356"
+        role="img"
+        aria-label="Four small pickleball courts side by side labelled Red, Orange, Green and Yellow. A shaded band marks the kitchen wherever it is enforced, and lime dots below each court show how many serves that level gets."
+        className="block w-full h-auto max-w-[640px] mx-auto"
+      >
+        {BALL_RULES.map((rule, n) => {
+          const ox = 26 + n * 148;
+          const oy = 54;
+          const net = oy + h / 2;
+          const kf = net - 7 * m;
+          const kitchenOn = rule.kitchen.trim().toUpperCase().startsWith("ON");
+          const lanes = /half a court|short court/i.test(rule.court);
+          const serves = /\btwo serves\b/i.test(rule.serve) ? 2 : 1;
+          const name = rule.label.replace(" Ball", "");
+          const firstClause = rule.scoring.split(";")[0];
+          const kind = /side-?out/i.test(rule.scoring) ? "side-out" : "rally";
+          const target = /\bto (\d+)/.exec(firstClause)?.[1];
+          const byTwo = /win by 2/i.test(firstClause) ? " by 2" : "";
+          const courtWord = /full court/i.test(rule.court) ? "full court" : "half court";
+          const chipW = name.length * 8 + 26;
+          const rows = [
+            `${serves} serve${serves > 1 ? "s" : ""}`,
+            rule.serveMiss.replace(/\.$/, ""),
+            kitchenOn ? "kitchen ON" : "kitchen OFF",
+            `${courtWord} · ${target ? `${kind} to ${target}${byTwo}` : kind}`,
+          ];
+          return (
+            <g key={rule.color}>
+              <rect x={ox} y={oy} width={w} height={h} className="c-surf" strokeWidth="1.6" />
+              {kitchenOn && <rect x={ox} y={kf} width={w} height={14 * m} className="c-kitch" />}
+              <line x1={ox} y1={kf} x2={ox + w} y2={kf} className="c-line" strokeWidth="1"
+                    strokeDasharray={kitchenOn ? undefined : "3 4"} opacity={kitchenOn ? 1 : 0.45} />
+              <line x1={ox} y1={net + 7 * m} x2={ox + w} y2={net + 7 * m} className="c-line" strokeWidth="1"
+                    strokeDasharray={kitchenOn ? undefined : "3 4"} opacity={kitchenOn ? 1 : 0.45} />
+              {lanes && (
+                <line x1={ox + w / 2} y1={oy} x2={ox + w / 2} y2={oy + h} stroke="#AADC00"
+                      strokeWidth="1.4" strokeDasharray="5 4" opacity="0.9" />
+              )}
+              <line x1={ox - 5} y1={net} x2={ox + w + 5} y2={net} className="c-net" strokeWidth="2.4" />
+              <rect x={ox + 40 - chipW / 2} y={20} width={chipW} height={21} rx={10.5} fill={HUE[rule.color]} />
+              <text x={ox + 40} y={35} textAnchor="middle" fontSize="12" fontWeight="800"
+                    fill={rule.color === "yellow" || rule.color === "green" ? "#0B1424" : "#fff"}>
+                {name}
+              </text>
+              {Array.from({ length: serves }, (_, d) => (
+                <circle key={d} cx={ox + 40 + (d - (serves - 1) / 2) * 20} cy={oy + h + 13} r={4.5} fill="#AADC00" />
+              ))}
+              {rows.map((line, j) => (
+                <text key={j} x={ox + 40} y={258 + j * 15} textAnchor="middle"
+                      fontSize={j === 0 ? 10 : 9.5} fontWeight="600"
+                      className={j === 0 ? "c-inkfill" : "c-mutedfill"}>
+                  {line}
+                </text>
+              ))}
+            </g>
+          );
+        })}
+        <text x={300} y={336} textAnchor="middle" fontSize="10" fontWeight="600" className="c-mutedfill">
+          shaded band = the kitchen is enforced · lime dots = serves you get
+        </text>
+      </svg>
+      <figcaption className="mt-3 text-xs leading-snug text-ngpa-muted print:text-gray-600 text-center mx-auto max-w-[66ch]">
+        Every level plays real pickleball; what changes is how much of the rulebook is switched on. Serves run
+        two, two, one, one &mdash; and Red is the one level with no kitchen and no two-bounce at all.
+      </figcaption>
+    </figure>
+  );
+}
+
 export default function FallPlaybookPage() {
   const greenStart = FALL_YOUTH_BLOCKS[0].startTime;
   const yellowStart = FALL_YOUTH_BLOCKS[1].startTime;
 
   return (
     <main className="min-h-screen bg-ngpa-deep print:bg-white px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
+      {/* Diagram theming. Every court part is a class rather than a literal fill
+          so this block can flip the courts to paper for printing — a captain
+          carries these to a court, and a dark ground prints badly. Scoped to
+          this page rather than globals.css: nothing else renders court SVG. */}
+      <style dangerouslySetInnerHTML={{ __html: DIAGRAM_CSS }} />
       <div className="max-w-4xl mx-auto">
         <div className="flex items-start justify-between gap-4 mb-2">
           <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal print:text-black">
@@ -162,6 +331,16 @@ export default function FallPlaybookPage() {
           </dl>
         </div>
 
+        <div className="mt-6 rounded-xl bg-ngpa-panel print:bg-white border border-ngpa-slate/40 print:border-gray-300 p-5 sm:p-6">
+          <h2 className="font-heading text-base font-black text-ngpa-white print:text-black mb-1">
+            How to read the diagrams
+          </h2>
+          <p className="text-sm text-ngpa-muted print:text-gray-600 mb-4">
+            One encoding, used the same way in every diagram on this page.
+          </p>
+          <Diagram id="legend" wide />
+        </div>
+
         <div className="mt-6 space-y-6">
           {/* ── 01 · Run of show ────────────────────────────────────────── */}
           <Section
@@ -169,6 +348,9 @@ export default function FallPlaybookPage() {
             title="Run of show — every Sunday"
             subtitle="Same order, every week. Both groups run the same arc; only the clock and the dials differ."
           >
+            <div className="mb-6">
+              <Diagram id="arc" wide />
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -261,6 +443,10 @@ export default function FallPlaybookPage() {
                     {block.teaches}
                   </p>
 
+                  <div className="my-4">
+                    <Diagram id={BLOCK_DIAGRAM[block.order]} />
+                  </div>
+
                   <dl className="mt-3 grid gap-2 sm:grid-cols-2 text-sm">
                     <div>
                       <dt className="text-xs font-bold uppercase tracking-wider text-ngpa-muted print:text-gray-600">
@@ -329,6 +515,9 @@ export default function FallPlaybookPage() {
             subtitle="Every level plays real pickleball; what changes is how much of the rulebook is switched on. Serves go two, two, one, one — Red and Orange get a second swing because the serve is still a skill being built, and at Red that second one may be taken from anywhere so the rally still starts. Green and Yellow play tournament standard. Red is the one level with no kitchen and no two-bounce at all, which is what makes its full court a real format rather than a leftover."
             breakBefore
           >
+            <div className="mb-6">
+              <BallRulesPanel />
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -499,6 +688,9 @@ export default function FallPlaybookPage() {
                     {game.players} · ages {game.minAge}+
                     {game.repsBlock > 0 && ` · reps block ${game.repsBlock}`}
                   </p>
+                  <div className="my-4">
+                    <Diagram id={GAME_DIAGRAM[game.slug]} />
+                  </div>
                   <p className="mt-2 text-sm text-ngpa-white/90 print:text-black leading-snug">
                     <strong className="text-ngpa-lime print:text-black">
                       Setup.
@@ -595,6 +787,10 @@ export default function FallPlaybookPage() {
           >
             <div className="flex justify-end print:hidden mb-4">
               <PrintButton label="Print captain card" />
+            </div>
+
+            <div className="mb-6">
+              <Diagram id="two-courts" wide />
             </div>
 
             <div className="rounded-lg border border-ngpa-lime/40 print:border-gray-400 p-4 mb-5">
