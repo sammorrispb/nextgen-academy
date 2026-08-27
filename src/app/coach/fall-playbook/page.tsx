@@ -326,7 +326,7 @@ export default function FallPlaybookPage() {
           <Section
             num={3}
             title="Modified rules by ball"
-            subtitle="Every level plays real pickleball; what changes is how much of the rulebook is switched on. Red gets one serve because at Red the rally is the point, not the serve — a miss doesn't end anything, the receiver feeds and play starts. Orange gets two because there the serve IS the skill being learned. Green and Yellow return to one: tournament standard."
+            subtitle="Every level plays real pickleball; what changes is how much of the rulebook is switched on. Serves go two, two, one, one — Red and Orange get a second swing because the serve is still a skill being built, and at Red that second one may be taken from anywhere so the rally still starts. Green and Yellow play tournament standard. Red is the one level with no kitchen and no two-bounce at all, which is what makes its full court a real format rather than a leftover."
             breakBefore
           >
             <div className="overflow-x-auto">

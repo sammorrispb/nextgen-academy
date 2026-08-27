@@ -88,15 +88,29 @@ test.describe("ball-color rules", () => {
     }
   });
 
-  // The two rules that look backwards on the page and aren't. If someone
-  // "fixes" them to a monotonic ladder, these fail and the comment above
-  // BALL_RULES explains why they shouldn't.
-  test("Red is one serve with no fault, and no kitchen", () => {
+  // The serve ladder is 2 / 2 / 1 / 1 — beginners get a second swing, Green and
+  // Yellow play tournament standard. It was 1 / 2 / 1 / 1 until 2026-08-27, when
+  // Sam changed Red after reading the rule back; the comment above BALL_RULES
+  // records why. These pin the CURRENT ladder so it can't drift silently again.
+  test("the serve ladder is two, two, one, one", () => {
+    expect(rulesForColor("red").serve).toMatch(/two serves/i);
+    expect(rulesForColor("orange").serve).toMatch(/two serves/i);
+    expect(rulesForColor("green").serve).toMatch(/one serve/i);
+    expect(rulesForColor("yellow").serve).toMatch(/one serve/i);
+  });
+
+  test("Red takes a second serve from anywhere, and still has no kitchen", () => {
     const red = rulesForColor("red");
-    expect(red.serve).toMatch(/one serve/i);
-    expect(red.serveMiss).toMatch(/no fault/i);
+    // The second attempt may be taken from anywhere, not just behind the
+    // baseline — the scaffold that lets a kid who can't clear the net from
+    // depth still start the rally.
+    expect(red.serve).toMatch(/anywhere/i);
+    expect(red.serveMiss).toMatch(/fault/i);
+    // Red is the one level with the non-volley zone and two-bounce switched
+    // off entirely, which is what makes its full court a real format.
     expect(red.kitchen).toMatch(/^OFF/);
     expect(red.twoBounce).toMatch(/^OFF/);
+    expect(red.court).toMatch(/full court/i);
   });
 
   test("Orange is two serves with the kitchen switched on", () => {
