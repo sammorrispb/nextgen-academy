@@ -236,6 +236,54 @@ Fall 2026 "Coach Sam" clubs that **Enrichment Collective** runs in MCPS schools 
 - **Age floor exception.** NGA's 6–16 rule is unchanged and every NGA form still starts at 6. The Wednesday club (Rosemary Hills) is a PreK–2 school, so it carries `ageMin: 5` for EC's intro format — scoped to this file exactly as `MVF_AGE_MIN = 8` narrows in its own. Never propagate `ageMin: 5` to an NGA surface.
 - **Schedule is CONFIRMED (Stef's PDF, updated revision 2026-08-13).** All five clubs run mid-Sept → mid/late Nov with real session dates already reconciled against the MCPS 2026–27 calendar — the gaps in each club's date list are closures, so a "missing" week is not an error. The PDF also swapped the Derwood and Silver Spring clubs' weekdays vs. the July hold and added the fifth Friday club; the updated revision publishes every club's time (Mon/Tue/Thu/Fri 3:30–4:30 PM, Wed 4:00–5:00 PM — dismissal + 5–10 min), so no EC calendar block ships all-day any more. **Post-PDF change (2026-08-16, Sam):** the Friday club moved from Sherwood ES (Sandy Spring, 4:00–5:00) to Olney ES (Olney), 3:30–4:30 PM — same session dates; the `sandy-spring-fri` key is kept so calendar blocks update in place.
 
+### Curriculum override layer (`/coach/fall-playbook` + `NOTION_CURRICULUM_DB_ID`)
+**Stage 1 of `docs/curriculum-editing-proposal.md` (read path only).** Lets Sam fix a
+coaching cue from his phone on a Sunday without a PR and a deploy — without losing the
+safety net that made PR #297 work (he rewrote the Red serve rule, `e2e/session-curriculum.spec.ts`
+went red, and the change became deliberate instead of silent).
+
+**It is an override layer, not a migration.** `src/data/session-curriculum.ts` and
+`src/data/fall-season-plan-2026.ts` stay the tested source of truth for DEFAULTS and are
+UNCHANGED; the Notion DB holds only overridden strings. Their specs import the data
+modules directly, so an override can never turn them green-when-they-should-be-red.
+
+- **`src/lib/curriculum-merge.ts` (pure)** — `mergeCurriculum(defaults, overrides)` over a
+  field registry. **Clone-on-write, always**: Next.js module singletons live across
+  requests, so writing into `BALL_RULES` in place would make an override permanent,
+  un-revertable and visible to every other request until redeploy. Field ids reuse the
+  Copy Desk scheme — `rule.<color>.<prop>`, `block.<order>.cue.<i>`, `block.<order>.<prop>`,
+  `captain.{duty,never,script,kit}.<i>`, `week.<n>.<prop>` — entity segments by natural key
+  (colour, `order`, `week`), array positions **0-based**. Structural fields (`order`,
+  `color`, `week`, `date`, `focusBlock`, the games/ritual slugs, `vocabulary`) are
+  deliberately NOT overridable: `rulesForColor`/`focusBlockFor`/`gamesFor`/`ritualFor` all
+  throw on a miss, so keeping them out is how "a run sheet never renders blank" is
+  guaranteed by construction. An empty `Value` is a REVERT, not a blanking.
+- **`src/lib/notion-curriculum.ts`** — read, ISR 300 (same 5-min convention as
+  `notion-sessions`), discriminated `status: "ok" | "config_missing" | "query_failed"`.
+  Never throws. **No server-side `Active` filter on purpose** — Notion 400s a filter naming
+  a property the DB lacks, which would turn a missing column into `query_failed` for the
+  whole read; a missing `Active` property therefore means active, and only an explicitly
+  unticked box suppresses a row.
+- **The page render is fail-soft and SILENT; `/api/cron/curriculum-health` is the loud
+  half** (daily `0 14 * * *`). `config_missing` is the deliberate ships-dark state and does
+  **not** alert. `curriculum_overrides_query_failed` and `curriculum_override_unknown_field`
+  do — the latter is the one that earns its keep, since a typo'd `rule.red.serv` would
+  otherwise sit in Notion doing nothing all season while the copy silently never changed.
+- **The ball-rules SVG parses the rule prose.** `BallRulesPanel` derives the serve dots,
+  the kitchen band and the scoring label by regex over `serve`/`scoring`/`kitchen`/`court`,
+  so it is fed the MERGED rules (picture and text must never disagree) and an override to
+  those four props redraws the diagram. Keep the existing wording shape.
+- An overridden string carries a small **`edited` marker, `print:hidden`** — visible to a
+  coach on screen, absent from the volunteer's printed captain card.
+- **Ships dark:** `NOTION_CURRICULUM_DB_ID` unset ⇒ zero network calls and the page renders
+  the code defaults (verified: prerendered visible text byte-identical to `main`).
+- **No write surface in Stage 1** and no child or parent data — curriculum is coach text,
+  so this sits outside the minor-PII egress surface. Stage 2 (`/coach/curriculum` editor)
+  and Stage 3 (export-back-to-git) are deliberately not built.
+- Pinned by `e2e/curriculum-merge.spec.ts` (merge semantics on synthetic defaults) +
+  `e2e/invariant-curriculum-failsoft.spec.ts` (no mutation of the data modules, ships dark,
+  fail-soft on every Notion failure mode, Notion-only read-only egress, alert posture).
+
 ### Unified events feed (`GET /api/events/feed`) + Google Calendar mirror
 `/api/sessions/feed` covers Notion sessions only; camps, MVF classes, and the Fall 2026 season live in `src/data/*.ts`, so anything wanting "every NGA date" had to re-read TypeScript source — which is how Sam's Google Calendar drifted out of sync after the 2026-07-21 weekend move. `GET /api/events/feed` (`src/lib/events-feed.ts`, `revalidate = 300`, CORS `*`) unions all four into one shape, each item carrying a stable `key` (`nga-sess|nga-camp|mvf|nga-fall:<slug>:<date>`) that maps 1:1 onto a calendar block.
 
@@ -299,6 +347,15 @@ The cron's ONLY write to the drafts DB is `stampDraftsSentAt` — it stamps `Sen
 - **`GET /api/cron/scrape-news`** — schedule `0 11 * * *` UTC (= ~6am ET in EST / 7am EDT). Pulls youth-pickleball news candidates from Google News RSS (6 youth-targeted queries), USA Pickleball + PPA RSS feeds, and Reddit (r/Pickleball + r/youthsports `top.json?t=week`). Each candidate must mention both a pickleball term and a youth-context term (`youth`, `junior`, `kid`, `school`, `academy`, `camp`, `coach`, `clinic`, etc.); see `matchYouthPickleball()` in `src/lib/news-scraper.ts`. Dedup is by canonical URL (UTM/tracking params stripped, Google News redirector unwrapped via `canonicalizeUrl()`). New URLs land in the **NGA Youth Pickleball News DB** (`NOTION_NEWS_DB_ID`) with `Status = New` for Sam to triage to `Approved` (ships in the next Thursday newsletter), `Rejected` (filtered out next time it's seen), or left to age out. Skipped silently if the env var is missing — endpoint still runs as a dry-run reporting candidates count. Pure parsing helpers (URL canonicalization, keyword filter, dedup) are unit-tested in `e2e/news-scraper.spec.ts`.
 - **`GET /api/cron/seed-tuesday-sessions`** — schedule `0 8 * * 1` UTC (Mon ~3–4am ET). Keeps **all four recurring weekly evenings** stocked (the path keeps its historical Tuesday name so the vercel.json entry and dashboards stay stable): for each ACTIVE template in `src/data/recurring-templates.ts` (Ridgeview Mon / Redland Tue / Westland Wed / Shannon Thu — Shannon Green/Yellow only, the rest all four levels; every evening 6:30–7:30 PM per MCPS permit #684275), ensures each of the next `WEEKS_AHEAD` (8) occurrences of its weekday has one row per level — a court each. Seeded dates are strictly FUTURE (min 1-day lead — a Monday run never seeds that same Monday). **Idempotent per template family** (a row whose title matches the template's titleBase or any `legacyTitlePrefixes` counts as present for its date+level, whatever its Status — a deliberately-cancelled evening/level is never resurrected, and a row hand-moved onto another evening's date can't suppress that evening's seed) and **fail-soft per row**, with a ~350ms Notion create throttle + one 429 retry. Misconfiguration alerts instead of no-opping green: missing `NOTION_API_KEY`/`NOTION_SESSIONS_DB_ID` → `config_missing`, an invalid template → `config_invalid`, an existing seeded row whose start time drifted from its template → one rolled-up `time_drift` entry (signal only — live rows are never auto-corrected). `?dryRun=1|true|yes` returns the would-create list with zero writes (any other value → 400, never a silent live run) — run it against prod before trusting a new template. Logic in `src/lib/recurring-sessions.ts` (`ensureWeeklyTemplates`; pure helpers `upcomingWeekday`, `buildTemplateRowProps`, `validateTemplate`, `parseDryRunParam` unit-tested in `e2e/recurring-sessions.spec.ts`). **The edit surface for venues/times/levels/active is `src/data/recurring-templates.ts`** — session locations are public (the hidden-location/reveal-cron system was retired 2026-06-05).
 
+
+- **`GET /api/cron/curriculum-health`** — schedule `0 14 * * *` UTC (10am ET). The loud half
+  of the curriculum override layer: re-runs the same override read + merge the playbook
+  does and alerts on what a coach cannot see from the page — `curriculum_overrides_query_failed`
+  (edits silently reverted to code defaults) and `curriculum_override_unknown_field` (a
+  Field ID that resolves to nothing, so that edit never landed). An unset
+  `NOTION_CURRICULUM_DB_ID` reports `dark: true` and alerts about NOTHING — shipping dark is
+  the intended state, not a failure. No parent/child data.
+
 - **`GET /api/cron/reconcile-cancelled-sessions`** — schedule `0 */2 * * *` UTC (every 2 hours). Closes the gap where a session marked `Cancelled` **by hand in Notion** (the common weather pull) fires NO refunds and NO parent comms — only the coach "Cancel session, notify all" button (`executeSessionCancel`) moves the money. Sweeps the Sessions DB for **upcoming** Cancelled rows (today ET → +`REGISTRATION_WINDOW_DAYS`; never past, so it can't retroactively refund a session marked Cancelled for bookkeeping) via `fetchCancelledSessionsInWindow()`, and for any row whose Confirmed roster still has an un-refunded registrant (`sessionNeedsCancelFanout`), fires the SAME idempotent `executeSessionCancel` engine (Stripe refund + Coach-voice cancellation email/opt-in SMS + `Cancellation Notified` flag). Self-healing: once everyone is refunded + notified, later ticks read the roster and skip — no duplicate refund or email. Parent email reason comes from an optional Sessions DB `Cancel Reason` select (weather/venue/low-enrollment/other; defaults to `other`) + optional `Cancel Note` rich-text. Pure act/skip + reason helpers in `src/lib/reconcile-cancelled.ts`, unit-tested in `e2e/reconcile-cancelled.spec.ts`. NOTE: marking a session Cancelled in Notion still does NOT auto-fire until the next 2-hour tick — for an instant pull use the coach button.
 
 - **`GET /api/cron/camp-checklist-reminder`** — schedule `0 11 * * *` UTC (= 7am ET in EDT; summer camps run on EDT). The 7am-on-camp-days coach nudge: emails the coach allowlist (`COACH_ALLOWED_EMAILS`, falling back to `nextgenacademypb@gmail.com`) a link to `/coach/camp-checklist` so the supply + setup run-of-show is one tap away before drop-off. No parent/child data — coaches only, so it sits outside the minor-PII egress surface. `campsRunningOn(todayET, CAMPS)` (pure, reuses `campDays()` in `src/data/camps.ts`) resolves the day's camp(s) from the scheduled Mon–Thu mornings and **no-ops** on every other day — including the makeup/rain Friday, which the cron can't know actually runs. Logic in `src/lib/camp-checklist-reminder.ts` (`runCampChecklistReminder`); email in `src/lib/email/camp-checklist-reminder.ts`; pure helpers + template unit-tested in `e2e/camp-checklist-reminder.spec.ts`. Always `?dryRun=1` (optional `&date=YYYY-MM-DD` to test a specific camp day) before relying on it.
@@ -354,6 +411,12 @@ See `.env.example`. Categories:
 - `NOTION_CREW_INTEREST_DB_ID` — NGA Crew Interest DB (the no-active-poll fallback form). Optional — endpoint logs + continues if unset.
 - `NOTION_NEWS_DB_ID` — NGA Youth Pickleball News DB (scraped news queue Sam triages for the weekly newsletter). Optional — scraper runs as a dry-run if unset, weekly newsletter just hides the news block.
 - `NOTION_NEWSLETTER_DRAFTS_DB_ID` — NGA Newsletter Drafts DB (Coach-voice longform sections drafted Wednesday by the cloud drafter routine; Sam approves a row before Thu 6pm for the cron to inject as the "From Coach Sam" lead block). The weekly newsletter still ships without it (the lead block just hides), but as of 2026-08-05 an unset value raises a `config_missing` cron alert rather than no-opping green — a lead block that can never ship is a misconfiguration, not a preference. See the "Newsletter lead block — drafter pipeline" section above.
+- `NOTION_CURRICULUM_DB_ID` — NGA Curriculum Overrides DB (one row per overridden
+  curriculum string, read by `/coach/fall-playbook`). Optional. **UNSET = the override
+  layer is dark** and the playbook renders the code defaults with no network call —
+  reported as dark by the health cron, never as a misconfiguration (deliberately unlike
+  `NOTION_NEWSLETTER_DRAFTS_DB_ID`, whose lead block is meant to ship). See the
+  "Curriculum override layer" section above.
 - `REFERRAL_TOKEN_SECRET` — HMAC signing key for `/newsletter?ref=<token>` links. Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` so a leaked unsub token can't be replayed as a referral and vice versa.
 - `LEAD_CONSENT_SECRET` — HMAC signing key for the permission-pass links (`GET /api/lead-consent`). Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` / `REFERRAL_TOKEN_SECRET` so tokens can't be replayed across families. UNSET = camp-outreach degrades to the reply-"skip" opt-out instead of one-click links.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.

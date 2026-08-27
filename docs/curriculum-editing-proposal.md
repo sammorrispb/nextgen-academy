@@ -1,8 +1,28 @@
 # Proposal — editing the curriculum from the website
 
-**Status: PROPOSAL. No code written.** Requested by Sam 2026-08-27 ("view these
-guides and edit them from the website"). Per the IPAV loop this is the *Propose*
-step; it needs Sam's approval before anything is built.
+**Status: APPROVED 2026-08-27. STAGE 1 SHIPPED; Stages 2 and 3 not built.**
+Requested by Sam 2026-08-27 ("view these guides and edit them from the website").
+
+Stage 1 — the read path — is live: `src/lib/curriculum-merge.ts`,
+`src/lib/notion-curriculum.ts`, `src/lib/curriculum-health.ts`,
+`/api/cron/curriculum-health`, and the merged render on `/coach/fall-playbook`.
+It ships dark until `NOTION_CURRICULUM_DB_ID` is set. Sam edits rows in Notion
+directly; there is deliberately **no write surface**. Stage 2 (the
+`/coach/curriculum` editor + one-tap revert) and Stage 3 (export-back-to-git)
+are deferred by design — the call was to run a season on Stage 1 first and only
+then decide whether they earn their keep.
+
+Two things the shipped design added to the proposal below:
+
+- **`week.<n>.<prop>` is in scope**, so the override layer spans
+  `fall-season-plan-2026.ts` as well. The file table further down omits it; that
+  file is UNCHANGED too, and its spec (`e2e/fall-season-plan.spec.ts`) still
+  pins its defaults.
+- **An `Active` checkbox on the DB.** Without Stage 2's revert button, deleting
+  the row was the only undo; unticking `Active` reverts one string while keeping
+  the text. A *missing* `Active` property means active, and there is no
+  server-side filter on it — Notion 400s a filter naming a property the DB lacks,
+  which would turn a missing column into a failed read for the whole feature.
 
 ## The problem
 

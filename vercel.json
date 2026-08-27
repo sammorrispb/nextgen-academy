@@ -48,6 +48,10 @@
     {
       "path": "/api/cron/reconcile-cancelled-sessions",
       "schedule": "0 */2 * * *"
+    },
+    {
+      "path": "/api/cron/curriculum-health",
+      "schedule": "0 14 * * *"
     }
   ]
 }
