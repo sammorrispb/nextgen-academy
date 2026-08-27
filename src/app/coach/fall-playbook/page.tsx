@@ -3,11 +3,6 @@ import type { Metadata } from "next";
 import { LEVEL_COLOR, LEVEL_COLOR_FALLBACK } from "@/lib/level-colors";
 import {
   AGE_BANDS,
-  BALL_RULES,
-  CAPTAIN_KIT,
-  CAPTAIN_NEVER,
-  CAPTAIN_RUN_OF_SHOW,
-  CAPTAIN_SCRIPT,
   COACHING_MANTRA,
   CURRICULUM_AGE_MAX,
   CURRICULUM_AGE_MIN,
@@ -19,8 +14,8 @@ import {
   PILLAR_ACTIVE_HEART_RATE,
   PILLAR_FEEDBACK_DENSITY,
   SESSION_ARC_90,
-  SKILL_STACK,
   phaseClock,
+  type BallRules,
 } from "@/data/session-curriculum";
 import {
   FALL_SEASON_LABEL,
@@ -31,12 +26,13 @@ import {
   SLOTS_PER_GROUP,
 } from "@/data/fall-2026";
 import {
-  FALL_SEASON_PLAN,
   focusBlockFor,
   gamesFor,
   ritualFor,
 } from "@/data/fall-season-plan-2026";
 import { findDiagram } from "@/data/court-diagrams";
+import { CURRICULUM_DEFAULTS, mergeCurriculum } from "@/lib/curriculum-merge";
+import { fetchCurriculumOverrides } from "@/lib/notion-curriculum";
 import PrintButton from "./PrintButton";
 
 // Internal coach ops tool — not a marketing page, not linked from public nav,
@@ -50,6 +46,12 @@ export const metadata: Metadata = {
     "Run-of-show, curriculum, and court-captain playbook for the Next Gen Youth Fall Season.",
   robots: { index: false, follow: false },
 };
+
+// Same 5-min ISR as /schedule. The page is otherwise static; this exists only
+// so a curriculum override edited in Notion reaches the court without a deploy.
+// With NOTION_CURRICULUM_DB_ID unset the read makes no network call at all, so
+// the dark path is the static page it has always been.
+export const revalidate = 300;
 
 const MONTHS = [
   "January",
@@ -189,12 +191,32 @@ function Diagram({ id, wide = false }: { id: string; wide?: boolean }) {
 }
 
 /**
+ * Screen-only marker for a string currently overridden from Notion, so it is
+ * always visible how far the live copy has drifted from what git has. It is
+ * `print:hidden` on purpose: a volunteer captain reading the printed card has
+ * no use for an internal versioning signal, and the drift is still visible to
+ * a coach on any screen.
+ */
+function Edited({ on, id }: { on: ReadonlySet<string>; id: string }) {
+  if (!on.has(id)) return null;
+  return (
+    <span
+      title={`Edited in Notion (${id}). The tested default lives in git.`}
+      className="print:hidden ml-1.5 inline-flex items-center gap-1 align-middle rounded-full border border-ngpa-lime/50 px-1.5 py-[1px] text-[10px] font-bold uppercase tracking-wider text-ngpa-lime"
+    >
+      <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full bg-ngpa-lime" />
+      edited
+    </span>
+  );
+}
+
+/**
  * The ball-rules panel. Unlike every other diagram this one is NOT generated:
  * it reads BALL_RULES at render time, so the serve dots, the enforced-kitchen
  * band and the lane can never disagree with the rules the rest of the page
  * prints. A hardcoded serve count in a picture is drift with a delay on it.
  */
-function BallRulesPanel() {
+function BallRulesPanel({ rules }: { rules: readonly BallRules[] }) {
   const m = 4;
   const w = 20 * m;
   const h = 44 * m;
@@ -212,7 +234,7 @@ function BallRulesPanel() {
         aria-label="Four small pickleball courts side by side labelled Red, Orange, Green and Yellow. A shaded band marks the kitchen wherever it is enforced, and lime dots below each court show how many serves that level gets."
         className="block w-full h-auto max-w-[640px] mx-auto"
       >
-        {BALL_RULES.map((rule, n) => {
+        {rules.map((rule, n) => {
           const ox = 26 + n * 148;
           const oy = 54;
           const net = oy + h / 2;
@@ -276,7 +298,18 @@ function BallRulesPanel() {
   );
 }
 
-export default function FallPlaybookPage() {
+export default async function FallPlaybookPage() {
+  // ONE merge for the whole page. The ball rules render twice (the generated
+  // SVG panel and the table below it), and BallRulesPanel derives its drawing
+  // by reading the rule prose — so merging per render site would let the
+  // picture disagree with the text it is supposed to be a picture of.
+  //
+  // Fail-soft is the whole contract here: a Notion outage, a slow query or an
+  // unset env var all return no overrides, and the page renders the code
+  // defaults. /api/cron/curriculum-health carries the loud half.
+  const { overrides } = await fetchCurriculumOverrides();
+  const c = mergeCurriculum(CURRICULUM_DEFAULTS, overrides);
+  const edited = c.editedFieldIds;
   const greenStart = FALL_YOUTH_BLOCKS[0].startTime;
   const yellowStart = FALL_YOUTH_BLOCKS[1].startTime;
 
@@ -418,7 +451,7 @@ export default function FallPlaybookPage() {
             breakBefore
           >
             <div className="space-y-5">
-              {SKILL_STACK.map((block) => (
+              {c.skillStack.map((block) => (
                 <article
                   key={block.order}
                   className="rounded-lg border border-ngpa-slate/40 print:border-gray-300 p-4 print:break-inside-avoid"
@@ -441,6 +474,7 @@ export default function FallPlaybookPage() {
                   </div>
                   <p className="mt-1 text-sm text-ngpa-white/80 print:text-gray-800">
                     {block.teaches}
+                    <Edited on={edited} id={`block.${block.order}.teaches`} />
                   </p>
 
                   <div className="my-4">
@@ -454,6 +488,7 @@ export default function FallPlaybookPage() {
                       </dt>
                       <dd className="text-ngpa-white/90 print:text-black leading-snug">
                         {block.setup}
+                        <Edited on={edited} id={`block.${block.order}.setup`} />
                       </dd>
                     </div>
                     <div>
@@ -462,6 +497,7 @@ export default function FallPlaybookPage() {
                       </dt>
                       <dd className="text-ngpa-white/90 print:text-black leading-snug">
                         {block.formation}
+                        <Edited on={edited} id={`block.${block.order}.formation`} />
                       </dd>
                     </div>
                     <div>
@@ -470,6 +506,7 @@ export default function FallPlaybookPage() {
                       </dt>
                       <dd className="text-ngpa-white/90 print:text-black leading-snug">
                         {block.rotation}
+                        <Edited on={edited} id={`block.${block.order}.rotation`} />
                       </dd>
                     </div>
                     <div>
@@ -478,6 +515,7 @@ export default function FallPlaybookPage() {
                       </dt>
                       <dd className="text-ngpa-white/90 print:text-black leading-snug">
                         {block.scaling}
+                        <Edited on={edited} id={`block.${block.order}.scaling`} />
                       </dd>
                     </div>
                   </dl>
@@ -487,12 +525,13 @@ export default function FallPlaybookPage() {
                       Cues — say these, in this order
                     </p>
                     <ul className="mt-1 space-y-0.5">
-                      {block.cues.map((cue) => (
+                      {block.cues.map((cue, i) => (
                         <li
-                          key={cue}
+                          key={i}
                           className="text-sm text-ngpa-white/90 print:text-black leading-snug"
                         >
                           &ldquo;{cue}&rdquo;
+                          <Edited on={edited} id={`block.${block.order}.cue.${i}`} />
                         </li>
                       ))}
                     </ul>
@@ -501,6 +540,7 @@ export default function FallPlaybookPage() {
                     </p>
                     <p className="mt-2 text-sm text-ngpa-teal print:text-gray-800">
                       <strong>Captain:</strong> {block.captainCue}
+                      <Edited on={edited} id={`block.${block.order}.captainCue`} />
                     </p>
                   </div>
                 </article>
@@ -516,7 +556,7 @@ export default function FallPlaybookPage() {
             breakBefore
           >
             <div className="mb-6">
-              <BallRulesPanel />
+              <BallRulesPanel rules={c.ballRules} />
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
@@ -543,7 +583,7 @@ export default function FallPlaybookPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {BALL_RULES.map((rule) => (
+                  {c.ballRules.map((rule) => (
                     <tr
                       key={rule.color}
                       className="border-b border-ngpa-slate/30 print:border-gray-300 align-top"
@@ -558,27 +598,35 @@ export default function FallPlaybookPage() {
                         </span>
                         <span className="block mt-1 text-[11px] text-ngpa-muted print:text-gray-600">
                           {rule.typicalAges}
+                          <Edited on={edited} id={`rule.${rule.color}.typicalAges`} />
                         </span>
                       </td>
                       <td className="py-2 pr-3 text-ngpa-white/90 print:text-black leading-snug">
                         {rule.serve}
+                        <Edited on={edited} id={`rule.${rule.color}.serve`} />
                         <span className="block mt-1 text-xs text-ngpa-muted print:text-gray-600">
                           {rule.serveMiss}
+                          <Edited on={edited} id={`rule.${rule.color}.serveMiss`} />
                         </span>
                       </td>
                       <td className="py-2 pr-3 text-ngpa-white/90 print:text-black leading-snug">
                         {rule.kitchen}
+                        <Edited on={edited} id={`rule.${rule.color}.kitchen`} />
                       </td>
                       <td className="py-2 pr-3 text-ngpa-white/90 print:text-black leading-snug">
                         {rule.twoBounce}
+                        <Edited on={edited} id={`rule.${rule.color}.twoBounce`} />
                       </td>
                       <td className="py-2 pr-3 text-ngpa-white/90 print:text-black leading-snug">
                         {rule.court}
+                        <Edited on={edited} id={`rule.${rule.color}.court`} />
                       </td>
                       <td className="py-2 text-ngpa-white/90 print:text-black leading-snug">
                         {rule.scoring}
+                        <Edited on={edited} id={`rule.${rule.color}.scoring`} />
                         <span className="block mt-1 text-xs text-ngpa-teal print:text-gray-700">
                           Captain watches: {rule.captainWatch}
+                          <Edited on={edited} id={`rule.${rule.color}.captainWatch`} />
                         </span>
                       </td>
                     </tr>
@@ -722,7 +770,7 @@ export default function FallPlaybookPage() {
             breakBefore
           >
             <div className="space-y-4">
-              {FALL_SEASON_PLAN.map((week) => {
+              {c.seasonPlan.map((week) => {
                 const focus = focusBlockFor(week);
                 const games = gamesFor(week);
                 const ritual = ritualFor(week);
@@ -740,6 +788,7 @@ export default function FallPlaybookPage() {
                       </span>
                       <h3 className="font-heading text-lg font-black text-ngpa-white print:text-black">
                         {week.title}
+                        <Edited on={edited} id={`week.${week.week}.title`} />
                       </h3>
                       <span className="rounded-full bg-ngpa-navy print:bg-transparent border border-ngpa-lime/50 print:border-gray-400 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ngpa-lime print:text-black">
                         {week.word}
@@ -760,13 +809,16 @@ export default function FallPlaybookPage() {
                     </p>
                     <p className="mt-1 text-sm text-ngpa-white/80 print:text-gray-800 leading-snug">
                       <strong>Looking for:</strong> {week.coachLooksFor}
+                      <Edited on={edited} id={`week.${week.week}.coachLooksFor`} />
                     </p>
                     <p className="mt-2 text-xs text-ngpa-muted print:text-gray-600 leading-snug">
                       Word framing: &ldquo;{week.wordFraming}&rdquo;
+                      <Edited on={edited} id={`week.${week.week}.wordFraming`} />
                     </p>
                     <p className="mt-1 text-xs text-ngpa-muted print:text-gray-600 leading-snug">
-                      Parents hear: &ldquo;{week.parentLine}&rdquo; · Home rep:{" "}
-                      {week.homeRep}
+                      Parents hear: &ldquo;{week.parentLine}&rdquo;
+                      <Edited on={edited} id={`week.${week.week}.parentLine`} /> · Home rep: {week.homeRep}
+                      <Edited on={edited} id={`week.${week.week}.homeRep`} />
                     </p>
                   </article>
                 );
@@ -821,7 +873,7 @@ export default function FallPlaybookPage() {
               Your run of show
             </h3>
             <ul className="mt-2 mb-5">
-              {CAPTAIN_RUN_OF_SHOW.map((duty) => (
+              {c.captainRunOfShow.map((duty, i) => (
                 <li
                   key={duty.phase}
                   className="flex items-start gap-3 py-2 border-b border-ngpa-slate/30 print:border-gray-300 last:border-b-0"
@@ -831,6 +883,7 @@ export default function FallPlaybookPage() {
                   </span>
                   <span className="text-sm text-ngpa-white/90 print:text-black leading-snug">
                     {duty.duty}
+                    <Edited on={edited} id={`captain.duty.${i}`} />
                   </span>
                 </li>
               ))}
@@ -842,12 +895,13 @@ export default function FallPlaybookPage() {
                   The five things you say
                 </h3>
                 <ul className="mt-2 space-y-1.5">
-                  {CAPTAIN_SCRIPT.map((line) => (
+                  {c.captainScript.map((line, i) => (
                     <li
-                      key={line}
+                      key={i}
                       className="text-sm text-ngpa-white/90 print:text-black leading-snug"
                     >
                       {line}
+                      <Edited on={edited} id={`captain.script.${i}`} />
                     </li>
                   ))}
                 </ul>
@@ -857,12 +911,13 @@ export default function FallPlaybookPage() {
                   Never
                 </h3>
                 <ul className="mt-2 space-y-1.5">
-                  {CAPTAIN_NEVER.map((line) => (
+                  {c.captainNever.map((line, i) => (
                     <li
-                      key={line}
+                      key={i}
                       className="text-sm text-ngpa-white/90 print:text-black leading-snug"
                     >
                       {line}
+                      <Edited on={edited} id={`captain.never.${i}`} />
                     </li>
                   ))}
                 </ul>
@@ -873,9 +928,9 @@ export default function FallPlaybookPage() {
               Your kit, per court
             </h3>
             <ul className="mt-2">
-              {CAPTAIN_KIT.map((item) => (
+              {c.captainKit.map((item, i) => (
                 <li
-                  key={item}
+                  key={i}
                   className="flex items-start gap-3 py-2 border-b border-ngpa-slate/30 print:border-gray-300 last:border-b-0"
                 >
                   <input
@@ -884,6 +939,7 @@ export default function FallPlaybookPage() {
                   />
                   <span className="text-sm text-ngpa-white/90 print:text-black leading-snug">
                     {item}
+                      <Edited on={edited} id={`captain.kit.${i}`} />
                   </span>
                 </li>
               ))}
