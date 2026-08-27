@@ -158,22 +158,27 @@ export function findAgeBand(band: string): AgeBandDials | undefined {
 // Red court and a Yellow court, stated precisely enough that a volunteer court
 // captain can enforce it without asking.
 //
-// The two rules that look backwards and aren't:
+// The serve ladder, and the one rule that still looks backwards:
 //
-// 1. RED GETS ONE SERVE, ORANGE GETS TWO. Red's single serve is not a harsher
-//    standard — it's the opposite. At Red the serve is not the point; the rally
-//    is. One attempt, and if it doesn't go in, the RECEIVING side feeds and the
-//    rally starts anyway. Nobody stands still waiting for a serve to land.
-//    Orange gets two because at Orange the serve IS a skill being learned, and
-//    a second attempt is the low-stakes rep that lets them swing at it. Green
-//    and Yellow return to one — tournament standard — because by then it's a
-//    shot they own.
+// 1. SERVES GO 2 / 2 / 1 / 1. Red and Orange get two attempts because at those
+//    levels the serve is a skill still being built and a second swing is the
+//    low-stakes rep; at Red the second one may be taken from anywhere, not just
+//    behind the baseline, so a kid who cannot yet clear the net from depth
+//    still gets the rally started. Green and Yellow return to one — tournament
+//    standard — because by then it is a shot they own.
+//    (Superseded 2026-08-27, Sam: Red previously took ONE serve that could not
+//    fault at all, on the reasoning that at Red the rally is the point and the
+//    receiver would just feed. He changed it after reading it back; a fault is
+//    now a fault at Red too. The scoring and court size moved with it — Red is
+//    full court on rally-to-15 rather than half a court on cooperative targets.)
 //
-// 2. RED HAS NO KITCHEN. Straight out of Play-and-Stay and the Level 2
-//    progression: removing the non-volley zone cuts one whole rule out of a
-//    six-year-old's working memory so the attention goes to tracking the ball
-//    and finding the paddle face. The kitchen comes back at Orange, along with
-//    the two-bounce rule, and it never leaves again.
+// 2. RED STILL HAS NO KITCHEN, and no two-bounce rule. Straight out of
+//    Play-and-Stay and the Level 2 progression: removing the non-volley zone
+//    cuts one whole rule out of a six-year-old's working memory so the
+//    attention goes to tracking the ball and finding the paddle face. The
+//    kitchen comes back at Orange, along with the two-bounce rule, and it never
+//    leaves again. Red is therefore full court, everything live, no zone —
+//    which is a real format, not a leftover.
 //
 // Both are single-line edits here if Sam wants them different — no other file
 // hardcodes a serve count or a kitchen rule.
@@ -208,32 +213,32 @@ export const BALL_RULES: readonly BallRules[] = [
     label: "Red Ball",
     ball: "Foam or red low-bounce ball — slow enough that a new player can arrive, set, and swing.",
     typicalAges: "6–8, or any age on day one",
-    serve: "One serve, underhand, from behind the baseline.",
+    serve: "Two serves, underhand, from behind the baseline for the first and anywhere for the second try",
     serveMiss:
-      "No fault, no lost point — the receiving side feeds and the rally starts. Protect the rally.",
+      "Second miss is a fault.",
     kitchen:
       "OFF. No non-volley zone is called. One less rule to hold while they learn to track the ball.",
     twoBounce: "OFF. Play the ball however it comes.",
-    court: "Short court — service boxes only, or half a court per pair.",
+    court: "Full court",
     scoring:
-      "Cooperative rally targets, not points. 'Can we get to five together?' No winner is named.",
+      "Rally Scoring games to 15 (no switching needed)",
     captainWatch:
-      "Is every kid swinging? A Red court that goes quiet has stopped being a rally and started being a line.",
+      "Are kids in the correct starting positions? Are the rallies getting started? Are all kids in a ready position and moving towards the ball as it is in the air?",
   },
   {
     color: "orange",
     label: "Orange Ball",
     ball: "Orange ball — faster than Red, still forgiving enough to rally.",
     typicalAges: "8–10",
-    serve: "Two serves, underhand, from behind the baseline. The second one is a real mulligan.",
-    serveMiss: "Second miss is a fault and the point goes over. Say it warmly, move on fast.",
+    serve: "Two serves, underhand, from behind the baseline — one is the working norm, the second is the safety net.",
+    serveMiss: "Second miss is a fault.",
     kitchen:
       "ON, taught generously. First foot fault is a warning and a re-do — 'toe the line' — not a lost point.",
     twoBounce: "ON. Serve bounces, return bounces, then anyone may volley.",
     court: "Full court.",
-    scoring: "Rally scoring to 7, win by 1. Short games so rotation stays on the clock.",
+    scoring: "Side-out scoring games to 11 win by 1.",
     captainWatch:
-      "Are they letting the return bounce? Orange is where the two-bounce habit is built or missed.",
+      "Are they letting the return bounce? Orange is where the two-bounce habit is built or missed. Are they able to position themselves close to the kitchen and execute some volleys?",
   },
   {
     color: "green",
@@ -241,14 +246,14 @@ export const BALL_RULES: readonly BallRules[] = [
     ball: "Green ball — near-standard pace with a little forgiveness left in it.",
     typicalAges: "10+",
     serve: "One serve, from behind the baseline.",
-    serveMiss: "Fault. Point to the other side.",
-    kitchen: "ON, standard. Faults are called.",
-    twoBounce: "ON, standard.",
+    serveMiss: "Fault.",
+    kitchen: "ON, standard. Faults are called by captains/referees",
+    twoBounce: "ON, standard. Self-officiated",
     court: "Full court.",
     scoring:
-      "Rally scoring to 9, win by 1, for rotating games; to 11, win by 2, for the feature game.",
+      "Side-out scoring games to 11, win by 1, for rotating games; to 11, win by 2, for the feature game.",
     captainWatch:
-      "Do both partners get to the kitchen line together after the return? That's the Green habit.",
+      "Do both partners get to the kitchen line together after the return? Are players hitting balls into the kitchen? Are players hitting with control, varying speed, and spin?",
   },
   {
     color: "yellow",
@@ -256,7 +261,7 @@ export const BALL_RULES: readonly BallRules[] = [
     ball: "Standard yellow ball — tournament equipment, tournament speed.",
     typicalAges: "12+",
     serve: "One serve, from behind the baseline. Tournament standard.",
-    serveMiss: "Fault. Point to the other side.",
+    serveMiss: "Fault.",
     kitchen: "ON, standard, self-officiated.",
     twoBounce: "ON, standard, self-officiated.",
     court: "Full court.",
@@ -843,11 +848,11 @@ export const CAPTAIN_RUN_OF_SHOW: readonly CaptainDuty[] = [
   },
   {
     phase: "Huddle",
-    duty: "Get your four to the coach, quietly. Then bring them straight back to your court.",
+    duty: "Get your four to the coach, for instructional time. Then get them back to playing.",
   },
   {
     phase: "Skill Stack",
-    duty: "Hold the six-minute clock and call every transition out loud. Feed when the drill needs a feed. Count rallies. Shout the kid's name and the block cue when they do it right.",
+    duty: "Hold the clock and call every transition out loud and on time. Feed when the drill needs a feed. Count rallies. Shout the kid's name and the block cue when they do it right.",
   },
   {
     phase: "Pickup and water",
@@ -885,7 +890,7 @@ export const CAPTAIN_NEVER: readonly string[] = [
   "Never feed a line of kids one at a time. If three are waiting, the drill is wrong — change it or split the court.",
   "Never discipline. Behaviour goes to the coach.",
   "Never be alone with a child who isn't yours.",
-  "Never let the court go silent. Silence is disengagement, and it's the first thing to fix.",
+  "Never let the court go silent. EQ - Encourage and Question",
 ];
 
 /** What a captain needs in hand, per court. */

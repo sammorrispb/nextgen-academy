@@ -40,20 +40,34 @@ They are independent. A twelve-year-old on day one plays **Orange rules at the
 13U dial**. A strong nine-year-old plays **Green rules at the 9U dial**. Every
 time these get merged into one ladder, somebody ends up bored or drowning.
 
-Two rules read backwards and are deliberate — both are commented in place:
+The serve ladder and the Red format are both deliberate, and both are commented
+in place:
 
-- **Red gets one serve, Orange gets two.** At Red the rally is the point, not
-  the serve: one attempt, and a miss doesn't end anything (the receiver feeds,
-  play starts). At Orange the serve *is* the skill being learned, so the second
-  attempt is the low-stakes rep. Green and Yellow go back to one — tournament
+- **Serves go 2 / 2 / 1 / 1.** Red and Orange get two attempts because at those
+  levels the serve is still a skill being built and a second swing is the
+  low-stakes rep. At Red the second attempt may be taken from **anywhere**, not
+  just behind the baseline, so a kid who cannot yet clear the net from depth
+  still gets the rally started. Green and Yellow return to one — tournament
   standard.
 - **Red has no kitchen and no two-bounce.** Straight from Play-and-Stay: cutting
   a rule out of a six-year-old's working memory buys attention for tracking the
-  ball. Both come back at Orange and never leave.
+  ball. Both come back at Orange and never leave. Red therefore plays a **full
+  court with everything live** — a real format, not a leftover.
+
+**Changed 2026-08-27 (Sam).** Red previously took ONE serve that could not fault
+at all (the receiver just fed), on half a court, scored with cooperative rally
+targets and no winner named. Sam revised it after reading the rules back in the
+copy desk: Red is now two serves with a real fault, full court, rally scoring to
+15. Orange and Green also moved from rally scoring to **side-out** scoring
+(Orange to 11 win by 1; Green to 11 win by 1 for rotating games). Side-out games
+run longer than rally-scored ones — **watch the round-robin block against the
+90-minute clock for the first couple of Sundays** and adjust the arc if it
+overruns.
 
 Change either in `BALL_RULES` and nowhere else — no other file hardcodes a serve
-count or a kitchen rule, and `e2e/session-curriculum.spec.ts` pins both so a
-well-meaning "fix" to a monotonic ladder fails loudly.
+count or a kitchen rule. `e2e/session-curriculum.spec.ts` pins the current
+ladder and Red's no-kitchen format, so the next change to either has to be
+deliberate rather than silent.
 
 ## Known drift — age bands
 
