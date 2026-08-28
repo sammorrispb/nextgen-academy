@@ -15,6 +15,7 @@ import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { groupSessions, sortByLevel } from "@/lib/schedule-grouping";
 import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
+import OpenNowOffers from "@/components/OpenNowOffers";
 import WeatherBar from "@/components/WeatherBar";
 import { fetchWeatherForDates, upcomingDates } from "@/lib/weather";
 import { breadcrumbJsonLd, courseJsonLd, SITE_URL } from "@/lib/seo";
@@ -236,7 +237,10 @@ export default async function SchedulePage() {
           <WeatherBar dates={weatherDates} weather={weather} />
 
           {sessions.length === 0 && (
-            <EmptyStateWaitlist source="schedule_empty" />
+            <>
+              <EmptyStateWaitlist source="schedule_empty" />
+              <OpenNowOffers />
+            </>
           )}
 
           {sessions.length > 0 && (

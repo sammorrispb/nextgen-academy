@@ -55,6 +55,11 @@ export default function EmptyStateWaitlist({
           contact,
           preferredArea,
           marketingOptIn,
+          // Which empty state the parent was looking at. Sent to the ROUTE (not
+          // just trackEvent) so the admin email says where the signup came
+          // from — without this the surface existed only in analytics.
+          source,
+          page: typeof window === "undefined" ? "" : window.location.pathname,
           // Attribution stash from UtmCapture (sessionStorage) — the route
           // maps it to a Source select on the Notion waitlist row.
           ...getUtm(),

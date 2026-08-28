@@ -3,6 +3,7 @@ import type { NgaSession } from "@/lib/notion-sessions";
 import { sessionToSlug } from "@/lib/session-slug";
 import { inferCity } from "@/lib/venue-lookup";
 import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
+import OpenNowOffers from "@/components/OpenNowOffers";
 import FillMeter from "@/components/FillMeter";
 import { LEVEL_COLOR } from "@/lib/level-colors";
 import { fillGoal } from "@/lib/fill-meter";
@@ -51,6 +52,7 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
               heading="No sessions open this week."
               source="home_upcoming_empty"
             />
+            <OpenNowOffers />
           </div>
         ) : (
           <>
