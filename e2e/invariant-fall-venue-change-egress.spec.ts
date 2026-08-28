@@ -44,7 +44,11 @@ function regRow(
       Allergies: { rich_text: [{ plain_text: ALLERGY }] },
       "Emergency Name": { rich_text: [{ plain_text: "Aunt Meg" }] },
       "Emergency Phone": { phone_number: "240-555-0134" },
-      "Parent Name": { rich_text: [{ plain_text: parentName }] },
+      // TITLE, not rich_text — the real Fall Registrations DB names each row
+      // for the parent. The fixture used to say rich_text (copied from the
+      // Player CRM's shape), so a greeting bug that hit every recipient
+      // ("Hi there") passed this suite cleanly.
+      "Parent Name": { title: [{ plain_text: parentName }] },
       "Parent Email": { email },
       Group: { select: { name: "Green" } },
       Status: { select: { name: status } },
@@ -127,6 +131,16 @@ test.describe("fall venue-change — no child data leaves with the email", () =>
       expect(send.body).not.toContain("240-555-0134");
       expect(send.body).not.toContain("2014");
     }
+  });
+
+  test("the greeting resolves to the parent's first name, not the fallback", async () => {
+    installWorld(stub, [regRow(CONFIRMED_EMAIL, "Dana Fields")]);
+    await runFallVenueChangeNotice({});
+
+    const send = resendSends()[0]!;
+    expect(send.body).toContain("Hi Dana");
+    // "there" is the no-name fallback; a schema mismatch silently lands here.
+    expect(send.body).not.toContain("Hi there");
   });
 
   test("the parent is the recipient, and admin is BCC — never CC", async () => {
