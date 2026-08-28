@@ -16,6 +16,7 @@ import {
   fallPollInviteText,
 } from "../src/lib/email/fall-poll-invite";
 import { WHATSAPP_PARENT_GROUP_URL } from "../src/lib/email/whatsapp-invite";
+import { FALL_POLL_VENUE } from "../src/data/fall-poll-2026";
 
 const EMAIL = "Parent@Example.org";
 
@@ -101,7 +102,10 @@ test.describe("fall-poll invite — copy", () => {
     for (const part of [html, text]) {
       expect(part).toContain("$225");
       expect(part).toContain("Sundays");
-      expect(part).toContain("Earle B. Wood Middle School");
+      // Constant, not a literal — the venue moved to Walter Johnson on
+      // 2026-08-27 and a hardcoded name here would have hidden a stale one.
+      expect(part).toContain(FALL_POLL_VENUE);
+      expect(part).not.toContain("Earle B. Wood");
       expect(part).toContain("Sept 20");
       expect(part).toContain("Oct 25");
       expect(part).toContain("1:00–2:30 PM");

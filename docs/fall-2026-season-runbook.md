@@ -6,7 +6,12 @@ is already **live and selling** — this is the delivery side.
 
 ## The season
 
-6 Sundays, **Sept 20 – Oct 25 2026** at Earle B. Wood Middle School, Rockville.
+6 Sundays, **Sept 20 – Oct 25 2026** at Walter Johnson High School, Bethesda
+(6400 Rock Spring Dr, MD 20814). **Venue moved 2026-08-27** — Earle B. Wood MS
+became unavailable for these Sundays and the season moved with 9 seats already
+sold; every registered family was emailed the change plus a full-refund offer
+(`POST /api/fall-venue-change`). Wood MS remains a live NGA venue for Saturday
+drop-ins and the August camp — it is not retired, just no longer the season's.
 Green Ball 1:00–2:30 PM, Yellow Ball 2:30–4:00 PM. One reserved tennis court =
 2 pickleball courts = **8 seats per group**, $225 per player, full season paid up
 front. Rain dates held **Nov 1 + Nov 8**.
@@ -114,8 +119,11 @@ they do **not** coach.
    kids. On a public court with a sole coach this is already a gap; captains are
    the mitigation, so a Sunday with zero captains means the coach is solo and
    the rule is broken.
-3. **First-aid/CPR + a per-venue emergency action plan** for Wood MS. Also
-   already on the P1 list.
+3. **First-aid/CPR + a per-venue emergency action plan** for Walter Johnson HS.
+   Also already on the P1 list — and note the plan has to be REDONE for the new
+   venue, not carried over from the Wood MS draft: nearest-hospital routing, the
+   gate/lot a medic would come through, and where the courts sit on campus are
+   all different at WJ (east side by the softball field, main lot off Rockledge).
 4. **Recruit.** Send the captain ask, take whatever Sundays people offer — one
    is a real contribution.
 5. **Send each captain their run sheet the day before.** Print

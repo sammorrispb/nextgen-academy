@@ -65,6 +65,7 @@ const VENUES: Record<string, Venue> = {
     tennisCourts: 6, // → 12 pickleball → 48 cap
     confirmCount: true,
     tip: "From Rockledge Dr, pull into the main school lot — the tennis courts are on the east side by the softball field, a short walk across the lot. Skip the West Parking Garage and medical lots across Rockledge Dr; those aren't the school's.",
+    note: "Fall 2026 season venue as of 2026-08-27 (Sundays, Sept 20 – Oct 25, 1–4 PM), moved here when Wood MS became unavailable. NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players a group — so the seat count did NOT change with the move. Room to grow to 3 courts under the half-rule (6 pickleball, 24 a group): change `FALL_TENNIS_COURTS_PER_SESSION` in `fall-2026.ts` and the seats follow. Also hosts the Sunday-evening weekly drop-ins, so the parking tip here is road-tested rather than satellite-derived.",
   },
   sherwood: {
     tennisCourts: 6, // → 12 pickleball → 48 cap
@@ -106,14 +107,14 @@ const VENUES: Record<string, Venue> = {
   // mistake this entry used to make: it recorded the park's courts, reported
   // nothing rentable, and sent parents to the wrong lot. The school's 6 tennis
   // courts (east side of campus) are the CUPF rental — that's what NGA permits
-  // for the Fall 2026 Sundays and what the Aug camp ran on. The 6 dedicated
+  // for the Saturday sessions and what the Aug camp ran on. The 6 dedicated
   // public pickleball courts to the north are Bauer Drive Local Park (parks
   // dept): free, lit, busy, and NOT reservable. See `note`.
   wood: {
     tennisCourts: 6, // physical; CUPF permits half → 3 bookable → 6 pickleball
     confirmCount: true,
     tip: "Enter off Bauer Dr and park in the main Earle B. Wood MS lot. Our tennis courts are on the east side of the campus, past the building — a 3–4 minute walk. Don't head for the pickleball courts up by the Bauer Drive Community Recreation Center; those are the public park's, not ours.",
-    note: "Fall 2026 season venue (Sundays, Sept 20 – Oct 25). NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players — with room to grow to 3 (see the half-rule note above): 6 pickleball courts, 24 players a group. Change `FALL_TENNIS_COURTS_PER_SESSION` in `fall-2026.ts` and the seat count follows. Separately, Bauer Drive Local Park to the north has 6 dedicated, lit public pickleball courts: FREE and high-traffic but NOT reservable, first-come only. Usable Mt-Zion-style for a free public session (~24 cap) and great for visibility, but you can't guarantee availability there.",
+    note: "STILL A LIVE VENUE — Saturday drop-in sessions and the August back-to-school camp run here; do not treat this entry as retired. It is no longer the Fall 2026 season venue: the season moved to Walter Johnson HS on 2026-08-27 when Wood became unavailable for those Sundays. NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players — with room to grow to 3 (see the half-rule note above): 6 pickleball courts, 24 players a group. Separately, Bauer Drive Local Park to the north has 6 dedicated, lit public pickleball courts: FREE and high-traffic but NOT reservable, first-come only. Usable Mt-Zion-style for a free public session (~24 cap) and great for visibility, but you can't guarantee availability there.",
     draft: true,
   },
 };

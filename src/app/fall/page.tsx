@@ -25,10 +25,18 @@ import { familySiteUrl } from "@/lib/urls";
 // Sam confirmed the terms (2026-08-14) and a real Stripe price backs checkout —
 // so the noindex posture and the no-price rule both lift here. The survey
 // (FallInterestForm) retired with the conversion.
+// Built from the season constants rather than typed out: this description had
+// hardcoded the venue and city, so the 2026-08-27 move to Walter Johnson left
+// the page body correct while the meta description still said Rockville — the
+// exact "canonical page is right, a variant path is stale" miss the repo rule
+// warns about. Derive it and that can't happen again.
 export const metadata: Metadata = {
   title: "Fall 2026 Season — Register | Next Gen Pickleball Academy",
-  description:
-    "Six Sundays of youth pickleball at Earle B. Wood Middle School in Rockville, Sept 20 – Oct 25. Green Ball 1:00–2:30 PM, Yellow Ball 2:30–4:00 PM. 8 spots per group, $225 per player for the full season.",
+  description: [
+    `Six Sundays of youth pickleball at ${FALL_VENUE_SHORT} in ${FALL_PUBLIC_AREA}, ${FALL_SEASON_LABEL}.`,
+    FALL_SEASON_GROUPS.map((g) => `${g.label} ${g.timeLabel}`).join(", ") + ".",
+    `${FALL_SEASON_SPOTS_PER_GROUP} spots per group, $${FALL_SEASON_PRICE_USD} per player for the full season.`,
+  ].join(" "),
   alternates: { canonical: "https://nextgenpbacademy.com/fall" },
 };
 

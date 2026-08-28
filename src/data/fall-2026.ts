@@ -2,7 +2,7 @@
 // survey, its confirmation email, the broadcast that drives traffic to it, and
 // the events feed's fall items.
 //
-// SHAPE DECIDED (Sam, 2026-08-14): Sundays only at Wood MS, Sept 20 – Oct 25 —
+// SHAPE DECIDED (Sam, 2026-08-14): Sundays only, Sept 20 – Oct 25 —
 // Green Ball 1:00–2:30 PM, then Yellow Ball 2:30–4:00 PM, with rain dates held
 // on Nov 1 and Nov 8. The earlier Saturday+Sunday 5–7 PM concept the survey
 // originally sized is superseded. The Link & Dink adult round robin remains on
@@ -104,6 +104,8 @@ export interface FallProgram {
 /**
  * Tennis courts NGA reserves from CUPF for each Sunday session (Sam, 2026-08-15).
  * Green and Yellow run back-to-back, so one court covers the whole 1–4 PM block.
+ * Unchanged by the 2026-08-27 move to Walter Johnson: this is a booking
+ * decision, not a property of the venue, so the seat count below held at 8.
  */
 export const FALL_TENNIS_COURTS_PER_SESSION = 1;
 
@@ -132,13 +134,20 @@ export const FALL_YOUTH_BLOCKS = [
   { level: "Yellow", startTime: "2:30 PM", endTime: "4:00 PM" },
 ] as const;
 
+/**
+ * VENUE MOVED 2026-08-27 (Sam): Earle B. Wood MS was no longer available for the
+ * season, so all 6 Sundays (and both rain dates) run at Walter Johnson HS
+ * instead. Dates, times, groups, price and seat count are all unchanged — only
+ * the place. Wood MS is still a live NGA venue for Saturday drop-in sessions and
+ * the August camp; do not sweep those references along with this one.
+ */
 export const FALL_VENUE =
-  "Earle B. Wood Middle School Tennis Courts, 14615 Bauer Dr, Rockville, MD 20853";
+  "Walter Johnson High School Tennis Courts, 6400 Rock Spring Dr, Bethesda, MD 20814";
 
 /** Broad area for any surface that shouldn't carry the full address. */
-export const FALL_PUBLIC_AREA = "Rockville, MD";
+export const FALL_PUBLIC_AREA = "Bethesda, MD";
 
-export const FALL_VENUE_SHORT = "Earle B. Wood Middle School";
+export const FALL_VENUE_SHORT = "Walter Johnson High School";
 
 /**
  * The 6 Sundays, ISO date-only. Written out rather than computed: date
