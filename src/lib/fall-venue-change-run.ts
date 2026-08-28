@@ -58,10 +58,22 @@ function firstNameOf(parentName: string): string {
   return trimmed.split(/\s+/)[0]!;
 }
 
-function richText(prop: unknown): string {
-  const rt = (prop as { rich_text?: { plain_text?: string }[] } | undefined)
-    ?.rich_text;
-  return (rt ?? []).map((t) => t.plain_text ?? "").join("");
+/**
+ * Reads a Notion text cell as either `rich_text` OR `title`.
+ *
+ * Both, deliberately: on THIS database `Parent Name` is the **title** property
+ * (the row is named for the parent), while the Player CRM that fall-reg-link
+ * reads names rows "Player Name" and keeps `Parent Name` as rich_text. Reading
+ * only rich_text here silently produced "Hi there" for every recipient — caught
+ * by sending the live email to Sam before the families, not by the suite, whose
+ * fixture had copied the wrong property shape too.
+ */
+function plainText(prop: unknown): string {
+  const cell = prop as
+    | { rich_text?: { plain_text?: string }[]; title?: { plain_text?: string }[] }
+    | undefined;
+  const runs = cell?.rich_text ?? cell?.title ?? [];
+  return runs.map((t) => t.plain_text ?? "").join("");
 }
 
 export interface FallVenueChangeRecipient {
@@ -191,7 +203,7 @@ export async function runFallVenueChangeNotice(
 
       const emailCell =
         (props["Parent Email"] as { email?: string })?.email ??
-        richText(props["Parent Email"]);
+        plainText(props["Parent Email"]);
       const email = primaryParentEmail(emailCell ?? "");
       if (!email) continue;
       if (onlySet && !onlySet.has(email)) continue;
@@ -202,7 +214,7 @@ export async function runFallVenueChangeNotice(
 
       byEmail.set(email, {
         email,
-        firstName: firstNameOf(richText(props["Parent Name"])),
+        firstName: firstNameOf(plainText(props["Parent Name"])),
       });
     }
     cursor = data.has_more ? data.next_cursor : undefined;
