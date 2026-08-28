@@ -135,7 +135,9 @@ test.describe("fall venue-change notice — what did NOT change", () => {
   test("says the rain dates moved to the new courts too", () => {
     // A held rain date at the OLD venue is the quiet way this move goes wrong.
     for (const part of bothParts()) {
-      expect(part).toMatch(/rain dates.*new courts|new courts too/is);
+      // [\s\S] rather than the `s` (dotAll) flag — tsconfig targets below
+      // ES2018, and `tsc --noEmit` rejects the flag (TS1501).
+      expect(part).toMatch(/rain dates[\s\S]*new courts|new courts too/i);
     }
   });
 
