@@ -112,6 +112,42 @@ Free, top-of-funnel offer: a cold parent says yes to the free thing first; price
 
 **Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/monthly). The only live price is the single $20 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references the referral perk ("you both get 50% off your next drop-in") as a percentage rather than a dollar amount, so a parent never reads a base price that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
 
+### Empty-state waitlist (`/api/waitlist` + `OpenNowOffers`)
+The form that renders ONLY when there are zero open sessions — on `/schedule` and in
+the home page's "This week" block (`UpcomingSessions.tsx`). Whenever the drop-in
+schedule is dark (every `recurring-templates.ts` entry `active: false` since 2026-08-23)
+this is the site's **primary conversion surface**, so treat it as a real funnel, not an
+edge case.
+
+- **Collects parent name + contact + area + child first name + age (6–16) + optional
+  level** (Red/Orange/Green/Yellow, defaulting to "Not sure yet" — a level must never
+  gate the door). Child fields approved by Sam 2026-08-28; the vocabulary mirrors
+  `validate-crew-interest.ts`. Nothing beyond that — no last name, DOB, school, or
+  medical.
+- **The NGA Waitlist DB is a child-PII destination as of 2026-08-28.** Child fields go
+  to Notion (the row) and Resend (the admin notification) ONLY. `/api/analytics` and
+  the Open Brain ingest stay parent-only — both fire on this route, so this is the
+  live edge of hostile-review item #4. Pinned by
+  `e2e/invariant-waitlist-pii-egress.spec.ts`, which SETS the Open Brain env and
+  asserts the payload is child-free rather than deleting the env so the helper
+  self-skips (that would prove only that the call didn't happen).
+- **Adding a child property means editing the Notion DB FIRST.** Notion 400s the whole
+  create when a payload names a property the DB lacks, and
+  `createNotionPageSourceFailSoft` retries ONLY Source-named rejections —
+  `e2e/waitlist-source-failsoft.spec.ts` deliberately pins that other rejections stay
+  visible, so don't widen it. A schema break loses the row but not the lead: the route
+  emails regardless and reports `notionStatus` on the admin notification.
+- **`OpenNowOffers` (`src/lib/open-now-offers.ts`, pure + date-injected)** renders what
+  a parent can act on today, beside the form and in the confirmation email from the
+  same helper so the two can't drift. Each card retires itself from its own data —
+  fall on `NEXT_PUBLIC_FALL_REGISTRATION_OPEN` + the season's last Sunday, league on
+  its `registrationDeadline`. **No seat counts** (they need a Notion read; a fabricated
+  count is worse than none) and **no league price** (`checkout-league` 503s until its
+  price env is set, so the card links the `/league` interest form).
+- The confirmation email is the only message these families consented to receive —
+  most decline marketing opt-in — so it carries the offers rather than a bare "we'll
+  be in touch."
+
 ### Eval confirmation (`POST /api/eval-confirmation`)
 **Always send the templated eval confirmation through this endpoint — never hand-build the email.** Free evaluations are booked manually (a parent inquires, Sam picks a time), so there's no Stripe webhook to fire the confirmation. This `?secret=$NGA_ADMIN_SECRET`-gated endpoint is the single source of truth for that send: it renders `src/lib/email/eval-confirmation.ts` (shared `brand.ts` chrome, EASE = Excellence), builds the `.ics` via `buildDropInIcs()` (`src/lib/email/ics.ts`), sends via Resend (`from` noreply@, **BCC** `nextgenacademypb@gmail.com`, replyTo `nextgenacademypb@gmail.com`) with the `.ics` attached, then stamps `Eval Date` on the lead's NGA Player CRM row (`src/lib/notion-eval.ts`, fail-soft — a Notion miss never fails a delivered email).
 

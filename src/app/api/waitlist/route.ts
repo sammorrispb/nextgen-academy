@@ -51,6 +51,20 @@ function parseContact(contact: string): {
 // The two empty states that render the waitlist form. Whitelisted rather than
 // escaped: these strings land in an HTML email, and an unknown value is a bug
 // or an attack, never a new surface we forgot about.
+const CHILD_LEVELS = new Set(["Red", "Orange", "Green", "Yellow"]);
+const CHILD_AGE_MIN = 6;
+const CHILD_AGE_MAX = 16;
+
+// Values a parent typed land in the admin notification's HTML. Escape at the
+// interpolation site rather than trusting validation to have covered it.
+function esc(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 const FORM_SURFACES = new Set(["schedule_empty", "home_upcoming_empty"]);
 const PATH_RE = /^\/[A-Za-z0-9/_-]{0,64}$/;
 
@@ -66,6 +80,11 @@ interface WaitlistBody {
   contact?: string;
   preferredArea?: string;
   marketingOptIn?: boolean;
+  childFirstName?: string;
+  /** Sent as a string by the form; validated to 6-16. */
+  childAge?: string;
+  /** Optional — Red/Orange/Green/Yellow, or "" for "not sure yet". */
+  childLevel?: string;
   /** Which empty-state form fired — see FORM_SURFACES. */
   source?: string;
   /** Pathname the form was rendered on. */
@@ -96,6 +115,28 @@ function validate(body: WaitlistBody): Record<string, string> {
   } else if (!ALLOWED_AREAS.has(body.preferredArea)) {
     errors.preferredArea = "Invalid area";
   }
+
+  if (!body.childFirstName?.trim()) {
+    errors.childFirstName = "Your kid's first name helps us match you up";
+  }
+
+  // NGA is 6-16, strictly. The waitlist is the first touch for most of these
+  // families, so the age gate belongs here and not only at checkout.
+  if (!body.childAge?.toString().trim()) {
+    errors.childAge = "Child's age is required";
+  } else {
+    const age = Number(body.childAge);
+    if (!Number.isFinite(age) || age < CHILD_AGE_MIN || age > CHILD_AGE_MAX) {
+      errors.childAge = `Age must be between ${CHILD_AGE_MIN} and ${CHILD_AGE_MAX}`;
+    }
+  }
+
+  // Level is optional on purpose — a parent landing on an empty schedule often
+  // doesn't know it yet, and a level must never gate the door.
+  if (body.childLevel && !CHILD_LEVELS.has(body.childLevel)) {
+    errors.childLevel = "Pick a level";
+  }
+
   return errors;
 }
 
@@ -125,6 +166,14 @@ async function createWaitlistEntry(body: Required<WaitlistBody>): Promise<{
 
   if (email) properties["Parent Email"] = { email };
   if (phone) properties["Parent Phone"] = { phone_number: phone };
+
+  properties["Child First Name"] = {
+    rich_text: [{ text: { content: body.childFirstName.trim() } }],
+  };
+  properties["Child Age"] = { number: Number(body.childAge) };
+  if (body.childLevel) {
+    properties["Child Level"] = { select: { name: body.childLevel } };
+  }
 
   // Source is best-effort attribution; the waitlist row is not. If Notion
   // rejects the create because of Source (the 2026-08-25 miss: this DB never
@@ -223,8 +272,9 @@ export async function POST(request: NextRequest) {
     New Waitlist Signup
   </h1>
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8; width: 140px;">Parent</td><td style="padding: 10px 8px; color: #EEF2FF;">${required.parentName}</td></tr>
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Contact</td><td style="padding: 10px 8px;"><a href="${email ? `mailto:${email}` : `tel:${phone}`}" style="color: #00D4FF;">${contactDisplay}</a></td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8; width: 140px;">Parent</td><td style="padding: 10px 8px; color: #EEF2FF;">${esc(required.parentName)}</td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Contact</td><td style="padding: 10px 8px;"><a href="${email ? `mailto:${esc(email)}` : `tel:${esc(phone ?? "")}`}" style="color: #00D4FF;">${esc(contactDisplay)}</a></td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Player</td><td style="padding: 10px 8px; color: #EEF2FF;">${esc(required.childFirstName)}, age ${esc(String(required.childAge))}${required.childLevel ? ` &middot; ${esc(required.childLevel)} Ball` : " &middot; level not given"}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Preferred Area</td><td style="padding: 10px 8px; color: #EEF2FF;">${required.preferredArea}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Marketing Opt-In</td><td style="padding: 10px 8px; color: #EEF2FF;">${required.marketingOptIn ? "Yes" : "No"}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Signed Up From</td><td style="padding: 10px 8px; color: #EEF2FF;">${describeSurface(required)}</td></tr>
