@@ -473,7 +473,7 @@ export default function OpsConsole({ isAdmin }: { isAdmin: boolean }) {
 
       <OpsCard
         title="Fall 2026 survey"
-        description="Asks both audiences — newsletter subscribers plus DD-clean eligible leads — whether the Sat/Sun 5–7 PM fall season at Wood MS works, and drives them to /fall. No sent-flag column, so a repeated live run RE-SENDS: preview first, and use retry-failed to fix a partial run."
+        description="Asks both audiences — newsletter subscribers plus DD-clean eligible leads — whether the Sunday fall season at Walter Johnson HS works, and drives them to /fall. No sent-flag column, so a repeated live run RE-SENDS: preview first, and use retry-failed to fix a partial run."
         opName="fall survey"
         params={{ variant: fallVariant }}
         paramsUi={

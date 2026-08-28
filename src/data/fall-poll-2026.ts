@@ -14,8 +14,9 @@
 export const FALL_POLL_SEASON_LABEL = "Sept 20 – Oct 25, 2026";
 export const FALL_POLL_SEASON_WEEKS = 6;
 export const FALL_POLL_DAY_LABEL = "Sundays";
-export const FALL_POLL_VENUE = "Earle B. Wood Middle School";
-export const FALL_POLL_VENUE_SHORT = "Wood MS";
+// Venue moved 2026-08-27 — see the note on FALL_VENUE in fall-2026.ts.
+export const FALL_POLL_VENUE = "Walter Johnson High School";
+export const FALL_POLL_VENUE_SHORT = "Walter Johnson HS";
 export const FALL_POLL_PRICE_USD = 225;
 export const FALL_POLL_SPOTS_PER_GROUP = 8;
 

@@ -18,6 +18,11 @@ import EmptyStateWaitlist from "@/components/EmptyStateWaitlist";
 import WeatherBar from "@/components/WeatherBar";
 import { fetchWeatherForDates, upcomingDates } from "@/lib/weather";
 import { breadcrumbJsonLd, courseJsonLd, SITE_URL } from "@/lib/seo";
+import {
+  FALL_PUBLIC_AREA,
+  FALL_SEASON_WEEKS,
+  FALL_VENUE_SHORT,
+} from "@/data/fall-2026";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -171,8 +176,11 @@ export default async function SchedulePage() {
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
                 New &middot; Fall 2026 Season
               </p>
+              {/* Venue from the constants — this line hardcoded Wood MS and
+                  would have gone stale on the 2026-08-27 move to Walter Johnson. */}
               <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                Six Sundays at Earle B. Wood MS in Rockville
+                {FALL_SEASON_WEEKS === 6 ? "Six" : FALL_SEASON_WEEKS} Sundays at{" "}
+                {FALL_VENUE_SHORT} in {FALL_PUBLIC_AREA}
               </p>
               <p className="text-sm text-ngpa-muted mt-0.5">
                 Sept 20 &ndash; Oct 25 &middot; Green Ball 1:00&ndash;2:30 PM,

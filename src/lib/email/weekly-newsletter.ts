@@ -78,7 +78,7 @@ export interface WeeklyNewsletterInput {
     /** "September 20 – October 25, 2026" */
     seasonLabel: string;
     weeks: number;
-    /** "Earle B. Wood Middle School, Rockville, MD" */
+    /** "Walter Johnson High School, Bethesda, MD" */
     venueLine: string;
     priceUsd: number;
     groups: NewsletterFallGroup[];

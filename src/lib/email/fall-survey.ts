@@ -38,10 +38,13 @@ export interface FallSurveyInput {
   unsubscribeUrl: string | null;
 }
 
+// Subject carries the venue from the constant. It read "Wood MS" until the
+// 2026-08-27 move — and the copy specs only asserted on the body, so a stale
+// venue in the subject line was the one place a venue move could hide.
 export function fallSurveySubject(variant: FallSurveyVariant): string {
   return variant === "ld"
-    ? "Fall round robin at Wood MS — does this work for you?"
-    : "Planning fall at Wood MS — tell us if this works";
+    ? `Fall round robin at ${FALL_VENUE_SHORT} — does this work for you?`
+    : `Planning fall at ${FALL_VENUE_SHORT} — tell us if this works`;
 }
 
 function programsInOrder(variant: FallSurveyVariant): FallProgram[] {

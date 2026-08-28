@@ -10,7 +10,11 @@ import {
   fallInterestConfirmationSubject,
   fallInterestConfirmationText,
 } from "../src/lib/email/fall-interest-confirmation";
-import { FALL_NO_HOLD_NOTE, SLOTS_PER_GROUP } from "../src/data/fall-2026";
+import {
+  FALL_NO_HOLD_NOTE,
+  FALL_VENUE_SHORT,
+  SLOTS_PER_GROUP,
+} from "../src/data/fall-2026";
 import { WHATSAPP_PARENT_GROUP_URL } from "../src/lib/email/whatsapp-invite";
 import { s } from "../src/lib/email/brand";
 
@@ -35,10 +39,14 @@ test.describe("fall survey broadcast — both variants", () => {
       const text = fallSurveyText(input({ variant }));
 
       for (const body of [html, text]) {
-        // Venue, days, window, length. Saturdays were dropped when the season
-        // reshaped to Sundays-only (2026-08-14) — a Saturday mention is a
-        // regression to the superseded shape.
-        expect(body).toContain("Earle B. Wood");
+        // Venue, days, window, length. Asserted against the constant, not a
+        // literal: this line read "Earle B. Wood" until the season moved to
+        // Walter Johnson (2026-08-27), and a hardcoded venue in the spec is
+        // how a stale venue survives a move. Saturdays were dropped when the
+        // season reshaped to Sundays-only (2026-08-14) — a Saturday mention is
+        // a regression to the superseded shape.
+        expect(body).toContain(FALL_VENUE_SHORT);
+        expect(body).not.toContain("Earle B. Wood");
         expect(body).not.toContain("Saturday");
         expect(body).toContain("Sunday");
         expect(body).toContain("1:00 PM");
@@ -150,6 +158,17 @@ test.describe("fall survey broadcast — both variants", () => {
     expect(fallSurveySubject("nga")).not.toEqual(fallSurveySubject("ld"));
     for (const v of VARIANTS) {
       expect(fallSurveySubject(v)).toMatch(/fall/i);
+    }
+  });
+
+  // The body assertions above covered the venue; the SUBJECT did not, and that
+  // is exactly where a stale "Wood MS" survived the 2026-08-27 move to Walter
+  // Johnson while every body test stayed green. A recipient reads the subject
+  // first, so it gets the same constant-driven guard.
+  test("subjects carry the current venue, not a hardcoded one", () => {
+    for (const v of VARIANTS) {
+      expect(fallSurveySubject(v)).toContain(FALL_VENUE_SHORT);
+      expect(fallSurveySubject(v)).not.toContain("Wood");
     }
   });
 

@@ -18,6 +18,10 @@ import { FALL_VENUE } from "../src/data/fall-2026";
 // the seat count and the court count have to be the same decision. They drifted
 // once already: fall-2026 advertised 9 slots per group while fall-poll-2026 sold
 // 8, and venue-parking recorded Wood MS as having nothing rentable at all.
+//
+// Written against FALL_VENUE rather than a named school, because the season
+// moved venues mid-registration (Wood MS → Walter Johnson HS, 2026-08-27) with
+// 9 seats already sold. Whatever venue the season names, these must hold.
 
 test.describe("fall season seats are derived from the booked courts", () => {
   test("one reserved tennis court is two pickleball courts and eight seats", () => {
@@ -43,38 +47,40 @@ test.describe("fall season seats are derived from the booked courts", () => {
 });
 
 test.describe("the fall venue is a bookable CUPF court", () => {
-  test("Wood MS resolves from the season venue string", () => {
+  test("the season venue string resolves to a known venue", () => {
+    // A venue the table can't resolve has no court count and no parking tip,
+    // so a rename or a move that misses venue-parking fails here first.
     expect(getVenue(FALL_VENUE)).not.toBeNull();
   });
 
-  test("Wood MS has rentable tennis courts, not zero", () => {
-    const wood = getVenue(FALL_VENUE)!;
-    // The old record described the free Bauer Drive park pickleball courts next
-    // door and reported nothing rentable, so the season's own venue looked
+  test("the season venue has rentable tennis courts, not zero", () => {
+    const venue = getVenue(FALL_VENUE)!;
+    // The old Wood record described the free Bauer Drive park pickleball courts
+    // next door and reported nothing rentable, so the season's own venue looked
     // unbookable and its capacity computed to 0.
-    expect(wood.tennisCourts).toBeGreaterThan(0);
-    expect(pickleballCourts(wood)).toBeGreaterThan(0);
-    expect(playerCapacity(wood)).toBeGreaterThan(0);
+    expect(venue.tennisCourts).toBeGreaterThan(0);
+    expect(pickleballCourts(venue)).toBeGreaterThan(0);
+    expect(playerCapacity(venue)).toBeGreaterThan(0);
   });
 
   test("the venue holds at least the courts the season books", () => {
-    const wood = getVenue(FALL_VENUE)!;
-    expect(wood.tennisCourts).toBeGreaterThanOrEqual(
+    const venue = getVenue(FALL_VENUE)!;
+    expect(venue.tennisCourts).toBeGreaterThanOrEqual(
       FALL_TENNIS_COURTS_PER_SESSION,
     );
   });
 
-  test("the parking tip points at the school courts, not the public park ones", () => {
-    const wood = getVenue(FALL_VENUE)!;
-    // Parents were being sent to the rec-center lot by Bauer Drive Local Park —
+  test("the parking tip sends parents to the school lot and our courts", () => {
+    const venue = getVenue(FALL_VENUE)!;
+    // Parents were once sent to the rec-center lot by Bauer Drive Local Park —
     // the free first-come courts — rather than the school courts we permit.
-    expect(wood.tip).toMatch(/Wood MS lot|school lot/i);
-    expect(wood.tip).toMatch(/tennis court/i);
-    // Naming the rec center is fine, but only to steer parents AWAY from it.
-    if (/Community Recreation Center/i.test(wood.tip)) {
-      expect(wood.tip).toMatch(/Don't|not ours|public park|park's/i);
+    expect(venue.tip).toMatch(/school lot|main .*lot/i);
+    expect(venue.tip).toMatch(/tennis court/i);
+    // Naming a neighbouring public facility is fine, but only to steer AWAY.
+    if (/Community Recreation Center|Parking Garage/i.test(venue.tip)) {
+      expect(venue.tip).toMatch(/Don't|Skip|not ours|public park|park's/i);
     }
     // The school courts are reserved, so nothing about them is first-come.
-    expect(wood.tip).not.toMatch(/first-come/i);
+    expect(venue.tip).not.toMatch(/first-come/i);
   });
 });
