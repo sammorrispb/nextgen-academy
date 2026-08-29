@@ -23,7 +23,7 @@ import {
   FALL_RAIN_DATES,
   FALL_VENUE,
   FALL_YOUTH_BLOCKS,
-  SLOTS_PER_GROUP,
+  FALL_SLOTS_BY_GROUP,
 } from "@/data/fall-2026";
 import {
   focusBlockFor,
@@ -332,7 +332,10 @@ export default async function FallPlaybookPage() {
         </h1>
         <p className="mt-3 text-base text-ngpa-white/70 print:text-gray-700 leading-relaxed">
           {FALL_SEASON_LABEL} · {FALL_YOUTH_BLOCKS.length} groups ·{" "}
-          {SLOTS_PER_GROUP} kids per group on 2 courts · ages{" "}
+          {FALL_YOUTH_BLOCKS.map(
+            (b) => `${b.level} ${FALL_SLOTS_BY_GROUP[b.level]}`,
+          ).join(" / ")}{" "}
+          kids on 2 courts · ages{" "}
           {CURRICULUM_AGE_MIN}–{CURRICULUM_AGE_MAX}. One court captain per
           court, so the coach coaches.
         </p>

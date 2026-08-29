@@ -9,7 +9,7 @@
 // state until NEXT_PUBLIC_FALL_REGISTRATION_OPEN is "true". BOTH must be set
 // to go live.
 
-import { SLOTS_PER_GROUP, FALL_YOUTH_BLOCKS } from "./fall-2026";
+import { FALL_SLOTS_BY_GROUP, FALL_YOUTH_BLOCKS } from "./fall-2026";
 import { FALL_POLL_PRICE_USD } from "./fall-poll-2026";
 
 export type FallSeasonGroup = "Green" | "Yellow";
@@ -18,7 +18,16 @@ export const FALL_SEASON_SLUG = "fall-2026";
 export const FALL_SEASON_TITLE = "Next Gen Youth Fall Season";
 export const FALL_SEASON_PRICE_USD = FALL_POLL_PRICE_USD;
 export const FALL_SEASON_PRICE_ENV_VAR = "STRIPE_FALL_SEASON_PRICE_ID";
-export const FALL_SEASON_SPOTS_PER_GROUP = SLOTS_PER_GROUP;
+export const FALL_SEASON_SLOTS_BY_GROUP = FALL_SLOTS_BY_GROUP;
+
+/**
+ * Seats in one color group. A function rather than a constant since 2026-08-29:
+ * Green and Yellow no longer hold the same number, so any caller asking "how
+ * many spots" has to say which group it means.
+ */
+export function fallSeasonSlotsFor(group: FallSeasonGroup): number {
+  return FALL_SLOTS_BY_GROUP[group];
+}
 
 export interface FallSeasonGroupOption {
   group: FallSeasonGroup;

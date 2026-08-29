@@ -110,7 +110,11 @@ test.describe("fall-poll invite — copy", () => {
       expect(part).toContain("Oct 25");
       expect(part).toContain("1:00–2:30 PM");
       expect(part).toContain("2:30–4:00 PM");
-      expect(part).toContain("8 spots");
+      // The seat count came out of this template on 2026-08-29 — Green and
+      // Yellow no longer hold the same number, so one figure here would be
+      // wrong for a group. Scarcity without a count.
+      expect(part).toMatch(/limited spots/i);
+      expect(part).not.toMatch(/\d+ spots/);
       expect(part).toContain("Green");
       expect(part).toContain("Yellow");
     }

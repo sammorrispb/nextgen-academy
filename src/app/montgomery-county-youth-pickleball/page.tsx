@@ -354,8 +354,8 @@ export default function MontgomeryCountyPage() {
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8">
             All group classes are{" "}
             <strong className="text-ngpa-white font-bold">$20 per 1-hour slot</strong>,{" "}
-            drop-in only — no subscription, no commitment. Each
-            pickleball court is capped at 4 players. Payments are
+            drop-in only — no subscription, no commitment. Courts stay
+            small, so every kid gets real reps. Payments are
             non-refundable.{" "}
             <Link
               href="/schedule"

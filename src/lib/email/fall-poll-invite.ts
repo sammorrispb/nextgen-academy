@@ -5,7 +5,6 @@ import {
   FALL_POLL_PRICE_USD,
   FALL_POLL_SEASON_LABEL,
   FALL_POLL_SEASON_WEEKS,
-  FALL_POLL_SPOTS_PER_GROUP,
   FALL_POLL_VENUE,
 } from "@/data/fall-poll-2026";
 import { signatureExtrasHtml, signatureExtrasText } from "./signature";
@@ -95,7 +94,7 @@ export function fallPollInviteHtml(input: FallPollInviteInput): string {
       <p style="margin:0 0 8px 0;color:${c.text};font-size:14px;line-height:1.7;">
         ${FALL_POLL_GROUPS.map(
           (g) =>
-            `<strong>${g.level} Ball</strong> &mdash; ${FALL_POLL_DAY_LABEL} ${g.timeLabel}, ${FALL_POLL_SPOTS_PER_GROUP} spots`,
+            `<strong>${g.level} Ball</strong> &mdash; ${FALL_POLL_DAY_LABEL} ${g.timeLabel}, limited spots`,
         ).join("<br>")}
       </p>
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.6;">
@@ -132,7 +131,7 @@ export function fallPollInviteText(input: FallPollInviteInput): string {
     "THE DETAILS",
     ...FALL_POLL_GROUPS.map(
       (g) =>
-        `${g.level} Ball — ${FALL_POLL_DAY_LABEL} ${g.timeLabel}, ${FALL_POLL_SPOTS_PER_GROUP} spots`,
+        `${g.level} Ball — ${FALL_POLL_DAY_LABEL} ${g.timeLabel}, limited spots`,
     ),
     `$${FALL_POLL_PRICE_USD} per player for the full ${FALL_POLL_SEASON_WEEKS}-week season.`,
     "",

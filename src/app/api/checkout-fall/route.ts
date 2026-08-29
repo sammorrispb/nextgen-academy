@@ -3,7 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import {
   FALL_SEASON_PRICE_ENV_VAR,
   FALL_SEASON_SLUG,
-  FALL_SEASON_SPOTS_PER_GROUP,
+  fallSeasonSlotsFor,
   FALL_SEASON_TITLE,
   findFallSeasonGroup,
 } from "@/data/fall-season-2026";
@@ -24,7 +24,8 @@ import {
 
 // Fall 2026 season checkout — full-pay only, ENV-GATED like checkout-league:
 // until STRIPE_FALL_SEASON_PRICE_ID is set this returns 503 so the season
-// ships dark. Unlike league, the season has a real 8-seat cap per group, so
+// ships dark. Unlike league, each season group has a real seat cap of its own
+// (Green 8, Yellow 10 — see FALL_SLOTS_BY_GROUP), so
 // the Notion roster count gates the checkout (fail-open on a Notion blip —
 // an oversold seat is a refundable mistake, an outage blocking checkout
 // isn't), and the cluster-style duplicate guard stops a same-kid double-pay.
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
   }
 
   const keys = await fetchFallRegistrationKeys(option.group);
-  if (keys.length >= FALL_SEASON_SPOTS_PER_GROUP) {
+  if (keys.length >= fallSeasonSlotsFor(option.group)) {
     return NextResponse.json(
       {
         error: `The ${option.label} group is full — reply to any of our emails or text Coach Sam and we'll add you to the sub list.`,

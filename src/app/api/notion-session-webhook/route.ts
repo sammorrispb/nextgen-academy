@@ -174,7 +174,7 @@ function notifyHtml(parentName: string, body: ExtractedSession): string {
     <p style="margin: 4px 0 0; font-size: 14px; color: #7A88B8;">${body.sessionLocation}</p>
   </div>
   <p style="font-size: 15px; line-height: 1.6;">
-    Spots are first-come, first-served and each pickleball court is capped at 4 players.
+    Spots are first-come, first-served and courts stay small on purpose.
   </p>
   <p style="margin: 28px 0;">
     <a href="https://nextgenpbacademy.com/schedule" style="display: inline-block; padding: 14px 28px; background: #00D4FF; color: #05132B; font-weight: 700; text-decoration: none; border-radius: 999px;">

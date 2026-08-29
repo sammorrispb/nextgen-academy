@@ -146,8 +146,8 @@ export default async function SchedulePage() {
           </h2>
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Seasons, weekly classes, and free evaluations for kids 6&ndash;16 at
-            every level &mdash; Red, Orange, Green, and Yellow Ball. Every court
-            is capped at 4 players, so nobody stands in line.
+            every level &mdash; Red, Orange, Green, and Yellow Ball. Courts stay
+            small, so nobody stands in line.
           </p>
           <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
             Not sure where your player fits? Start with a free evaluation
@@ -229,7 +229,7 @@ export default async function SchedulePage() {
           <SectionHeading
             eyebrow="Upcoming Sessions"
             title="Pick a date and reserve your spot."
-            subtitle="$20 per 1-hour drop-in slot. Each pickleball court is capped at 4 players."
+            subtitle="$20 per 1-hour drop-in slot. Courts stay small on purpose."
           />
 
           <RegistrationNotice />

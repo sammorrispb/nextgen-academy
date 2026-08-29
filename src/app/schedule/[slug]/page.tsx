@@ -156,7 +156,7 @@ export default async function SessionPage({ params }: PageProps) {
           <SectionHeading
             eyebrow="Reserve a Slot"
             title="Lock in this session."
-            subtitle="$20 for one 1-hour slot. Drop-in only — no subscription, no commitment. Each pickleball court is capped at 4 players."
+            subtitle="$20 for one 1-hour slot. Drop-in only — no subscription, no commitment. Courts stay small on purpose."
           />
 
           <RegistrationNotice />

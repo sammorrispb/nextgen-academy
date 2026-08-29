@@ -18,7 +18,6 @@ export const FALL_POLL_DAY_LABEL = "Sundays";
 export const FALL_POLL_VENUE = "Walter Johnson High School";
 export const FALL_POLL_VENUE_SHORT = "Walter Johnson HS";
 export const FALL_POLL_PRICE_USD = 225;
-export const FALL_POLL_SPOTS_PER_GROUP = 8;
 
 export const FALL_POLL_SUNDAYS = [
   "2026-09-20",

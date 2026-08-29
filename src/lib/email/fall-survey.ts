@@ -7,7 +7,6 @@ import {
   FALL_SEASON_WEEKS,
   FALL_START_TIME,
   FALL_VENUE_SHORT,
-  SLOTS_PER_GROUP,
   type FallProgram,
 } from "@/data/fall-2026";
 import { signatureExtrasHtml, signatureExtrasText } from "./signature";
@@ -59,7 +58,7 @@ function programCardHtml(p: FallProgram): string {
       <h2 style="font-family:Montserrat,Arial,sans-serif;color:${c.text};font-size:18px;margin:0 0 10px 0;">${p.name}</h2>
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.6;">${p.format}</p>
       <p style="margin:0;color:${c.muted};font-size:13px;line-height:1.6;">
-        ${SLOTS_PER_GROUP} spots in each ${p.groupNoun} &mdash; ${p.groups.join(" &middot; ")}
+        Every ${p.groupNoun} runs small &mdash; ${p.groups.join(" &middot; ")}
       </p>
     </div>`;
 }
@@ -71,7 +70,7 @@ function programCardText(p: FallProgram): string {
     p.name,
     p.who,
     p.format,
-    `${SLOTS_PER_GROUP} spots in each ${p.groupNoun} — ${p.groups.join(" · ")}`,
+    `Every ${p.groupNoun} runs small — ${p.groups.join(" · ")}`,
   ].join("\n");
 }
 
@@ -103,7 +102,7 @@ export function fallSurveyHtml(input: FallSurveyInput): string {
     <div style="${s.card}">
       <p style="margin:0 0 12px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.muted};font-weight:700;">How it would work</p>
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.6;">
-        <strong>${SLOTS_PER_GROUP} spots per group, first come first serve.</strong>
+        <strong>Small groups, first come first serve.</strong>
         Small on purpose &mdash; everybody gets real reps and real games.
       </p>
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.6;">
@@ -162,7 +161,7 @@ export function fallSurveyText(input: FallSurveyInput): string {
 
   lines.push(
     "HOW IT WOULD WORK",
-    `${SLOTS_PER_GROUP} spots per group, first come first serve. Small on purpose — everybody gets real reps and real games.`,
+    `Small groups, first come first serve. Small on purpose — everybody gets real reps and real games.`,
     `It's a full season. You'd commit to all ${FALL_SEASON_WEEKS} weeks and pay for the season up front. That's what keeps a group together and keeps the round robin worth showing up for.`,
     `Can't commit to all ${FALL_SEASON_WEEKS} weeks? There's a sub list. Tell us and we'll call you when a spot opens week to week.`,
     "",

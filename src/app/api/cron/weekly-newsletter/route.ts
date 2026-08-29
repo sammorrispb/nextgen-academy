@@ -28,7 +28,7 @@ import {
 import {
   FALL_SEASON_GROUPS,
   FALL_SEASON_PRICE_USD,
-  FALL_SEASON_SPOTS_PER_GROUP,
+  fallSeasonSlotsFor,
   FALL_SEASON_TITLE,
 } from "@/data/fall-season-2026";
 import { countFallRegistrations } from "@/lib/notion-fall-registrations";
@@ -202,10 +202,7 @@ async function loadFallSeason(
       label: option.label,
       timeLabel: option.timeLabel,
       spotsLeft:
-        taken === null
-          ? null
-          : Math.max(0, FALL_SEASON_SPOTS_PER_GROUP - taken),
-      spotsPerGroup: FALL_SEASON_SPOTS_PER_GROUP,
+        taken === null ? null : fallSeasonSlotsFor(option.group) - taken,
     });
   }
 

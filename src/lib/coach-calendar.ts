@@ -8,7 +8,7 @@ import {
   FALL_RAIN_DATES,
   FALL_YOUTH_BLOCKS,
   FALL_VENUE_SHORT,
-  SLOTS_PER_GROUP,
+  fallSlotsFor,
 } from "@/data/fall-2026";
 
 /**
@@ -203,7 +203,7 @@ export function fallEntriesForMonth(month: string): CalendarEntry[] {
         location: FALL_VENUE_SHORT,
         status: tentative ? "Tentative" : "Open",
         registered: null,
-        capacity: SLOTS_PER_GROUP,
+        capacity: fallSlotsFor(block.level),
         href: null,
         source: "fall",
       });

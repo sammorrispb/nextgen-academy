@@ -14,7 +14,6 @@ import {
 import {
   FALL_SEASON_GROUPS,
   FALL_SEASON_PRICE_USD,
-  FALL_SEASON_SPOTS_PER_GROUP,
   FALL_SEASON_TITLE,
   type FallSeasonGroup,
 } from "@/data/fall-season-2026";
@@ -35,7 +34,7 @@ export const metadata: Metadata = {
   description: [
     `Six Sundays of youth pickleball at ${FALL_VENUE_SHORT} in ${FALL_PUBLIC_AREA}, ${FALL_SEASON_LABEL}.`,
     FALL_SEASON_GROUPS.map((g) => `${g.label} ${g.timeLabel}`).join(", ") + ".",
-    `${FALL_SEASON_SPOTS_PER_GROUP} spots per group, $${FALL_SEASON_PRICE_USD} per player for the full season.`,
+    `Small groups, $${FALL_SEASON_PRICE_USD} per player for the full season.`,
   ].join(" "),
   alternates: { canonical: "https://nextgenpbacademy.com/fall" },
 };
@@ -112,8 +111,7 @@ export default async function FallPage() {
               $<span itemProp="price" content={String(FALL_SEASON_PRICE_USD)}>{FALL_SEASON_PRICE_USD}</span>{" "}
               per player for the full season
             </strong>{" "}
-            &middot; {FALL_SEASON_SPOTS_PER_GROUP} spots per group, first come
-            first serve.
+            &middot; Small groups, first come first serve.
           </p>
           <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed">
             The season is a full-season commitment paid up front, and it&rsquo;s
@@ -149,8 +147,8 @@ export default async function FallPage() {
                   </a>
                 </h3>
                 <p className="text-ngpa-white/80 leading-relaxed">
-                  Ninety minutes — coached practice, then the round robin.{" "}
-                  {FALL_SEASON_SPOTS_PER_GROUP} spots.
+                  Ninety minutes — coached practice, then the round robin.
+                  Small group.
                 </p>
               </article>
             ))}

@@ -11,8 +11,8 @@ export default function RegistrationNotice() {
           $20 per 1-hour slot.
         </strong>{" "}
         Drop-in only — no subscription, no commitment. Pick the session below
-        that fits your child&rsquo;s level and date. Spots are capped at 4
-        players per pickleball court, so reserve early. If we cancel a session
+        that fits your child&rsquo;s level and date. Courts stay small, so
+        reserve early. If we cancel a session
         for weather, you get an automatic full refund — otherwise payments are
         non-refundable. Questions? Email{" "}
         <a
