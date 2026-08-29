@@ -13,6 +13,7 @@ import {
   type FallRegistrationErrors,
 } from "@/lib/validate-fall-registration";
 import { isWaiverRequired } from "@/lib/waiver-required";
+import { seatStatusLabel } from "@/lib/seat-status";
 
 // Season REGISTRATION form — the full-pay checkout surface that replaced the
 // FallInterestForm survey once the season's terms were set. Structural mirror
@@ -180,13 +181,12 @@ export default function FallRegistrationForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="group">
             {FALL_SEASON_GROUPS.map((option) => {
               const taken = spotsTaken[option.group];
-              const soldOut =
-                typeof taken === "number" &&
-                taken >= FALL_SEASON_SPOTS_PER_GROUP;
               const spotsLeft =
                 typeof taken === "number"
-                  ? Math.max(0, FALL_SEASON_SPOTS_PER_GROUP - taken)
+                  ? FALL_SEASON_SPOTS_PER_GROUP - taken
                   : null;
+              const soldOut = spotsLeft !== null && spotsLeft <= 0;
+              const seatStatus = seatStatusLabel(spotsLeft);
               const selected = form.group === option.group;
               return (
                 <label
@@ -214,11 +214,7 @@ export default function FallRegistrationForm({
                   </span>
                   <span className="text-sm text-ngpa-white/70 pl-8">
                     Sundays {option.timeLabel}
-                    {soldOut
-                      ? " · Sold out"
-                      : spotsLeft !== null
-                        ? ` · ${spotsLeft} of ${FALL_SEASON_SPOTS_PER_GROUP} spots left`
-                        : ""}
+                    {seatStatus ? ` · ${seatStatus}` : ""}
                   </span>
                 </label>
               );
