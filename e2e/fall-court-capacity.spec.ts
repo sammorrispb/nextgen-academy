@@ -2,9 +2,10 @@ import { test, expect } from "@playwright/test";
 
 import {
   FALL_TENNIS_COURTS_PER_SESSION,
-  SLOTS_PER_GROUP,
+  FALL_PLAYERS_PER_COURT,
+  FALL_SLOTS_BY_GROUP,
+  FALL_YOUTH_BLOCKS,
 } from "../src/data/fall-2026";
-import { FALL_POLL_SPOTS_PER_GROUP } from "../src/data/fall-poll-2026";
 import {
   PICKLEBALL_COURTS_PER_TENNIS_COURT,
   PLAYERS_PER_PICKLEBALL_COURT,
@@ -19,30 +20,58 @@ import { FALL_VENUE } from "../src/data/fall-2026";
 // once already: fall-2026 advertised 9 slots per group while fall-poll-2026 sold
 // 8, and venue-parking recorded Wood MS as having nothing rentable at all.
 //
+// Per-group since 2026-08-29: Green and Yellow no longer hold the same number,
+// so there is nothing left to assert about "the" seat count — each group is
+// pinned to its own court math instead.
+//
 // Written against FALL_VENUE rather than a named school, because the season
 // moved venues mid-registration (Wood MS → Walter Johnson HS, 2026-08-27) with
 // 9 seats already sold. Whatever venue the season names, these must hold.
 
 test.describe("fall season seats are derived from the booked courts", () => {
-  test("one reserved tennis court is two pickleball courts and eight seats", () => {
+  test("every group's seats are its own court math, never a typed number", () => {
     expect(FALL_TENNIS_COURTS_PER_SESSION).toBe(1);
-    expect(SLOTS_PER_GROUP).toBe(
-      FALL_TENNIS_COURTS_PER_SESSION *
-        PICKLEBALL_COURTS_PER_TENNIS_COURT *
-        PLAYERS_PER_PICKLEBALL_COURT,
-    );
+    for (const block of FALL_YOUTH_BLOCKS) {
+      expect(FALL_SLOTS_BY_GROUP[block.level]).toBe(
+        FALL_TENNIS_COURTS_PER_SESSION *
+          PICKLEBALL_COURTS_PER_TENNIS_COURT *
+          FALL_PLAYERS_PER_COURT[block.level],
+      );
+    }
   });
 
-  test("the survey and the poll quote the same number of spots", () => {
-    expect(SLOTS_PER_GROUP).toBe(FALL_POLL_SPOTS_PER_GROUP);
+  test("every Sunday block has a seat count and a players-per-court figure", () => {
+    // A block added to the season without an entry in either map would sell
+    // `undefined` seats through the checkout gate.
+    for (const block of FALL_YOUTH_BLOCKS) {
+      expect(typeof FALL_SLOTS_BY_GROUP[block.level]).toBe("number");
+      expect(FALL_SLOTS_BY_GROUP[block.level]).toBeGreaterThan(0);
+      expect(FALL_PLAYERS_PER_COURT[block.level]).toBeGreaterThan(0);
+    }
   });
 
-  test("seats per group never exceed what one booked court holds", () => {
-    const seatsOnBookedCourts =
-      FALL_TENNIS_COURTS_PER_SESSION *
-      PICKLEBALL_COURTS_PER_TENNIS_COURT *
-      PLAYERS_PER_PICKLEBALL_COURT;
-    expect(SLOTS_PER_GROUP).toBeLessThanOrEqual(seatsOnBookedCourts);
+  test("Green holds the standard 4 a court; Yellow is the deliberate exception", () => {
+    // Sam, 2026-08-29: Yellow runs 5 a court against the SAME single booking.
+    // Green must not drift along with it, and neither may the site-wide cap
+    // that sizes drop-ins and every venue's playerCapacity.
+    expect(FALL_PLAYERS_PER_COURT.Green).toBe(PLAYERS_PER_PICKLEBALL_COURT);
+    expect(FALL_PLAYERS_PER_COURT.Yellow).toBe(5);
+    expect(PLAYERS_PER_PICKLEBALL_COURT).toBe(4);
+    expect(FALL_SLOTS_BY_GROUP.Green).toBe(8);
+    expect(FALL_SLOTS_BY_GROUP.Yellow).toBe(10);
+  });
+
+  test("no group is sized past what its court can physically hold", () => {
+    // 4 a court is NGA's comfortable cap; 5 is the agreed squeeze. Anything
+    // above 6 a court is not a booking decision any more, it's an overbook.
+    const MAX_PLAYERS_PER_COURT = 6;
+    const courts =
+      FALL_TENNIS_COURTS_PER_SESSION * PICKLEBALL_COURTS_PER_TENNIS_COURT;
+    for (const block of FALL_YOUTH_BLOCKS) {
+      expect(FALL_SLOTS_BY_GROUP[block.level]).toBeLessThanOrEqual(
+        courts * MAX_PLAYERS_PER_COURT,
+      );
+    }
   });
 });
 

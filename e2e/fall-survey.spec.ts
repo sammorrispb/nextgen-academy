@@ -13,7 +13,6 @@ import {
 import {
   FALL_NO_HOLD_NOTE,
   FALL_VENUE_SHORT,
-  SLOTS_PER_GROUP,
 } from "../src/data/fall-2026";
 import { WHATSAPP_PARENT_GROUP_URL } from "../src/lib/email/whatsapp-invite";
 import { s } from "../src/lib/email/brand";
@@ -54,9 +53,10 @@ test.describe("fall survey broadcast — both variants", () => {
         expect(body).toContain("September 20");
         expect(body).toContain("October 25");
         expect(body).toContain("6 weeks");
-        // Terms. Assert against the constant, not a literal — this line read
-        // "9 " until the seat count was derived from the booked court count.
-        expect(body).toContain(`${SLOTS_PER_GROUP} `);
+        // Terms. The seat count came OUT of this template on 2026-08-29 —
+        // capacity is per-group now and a broadcast can't quote one number for
+        // both, so the copy says "small groups" and pins nothing numeric.
+        expect(body).toMatch(/small groups/i);
         expect(body).toMatch(/first come/i);
         expect(body).toMatch(/full season/i);
         expect(body).toMatch(/sub list/i);

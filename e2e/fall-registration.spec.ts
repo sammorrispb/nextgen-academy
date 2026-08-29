@@ -8,18 +8,16 @@ import { buildFallSeasonConfirmationEmail } from "../src/lib/email/fall-season-c
 import {
   FALL_SEASON_GROUPS,
   FALL_SEASON_PRICE_USD,
-  FALL_SEASON_SPOTS_PER_GROUP,
+  FALL_SEASON_SLOTS_BY_GROUP,
+  fallSeasonSlotsFor,
 } from "../src/data/fall-season-2026";
-import {
-  FALL_POLL_PRICE_USD,
-  FALL_POLL_SPOTS_PER_GROUP,
-} from "../src/data/fall-poll-2026";
+import { FALL_POLL_PRICE_USD } from "../src/data/fall-poll-2026";
 import {
   FALL_RAIN_DATES,
   FALL_SUNDAYS,
   FALL_VENUE,
   FALL_YOUTH_BLOCKS,
-  SLOTS_PER_GROUP,
+  FALL_SLOTS_BY_GROUP,
 } from "../src/data/fall-2026";
 
 // Pure-function specs — no dev server. Run with:
@@ -46,9 +44,15 @@ test.describe("fall season product data stays consistent", () => {
     expect(FALL_SEASON_PRICE_USD).toBe(225);
   });
 
-  test("seat cap is the derived court math, same number the poll sold", () => {
-    expect(FALL_SEASON_SPOTS_PER_GROUP).toBe(SLOTS_PER_GROUP);
-    expect(FALL_SEASON_SPOTS_PER_GROUP).toBe(FALL_POLL_SPOTS_PER_GROUP);
+  test("the season's seat caps are the season config's, per group", () => {
+    // The checkout gate reads fallSeasonSlotsFor; if this wrapper ever stops
+    // tracking the court math, a group silently oversells or undersells.
+    expect(FALL_SEASON_SLOTS_BY_GROUP).toEqual(FALL_SLOTS_BY_GROUP);
+    for (const block of FALL_YOUTH_BLOCKS) {
+      expect(fallSeasonSlotsFor(block.level)).toBe(
+        FALL_SLOTS_BY_GROUP[block.level],
+      );
+    }
   });
 
   test("groups mirror the Sunday blocks with canonical ball-color labels", () => {

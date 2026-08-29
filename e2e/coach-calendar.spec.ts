@@ -14,7 +14,11 @@ import {
   type DemandRow,
 } from "../src/lib/coach-calendar";
 import type { CalendarSessionRow } from "../src/lib/notion-sessions";
-import { FALL_SUNDAYS, FALL_RAIN_DATES, SLOTS_PER_GROUP } from "../src/data/fall-2026";
+import {
+  FALL_SUNDAYS,
+  FALL_RAIN_DATES,
+  FALL_SLOTS_BY_GROUP,
+} from "../src/data/fall-2026";
 
 function sessionRow(over: Partial<CalendarSessionRow> = {}): CalendarSessionRow {
   return {
@@ -133,7 +137,14 @@ test.describe("entry normalization", () => {
     expect(sept.map((e) => e.level)).toContain("Green");
     expect(sept.map((e) => e.level)).toContain("Yellow");
     // Fall seats live only in Stripe metadata — capacity is known, fill is not.
-    expect(sept.every((e) => e.capacity === SLOTS_PER_GROUP)).toBe(true);
+    expect(
+      sept.every(
+        (e) => e.capacity === FALL_SLOTS_BY_GROUP[e.level as "Green" | "Yellow"],
+      ),
+    ).toBe(true);
+    // Green and Yellow differ, so a single shared capacity would pass a
+    // sloppier assertion while showing the wrong number on one of them.
+    expect(new Set(sept.map((e) => e.capacity)).size).toBe(2);
     expect(sept.every((e) => e.registered === null)).toBe(true);
     expect(sept.every((e) => e.href === null)).toBe(true);
 

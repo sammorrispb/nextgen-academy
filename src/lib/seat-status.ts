@@ -10,13 +10,20 @@
  *
  * `null` in means the roster count is unknown (Notion unavailable); `null` out
  * means render nothing, because a fabricated status is worse than none.
+ *
+ * `fullLabel` lets a surface keep its own wording for the full state — the
+ * weekly newsletter points at the season's sub list, which is the real thing a
+ * family joins, rather than the generic waitlist.
  */
-export function seatStatusLabel(remaining: number | null): string | null {
+export function seatStatusLabel(
+  remaining: number | null,
+  opts?: { fullLabel?: string },
+): string | null {
   if (remaining === null) return null;
   // Clamp rather than trust: the count comes from a live roster a human can
   // add rows to past the cap.
   const left = Math.max(0, remaining);
-  if (left === 0) return "Full — join the waitlist";
+  if (left === 0) return opts?.fullLabel ?? "Full — join the waitlist";
   if (left === 1) return "Last spot";
   if (left <= 3) return "Filling up";
   return "Spots open";

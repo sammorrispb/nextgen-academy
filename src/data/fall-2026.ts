@@ -105,22 +105,9 @@ export interface FallProgram {
  * Tennis courts NGA reserves from CUPF for each Sunday session (Sam, 2026-08-15).
  * Green and Yellow run back-to-back, so one court covers the whole 1–4 PM block.
  * Unchanged by the 2026-08-27 move to Walter Johnson: this is a booking
- * decision, not a property of the venue, so the seat count below held at 8.
+ * decision, not a property of the venue, so the seat counts held across the move.
  */
 export const FALL_TENNIS_COURTS_PER_SESSION = 1;
-
-/**
- * Slots available in each color group / bracket. First come, first serve.
- *
- * DERIVED from the court booking rather than typed, because it drifted once:
- * this file advertised 9 while `fall-poll-2026.ts` sold 8, and 9 doesn't fit on
- * one court anyway (2 pickleball courts × 4 players). Book a second court and
- * the seat count follows on its own.
- */
-export const SLOTS_PER_GROUP =
-  FALL_TENNIS_COURTS_PER_SESSION *
-  PICKLEBALL_COURTS_PER_TENNIS_COURT *
-  PLAYERS_PER_PICKLEBALL_COURT;
 
 export const FALL_SEASON_WEEKS = 6;
 
@@ -133,6 +120,47 @@ export const FALL_YOUTH_BLOCKS = [
   { level: "Green", startTime: "1:00 PM", endTime: "2:30 PM" },
   { level: "Yellow", startTime: "2:30 PM", endTime: "4:00 PM" },
 ] as const;
+
+/** "Green" | "Yellow" — taken from the blocks so the two can't disagree. */
+export type FallBlockLevel = (typeof FALL_YOUTH_BLOCKS)[number]["level"];
+
+/**
+ * Players per pickleball court, per color group (Sam, 2026-08-29).
+ *
+ * Green holds NGA's standard 4. Yellow runs 5 — the extra body was bought
+ * against the court we already book rather than by renting a second one.
+ *
+ * Scoped to this season deliberately: the site-wide 4-per-court cap that sizes
+ * drop-ins and every venue's `playerCapacity` is UNCHANGED, so raising a season
+ * group means editing this map, never `PLAYERS_PER_PICKLEBALL_COURT`.
+ */
+export const FALL_PLAYERS_PER_COURT: Record<FallBlockLevel, number> = {
+  Green: PLAYERS_PER_PICKLEBALL_COURT,
+  Yellow: 5,
+};
+
+/**
+ * Slots available in each color group. First come, first serve.
+ *
+ * Still DERIVED from the court booking rather than typed, because it drifted
+ * once: this file advertised 9 while `fall-poll-2026.ts` sold 8. Book a second
+ * court and both groups grow together; change one group's players-per-court
+ * above and only that group moves.
+ */
+export const FALL_SLOTS_BY_GROUP: Record<FallBlockLevel, number> = {
+  Green:
+    FALL_TENNIS_COURTS_PER_SESSION *
+    PICKLEBALL_COURTS_PER_TENNIS_COURT *
+    FALL_PLAYERS_PER_COURT.Green,
+  Yellow:
+    FALL_TENNIS_COURTS_PER_SESSION *
+    PICKLEBALL_COURTS_PER_TENNIS_COURT *
+    FALL_PLAYERS_PER_COURT.Yellow,
+};
+
+export function fallSlotsFor(level: FallBlockLevel): number {
+  return FALL_SLOTS_BY_GROUP[level];
+}
 
 /**
  * VENUE MOVED 2026-08-27 (Sam): Earle B. Wood MS was no longer available for the

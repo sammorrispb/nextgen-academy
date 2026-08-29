@@ -2,6 +2,7 @@ import { c, s } from "./brand";
 import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
 import { fillLabel, fillBar } from "@/lib/fill-meter";
+import { seatStatusLabel } from "@/lib/seat-status";
 import {
   phoneLineHtml,
   phoneLineText,
@@ -56,8 +57,6 @@ export interface NewsletterFallGroup {
   timeLabel: string;
   /** Seats still open, or null when the roster count couldn't be read. */
   spotsLeft: number | null;
-  /** Full build-out of the group (the court math in fall-2026.ts). */
-  spotsPerGroup: number;
 }
 
 export interface WeeklyNewsletterInput {
@@ -183,21 +182,17 @@ function pollProgressLabel(p: NewsletterOpenPoll): string {
 }
 
 /**
- * Seat line for one fall group. A null count means the roster read failed —
- * fall back to the group size rather than inventing a number, because "3 spots
- * left" that isn't true is worse than no urgency at all.
+ * Seat line for one fall group, or "" when the roster read failed — a null
+ * count used to fall back to the group size, but the group size is exactly the
+ * number this email no longer publishes, and silence beats a stale cap.
  */
 export function fallSpotsLabel(g: NewsletterFallGroup): string {
-  if (g.spotsLeft === null) return `${g.spotsPerGroup} spots`;
-  if (g.spotsLeft <= 0) return "Full — ask about the sub list";
-  // "8 of 8 spots left" reads like a typo on an untouched group; a scarcity
-  // count only earns its place once someone has actually taken a seat.
-  if (g.spotsLeft >= g.spotsPerGroup) return `${g.spotsPerGroup} spots open`;
-  return `${g.spotsLeft} of ${g.spotsPerGroup} spots left`;
+  return seatStatusLabel(g.spotsLeft, { fullLabel: "Full — ask about the sub list" }) ?? "";
 }
 
 function fallGroupLine(g: NewsletterFallGroup): string {
-  return `Sundays ${g.timeLabel} · ${fallSpotsLabel(g)}`;
+  const spots = fallSpotsLabel(g);
+  return `Sundays ${g.timeLabel}${spots ? ` · ${spots}` : ""}`;
 }
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {

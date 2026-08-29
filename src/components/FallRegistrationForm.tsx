@@ -4,7 +4,7 @@ import { useState } from "react";
 import InlineWaiverStep from "@/components/InlineWaiverStep";
 import {
   FALL_SEASON_GROUPS,
-  FALL_SEASON_SPOTS_PER_GROUP,
+  fallSeasonSlotsFor,
   type FallSeasonGroup,
 } from "@/data/fall-season-2026";
 import {
@@ -183,7 +183,7 @@ export default function FallRegistrationForm({
               const taken = spotsTaken[option.group];
               const spotsLeft =
                 typeof taken === "number"
-                  ? FALL_SEASON_SPOTS_PER_GROUP - taken
+                  ? fallSeasonSlotsFor(option.group) - taken
                   : null;
               const soldOut = spotsLeft !== null && spotsLeft <= 0;
               const seatStatus = seatStatusLabel(spotsLeft);

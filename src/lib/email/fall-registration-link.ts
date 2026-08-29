@@ -5,7 +5,6 @@ import {
   FALL_POLL_PRICE_USD,
   FALL_POLL_SEASON_LABEL,
   FALL_POLL_SEASON_WEEKS,
-  FALL_POLL_SPOTS_PER_GROUP,
   FALL_POLL_VENUE,
 } from "@/data/fall-poll-2026";
 import { signatureExtrasHtml, signatureExtrasText } from "./signature";
@@ -65,7 +64,7 @@ export function fallRegistrationLinkHtml(
     <p style="margin:0 0 20px 0;color:${c.text};font-size:15px;line-height:1.65;">
       You said <strong style="color:${c.accentLime};">IN</strong> for the fall season, so here&rsquo;s
       the registration link. Spots are <strong>first come, first serve</strong> &mdash;
-      ${FALL_POLL_SPOTS_PER_GROUP} per group &mdash; so grabbing yours now is the safest bet.
+      and the groups are small &mdash; so grabbing yours now is the safest bet.
     </p>
 
     <div style="${s.cardAccent}">
@@ -119,7 +118,7 @@ export function fallRegistrationLinkText(
     `Thanks ${firstName} — let's lock the spot.`,
     ``,
     `You said IN for the fall season, so here's the registration link. Spots are`,
-    `first come, first serve — ${FALL_POLL_SPOTS_PER_GROUP} per group — so grabbing yours now is the safest bet.`,
+    `first come, first serve — and the groups are small — so grabbing yours now is the safest bet.`,
     ``,
     `WHAT YOU'RE SIGNING UP FOR`,
     `${FALL_POLL_SEASON_WEEKS} ${FALL_POLL_DAY_LABEL} at ${FALL_POLL_VENUE}`,

@@ -15,7 +15,7 @@ import {
 import {
   FALL_SEASON_GROUPS,
   FALL_SEASON_PRICE_USD,
-  FALL_SEASON_SPOTS_PER_GROUP,
+  fallSeasonSlotsFor,
   FALL_SEASON_TITLE,
 } from "../src/data/fall-season-2026";
 import { MVF_TOURNAMENT, mvfTournamentIsUpcoming } from "../src/data/mvf";
@@ -585,8 +585,7 @@ test.describe("weekly newsletter — fall season block", () => {
     groups: FALL_SEASON_GROUPS.map((g) => ({
       label: g.label,
       timeLabel: g.timeLabel,
-      spotsLeft: FALL_SEASON_SPOTS_PER_GROUP,
-      spotsPerGroup: FALL_SEASON_SPOTS_PER_GROUP,
+      spotsLeft: fallSeasonSlotsFor(g.group),
     })),
     url: `${ORIGIN}/fall`,
   };
@@ -662,29 +661,30 @@ test.describe("weekly newsletter — fall season block", () => {
       },
     };
     const html = weeklyNewsletterHtml(input);
-    expect(html).toContain(`3 of ${FALL_SEASON_SPOTS_PER_GROUP} spots left`);
+    expect(html).toContain("Filling up");
     expect(html).toContain("Full — ask about the sub list");
   });
 
-  test("an untouched group reads as open, not '8 of 8 left'", () => {
+  test("the seat line never publishes the group's capacity", () => {
+    // Capacity is a court booking that moves, and Green and Yellow no longer
+    // hold the same number — one printed figure would be wrong for a group.
     const html = weeklyNewsletterHtml({ ...baseInput, fallSeason });
-    expect(html).toContain(`${FALL_SEASON_SPOTS_PER_GROUP} spots open`);
-    expect(html).not.toContain(
-      `${FALL_SEASON_SPOTS_PER_GROUP} of ${FALL_SEASON_SPOTS_PER_GROUP} spots left`,
-    );
+    expect(html).toContain("Spots open");
+    expect(html).not.toMatch(/\d+ of \d+ spots left/);
+    expect(html).not.toMatch(/\d+ spots open/);
   });
 
-  test("an unreadable roster falls back to the group size, not a made-up count", () => {
+  test("an unreadable roster says nothing rather than inventing a count", () => {
     // countFallRegistrations returns null on a Notion miss. Printing "0 spots
-    // left" there would close a season that is actually wide open.
+    // left" there would close a season that is actually wide open, and the old
+    // fallback printed the group size — the number this email no longer quotes.
     expect(
       fallSpotsLabel({
         label: "Green Ball",
         timeLabel: "1:00–2:30 PM",
         spotsLeft: null,
-        spotsPerGroup: FALL_SEASON_SPOTS_PER_GROUP,
       }),
-    ).toBe(`${FALL_SEASON_SPOTS_PER_GROUP} spots`);
+    ).toBe("");
   });
 });
 

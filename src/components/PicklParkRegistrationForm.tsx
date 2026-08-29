@@ -13,6 +13,7 @@ import {
   type PicklParkRegistrationErrors,
 } from "@/lib/validate-picklpark-registration";
 import { isWaiverRequired } from "@/lib/waiver-required";
+import { seatStatusLabel } from "@/lib/seat-status";
 
 // Pickl Park Saturday season registration form — structural mirror of
 // FallRegistrationForm (same field set + a11y patterns + Stripe-redirect
@@ -179,13 +180,12 @@ export default function PicklParkRegistrationForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="group">
             {PICKLPARK_SEASON_GROUPS.map((option) => {
               const taken = spotsTaken[option.group];
-              const soldOut =
-                typeof taken === "number" &&
-                taken >= PICKLPARK_SEASON_SPOTS_PER_GROUP;
               const spotsLeft =
                 typeof taken === "number"
-                  ? Math.max(0, PICKLPARK_SEASON_SPOTS_PER_GROUP - taken)
+                  ? PICKLPARK_SEASON_SPOTS_PER_GROUP - taken
                   : null;
+              const soldOut = spotsLeft !== null && spotsLeft <= 0;
+              const seatStatus = seatStatusLabel(spotsLeft);
               const selected = form.group === option.group;
               return (
                 <label
@@ -213,11 +213,7 @@ export default function PicklParkRegistrationForm({
                   </span>
                   <span className="text-sm text-ngpa-white/70 pl-8">
                     Saturdays {option.timeLabel}
-                    {soldOut
-                      ? " · Sold out"
-                      : spotsLeft !== null
-                        ? ` · ${spotsLeft} of ${PICKLPARK_SEASON_SPOTS_PER_GROUP} spots left`
-                        : ""}
+                    {seatStatus ? ` · ${seatStatus}` : ""}
                   </span>
                 </label>
               );
