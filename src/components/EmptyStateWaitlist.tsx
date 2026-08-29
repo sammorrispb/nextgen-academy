@@ -26,6 +26,8 @@ interface EmptyStateWaitlistProps {
   source?: string;
 }
 
+const LEVELS = ["Red", "Orange", "Green", "Yellow"];
+
 type Status = "idle" | "submitting" | "success" | "error";
 
 export default function EmptyStateWaitlist({
@@ -35,6 +37,9 @@ export default function EmptyStateWaitlist({
   const [parentName, setParentName] = useState("");
   const [contact, setContact] = useState("");
   const [preferredArea, setPreferredArea] = useState("Anywhere in MoCo");
+  const [childFirstName, setChildFirstName] = useState("");
+  const [childAge, setChildAge] = useState("");
+  const [childLevel, setChildLevel] = useState("");
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<Status>("idle");
@@ -54,7 +59,15 @@ export default function EmptyStateWaitlist({
           parentName,
           contact,
           preferredArea,
+          childFirstName,
+          childAge,
+          childLevel,
           marketingOptIn,
+          // Which empty state the parent was looking at. Sent to the ROUTE (not
+          // just trackEvent) so the admin email says where the signup came
+          // from — without this the surface existed only in analytics.
+          source,
+          page: typeof window === "undefined" ? "" : window.location.pathname,
           // Attribution stash from UtmCapture (sessionStorage) — the route
           // maps it to a Source select on the Notion waitlist row.
           ...getUtm(),
@@ -86,7 +99,8 @@ export default function EmptyStateWaitlist({
           You&rsquo;re on the list, {parentName.split(" ")[0]}.
         </h3>
         <p className="text-base text-ngpa-white/80 leading-relaxed">
-          We&rsquo;ll email you the day new sessions open in{" "}
+          We&rsquo;ll email you the day new sessions open for{" "}
+          {childFirstName.trim() || "your player"} in{" "}
           <span className="font-bold text-ngpa-teal">{preferredArea}</span>.
         </p>
       </div>
@@ -142,6 +156,62 @@ export default function EmptyStateWaitlist({
             required
           />
           {errors.contact && <p className={errorClass}>{errors.contact}</p>}
+        </div>
+        <div className="grid grid-cols-[1fr_5.5rem] gap-3">
+          <div>
+            <label htmlFor="wl-childName" className={labelClass}>
+              Your kid&rsquo;s first name
+            </label>
+            <input
+              id="wl-childName"
+              type="text"
+              value={childFirstName}
+              onChange={(e) => setChildFirstName(e.target.value)}
+              placeholder="Ava"
+              className={inputClass}
+              required
+            />
+            {errors.childFirstName && (
+              <p className={errorClass}>{errors.childFirstName}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="wl-childAge" className={labelClass}>
+              Age
+            </label>
+            <input
+              id="wl-childAge"
+              type="number"
+              inputMode="numeric"
+              min={6}
+              max={16}
+              value={childAge}
+              onChange={(e) => setChildAge(e.target.value)}
+              placeholder="10"
+              className={inputClass}
+              required
+            />
+            {errors.childAge && <p className={errorClass}>{errors.childAge}</p>}
+          </div>
+        </div>
+        <div>
+          <label htmlFor="wl-childLevel" className={labelClass}>
+            Level <span className="font-normal text-ngpa-white/50">(optional)</span>
+          </label>
+          <select
+            id="wl-childLevel"
+            value={childLevel}
+            onChange={(e) => setChildLevel(e.target.value)}
+            className={`${inputClass} appearance-none cursor-pointer`}
+          >
+            <option value="">Not sure yet &mdash; we&rsquo;ll help you find it</option>
+            {LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level} Ball
+              </option>
+            ))}
+          </select>
+          {errors.childLevel && <p className={errorClass}>{errors.childLevel}</p>}
         </div>
         <div>
           <label htmlFor="wl-area" className={labelClass}>

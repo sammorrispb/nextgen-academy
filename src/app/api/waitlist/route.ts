@@ -5,6 +5,10 @@ import { Resend } from "resend";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
+import {
+  buildOpenNowOffers,
+  fallRegistrationOpen,
+} from "@/lib/open-now-offers";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -44,11 +48,47 @@ function parseContact(contact: string): {
   return { email: null, phone: contact.trim() };
 }
 
+// The two empty states that render the waitlist form. Whitelisted rather than
+// escaped: these strings land in an HTML email, and an unknown value is a bug
+// or an attack, never a new surface we forgot about.
+const CHILD_LEVELS = new Set(["Red", "Orange", "Green", "Yellow"]);
+const CHILD_AGE_MIN = 6;
+const CHILD_AGE_MAX = 16;
+
+// Values a parent typed land in the admin notification's HTML. Escape at the
+// interpolation site rather than trusting validation to have covered it.
+function esc(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+const FORM_SURFACES = new Set(["schedule_empty", "home_upcoming_empty"]);
+const PATH_RE = /^\/[A-Za-z0-9/_-]{0,64}$/;
+
+function describeSurface(body: WaitlistBody): string {
+  const surface = FORM_SURFACES.has(body.source ?? "") ? body.source : null;
+  const page = body.page && PATH_RE.test(body.page) ? body.page : null;
+  if (surface && page) return `${surface} (${page})`;
+  return surface ?? page ?? "unknown";
+}
+
 interface WaitlistBody {
   parentName?: string;
   contact?: string;
   preferredArea?: string;
   marketingOptIn?: boolean;
+  childFirstName?: string;
+  /** Sent as a string by the form; validated to 6-16. */
+  childAge?: string;
+  /** Optional — Red/Orange/Green/Yellow, or "" for "not sure yet". */
+  childLevel?: string;
+  /** Which empty-state form fired — see FORM_SURFACES. */
+  source?: string;
+  /** Pathname the form was rendered on. */
+  page?: string;
   // Attribution (optional) — UTM stash forwarded by the waitlist form
   // (UtmCapture → sessionStorage). Mapped to a Source select on the Notion
   // row via the shared attributedSource() vocab; absent = "Website".
@@ -75,6 +115,28 @@ function validate(body: WaitlistBody): Record<string, string> {
   } else if (!ALLOWED_AREAS.has(body.preferredArea)) {
     errors.preferredArea = "Invalid area";
   }
+
+  if (!body.childFirstName?.trim()) {
+    errors.childFirstName = "Your kid's first name helps us match you up";
+  }
+
+  // NGA is 6-16, strictly. The waitlist is the first touch for most of these
+  // families, so the age gate belongs here and not only at checkout.
+  if (!body.childAge?.toString().trim()) {
+    errors.childAge = "Child's age is required";
+  } else {
+    const age = Number(body.childAge);
+    if (!Number.isFinite(age) || age < CHILD_AGE_MIN || age > CHILD_AGE_MAX) {
+      errors.childAge = `Age must be between ${CHILD_AGE_MIN} and ${CHILD_AGE_MAX}`;
+    }
+  }
+
+  // Level is optional on purpose — a parent landing on an empty schedule often
+  // doesn't know it yet, and a level must never gate the door.
+  if (body.childLevel && !CHILD_LEVELS.has(body.childLevel)) {
+    errors.childLevel = "Pick a level";
+  }
+
   return errors;
 }
 
@@ -104,6 +166,14 @@ async function createWaitlistEntry(body: Required<WaitlistBody>): Promise<{
 
   if (email) properties["Parent Email"] = { email };
   if (phone) properties["Parent Phone"] = { phone_number: phone };
+
+  properties["Child First Name"] = {
+    rich_text: [{ text: { content: body.childFirstName.trim() } }],
+  };
+  properties["Child Age"] = { number: Number(body.childAge) };
+  if (body.childLevel) {
+    properties["Child Level"] = { select: { name: body.childLevel } };
+  }
 
   // Source is best-effort attribution; the waitlist row is not. If Notion
   // rejects the create because of Source (the 2026-08-25 miss: this DB never
@@ -160,6 +230,24 @@ export async function POST(request: NextRequest) {
   const { email, phone } = parseContact(required.contact);
   const contactDisplay = email || phone || required.contact;
 
+  // Same offers the empty-state block renders — a waitlist confirmation is the
+  // one message these parents consented to, and most never opt into marketing,
+  // so it has to carry what they can act on today.
+  const offersHtml = buildOpenNowOffers(
+    new Date().toISOString().slice(0, 10),
+    fallRegistrationOpen(),
+  )
+    .map(
+      (offer) => `
+    <div style="background: #0C1F47; padding: 18px 20px; border-radius: 8px; margin: 0 0 12px;">
+      <p style="margin: 0 0 4px; font-size: 11px; color: #AADC00; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700;">${offer.eyebrow}</p>
+      <p style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #EEF2FF;">${offer.title}</p>
+      <p style="margin: 0 0 10px; font-size: 14px; line-height: 1.6; color: #C7D0EE;">${offer.detail}</p>
+      <a href="https://nextgenpbacademy.com${offer.href}" style="color: #00D4FF; font-weight: 600; font-size: 14px; text-decoration: none;">${offer.cta} &rarr;</a>
+    </div>`,
+    )
+    .join("");
+
   let notionStatus = "skipped";
   if (process.env.NOTION_API_KEY && process.env.NOTION_WAITLIST_DB_ID) {
     try {
@@ -184,10 +272,12 @@ export async function POST(request: NextRequest) {
     New Waitlist Signup
   </h1>
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8; width: 140px;">Parent</td><td style="padding: 10px 8px; color: #EEF2FF;">${required.parentName}</td></tr>
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Contact</td><td style="padding: 10px 8px;"><a href="${email ? `mailto:${email}` : `tel:${phone}`}" style="color: #00D4FF;">${contactDisplay}</a></td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8; width: 140px;">Parent</td><td style="padding: 10px 8px; color: #EEF2FF;">${esc(required.parentName)}</td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Contact</td><td style="padding: 10px 8px;"><a href="${email ? `mailto:${esc(email)}` : `tel:${esc(phone ?? "")}`}" style="color: #00D4FF;">${esc(contactDisplay)}</a></td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Player</td><td style="padding: 10px 8px; color: #EEF2FF;">${esc(required.childFirstName)}, age ${esc(String(required.childAge))}${required.childLevel ? ` &middot; ${esc(required.childLevel)} Ball` : " &middot; level not given"}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Preferred Area</td><td style="padding: 10px 8px; color: #EEF2FF;">${required.preferredArea}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Marketing Opt-In</td><td style="padding: 10px 8px; color: #EEF2FF;">${required.marketingOptIn ? "Yes" : "No"}</td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Signed Up From</td><td style="padding: 10px 8px; color: #EEF2FF;">${describeSurface(required)}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notion DB</td><td style="padding: 10px 8px; color: #EEF2FF;">${notionStatus}</td></tr>
   </table>
 </div>`;
@@ -201,12 +291,8 @@ export async function POST(request: NextRequest) {
   <p style="font-size: 15px; line-height: 1.6;">
     Thanks for adding yourself to the Next Gen waitlist for <strong style="color: #AADC00;">${required.preferredArea}</strong>. We&rsquo;ll email you the day new sessions open near you &mdash; usually 30 days ahead of the session date.
   </p>
-  <div style="background: #0C1F47; padding: 20px; border-radius: 8px; margin: 24px 0;">
-    <p style="margin: 0 0 4px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">While you wait</p>
-    <p style="margin: 0; font-size: 15px; line-height: 1.6;">
-      Want your child evaluated before the next cohort opens? <a href="https://nextgenpbacademy.com/free-evaluation" style="color: #00D4FF; font-weight: 600;">Book a free 30-min evaluation &rarr;</a>
-    </p>
-  </div>
+  <p style="margin: 24px 0 12px; font-size: 13px; color: #7A88B8; text-transform: uppercase; letter-spacing: 1px;">While you wait &mdash; open right now</p>
+  ${offersHtml}
   <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #1A3060;">
     <p style="font-size: 14px; line-height: 1.6;">
       Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="color: #00D4FF;">${site.phone}</a>.
