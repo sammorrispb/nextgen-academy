@@ -42,6 +42,38 @@ Marketing / lead-gen website for **Next Gen Pickleball Academy** — youth pickl
 
 Live at https://nextgenpbacademy.com (deployed on Vercel, auto-deploy from `main`).
 
+## Deliverables go to Notion, not to a published artifact
+
+**Standing preference (Sam, 2026-08-30): any document-shaped deliverable is a Notion
+page.** Runbooks, playbooks, plans, reports, reviews, proposals, summaries meant to be
+kept — write them into Notion with the Notion MCP tools so Sam can read them in the
+Notion app and edit them with Claude later. A published HTML artifact is a dead end for
+that: he cannot open it in Notion and cannot edit it in a later session.
+
+- **How:** read `notion://docs/enhanced-markdown-spec` first (via `notion-fetch`) — Notion
+  markdown has its own callout, table and toggle syntax, and guessing it produces a page
+  that renders wrong. Give the page an icon and a one-line italic standfirst.
+- **Still fine as an artifact:** something that is genuinely a *web page* — an app, a
+  dashboard, an interactive tool, a chart that needs to run. Prose is a Notion page.
+- Answering a question in chat is not a deliverable. This is about documents that outlive
+  the conversation.
+
+The same rule is in the other three repos' CLAUDE.md, each pointing at its own Notion
+home. Filing is **by project**: L&D procedures → Link & Dink SOPs
+(`fe1c6730149a4dc08b679fb5d4809bd0`), L&D technical/product decisions → the Tech Decisions
+register via `/decision`, NGA marketing/ops → Next Gen Pickleball Academy HOME
+(`210fa3ac27dc804d9877f8a77c48d40b`), coach handbook → NGA Coaching System
+(`349fa3ac27dc8156953afa142c43435c`).
+
+- **Where, in this repo:** under **Next Gen Pickleball Academy HOME**
+  (`210fa3ac27dc804d9877f8a77c48d40b`). When nothing there obviously fits, ask rather
+  than guessing.
+- **Minor-data governance still binds a Notion page.** A document is an egress surface
+  like any other: no child first names, no birth years, no roster detail, no allergy or
+  emergency-contact text. Aggregates and policy only. The rule that a new egress
+  destination for child fields is a hostile-review trigger does not stop applying because
+  the destination is prose.
+
 ## Ecosystem
 Part of Sam Morris's pickleball platform. Other repos this site talks to:
 - **Open Brain** (`sammorrispb/open-brain`) — semantic CRM; receives `ingestToOpenBrain` POSTs.
