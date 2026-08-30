@@ -63,7 +63,8 @@ home. Filing is **by project**: L&D procedures → Link & Dink SOPs
 (`fe1c6730149a4dc08b679fb5d4809bd0`), L&D technical/product decisions → the Tech Decisions
 register via `/decision`, NGA marketing/ops → Next Gen Pickleball Academy HOME
 (`210fa3ac27dc804d9877f8a77c48d40b`), coach handbook → NGA Coaching System
-(`349fa3ac27dc8156953afa142c43435c`).
+(`349fa3ac27dc8156953afa142c43435c`), Open Brain → the Open Brain hub
+(`3ccfa3ac27dc81dd82b0d7c9b4da531c`), anything uncategorised → its Brain Dump inbox.
 
 - **Where, in this repo:** under **Next Gen Pickleball Academy HOME**
   (`210fa3ac27dc804d9877f8a77c48d40b`). When nothing there obviously fits, ask rather
