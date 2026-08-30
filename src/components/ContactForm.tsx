@@ -18,7 +18,7 @@ import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
 
-const [MOCO_LOCATION, FREDERICK_LOCATION] = LEAD_LOCATIONS;
+const [MOCO_LOCATION] = LEAD_LOCATIONS;
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -159,11 +159,10 @@ export default function ContactForm() {
       email,
       phone: phone || undefined,
       interest,
-      // Only private lessons run in Frederick; omitted for the MoCo default
-      // so existing submissions stay byte-identical.
-      ...(interest === "private-lessons" && location === FREDERICK_LOCATION
-        ? { location }
-        : {}),
+      // The location radio only renders for private lessons, so send it for
+      // that interest whichever option was picked — gating on Frederick alone
+      // silently dropped every MoCo answer.
+      ...(interest === "private-lessons" ? { location } : {}),
       message: message || undefined,
       ...trackingRef.current,
       visitor_id: getVisitorIdForForm() || null,

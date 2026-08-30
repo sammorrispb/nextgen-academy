@@ -16,7 +16,7 @@ import { site } from "@/data/site";
 
 const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
 
-const [MOCO_LOCATION, FREDERICK_LOCATION] = LEAD_LOCATIONS;
+const [MOCO_LOCATION] = LEAD_LOCATIONS;
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -147,10 +147,10 @@ export default function LeadForm({
       parentName,
       contact,
       kids: kids.map((k) => ({ name: k.name.trim(), age: Number(k.age) })),
-      // Omitted for the MoCo default so existing leads keep reading
-      // "No preference" in the admin email and the Notion Location select
-      // stays clean.
-      ...(location === FREDERICK_LOCATION ? { location } : {}),
+      // Send whichever the parent picked. Omitting the MoCo default used to
+      // make every MoCo family read "No preference" in the admin email and
+      // leave Notion's Location empty — we were discarding a real answer.
+      location,
       notes: notes || undefined,
       ...trackingRef.current,
       visitor_id: getVisitorIdForForm() || null,

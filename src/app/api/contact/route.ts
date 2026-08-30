@@ -9,6 +9,12 @@ import {
 } from "@/lib/validate-contact";
 import type { ContactFormData, ContactInterest } from "@/lib/validate-contact";
 import { normalizeKids } from "@/lib/validate-lead";
+import {
+  appendLeadInquiry,
+  findFamilyRows,
+  hasChildRow,
+  todayET,
+} from "@/lib/notion-lead-enrich";
 import type { Kid } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
@@ -75,27 +81,6 @@ function currentSeasonLabel(now: Date = new Date()): string {
   if (m >= 2 && m <= 4) return `Spring ${y}`;
   if (m >= 5 && m <= 7) return `Summer ${y}`;
   return `Fall ${y}`;
-}
-
-async function findNotionPlayer(email: string): Promise<string | null> {
-  const notionKey = process.env.NOTION_API_KEY;
-  if (!notionKey) return null;
-
-  const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": "2022-06-28",
-    },
-    body: JSON.stringify({
-      filter: { property: "Parent Email", email: { equals: email } },
-      page_size: 1,
-    }),
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.results?.length > 0 ? data.results[0].id : null;
 }
 
 async function createNotionRow(
@@ -188,6 +173,20 @@ async function createNotionRow(
   return { id: data.id };
 }
 
+/** One-line record of THIS contact-form submission for the Notes timeline. */
+function contactInquirySummary(
+  body: ContactFormData,
+  interestLabel: string,
+  kids: Array<{ name: string; age: number }>,
+): string {
+  const who = kids.length
+    ? ` — ${kids.map((k) => `${k.name.trim() || "unnamed"} (${k.age})`).join(", ")}`
+    : "";
+  const note = body.message?.trim();
+  const where = body.location ? ` Prefers ${body.location}.` : "";
+  return `Repeat inquiry (${interestLabel})${who}.${where}${note ? ` Parent says: "${note}"` : ""}`;
+}
+
 export async function POST(request: NextRequest) {
   if (!process.env.RESEND_API_KEY) {
     console.error("RESEND_API_KEY is not configured");
@@ -237,9 +236,42 @@ export async function POST(request: NextRequest) {
   let notionStatus = "skipped";
   if (process.env.NOTION_API_KEY) {
     try {
-      const existingId = await findNotionPlayer(body.email);
-      if (existingId) {
-        notionStatus = "already exists";
+      const familyRows = await findFamilyRows(body.email, null);
+      if (familyRows.length > 0) {
+        // Known family: append this inquiry rather than dropping it. "Already
+        // on file" used to mean we wrote nothing at all, so a second child or
+        // a fresh question survived only in the admin email.
+        const appended = await appendLeadInquiry(
+          familyRows[0].id,
+          {
+            date: todayET(),
+            channel: "Contact form",
+            summary: contactInquirySummary(body, interestLabel, kids),
+            location: body.location,
+            landingPage: body.landing_page ?? undefined,
+          },
+          familyRows[0],
+        );
+        const newKids = kids.filter((kid) => !hasChildRow(familyRows, kid.name));
+        const created = (
+          await Promise.all(
+            newKids.map((kid, i) =>
+              createNotionRow(
+                body,
+                kid,
+                newKids.filter((_, j) => j !== i),
+              ),
+            ),
+          )
+        ).filter((r) => r.id).length;
+        const parts = [
+          appended.updated ? "updated existing" : `update failed (${appended.reason})`,
+        ];
+        if (created > 0) parts.push(`created ${created} new child row(s)`);
+        notionStatus = parts.join(" + ");
+        if (!appended.updated && !appended.duplicate) {
+          console.error("Notion append failed:", appended.reason);
+        }
       } else if (kids.length === 0) {
         // Non-program interest (or program interest without a kid — shouldn't
         // happen post-validation, but defensive): one inquiry row, no Age.
