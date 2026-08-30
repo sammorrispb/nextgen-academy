@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EMAIL_RE, playerCrmDbId } from "@/lib/notion-utils";
+import {
+  appendLeadInquiry,
+  findFamilyRows,
+  hasChildRow,
+  todayET,
+} from "@/lib/notion-lead-enrich";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { normalizeKids, validateLeadForm } from "@/lib/validate-lead";
@@ -34,29 +40,6 @@ function parseContact(contact: string): { email: string | null; phone: string | 
     return { email: contact.trim(), phone: null };
   }
   return { email: null, phone: contact.trim() };
-}
-
-async function findNotionPlayer(contact: string): Promise<string | null> {
-  const notionKey = process.env.NOTION_API_KEY;
-  if (!notionKey) return null;
-
-  const { email, phone } = parseContact(contact);
-  const filter = email
-    ? { property: "Parent Email", email: { equals: email } }
-    : { property: "Parent Phone", phone_number: { equals: phone } };
-
-  const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": "2022-06-28",
-    },
-    body: JSON.stringify({ filter, page_size: 1 }),
-  });
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.results?.length > 0 ? data.results[0].id : null;
 }
 
 function formatAttribution(body: LeadFormData): string {
@@ -161,6 +144,15 @@ async function createNotionPlayerRow(
   return { id: data.id };
 }
 
+/** One-line record of THIS submission for the family's Notes timeline. Kept
+ * short on purpose — Notes is a scannable history, not a transcript. */
+function inquirySummary(body: LeadFormData, kids: Kid[]): string {
+  const who = kids.map((k) => `${k.name.trim() || "unnamed"} (${k.age})`).join(", ");
+  const note = body.notes?.trim();
+  const where = body.location ? ` Prefers ${body.location}.` : "";
+  return `Repeat inquiry — ${who}.${where}${note ? ` Parent says: "${note}"` : ""}`;
+}
+
 // ─── Main Handler ────────────────────────────────
 
 export async function POST(request: NextRequest) {
@@ -194,11 +186,12 @@ export async function POST(request: NextRequest) {
 
   const kids = normalizeKids(body);
 
-  // ─── 1. Create Notion Player rows (one per kid; parent-level dedup) ───
-  // Dedup intentionally stays at the parent-email/phone level: if a parent
-  // already has a row in the CRM, we don't auto-create N more — that risks
-  // duplicating an existing family if the form is re-submitted. Coach can
-  // add siblings manually until a richer per-kid dedup ships.
+  // ─── 1. Notion Player CRM: update the family we know, create the kids we don't ───
+  // Dedup is still per PARENT, but "already on file" is no longer a reason to
+  // write nothing. Until now, a returning family's second inquiry produced no
+  // row and no update — a new sibling, a changed location and fresh parent
+  // notes were dropped while the admin email rendered them in full, so the
+  // loss was invisible. A repeat inquiry is the most valuable lead we get.
   let notionStatus = "skipped";
   // Gate the WhatsApp invite on a confirmed-new parent. If Notion lookup
   // fails or env is missing, default to NOT inviting so we don't re-prompt
@@ -206,9 +199,45 @@ export async function POST(request: NextRequest) {
   let isFirstTimer = false;
   if (process.env.NOTION_API_KEY) {
     try {
-      const existingId = await findNotionPlayer(body.contact);
-      if (existingId) {
-        notionStatus = "already exists";
+      const { email: parentEmail, phone: parentPhone } = parseContact(body.contact);
+      const familyRows = await findFamilyRows(parentEmail, parentPhone);
+
+      if (familyRows.length > 0) {
+        const appended = await appendLeadInquiry(
+          familyRows[0].id,
+          {
+            date: todayET(),
+            channel: "Lead form",
+            summary: inquirySummary(body, kids),
+            location: body.location,
+            landingPage: body.landing_page ?? undefined,
+          },
+          familyRows[0],
+        );
+
+        // Only kids we have never seen get a row — re-submitting the same child
+        // must not fork the family into duplicates.
+        const newKids = kids.filter((kid) => !hasChildRow(familyRows, kid.name));
+        const created = (
+          await Promise.all(
+            newKids.map((kid, i) =>
+              createNotionPlayerRow(
+                body,
+                kid,
+                newKids.filter((_, j) => j !== i),
+              ),
+            ),
+          )
+        ).filter((r) => r.id).length;
+
+        const parts = [
+          appended.updated ? "updated existing" : `update failed (${appended.reason})`,
+        ];
+        if (created > 0) parts.push(`created ${created} new child row(s)`);
+        notionStatus = parts.join(" + ");
+        if (!appended.updated && !appended.duplicate) {
+          console.error("Notion append failed:", appended.reason);
+        }
       } else {
         isFirstTimer = true;
         const results = await Promise.all(
