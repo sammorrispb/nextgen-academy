@@ -66,7 +66,12 @@ price without it is selling the shorter hour and none of the reason.
 3. ~~**Notion — Sessions DB**: add **`All Levels`** to the `Level` select.~~
    **DONE 2026-08-31.** The four colour options were preserved. Still to do:
    add `Frederick` to the Player CRM `Location` select and `The Pickl Park` to
-   `Site`.
+   `Site`. **Step 8 confirmed both are real gaps, not theory** — the smoke
+   test's Player CRM row came back with `Site` empty, because `matchSite()`
+   (`src/lib/notion-player-sync.ts`) has no Pickl Park entry and correctly
+   declines to guess: an unknown select value would 400 the whole write and take
+   the `Last Attended` update with it. Cosmetic today, worth fixing before the
+   season fills.
 4. ~~**Smoke-test the seeder**~~ **DONE 2026-08-31** — dry-run reported
    `wouldCreate: 7`, one row per Saturday, never four. **Sep 12 / 19 / 26 are
    hand-seeded and live** (verified in `/api/sessions/feed`); their titles are
@@ -91,28 +96,46 @@ price without it is selling the shorter hour and none of the reason.
    correct. Not verifiable from code: with registration closed nothing reads the
    DB, and `countPicklParkRegistrations` fails soft to `null` either way. The
    check at go-live is below.
-7. **Set Vercel env** (production) — the two values now exist:
+7. ~~**Set Vercel env** (production)~~ **DONE 2026-08-31** — both values are live:
 
    ```
    STRIPE_PICKLPARK_SEASON_PRICE_ID=price_1UAW31BpXOfTC961acgj7Fqe
    NOTION_PICKLPARK_REGS_DB_ID=febf59e72797405995a9606d677fc9f6
    ```
 
-   **Hold `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` until after the first Open
-   Court (~Sep 12–19)** — Sam's call 2026-08-31. Setting the first two alone is
-   safe: the page keeps its closed state and no form renders, so nobody can
-   reach checkout. Opening before any Open Court has run would sell cold, which
-   is the outcome the Open Court hour exists to avoid.
-7b. **Confirm the Notion wiring the moment the flag flips.** With registration
-    open, `/picklpark` calls `countPicklParkRegistrations` per band. A readable
-    DB returns 0 and each group card shows **"Spots open"**; an unreadable one
+   **`NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` is still deliberately UNSET —
+   hold it until after the first Open Court (~Sep 12–19)**, Sam's call
+   2026-08-31. The first two alone are safe: the page keeps its closed state and
+   no form renders, so nobody can reach checkout. Opening before any Open Court
+   has run would sell cold, which is the outcome the Open Court hour exists to
+   avoid.
+7b. **Cheap pre-check once the flag flips.** With registration open,
+    `/picklpark` calls `countPicklParkRegistrations` per band. A readable DB
+    returns 0 and each group card shows **"Spots open"**; an unreadable one
     returns `null` and the card shows **no seat status at all**. Blank status on
     a brand-new season means the integration cannot see the DB — not that it is
-    full. This is the cheapest positive signal available; the definitive one is
-    step 8.
-8. **Smoke test the season** (Stripe test mode or a $225 live + refund):
-   checkout redirect, the waiver-gate 409 → inline sign → resume, webhook roster
-   row in the new DB, parent confirmation email, `/picklpark/success`.
+    full. Step 8 has already answered this definitively; keep 7b as the
+    zero-cost confirmation after any later env or integration change.
+8. ~~**Smoke test the season**~~ **DONE 2026-08-31 — PASSED.** Run live rather
+   than in test mode, at **$0** via a single-use 100%-off promo code restricted
+   to the season product (`prod_VArmZ4zV7oq0rD`), so no money moved and the
+   coupon retired itself. All five legs fired: checkout redirect → roster row in
+   `febf59e72797405995a9606d677fc9f6` with all 13 properties mapped → Player CRM
+   row created → Open Brain `nga_picklpark_registration` activity → parent
+   confirmation + admin notification emails → `/picklpark/success`. **This, not
+   step 7b, is what proves the "Player DB" integration can see and write the new
+   database**, and that the webhook's `kind: picklpark` discriminator routes to
+   `handlePicklParkCheckout` rather than the drop-in path. All test artefacts
+   were then reversed (roster row `Cancelled`, player row `Inactive`, OB activity
+   deleted).
+
+   Two artefacts of a **$0** run look like defects and are not: **Amount Paid
+   reads $0.00** (the webhook records `amount_total`, i.e. post-discount) and
+   the **Stripe Payment Intent ID is blank** (Stripe mints no PaymentIntent for a
+   $0 checkout). The second leaves a real gap — **the `charge.refunded`
+   reconciliation leg was NOT exercised**, because no charge existed to refund.
+   Everything upstream of it is covered; test that leg against the first genuine
+   paid registration, or with a $225 live + refund if you want it proven sooner.
 9. **Run `/calendar-sync`** — the seven existing Saturday holds are at the OLD
    1–3 PM Green & Yellow shape and are now wrong. The sync retimes the
    `nga-pp:saturday:<date>` season blocks to 3–5 PM and picks up Open Court
