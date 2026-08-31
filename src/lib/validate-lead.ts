@@ -42,7 +42,7 @@ const NAME_MAX = 40;
 
 export const LEAD_LOCATIONS = [
   "Montgomery County",
-  "Frederick — The Pickle Park",
+  "Frederick — The Pickl Park",
 ] as const;
 
 export function normalizeKids(data: Partial<LeadFormData>): Kid[] {

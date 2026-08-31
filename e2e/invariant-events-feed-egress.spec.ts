@@ -8,6 +8,11 @@ import {
   EC_PARTNER_URL,
   ecClubTitle,
 } from "../src/data/enrichment-collective";
+import {
+  PICKLPARK_END_TIME,
+  PICKLPARK_OPEN_COURT_START_TIME,
+  PICKLPARK_START_TIME,
+} from "../src/data/picklpark-2026";
 
 // THE unified-feed egress invariant. GET /api/events/feed is a PUBLIC,
 // unauthenticated surface that unions four schedule sources into one payload —
@@ -174,9 +179,25 @@ test.describe("events feed — egress invariants", () => {
     const confirmed = items.filter((i) => !i.tentative);
     expect(confirmed).toHaveLength(6);
     for (const item of confirmed) {
-      expect(item.startTime).toBe("1:00 PM");
-      expect(item.endTime).toBe("3:00 PM");
+      // Derived from the season config, not typed — this pair went stale on
+      // the 2026-08-31 reshape (1–3 PM → 3–5 PM) and only a hardcoded literal
+      // made that a test edit rather than an automatic one.
+      expect(item.startTime).toBe(PICKLPARK_START_TIME);
+      expect(item.endTime).toBe(PICKLPARK_END_TIME);
       expect(item.allDay).toBe(false);
+    }
+  });
+
+  test("the feed does NOT claim the Open Court hour — sessions own it", () => {
+    // Open Court is an ordinary Sessions-DB row and already reaches the feed
+    // through buildSessionEvents. Emitting it here too would double-create it
+    // on the calendar mirror, the same reason the MVF tournament is absent.
+    const feed = buildEventsFeed(
+      { sessions: [] },
+      "https://nextgenpbacademy.com",
+    );
+    for (const item of feed.filter((i) => i.source === "picklpark")) {
+      expect(item.startTime).not.toBe(PICKLPARK_OPEN_COURT_START_TIME);
     }
   });
 

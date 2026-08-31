@@ -325,6 +325,26 @@ The one-shot notice to families who had **already paid** when the season moved f
 - **Read-only.** The engine never writes to Notion (pinned) — a refund, if a family takes it, is a separate deliberate act through the existing cancel path, not a side effect of the notice.
 - **No sent-flag column — a repeated live run RE-SENDS; always `{"dryRun": true}` first** (the body reports `scanned_rows`, `confirmed_rows` and the recipient list) and use `only` to retry a partial run.
 
+### Pickl Park Saturdays — Frederick (`/picklpark` + the Open Court drop-in)
+**NGA's first venue outside Montgomery County** (The Pickl Park, an 8-court indoor club at 355 Ballenger Center Dr, Frederick MD). Two products, one Saturday, one court booking of 2 courts, 2–5 PM:
+
+| Time | What | Sells through |
+|---|---|---|
+| 2:00–3:00 | **Open Court** — all levels, ages 6–16, $20 drop-in | `/schedule` (the ordinary drop-in stack) |
+| 3:00–4:00 | **Red & Orange Ball** season | `/picklpark` |
+| 4:00–5:00 | **Green & Yellow Ball** season | `/picklpark` |
+
+- **The market is cold, and that drives the whole design.** The Player CRM holds 422 rows / 272 families and **zero** Frederick families — no list, no evaluations. Open Court is therefore the *prerequisite*, not a companion: it builds the list and produces the level placements, then the season sells to a warm list. (Signal for scale: the Walter Johnson season, sold to 272 known families with a newsletter and a poll behind it, took 9 of 18 seats.) **First Open Court Sep 12** — Sep 5 is the MVF tournament.
+- **Season groups are BANDS, not single colours.** With nobody evaluated, a four-way split would ask parents to self-select a level they can't know. `PicklParkBandLevel` = `"Red/Orange" | "Green/Yellow"`; the Notion `Group` select uses those exact values.
+- **$225 matches Montgomery County and buys a shorter block** (6 × 60 min vs Walter Johnson's 6 × 90). The venue closes that gap, not the clock: indoors means all six Saturdays run, while the outdoor season holds two rain dates because it might not. `PICKLPARK_INDOOR_NOTE` is reused verbatim by the page and the confirmation email — **a surface that quotes the price without it is selling the shorter hour and none of the reason.** The Nov 14 hold is a facility/coach hold, NOT a rain date.
+- **Seats are per band and DERIVED** — `PICKLPARK_SLOTS_BY_GROUP` (2 courts × `PICKLPARK_PLAYERS_PER_COURT[band]`, both 4 → 8 each). The checkout gate reads `picklParkSeasonSlotsFor(group)`; it shipped reading one shared scalar, the exact bug `invariant-fall-seat-cap-per-group.spec.ts` exists for. **To change a band, edit that map or book a court — never `PLAYERS_PER_PICKLEBALL_COURT`.** No public surface publishes the count.
+- **`SessionLevel` gained `"All Levels"`** (`src/lib/notion-sessions.ts`) so one mixed Open Court row exists instead of four colour courts. It is deliberately **outside** `ALL_LEVELS` (it's `OPEN_LEVEL` in `recurring-templates.ts`) — listing it inside would seed a fifth court on every all-levels evening. **Every colour-matching caller must funnel through `onColorLadder()`**, which EXCLUDES open rows rather than aliasing them to `null`: `post-eval-followup-run` treats a null level as a match for any rally-ready kid, so aliasing would have mailed Rockville families an invite to Frederick. Applied in crew-interest, crew-followup, crew-autoreserve and post-eval.
+- **The Pickl Park Saturday template is the ONLY active `recurring-templates.ts` entry** since the 2026-08-23 blackout. Different venue, different county, different day from every dark MoCo template, so it cannot re-stock them — pinned by `e2e/recurring-sessions.spec.ts`.
+- **Egress:** the checkout route reads Notion (roster + waiver) and writes Stripe metadata only — the roster row is the webhook's job. `NOTION_PICKLPARK_REGS_DB_ID` is a child-PII destination, pinned by `e2e/invariant-picklpark-registration-pii-egress.spec.ts` (checkout side) + `e2e/invariant-child-pii-egress.spec.ts` (webhook side).
+- **Ships dark:** `STRIPE_PICKLPARK_SEASON_PRICE_ID` + `NOTION_PICKLPARK_REGS_DB_ID` + `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN=true`, in that order. **Go/no-go minimum: 8 paid across both bands, decided at T−72h** — below that, cancel and refund. Full ops detail: `docs/picklpark-season-runbook.md`.
+- **Saturday afternoon is not a named cell on the Pickl Park rate card** — the court-time proposal covers Mon–Wed mornings and Tue–Thu evenings only, and its own rule is that an unnamed cell defaults to the higher neighbour. Settle it with Amar in the same conversation as the others.
+- **SEO posture unchanged** — one venue addition, not a market expansion. No Frederick city page; `SERVICE_AREAS`/`NGA_POSTAL_ADDRESS` stay Montgomery County. `LEAD_AREAS` (`src/data/lead-areas.ts`, now shared by `/api/waitlist` and `EmptyStateWaitlist` instead of duplicated) does carry `Frederick`.
+
 ### Enrichment Collective after-school clubs (`src/data/enrichment-collective.ts`)
 Fall 2026 "Coach Sam" clubs that **Enrichment Collective** runs in MCPS schools — Mon Greenwood (Brookeville) / Tue Candlewood (Derwood) / Wed Rosemary Hills (Silver Spring) / Thu Belmont (Olney) / Fri Olney ES (Olney). Partner-run like MVF: EC owns registration and payment, carries the general liability insurance, and collects the waivers and media releases, so **the NGA waiver gate does not apply** and no NGA Stripe path is involved. Sam is a 1099 contractor to EC.
 
@@ -508,6 +528,13 @@ See `.env.example`. Categories:
 - `NOTION_CREW_INTEREST_DB_ID` — NGA Crew Interest DB (the no-active-poll fallback form). Optional — endpoint logs + continues if unset.
 - `NOTION_NEWS_DB_ID` — NGA Youth Pickleball News DB (scraped news queue Sam triages for the weekly newsletter). Optional — scraper runs as a dry-run if unset, weekly newsletter just hides the news block.
 - `NOTION_NEWSLETTER_DRAFTS_DB_ID` — NGA Newsletter Drafts DB (Coach-voice longform sections drafted Wednesday by the cloud drafter routine; Sam approves a row before Thu 6pm for the cron to inject as the "From Coach Sam" lead block). The weekly newsletter still ships without it (the lead block just hides), but as of 2026-08-05 an unset value raises a `config_missing` cron alert rather than no-opping green — a lead block that can never ship is a misconfiguration, not a preference. See the "Newsletter lead block — drafter pipeline" section above.
+- `STRIPE_PICKLPARK_SEASON_PRICE_ID` + `NOTION_PICKLPARK_REGS_DB_ID` +
+  `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` — the Pickl Park Saturday season trio.
+  ALL THREE must be set, in that order, for `/picklpark` to go live; until then
+  the page holds the closed state and `/api/checkout-picklpark` 503s. Never point
+  `NOTION_PICKLPARK_REGS_DB_ID` at the Fall Regs DB — capacity is scoped by
+  `Group` alone, so the two seasons would cross-count seats. See the
+  "Pickl Park Saturdays" section above.
 - `NOTION_CURRICULUM_DB_ID` — NGA Curriculum Overrides DB (one row per overridden
   curriculum string, read by `/coach/fall-playbook`). Optional. **UNSET = the override
   layer is dark** and the playbook renders the code defaults with no network call —

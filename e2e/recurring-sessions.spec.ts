@@ -12,8 +12,15 @@ import {
 import {
   RECURRING_TEMPLATES,
   ALL_LEVELS,
+  OPEN_LEVEL,
   type RecurringTemplate,
 } from "../src/data/recurring-templates";
+import {
+  PICKLPARK_OPEN_COURT_END_TIME,
+  PICKLPARK_OPEN_COURT_START_TIME,
+  PICKLPARK_PICKLEBALL_COURTS,
+  PICKLPARK_VENUE,
+} from "../src/data/picklpark-2026";
 import { GET as seedRoute } from "../src/app/api/cron/seed-tuesday-sessions/route";
 
 // Pure-node spec (no dev server): date math + row-prop builders are pure, and
@@ -123,13 +130,22 @@ test.describe("upcomingWeekday", () => {
 });
 
 test.describe("recurring templates (weekend move 2026-07-21)", () => {
-  test("NO template auto-seeds — every one is inactive (drop-ins cancelled 2026-08-23)", () => {
-    // Sam cancelled every upcoming drop-in row on 2026-08-23, so no template
-    // may seed new ones. Row-family idempotency only stops the cron
-    // resurrecting dates ALREADY seeded — an active template would still
-    // stock fresh OPEN rows past the cancelled run and reopen a schedule
-    // meant to be dark. Flip one back to `active: true` to resume.
-    expect(RECURRING_TEMPLATES.filter((t) => t.active)).toEqual([]);
+  test("every MONTGOMERY COUNTY template stays dark (drop-ins cancelled 2026-08-23)", () => {
+    // Sam cancelled every upcoming MoCo drop-in row on 2026-08-23, so none of
+    // those templates may seed new ones. Row-family idempotency only stops the
+    // cron resurrecting dates ALREADY seeded — an active template would still
+    // stock fresh OPEN rows past the cancelled run and reopen a schedule meant
+    // to be dark. Flip one back to `active: true` to resume.
+    //
+    // Widened from "no template auto-seeds" on 2026-08-31: the Pickl Park
+    // Saturday Open Court is deliberately active. It is a different venue in a
+    // different county on a day none of these templates run, so turning it on
+    // cannot re-stock any of them — which is what this assertion now pins.
+    const moco = RECURRING_TEMPLATES.filter(
+      (t) => !t.location.includes("Pickl Park"),
+    );
+    expect(moco.length).toBeGreaterThan(0);
+    expect(moco.filter((t) => t.active)).toEqual([]);
   });
 
   test("Wednesday ages 8–11 block is retained and still valid (added 2026-08-13)", () => {
@@ -228,6 +244,66 @@ test.describe("buildTemplateRowProps", () => {
     for (const level of ALL_LEVELS) {
       expect(buildTemplateRowProps(mon, "2026-07-06", level).Level.select.name).toBe(level);
     }
+  });
+
+  test("OPEN_LEVEL is outside the colour ladder, so it never fans out", () => {
+    // The whole point: a template listing it seeds ONE mixed row, not a
+    // court per colour. Putting it inside ALL_LEVELS would quietly book four
+    // courts for a one-hour intro class.
+    expect(ALL_LEVELS).not.toContain(OPEN_LEVEL);
+    expect(OPEN_LEVEL).toBe("All Levels");
+  });
+});
+
+test.describe("Pickl Park Saturday Open Court template", () => {
+  const openCourt = RECURRING_TEMPLATES.find(
+    (t) => t.titleBase === "Pickl Park Saturday Open Court",
+  )!;
+
+  test("exists, is active, and is the only active template", () => {
+    expect(openCourt).toBeDefined();
+    expect(openCourt.active).toBe(true);
+    // Every MoCo template has been dark since the 2026-08-23 blackout and
+    // must stay that way — flipping this one on must not have woken them.
+    const active = RECURRING_TEMPLATES.filter((t) => t.active);
+    expect(active.map((t) => t.titleBase)).toEqual([
+      "Pickl Park Saturday Open Court",
+    ]);
+  });
+
+  test("validates, and seeds Saturdays at the Pickl Park venue", () => {
+    expect(validateTemplate(openCourt)).toEqual([]);
+    expect(openCourt.weekday).toBe(6);
+    expect(openCourt.location).toBe(PICKLPARK_VENUE);
+    expect(openCourt.startTime).toBe(PICKLPARK_OPEN_COURT_START_TIME);
+    expect(openCourt.endTime).toBe(PICKLPARK_OPEN_COURT_END_TIME);
+  });
+
+  test("seeds exactly ONE all-levels row per Saturday, never four", () => {
+    expect(openCourt.levels).toEqual([OPEN_LEVEL]);
+    expect(openCourt.levels).toHaveLength(1);
+
+    const props = buildTemplateRowProps(openCourt, "2026-09-12", OPEN_LEVEL);
+    expect(props.Session.title[0].text.content).toBe(
+      "Pickl Park Saturday Open Court — All Levels",
+    );
+    expect(props.Level.select.name).toBe("All Levels");
+    // Both booked courts sit under the one row, so capacity (courts × 4)
+    // lands on the eight seats NGA actually holds.
+    expect(props["Court count"].number).toBe(PICKLPARK_PICKLEBALL_COURTS);
+    expect(props["Max courts"].number).toBe(PICKLPARK_PICKLEBALL_COURTS);
+    expect(props.Status.select.name).toBe("Open");
+  });
+
+  test("starts Sep 12 — never back-fills, and never lands on the MVF tournament", () => {
+    // Sep 5 is the MVF tournament, 8:30 AM–3:00 PM. A startsOn earlier than
+    // Sep 12 would seed a Saturday Sam cannot coach.
+    expect(openCourt.startsOn).toBe("2026-09-12");
+    expect(openCourt.startsOn! > "2026-09-05").toBe(true);
+    expect(
+      new Date(`${openCourt.startsOn}T12:00:00Z`).getUTCDay(),
+      "startsOn must itself be a Saturday",
+    ).toBe(6);
   });
 });
 

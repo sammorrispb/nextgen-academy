@@ -1,3 +1,4 @@
+import { PICKLPARK_INDOOR_NOTE } from "@/data/picklpark-2026";
 import { signatureExtrasText } from "./signature";
 /**
  * Pickl Park Saturday season registration confirmation — the parent's "you're
@@ -36,11 +37,11 @@ function formatSaturday(iso: string): string {
 export interface PicklParkSeasonConfirmationInput {
   parentFirst: string;
   childFirst: string;
-  /** "Green Ball" */
+  /** "Red & Orange Ball" */
   groupLabel: string;
-  /** "1:00–2:00 PM" */
+  /** "3:00–4:00 PM" */
   timeLabel: string;
-  /** Already formatted, e.g. "175.00". */
+  /** Already formatted, e.g. "225.00". */
   amountUsd: string;
   /** Exact venue block. */
   venue: string;
@@ -78,7 +79,9 @@ export function buildPicklParkSeasonConfirmationEmail(
     "",
     `Each Saturday is a full hour on dedicated pickleball courts — coached practice first, then a rotating-partner round robin, so ${childFirst} partners with everyone in the group across the season.`,
     "",
-    `If a Saturday can't run we make it up on ${makeupDates.map(formatSaturday).join(" or ")} — we'll email you before the weekend either way.`,
+    PICKLPARK_INDOOR_NOTE,
+    "",
+    `In the rare case a Saturday can't run — a facility closure, say — we make it up on ${makeupDates.map(formatSaturday).join(" or ")} and email you before the weekend.`,
     "",
     `Paid: $${amountUsd} (full season).`,
     "",

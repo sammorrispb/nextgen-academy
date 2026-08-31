@@ -382,7 +382,7 @@ export default async function Home() {
             <p className="text-base text-ngpa-white/70 leading-relaxed">
               Sessions rotate across Montgomery County Public Schools by demand
               &mdash; closer to more zip codes than a single fixed venue.
-              Private lessons are also available at The Pickle Park in
+              Private lessons are also available at The Pickl Park in
               Frederick.{" "}
               <Link
                 href="/schedule"

@@ -3,9 +3,9 @@ import { getStripe } from "@/lib/stripe";
 import {
   PICKLPARK_SEASON_PRICE_ENV_VAR,
   PICKLPARK_SEASON_SLUG,
-  PICKLPARK_SEASON_SPOTS_PER_GROUP,
   PICKLPARK_SEASON_TITLE,
   findPicklParkSeasonGroup,
+  picklParkSeasonSlotsFor,
 } from "@/data/picklpark-season-2026";
 import { PICKLPARK_SEASON_LABEL, PICKLPARK_VENUE } from "@/data/picklpark-2026";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
@@ -24,8 +24,8 @@ import {
 
 // Pickl Park Saturday season checkout — full-pay only, ENV-GATED like
 // checkout-fall: until STRIPE_PICKLPARK_SEASON_PRICE_ID is set this returns
-// 503 so the season ships dark. The season has a real 8-seat cap per group, so
-// the Notion roster count gates the checkout (fail-open on a Notion blip — an
+// 503 so the season ships dark. Each band has its own seat cap, so the Notion
+// roster count gates the checkout PER BAND (fail-open on a Notion blip — an
 // oversold seat is a refundable mistake, an outage blocking checkout isn't),
 // and the duplicate guard stops a same-kid double-pay.
 
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   }
 
   const keys = await fetchPicklParkRegistrationKeys(option.group);
-  if (keys.length >= PICKLPARK_SEASON_SPOTS_PER_GROUP) {
+  if (keys.length >= picklParkSeasonSlotsFor(option.group)) {
     return NextResponse.json(
       {
         error: `The ${option.label} group is full — reply to any of our emails or text Coach Sam and we'll add you to the sub list.`,

@@ -4,7 +4,7 @@ import { useState } from "react";
 import InlineWaiverStep from "@/components/InlineWaiverStep";
 import {
   PICKLPARK_SEASON_GROUPS,
-  PICKLPARK_SEASON_SPOTS_PER_GROUP,
+  picklParkSeasonSlotsFor,
   type PicklParkSeasonGroup,
 } from "@/data/picklpark-season-2026";
 import {
@@ -174,15 +174,15 @@ export default function PicklParkRegistrationForm({
       )}
 
       <div className="space-y-4">
-        {/* Group pick — Green or Yellow */}
+        {/* Group pick — Red/Orange or Green/Yellow */}
         <fieldset>
-          <legend className={labelClass}>Your player&rsquo;s color group</legend>
+          <legend className={labelClass}>Your player&rsquo;s group</legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="group">
             {PICKLPARK_SEASON_GROUPS.map((option) => {
               const taken = spotsTaken[option.group];
               const spotsLeft =
                 typeof taken === "number"
-                  ? PICKLPARK_SEASON_SPOTS_PER_GROUP - taken
+                  ? picklParkSeasonSlotsFor(option.group) - taken
                   : null;
               const soldOut = spotsLeft !== null && spotsLeft <= 0;
               const seatStatus = seatStatusLabel(spotsLeft);

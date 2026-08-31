@@ -23,9 +23,33 @@
 //     (it seeds every occurrence of a weekday, no skips). To resume open-ended
 //     auto-seeding of the weekend cadence once it runs gap-free, flip the two
 //     weekend templates to `active: true`.
+//
+// 2026-08-31 — the Pickl Park Saturday Open Court is added ACTIVE, the first
+// live template since the 2026-08-23 blackout. It is a different venue on a
+// different day from every dark MoCo template, so turning it on cannot
+// re-stock any of them.
 
+import {
+  PICKLPARK_OPEN_COURT_END_TIME,
+  PICKLPARK_OPEN_COURT_START_TIME,
+  PICKLPARK_PICKLEBALL_COURTS,
+  PICKLPARK_PUBLIC_AREA,
+  PICKLPARK_VENUE,
+} from "./picklpark-2026";
+
+/** The colour ladder. A template listing these seeds one row (= one court) each. */
 export const ALL_LEVELS = ["Red", "Orange", "Green", "Yellow"] as const;
-export type SessionLevel = (typeof ALL_LEVELS)[number];
+
+/**
+ * "All Levels" is NOT part of ALL_LEVELS and never fans out — it is the single
+ * mixed-group label an open intro session carries, so a template whose
+ * `levels` is `["All Levels"]` seeds exactly ONE row for the whole hour.
+ * Listing it inside ALL_LEVELS would seed a fifth court on every all-levels
+ * evening, which is the opposite of what it means.
+ */
+export const OPEN_LEVEL = "All Levels" as const;
+
+export type SessionLevel = (typeof ALL_LEVELS)[number] | typeof OPEN_LEVEL;
 
 export interface RecurringTemplate {
   /** Day of week the session runs, 0=Sun … 6=Sat (matches Date#getUTCDay).
@@ -63,6 +87,43 @@ export interface RecurringTemplate {
 }
 
 export const RECURRING_TEMPLATES: readonly RecurringTemplate[] = [
+  // ── Pickl Park Saturday Open Court (added 2026-08-31, first session Sep 12)
+  // The lead-generation half of the Frederick plan, and the ONLY active
+  // template on this file.
+  //
+  // Frederick is a cold market — the Player CRM holds 422 rows and not one of
+  // them is a Frederick family — so there is no list to sell a six-week season
+  // to and nobody has been evaluated. This hour is the on-ramp that builds
+  // both: a parent books a single $20 drop-in, Coach Sam sees the kid play,
+  // and the family lands in the CRM with a real level attached. It runs at
+  // 2:00 so it finishes as the season groups start at 3:00 — a new family can
+  // stay and watch the thing they'd be buying.
+  //
+  // ONE row, not four: `levels: [OPEN_LEVEL]` is the whole point. Every level
+  // is welcome in the same group, and `courtCount: 2` gives it the eight seats
+  // NGA books, so fanning it across the colour ladder would both misdescribe
+  // it and over-book the venue.
+  //
+  // `startsOn` keeps the Monday cron from back-filling September Saturdays
+  // that have already passed — and Sep 5 is deliberately not the start: Sam is
+  // running the MVF tournament that day, 8:30 AM–3:00 PM.
+  {
+    weekday: 6,
+    titleBase: "Pickl Park Saturday Open Court",
+    legacyTitlePrefixes: ["Pickl Park Saturday Open Court"],
+    location: PICKLPARK_VENUE,
+    publicArea: PICKLPARK_PUBLIC_AREA,
+    startTime: PICKLPARK_OPEN_COURT_START_TIME,
+    endTime: PICKLPARK_OPEN_COURT_END_TIME,
+    levels: [OPEN_LEVEL],
+    courtCount: PICKLPARK_PICKLEBALL_COURTS,
+    maxCourts: PICKLPARK_PICKLEBALL_COURTS,
+    startsOn: "2026-09-12",
+    notes:
+      "Open Court — every level welcome, ages 6–16. One hour indoors at The Pickl Park, drop in week by week. Runs right before the Saturday season groups.",
+    active: true,
+  },
+
   // ── Wednesday ages 8–11 block (added 2026-08-13, first session Sept 2) ───
   // Sits between the afternoon school clubs and the Wednesday Link & Dink
   // night: Red & Orange courts for kids 8–11 who are newer to the game. 5:30

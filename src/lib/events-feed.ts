@@ -313,9 +313,14 @@ export function buildFallEvents(origin: string): EventFeedItem[] {
 
 /**
  * Pickl Park Fall 2026 Saturday season → one confirmed item per Saturday
- * (Green 1:00–2:00, Yellow 2:00–3:00 back-to-back = one 1–3 PM block a mirror
- * can hold), plus a flagged hold on the makeup date. The venue is a public
- * commercial facility, so the full address ships — same posture as FALL_VENUE.
+ * (Red & Orange 3:00–4:00, Green & Yellow 4:00–5:00 back-to-back = one 3–5 PM
+ * block a mirror can hold), plus a flagged hold on the makeup date. The venue
+ * is a public commercial facility, so the full address ships — same posture as
+ * FALL_VENUE.
+ *
+ * The 2:00–3:00 Open Court hour that precedes the season is NOT emitted here:
+ * it is an ordinary Sessions-DB row and already reaches the feed through
+ * buildSessionEvents, so claiming it twice would double-create it downstream.
  */
 export function buildPicklParkEvents(origin: string): EventFeedItem[] {
   const shared = (date: string) => ({
@@ -332,7 +337,7 @@ export function buildPicklParkEvents(origin: string): EventFeedItem[] {
   return [
     ...PICKLPARK_SATURDAYS.map((date) => ({
       ...shared(date),
-      title: "NGA Pickl Park Season — Green & Yellow",
+      title: "NGA Pickl Park Season — Red/Orange + Green/Yellow",
       tentative: false,
       status: "Open" as const,
     })),

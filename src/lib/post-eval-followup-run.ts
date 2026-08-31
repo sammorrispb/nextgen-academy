@@ -29,7 +29,7 @@ import {
   buildPostEvalFollowupHtml,
   type Level,
 } from "@/lib/email/post-eval-followup";
-import { fetchUpcomingSessions } from "@/lib/notion-sessions";
+import { fetchUpcomingSessions, onColorLadder } from "@/lib/notion-sessions";
 
 const LEVEL_SET = new Set(Object.keys(LEVEL_DESCRIPTIONS));
 const MAX_SESSION_LINES = 5;
@@ -91,7 +91,7 @@ async function fetchSessionLinesForLevel(level: Level): Promise<string[]> {
     const matches = isPrivateBridgeLevel(level)
       ? (l: Level | null) => l === level
       : (l: Level | null) => l === level || l === null;
-    return sessions
+    return onColorLadder(sessions)
       .filter((s) => s.status === "Open" && s.spotsLeft > 0)
       .filter((s) => matches(s.level))
       .slice(0, MAX_SESSION_LINES)

@@ -150,7 +150,7 @@ test.describe("lead dedup — a repeat inquiry is never dropped", () => {
     ]);
     await leadPOST(
       submissionRequest([{ name: "Fabian", age: 11 }], {
-        location: "Frederick — The Pickle Park",
+        location: "Frederick — The Pickl Park",
       }),
     );
 
@@ -167,12 +167,12 @@ test.describe("lead dedup — a repeat inquiry is never dropped", () => {
     installWorld(stub);
     await leadPOST(
       submissionRequest([{ name: "Fabian", age: 11 }], {
-        location: "Frederick — The Pickle Park",
+        location: "Frederick — The Pickl Park",
       }),
     );
 
     const props = JSON.parse(patchCalls()[0].body).properties;
-    expect(props.Location.select.name).toBe("Frederick — The Pickle Park");
+    expect(props.Location.select.name).toBe("Frederick — The Pickl Park");
   });
 });
 

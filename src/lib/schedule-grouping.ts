@@ -1,11 +1,14 @@
 import type { NgaSession, SessionLevel } from "@/lib/notion-sessions";
 import { fillGoal } from "@/lib/fill-meter";
 
+// "All Levels" sits after the colour ladder rather than inside it — it isn't a
+// rung, and slotting it anywhere among the colours would reorder live rows.
 const LEVEL_ORDER: Record<SessionLevel, number> = {
   Red: 0,
   Orange: 1,
   Green: 2,
   Yellow: 3,
+  "All Levels": 4,
 };
 
 export function levelRank(level: NgaSession["level"]): number {

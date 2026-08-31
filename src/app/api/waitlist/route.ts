@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { LEAD_AREA_SET } from "@/data/lead-areas";
 import { EMAIL_RE, createNotionPageSourceFailSoft } from "@/lib/notion-utils";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
@@ -7,7 +8,7 @@ import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import {
   buildOpenNowOffers,
-  fallRegistrationOpen,
+  openNowFlags,
 } from "@/lib/open-now-offers";
 
 function getResend() {
@@ -18,21 +19,6 @@ const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 
-const ALLOWED_AREAS = new Set([
-  "Anywhere in MoCo",
-  "Rockville",
-  "North Bethesda",
-  "Bethesda",
-  "Potomac",
-  "Chevy Chase",
-  "Kensington",
-  "Silver Spring",
-  "Gaithersburg",
-  "Derwood",
-  "Aspen Hill",
-  "Olney",
-  "Sandy Spring",
-]);
 
 // Per-route in-memory rate limit (5/hr, resets on deploy) — shared impl in
 // src/lib/rate-limit.ts; each route keeps its own bucket, as before.
@@ -112,7 +98,7 @@ function validate(body: WaitlistBody): Record<string, string> {
   }
   if (!body.preferredArea?.trim()) {
     errors.preferredArea = "Pick an area";
-  } else if (!ALLOWED_AREAS.has(body.preferredArea)) {
+  } else if (!LEAD_AREA_SET.has(body.preferredArea)) {
     errors.preferredArea = "Invalid area";
   }
 
@@ -235,7 +221,7 @@ export async function POST(request: NextRequest) {
   // so it has to carry what they can act on today.
   const offersHtml = buildOpenNowOffers(
     new Date().toISOString().slice(0, 10),
-    fallRegistrationOpen(),
+    openNowFlags(),
   )
     .map(
       (offer) => `

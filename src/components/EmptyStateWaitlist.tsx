@@ -2,22 +2,9 @@
 
 import { useState } from "react";
 import { getUtm, trackEvent } from "@/lib/funnelClient";
+import { LEAD_AREAS } from "@/data/lead-areas";
 
-const AREAS = [
-  "Anywhere in MoCo",
-  "Rockville",
-  "North Bethesda",
-  "Bethesda",
-  "Potomac",
-  "Chevy Chase",
-  "Kensington",
-  "Silver Spring",
-  "Gaithersburg",
-  "Derwood",
-  "Aspen Hill",
-  "Olney",
-  "Sandy Spring",
-];
+const AREAS = LEAD_AREAS;
 
 interface EmptyStateWaitlistProps {
   /** Optional heading override. Default: "No sessions open right now." */

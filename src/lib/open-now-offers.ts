@@ -8,6 +8,16 @@ import {
   FALL_SEASON_GROUPS,
   FALL_SEASON_PRICE_USD,
 } from "@/data/fall-season-2026";
+import {
+  PICKLPARK_SATURDAYS,
+  PICKLPARK_SEASON_LABEL,
+  PICKLPARK_VENUE_SHORT,
+  PICKLPARK_PUBLIC_AREA,
+} from "@/data/picklpark-2026";
+import {
+  PICKLPARK_SEASON_GROUPS,
+  PICKLPARK_SEASON_PRICE_USD,
+} from "@/data/picklpark-season-2026";
 import { LEAGUE_SEASONS } from "@/data/leagues";
 
 /**
@@ -29,10 +39,21 @@ export interface OpenNowOffer {
   cta: string;
 }
 
+/**
+ * Which registration flags are live. An object, not positional booleans: two
+ * seasons run in parallel this fall and `(today, true, false)` at a call site
+ * says nothing about which is which.
+ */
+export interface OpenNowFlags {
+  fallRegistrationOpen: boolean;
+  picklParkRegistrationOpen: boolean;
+}
+
 export function buildOpenNowOffers(
   todayIso: string,
-  fallRegistrationOpen: boolean,
+  flags: OpenNowFlags,
 ): OpenNowOffer[] {
+  const { fallRegistrationOpen, picklParkRegistrationOpen } = flags;
   const offers: OpenNowOffer[] = [
     {
       href: "/free-evaluation",
@@ -60,6 +81,22 @@ export function buildOpenNowOffers(
     });
   }
 
+  // Same gate /picklpark reads: the env flag AND the season's own last
+  // Saturday, so the card retires itself the way the fall one does.
+  const lastSaturday = PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1];
+  if (picklParkRegistrationOpen && todayIso <= lastSaturday) {
+    const groupLine = PICKLPARK_SEASON_GROUPS.map(
+      (g) => `${g.label} ${g.timeLabel}`,
+    ).join(" · ");
+    offers.push({
+      href: "/picklpark",
+      eyebrow: "Registering now",
+      title: "Pickl Park Saturday season",
+      detail: `Six Saturdays indoors, ${PICKLPARK_SEASON_LABEL}, at ${PICKLPARK_VENUE_SHORT} in ${PICKLPARK_PUBLIC_AREA}. ${groupLine}. $${PICKLPARK_SEASON_PRICE_USD} for the season.`,
+      cta: "See the season",
+    });
+  }
+
   // League enrollment ships dark (checkout-league 503s until its price env is
   // set), so this points at the interest form on /league and never quotes a
   // price. Drops off once the registration deadline has passed.
@@ -78,7 +115,12 @@ export function buildOpenNowOffers(
   return offers;
 }
 
-/** Reads the same public flag `/fall` does. */
-export function fallRegistrationOpen(): boolean {
-  return process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true";
+/** Reads the same public flags `/fall` and `/picklpark` do. */
+export function openNowFlags(): OpenNowFlags {
+  return {
+    fallRegistrationOpen:
+      process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true",
+    picklParkRegistrationOpen:
+      process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN === "true",
+  };
 }

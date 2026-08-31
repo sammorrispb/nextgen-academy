@@ -117,9 +117,9 @@ test.describe("child PII egress (registration path)", () => {
           // kind=picklpark routes to the Pickl Park roster branch; the drop-in
           // session_id key must not be read there.
           kind: "picklpark",
-          group: "Green",
-          group_label: "Green Ball",
-          group_time: "1:00–2:00 PM",
+          group: "Red/Orange",
+          group_label: "Red & Orange Ball",
+          group_time: "3:00–4:00 PM",
           season_title: "Next Gen Pickl Park Saturday Season",
           season_label: "October 3 – November 7, 2026",
           venue: "The Pickl Park, 355 Ballenger Center Dr, Frederick, MD 21703",
