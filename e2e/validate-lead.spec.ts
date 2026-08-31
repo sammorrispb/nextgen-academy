@@ -110,7 +110,7 @@ test.describe("validateLeadForm — location allowlist", () => {
   test("Frederick uses the exact Notion select string", () => {
     // One canonical literal (em dash included) everywhere, or the Notion
     // Location select forks into near-identical options.
-    expect(LEAD_LOCATIONS).toContain("Frederick — The Pickle Park");
+    expect(LEAD_LOCATIONS).toContain("Frederick — The Pickl Park");
   });
 
   test("an unknown location is rejected", () => {

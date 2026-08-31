@@ -117,6 +117,24 @@ const VENUES: Record<string, Venue> = {
     note: "STILL A LIVE VENUE — Saturday drop-in sessions and the August back-to-school camp run here; do not treat this entry as retired. It is no longer the Fall 2026 season venue: the season moved to Walter Johnson HS on 2026-08-27 when Wood became unavailable for those Sundays. NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players — with room to grow to 3 (see the half-rule note above): 6 pickleball courts, 24 players a group. Separately, Bauer Drive Local Park to the north has 6 dedicated, lit public pickleball courts: FREE and high-traffic but NOT reservable, first-come only. Usable Mt-Zion-style for a free public session (~24 cap) and great for visibility, but you can't guarantee availability there.",
     draft: true,
   },
+
+  // ── Commercial partner facilities (NOT CUPF; the court math above doesn't apply) ──
+  // The only entry here that isn't a school. `tennisCourts: 0` is literal, not
+  // a placeholder: there are no tennis courts to halve or double, because the
+  // courts ARE pickleball courts booked per court per hour. Seat counts for
+  // anything at this venue derive from PICKLPARK_PICKLEBALL_COURTS in
+  // picklpark-2026.ts, never from pickleballCourts()/playerCapacity() here —
+  // both would read 0 and both are unused outside the CUPF venues.
+  //
+  // It earns an entry purely for the parking tip: this is a brand-new venue in
+  // a county where no NGA family has ever been, so a first-time parent gets
+  // the one paragraph they actually need.
+  "pickl park": {
+    tennisCourts: 0,
+    tip: "The Pickl Park has its own lot at 355 Ballenger Center Dr — pull in and park anywhere; check-in is straight through the main doors. It's off Ballenger Creek Pike in the Ballenger Center complex, so follow the building numbers rather than the shopping-center signs.",
+    draft: true,
+    note: "Commercial indoor pickleball club, 8 courts, Frederick MD. NGA's first venue outside Montgomery County (Saturday season + Open Court hour, from 2026-09-12). Courts are booked per court per hour under the standing Pickl Park arrangement — nothing here comes from CUPF, so the half-rule and the tennis→pickleball doubling are both irrelevant. Parking tip is satellite/website-derived; confirm on the first Saturday.",
+  },
 };
 
 /** Returns the venue record whose key matches the location string, or null. */

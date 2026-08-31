@@ -13,7 +13,7 @@ import {
 } from "@/lib/validate-crew-interest";
 import { forwardToCohortPool } from "@/lib/forward-to-cohort-pool";
 import { createCrewInterest } from "@/lib/notion-crew-interest";
-import { fetchUpcomingSessions } from "@/lib/notion-sessions";
+import { fetchUpcomingSessions, onColorLadder } from "@/lib/notion-sessions";
 import { matchSessionsForPreferences } from "@/lib/crew-matching";
 import {
   formatCrewSessionLines,
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     const sessions = await fetchUpcomingSessions();
     const matched = matchSessionsForPreferences(
       { level: childLevel, days: preferredDays, area: preferredLocation },
-      sessions,
+      onColorLadder(sessions),
     );
     matchedSessions = formatCrewSessionLines(matched, SITE_ORIGIN);
   } catch (err) {

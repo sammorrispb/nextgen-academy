@@ -6,8 +6,9 @@ import {
 
 // Validator for the Pickl Park Saturday season checkout. Structural mirror of
 // validate-fall-registration: same parent/child/emergency field set with the
-// Pickl Park Green/Yellow group pick. The age window is NGA's standing 6–16
-// (imported, never re-typed).
+// Pickl Park band pick (Red/Orange or Green/Yellow — bands, not single colors,
+// because Frederick families have not been evaluated). The age window is NGA's
+// standing 6–16 (imported, never re-typed).
 
 export interface PicklParkRegistrationData {
   group: string;
@@ -46,7 +47,7 @@ export function validatePicklParkRegistration(
   const errors: PicklParkRegistrationErrors = {};
 
   if (!data.group?.trim() || !findPicklParkSeasonGroup(data.group)) {
-    errors.group = "Pick your player's color group";
+    errors.group = "Pick your player's group";
   }
   if (!data.parentName?.trim()) errors.parentName = "Parent name is required";
   if (!data.email?.trim()) {

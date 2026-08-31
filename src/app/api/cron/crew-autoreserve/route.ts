@@ -11,6 +11,7 @@ import {
 import {
   fetchUpcomingSessions,
   incrementSessionRegistered,
+  onColorLadder,
   type NgaSession,
 } from "@/lib/notion-sessions";
 import {
@@ -60,10 +61,13 @@ interface PerCommitOutcome {
   error?: string;
 }
 
-function findNextMatchingSession(
+// Generic over the session shape so a caller that has already narrowed the
+// level (see onColorLadder below) keeps that narrowing on the way out — the
+// roster row it feeds only speaks the colour ladder.
+function findNextMatchingSession<T extends NgaSession>(
   commit: CrewCommit,
-  sessions: NgaSession[],
-): NgaSession | null {
+  sessions: T[],
+): T | null {
   for (const s of sessions) {
     if (s.status !== "Open") continue;
     if (s.spotsLeft <= 0) continue;
@@ -97,7 +101,9 @@ async function processOne(
     return outcome;
   }
 
-  const next = findNextMatchingSession(commit, sessions);
+  // An open-intro row is never auto-charged against a crew commitment: the
+  // family bought a colour-matched crew, not whatever else is on the calendar.
+  const next = findNextMatchingSession(commit, onColorLadder(sessions));
   if (!next) return outcome;
 
   // Idempotency: don't double-book if this child is already on the roster.

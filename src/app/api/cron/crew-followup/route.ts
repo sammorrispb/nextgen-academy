@@ -6,7 +6,7 @@ import {
   markCrewInterestFlag,
   type ActionableCrewInterest,
 } from "@/lib/notion-crew-interest";
-import { fetchUpcomingSessions } from "@/lib/notion-sessions";
+import { fetchUpcomingSessions, onColorLadder } from "@/lib/notion-sessions";
 import {
   findCandidateMatches,
   matchSessionsForPreferences,
@@ -153,7 +153,7 @@ export const GET = withCronAlert("crew-followup", async () => {
     const matchedSessions: CrewSessionLine[] = formatCrewSessionLines(
       matchSessionsForPreferences(
         { level: row.childLevel, days: row.preferredDays, area: row.preferredArea },
-        sessions,
+        onColorLadder(sessions),
       ),
       SITE_ORIGIN,
     );

@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import PicklParkRegistrationForm from "@/components/PicklParkRegistrationForm";
 import JsonLd from "@/components/JsonLd";
 import {
+  PICKLPARK_INDOOR_NOTE,
   PICKLPARK_MAKEUP_DATES,
+  PICKLPARK_OPEN_COURT_END_TIME,
+  PICKLPARK_OPEN_COURT_START_TIME,
   PICKLPARK_SEASON_LABEL,
   PICKLPARK_SEASON_WEEKS,
   PICKLPARK_SATURDAYS,
@@ -13,7 +17,6 @@ import {
 import {
   PICKLPARK_SEASON_GROUPS,
   PICKLPARK_SEASON_PRICE_USD,
-  PICKLPARK_SEASON_SPOTS_PER_GROUP,
   PICKLPARK_SEASON_TITLE,
   type PicklParkSeasonGroup,
 } from "@/data/picklpark-season-2026";
@@ -22,13 +25,22 @@ import { countPicklParkRegistrations } from "@/lib/notion-picklpark-registration
 // The Pickl Park Saturday season registration page — the fall-season pattern
 // at NGA's first partner venue (Frederick, MD). One venue addition, not a
 // market expansion: the site's SEO posture stays Montgomery County. A real
-// Stripe price backs /api/checkout-picklpark, so quoting $175 here is within
-// the pricing rule once that product exists — and the page holds the closed
-// state (no form) until NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN is "true".
+// Stripe price backs /api/checkout-picklpark, so quoting the price here is
+// within the pricing rule once that product exists — and the page holds the
+// closed state (no form) until NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN is
+// "true".
+//
+// The description is COMPOSED, never typed. A hardcoded one is how /fall spent
+// days telling search engines the season was in Rockville after it had moved,
+// and the literal this replaced still advertised the old times, the old price,
+// and a seat count no public surface is allowed to publish.
+const GROUP_SUMMARY = PICKLPARK_SEASON_GROUPS.map(
+  (g) => `${g.label} ${g.timeLabel}`,
+).join(", ");
+
 export const metadata: Metadata = {
   title: "Pickl Park Saturday Season — Register | Next Gen Pickleball Academy",
-  description:
-    "Six Saturdays of youth pickleball at The Pickl Park in Frederick, Oct 3 – Nov 7. Green Ball 1:00–2:00 PM, Yellow Ball 2:00–3:00 PM. 8 spots per group, $175 per player for the full season.",
+  description: `${PICKLPARK_SEASON_WEEKS} Saturdays of indoor youth pickleball at ${PICKLPARK_VENUE_SHORT} in ${PICKLPARK_PUBLIC_AREA}, ${PICKLPARK_SEASON_LABEL}. ${GROUP_SUMMARY}. Small groups, $${PICKLPARK_SEASON_PRICE_USD} per player for the full season.`,
   alternates: { canonical: "https://nextgenpbacademy.com/picklpark" },
 };
 
@@ -94,15 +106,22 @@ export default async function PicklParkPage() {
             {registrationOpen ? "open" : "opening soon"}
           </p>
           <h1 className="font-heading text-3xl sm:text-5xl font-black text-ngpa-white tracking-tight mb-5">
-            Six Saturdays on real pickleball courts.
+            Six Saturdays indoors, whatever the weather.
           </h1>
           <p className="text-lg text-ngpa-white/80 leading-relaxed mb-6">
             The Next Gen Pickl Park Saturday Season runs {PICKLPARK_SEASON_WEEKS}{" "}
             Saturdays at {PICKLPARK_VENUE_SHORT} in {PICKLPARK_PUBLIC_AREA} —
-            our first Frederick location, on dedicated pickleball courts —{" "}
-            <time dateTime={PICKLPARK_SATURDAYS[0]}>{PICKLPARK_SEASON_LABEL}</time>:{" "}
+            our first Frederick location, on dedicated indoor pickleball courts
+            —{" "}
+            <time dateTime={PICKLPARK_SATURDAYS[0]}>{PICKLPARK_SEASON_LABEL}</time>
+            :{" "}
             <strong className="text-ngpa-white">
-              Green Ball 1:00&ndash;2:00 PM, Yellow Ball 2:00&ndash;3:00 PM
+              {PICKLPARK_SEASON_GROUPS.map((g, i) => (
+                <span key={g.group}>
+                  {i > 0 && ", "}
+                  {g.label} {g.timeLabel}
+                </span>
+              ))}
             </strong>
             . Coached practice first, then a rotating-partner round robin, so
             every kid partners with everyone in the group across the season.
@@ -112,8 +131,10 @@ export default async function PicklParkPage() {
               $<span itemProp="price" content={String(PICKLPARK_SEASON_PRICE_USD)}>{PICKLPARK_SEASON_PRICE_USD}</span>{" "}
               per player for the full season
             </strong>{" "}
-            &middot; {PICKLPARK_SEASON_SPOTS_PER_GROUP} spots per group, first
-            come first serve.
+            &middot; small groups, first come first serve.
+          </p>
+          <p className="mt-3 text-ngpa-white/80 leading-relaxed">
+            {PICKLPARK_INDOOR_NOTE}
           </p>
           <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed">
             The season is a full-season commitment paid up front, and it&rsquo;s
@@ -149,22 +170,46 @@ export default async function PicklParkPage() {
                   </a>
                 </h3>
                 <p className="text-ngpa-white/80 leading-relaxed">
-                  A full hour — coached practice, then the round robin.{" "}
-                  {PICKLPARK_SEASON_SPOTS_PER_GROUP} spots.
+                  A full hour — coached practice, then the round robin. Small
+                  group, one court per level.
                 </p>
               </article>
             ))}
           </div>
           <p className="text-sm text-ngpa-white/60 leading-relaxed mb-6">
-            Not sure which color fits your player?{" "}
+            Not sure which group fits your player?{" "}
             <a
               href="/levels"
               className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
             >
-              See what Green and Yellow Ball mean
+              See what each ball color means
             </a>
-            .
+            , or come to Open Court first — details below.
           </p>
+
+          <div className="bg-ngpa-panel rounded-2xl border border-ngpa-lime/40 p-6 sm:p-7 mb-6">
+            <p className="text-xs font-bold text-ngpa-lime uppercase tracking-[0.18em] mb-2">
+              Saturdays {PICKLPARK_OPEN_COURT_START_TIME}&ndash;
+              {PICKLPARK_OPEN_COURT_END_TIME.replace(" PM", "")} PM &middot; drop
+              in, no season required
+            </p>
+            <h3 className="font-heading text-xl sm:text-2xl font-black text-ngpa-white tracking-tight mb-3">
+              New to this? Start with Open Court.
+            </h3>
+            <p className="text-ngpa-white/80 leading-relaxed mb-4">
+              Every level welcome, ages 6&ndash;16, one hour, book it week by
+              week. Coach Sam will tell you which group your player fits before
+              you commit to a season &mdash; and it runs right before the season
+              groups, so you can stay and watch what you&rsquo;d be signing up
+              for.
+            </p>
+            <Link
+              href="/schedule"
+              className="inline-flex items-center justify-center px-6 py-3 bg-ngpa-lime text-ngpa-deep font-heading font-bold rounded-full hover:bg-ngpa-lime/90 transition-colors min-h-[48px]"
+            >
+              See Open Court dates →
+            </Link>
+          </div>
 
           <div className="bg-ngpa-slate/40 rounded-2xl border border-ngpa-slate/60 p-6 sm:p-7">
             <h3 className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-4">
@@ -191,9 +236,10 @@ export default async function PicklParkPage() {
               </li>
               <li>
                 <strong className="text-ngpa-white">
-                  A makeup date built in.
+                  A held date, just in case.
                 </strong>{" "}
-                If a Saturday can&rsquo;t run we make it up on{" "}
+                Weather never takes a week indoors, but if a Saturday
+                can&rsquo;t run we make it up on{" "}
                 {PICKLPARK_MAKEUP_DATES.map((d, i) => (
                   <span key={d}>
                     {i > 0 && " or "}
@@ -204,10 +250,11 @@ export default async function PicklParkPage() {
               </li>
               <li>
                 <strong className="text-ngpa-white">
-                  Real pickleball courts.
+                  Real pickleball courts, indoors.
                 </strong>{" "}
-                The Pickl Park is a dedicated pickleball facility &mdash;
-                permanent nets, real lines, no gym-floor tape.
+                The Pickl Park is a dedicated indoor pickleball club &mdash;
+                permanent nets, real lines, cushioned courts, no gym-floor tape
+                and no weather.
               </li>
               <li>
                 <strong className="text-ngpa-white">
@@ -232,7 +279,7 @@ export default async function PicklParkPage() {
           </h2>
           <p className="text-ngpa-white/70 leading-relaxed mb-8">
             {registrationOpen
-              ? "Pick your player's color group, register, and pay for the season in one go — you'll get a confirmation email with every date."
+              ? "Pick your player's group, register, and pay for the season in one go — you'll get a confirmation email with every date."
               : "We're finishing the season setup. Join the newsletter and you'll be first to know the moment registration opens."}
           </p>
           {registrationOpen ? (

@@ -281,7 +281,7 @@ export default function FreeEvaluationPage() {
               Also in Frederick.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Private lessons run at The Pickle Park in Frederick. Pick
+              Private lessons run at The Pickl Park in Frederick. Pick
               &ldquo;Frederick&rdquo; on the form above and we&rsquo;ll set up a
               time.
             </p>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   buildOpenNowOffers,
-  fallRegistrationOpen,
+  openNowFlags,
 } from "@/lib/open-now-offers";
 
 /**
@@ -17,7 +17,7 @@ import {
  */
 export default function OpenNowOffers() {
   const todayIso = new Date().toISOString().slice(0, 10);
-  const offers = buildOpenNowOffers(todayIso, fallRegistrationOpen());
+  const offers = buildOpenNowOffers(todayIso, openNowFlags());
 
   if (offers.length === 0) return null;
 

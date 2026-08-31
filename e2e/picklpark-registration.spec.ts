@@ -11,13 +11,18 @@ import {
   PICKLPARK_SEASON_GROUPS,
   PICKLPARK_SEASON_PRICE_USD,
   PICKLPARK_SEASON_PRICE_ENV_VAR,
-  PICKLPARK_SEASON_SPOTS_PER_GROUP,
+  picklParkSeasonSlotsFor,
 } from "../src/data/picklpark-season-2026";
 import {
+  PICKLPARK_INDOOR_NOTE,
   PICKLPARK_MAKEUP_DATES,
+  PICKLPARK_OPEN_COURT_END_TIME,
+  PICKLPARK_OPEN_COURT_START_TIME,
   PICKLPARK_SATURDAYS,
   PICKLPARK_PICKLEBALL_COURTS,
-  PICKLPARK_SLOTS_PER_GROUP,
+  PICKLPARK_PLAYERS_PER_COURT,
+  PICKLPARK_SLOTS_BY_GROUP,
+  PICKLPARK_START_TIME,
   PICKLPARK_VENUE,
   PICKLPARK_YOUTH_BLOCKS,
 } from "../src/data/picklpark-2026";
@@ -35,7 +40,7 @@ import { POST as CHECKOUT_POST } from "../src/app/api/checkout-picklpark/route";
 
 function validForm(): PicklParkRegistrationData {
   return {
-    group: "Green",
+    group: "Red/Orange",
     parentName: "Test Parent",
     email: "parent@example.com",
     phone: "301-555-0142",
@@ -56,7 +61,7 @@ function checkoutReq(body: unknown): NextRequest {
   });
 }
 
-/** A Confirmed Green roster row for the capacity/duplicate queries. */
+/** A Confirmed roster row for the capacity/duplicate queries. */
 function confirmedRow(childFirstName: string, parentEmail: string) {
   return {
     id: `row-${childFirstName}`,
@@ -68,30 +73,53 @@ function confirmedRow(childFirstName: string, parentEmail: string) {
 }
 
 test.describe("picklpark season product data stays consistent", () => {
-  test("price is the operator-set $175", () => {
-    expect(PICKLPARK_SEASON_PRICE_USD).toBe(175);
+  test("price matches the Montgomery County season at $225", () => {
+    expect(PICKLPARK_SEASON_PRICE_USD).toBe(225);
   });
 
-  test("seat cap is DERIVED from the court booking (2 pickleball courts × 4)", () => {
-    expect(PICKLPARK_SEASON_SPOTS_PER_GROUP).toBe(PICKLPARK_SLOTS_PER_GROUP);
-    expect(PICKLPARK_SLOTS_PER_GROUP).toBe(
-      PICKLPARK_PICKLEBALL_COURTS * PLAYERS_PER_PICKLEBALL_COURT,
-    );
-    expect(PICKLPARK_SEASON_SPOTS_PER_GROUP).toBe(8);
+  test("seat caps are DERIVED per band from the court booking", () => {
+    for (const band of PICKLPARK_YOUTH_BLOCKS.map((b) => b.level)) {
+      expect(picklParkSeasonSlotsFor(band)).toBe(
+        PICKLPARK_SLOTS_BY_GROUP[band],
+      );
+      expect(PICKLPARK_SLOTS_BY_GROUP[band]).toBe(
+        PICKLPARK_PICKLEBALL_COURTS * PICKLPARK_PLAYERS_PER_COURT[band],
+      );
+    }
   });
 
-  test("groups mirror the Saturday blocks with canonical ball-color labels", () => {
+  test("the site-wide per-court cap is the default, and is NOT the dial", () => {
+    // Raising a band means editing PICKLPARK_PLAYERS_PER_COURT, never the
+    // site-wide constant that also sizes every drop-in.
+    expect(PLAYERS_PER_PICKLEBALL_COURT).toBe(4);
+    for (const band of PICKLPARK_YOUTH_BLOCKS.map((b) => b.level)) {
+      expect(PICKLPARK_PLAYERS_PER_COURT[band]).toBe(
+        PLAYERS_PER_PICKLEBALL_COURT,
+      );
+    }
+  });
+
+  test("groups are the two bands, with canonical ball-color words", () => {
     expect(PICKLPARK_SEASON_GROUPS.map((g) => g.group)).toEqual(
       PICKLPARK_YOUTH_BLOCKS.map((b) => b.level),
     );
     expect(PICKLPARK_SEASON_GROUPS.map((g) => g.label)).toEqual([
-      "Green Ball",
-      "Yellow Ball",
+      "Red & Orange Ball",
+      "Green & Yellow Ball",
     ]);
     expect(PICKLPARK_SEASON_GROUPS.map((g) => g.timeLabel)).toEqual([
-      "1:00–2:00 PM",
-      "2:00–3:00 PM",
+      "3:00–4:00 PM",
+      "4:00–5:00 PM",
     ]);
+  });
+
+  test("the season runs 3–5 PM, after the 2 PM Open Court hour", () => {
+    // Open Court hands straight off into the season — that adjacency is the
+    // whole conversion argument for running it first, so pin that it holds.
+    expect(PICKLPARK_OPEN_COURT_START_TIME).toBe("2:00 PM");
+    expect(PICKLPARK_OPEN_COURT_END_TIME).toBe(PICKLPARK_START_TIME);
+    expect(PICKLPARK_START_TIME).toBe("3:00 PM");
+    expect(PICKLPARK_YOUTH_BLOCKS[0].startTime).toBe(PICKLPARK_START_TIME);
   });
 
   test("six Saturdays Oct 3 – Nov 7, all actually Saturdays, makeup Nov 14", () => {
@@ -208,12 +236,13 @@ test.describe("POST /api/checkout-picklpark (route, pure node)", () => {
     expect(stub.calls).toHaveLength(0);
   });
 
-  test("9th registration in a full group → 409 sold_out before Stripe", async () => {
+  test("a full band → 409 sold_out before Stripe", async () => {
     process.env[PICKLPARK_SEASON_PRICE_ENV_VAR] = "price_picklpark_test";
     stub
       .on(`databases/${PICKLPARK_DB}/query`, {
-        results: Array.from({ length: PICKLPARK_SEASON_SPOTS_PER_GROUP }, (_, i) =>
-          confirmedRow(`Kid${i}`, `family${i}@example.com`),
+        results: Array.from(
+          { length: picklParkSeasonSlotsFor("Red/Orange") },
+          (_, i) => confirmedRow(`Kid${i}`, `family${i}@example.com`),
         ),
       })
       .install();
@@ -250,9 +279,9 @@ test.describe("picklpark season confirmation email", () => {
     return buildPicklParkSeasonConfirmationEmail({
       parentFirst: "Jordan",
       childFirst: "Ava",
-      groupLabel: "Green Ball",
-      timeLabel: "1:00–2:00 PM",
-      amountUsd: "175.00",
+      groupLabel: "Red & Orange Ball",
+      timeLabel: "3:00–4:00 PM",
+      amountUsd: "225.00",
       venue: PICKLPARK_VENUE,
       saturdays: PICKLPARK_SATURDAYS,
       makeupDates: PICKLPARK_MAKEUP_DATES,
@@ -261,8 +290,8 @@ test.describe("picklpark season confirmation email", () => {
 
   test("carries the group, every Saturday, the venue, and the makeup date", () => {
     const { subject, text } = build();
-    expect(subject).toContain("Green Ball");
-    expect(text).toContain("Saturdays 1:00–2:00 PM");
+    expect(subject).toContain("Red & Orange Ball");
+    expect(text).toContain("Saturdays 3:00–4:00 PM");
     expect(text).toContain("Saturday, October 3");
     expect(text).toContain("Saturday, November 7");
     for (const iso of PICKLPARK_SATURDAYS) {
@@ -275,7 +304,15 @@ test.describe("picklpark season confirmation email", () => {
 
   test("quotes the real paid amount (season price exists in Stripe)", () => {
     const { text } = build();
-    expect(text).toContain("Paid: $175.00 (full season).");
+    expect(text).toContain("Paid: $225.00 (full season).");
+  });
+
+  test("carries the indoor promise that earns price parity with MoCo", () => {
+    // $225 buys a 60-minute block here against Walter Johnson's 90. The
+    // reason is the venue, not the clock — a confirmation that quotes the
+    // price without it is selling the shorter hour and none of the reason.
+    const { text } = build();
+    expect(text).toContain(PICKLPARK_INDOOR_NOTE);
   });
 
   test("states the non-refundable terms and speaks Coach voice", () => {

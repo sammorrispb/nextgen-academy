@@ -3,7 +3,43 @@ import { readPlainText } from "@/lib/notion-utils";
 import { fetchUpcomingDropIns } from "@/lib/notion-dropins";
 import { isSessionEnded } from "@/lib/session-time";
 
-export type SessionLevel = "Red" | "Orange" | "Green" | "Yellow";
+// "All Levels" is not a rung on the Red→Yellow ladder — it labels an open
+// intro session that welcomes every level at once (the Pickl Park Saturday
+// Open Court hour). Kept in this union rather than modelled as a null level so
+// the row's own title and select say what it is; anything that matches a
+// player to a *specific* colour (crew-matching) simply never matches it, which
+// is the correct behaviour for an on-ramp.
+export type SessionLevel =
+  | "Red"
+  | "Orange"
+  | "Green"
+  | "Yellow"
+  | "All Levels";
+
+export const OPEN_SESSION_LEVEL = "All Levels" as const;
+
+/** A single rung of the ladder — what every colour-matching surface speaks. */
+export type ColorLevel = Exclude<SessionLevel, typeof OPEN_SESSION_LEVEL>;
+
+/**
+ * Drop open-intro rows, narrowing the rest to the colour ladder.
+ *
+ * Every caller that matches a player to sessions by COLOUR must funnel through
+ * this. An open row is deliberately EXCLUDED rather than mapped to a null
+ * level, because "no level" already means something else to those matchers:
+ * `post-eval-followup-run` treats a null-level row as a match for any
+ * rally-ready kid, so aliasing would have mailed a Rockville family an invite
+ * to a Frederick session. Excluding is the only reading that stays true at
+ * every call site.
+ */
+export function onColorLadder<T extends { level: SessionLevel | null }>(
+  sessions: readonly T[],
+): (T & { level: ColorLevel | null })[] {
+  return sessions.filter(
+    (s): s is T & { level: ColorLevel | null } =>
+      s.level !== OPEN_SESSION_LEVEL,
+  );
+}
 
 export interface NgaSession {
   id: string;
