@@ -4,7 +4,7 @@ Two products share one Saturday and one court booking in Frederick:
 
 | Time | What | Sells through | State |
 |---|---|---|---|
-| 2:00–3:00 PM | **Open Court** — all levels, ages 6–16, $20 drop-in | `/schedule` (the normal drop-in stack) | seeded by cron, first session **Sep 12** |
+| 2:00–3:00 PM | **Open Court** — all levels, ages 6–16, $20 drop-in | `/schedule` (the normal drop-in stack) | **LIVE** — Sep 12/19/26 seeded 2026-08-31; cron extends weekly |
 | 3:00–4:00 PM | **Red & Orange Ball** season | `/picklpark` | ships DARK |
 | 4:00–5:00 PM | **Green & Yellow Ball** season | `/picklpark` | ships DARK |
 
@@ -63,27 +63,44 @@ price without it is selling the shorter hour and none of the reason.
 2. **Book the courts**: 2 courts, Saturdays **2–5 PM**, Sep 12 → Nov 7, plus a
    hold on Nov 14. Three hours × 2 courts × 6 weeks = 36 court-hours for the
    season, plus 2 court-hours a week for Open Court.
-3. **Notion — Sessions DB**: add **`All Levels`** to the `Level` select. (Notion
-   auto-creates select *options* on write, but adding it by hand keeps the
-   board views tidy.) Add `Frederick` to the Player CRM `Location` select and
-   `The Pickl Park` to `Site`.
-4. **Smoke-test the seeder** *before* trusting it:
+3. ~~**Notion — Sessions DB**: add **`All Levels`** to the `Level` select.~~
+   **DONE 2026-08-31.** The four colour options were preserved. Still to do:
+   add `Frederick` to the Player CRM `Location` select and `The Pickl Park` to
+   `Site`.
+4. ~~**Smoke-test the seeder**~~ **DONE 2026-08-31** — dry-run reported
+   `wouldCreate: 7`, one row per Saturday, never four. **Sep 12 / 19 / 26 are
+   hand-seeded and live** (verified in `/api/sessions/feed`); their titles are
+   codepoint-identical to `${titleBase} — ${level}`, so the Monday cron adds
+   Oct 3 → Oct 24 and skips them. Re-run any time with:
    `GET /api/cron/seed-tuesday-sessions?dryRun=1` — expect one
    `Pickl Park Saturday Open Court — All Levels` row per Saturday from Sep 12,
    **one row per date, never four**. Any other `dryRun` value 400s rather than
    running live.
-5. **Create the Stripe product** — NGA Stripe `acct_1TU4iSBpXOfTC961`: a
-   "Pickl Park Saturday Season (Fall 2026)" product with a one-time **$225**
-   price. The $225 on the page is only honest once this exists.
-6. **Create the "NGA Pickl Park Registrations" Notion DB** — duplicate the Fall
-   Regs DB schema exactly (properties listed in `.env.example` next to
-   `NOTION_FALL_REGS_DB_ID`), with `Group` options **`Red/Orange`** and
-   **`Green/Yellow`**. Never reuse the Fall Regs DB itself — capacity is scoped
-   by Group alone, so sharing would cross-count the two seasons' seats. Share it
-   with the NGA Notion integration.
-7. **Set Vercel env** (production): `STRIPE_PICKLPARK_SEASON_PRICE_ID`,
-   `NOTION_PICKLPARK_REGS_DB_ID`, then
-   `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN=true`.
+5. ~~**Create the Stripe product**~~ **DONE 2026-08-31** on NGA Stripe
+   `acct_1TU4iSBpXOfTC961` (livemode): product `prod_VArmZ4zV7oq0rD`,
+   one-time $225 price **`price_1UAW31BpXOfTC961acgj7Fqe`** — verified
+   `unit_amount: 22500`, `type: one_time`, `tax_behavior: exclusive`, and NOT
+   attached to the Fall season product.
+6. ~~**Create the "NGA Pickl Park Registrations" Notion DB**~~ **DONE
+   2026-08-31** under NGA HOME: **`febf59e72797405995a9606d677fc9f6`**. All 15
+   Fall Regs properties mirrored; `Group` options are `Red/Orange` and
+   `Green/Yellow`. Never reuse the Fall Regs DB itself — capacity is scoped by
+   Group alone, so sharing would cross-count the two seasons' seats.
+   ⚠️ **STILL TO DO: share it with the NGA Notion integration** in the Notion
+   UI, or the webhook 500s on the first real registration while everything else
+   looks correct.
+7. **Set Vercel env** (production) — the two values now exist:
+
+   ```
+   STRIPE_PICKLPARK_SEASON_PRICE_ID=price_1UAW31BpXOfTC961acgj7Fqe
+   NOTION_PICKLPARK_REGS_DB_ID=febf59e72797405995a9606d677fc9f6
+   ```
+
+   **Hold `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` until after the first Open
+   Court (~Sep 12–19)** — Sam's call 2026-08-31. Setting the first two alone is
+   safe: the page keeps its closed state and no form renders, so nobody can
+   reach checkout. Opening before any Open Court has run would sell cold, which
+   is the outcome the Open Court hour exists to avoid.
 8. **Smoke test the season** (Stripe test mode or a $225 live + refund):
    checkout redirect, the waiver-gate 409 → inline sign → resume, webhook roster
    row in the new DB, parent confirmation email, `/picklpark/success`.
