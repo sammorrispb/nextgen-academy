@@ -518,7 +518,13 @@ Always route outbound links through these — they handle UTM/`ref` stamping con
 ## Environment Variables
 See `.env.example`. Categories:
 - `RESEND_API_KEY` — required for any lead form / Stripe webhook email to succeed.
-- `NOTION_API_KEY` — required for the public schedule and webhook DB writes.
+- `NOTION_API_KEY` — required for the public schedule and webhook DB writes. The
+  integration is named **"Player DB"** in Sam's Notion workspace. **A new Notion DB
+  is invisible to the site until it is shared with that integration**, and nothing
+  in code can detect the omission: Notion's API exposes no way to list a database's
+  connections, so a missed share surfaces only as a read returning null (the page
+  then hides the value rather than erroring) or a write 404ing. Confirm by opening
+  a DB that already works, `•••` → Connections, and copying what is listed.
 - `NOTION_SESSIONS_DB_ID` — NGA Sessions Schedule database ID (`3eed8a91-f328-4b63-a4aa-b890f133a80a`).
 - `NOTION_DROPINS_DB_ID` — NGA Drop-in Registrations database ID (`557f01d8-e4c6-47d9-a67b-f0817dd8724f`).
 - `NOTION_WAIVERS_DB_ID` — NGA Waivers DB (`8ff69033-db0b-4d96-a8df-ead6b6ac7682`); one signed one-time waiver per parent. Read by the pre-checkout waiver gate. UNSET = gate fails open (checkout never blocked); set it to enforce.

@@ -86,9 +86,11 @@ price without it is selling the shorter hour and none of the reason.
    Fall Regs properties mirrored; `Group` options are `Red/Orange` and
    `Green/Yellow`. Never reuse the Fall Regs DB itself — capacity is scoped by
    Group alone, so sharing would cross-count the two seasons' seats.
-   ⚠️ **STILL TO DO: share it with the NGA Notion integration** in the Notion
-   UI, or the webhook 500s on the first real registration while everything else
-   looks correct.
+   Shared with the **"Player DB"** integration 2026-08-31 (Sam) — without that
+   the webhook 404s on the first real registration while everything else looks
+   correct. Not verifiable from code: with registration closed nothing reads the
+   DB, and `countPicklParkRegistrations` fails soft to `null` either way. The
+   check at go-live is below.
 7. **Set Vercel env** (production) — the two values now exist:
 
    ```
@@ -101,6 +103,13 @@ price without it is selling the shorter hour and none of the reason.
    safe: the page keeps its closed state and no form renders, so nobody can
    reach checkout. Opening before any Open Court has run would sell cold, which
    is the outcome the Open Court hour exists to avoid.
+7b. **Confirm the Notion wiring the moment the flag flips.** With registration
+    open, `/picklpark` calls `countPicklParkRegistrations` per band. A readable
+    DB returns 0 and each group card shows **"Spots open"**; an unreadable one
+    returns `null` and the card shows **no seat status at all**. Blank status on
+    a brand-new season means the integration cannot see the DB — not that it is
+    full. This is the cheapest positive signal available; the definitive one is
+    step 8.
 8. **Smoke test the season** (Stripe test mode or a $225 live + refund):
    checkout redirect, the waiver-gate 409 → inline sign → resume, webhook roster
    row in the new DB, parent confirmation email, `/picklpark/success`.
