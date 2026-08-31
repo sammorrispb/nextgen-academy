@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { NextRequest } from "next/server";
-import { FetchStub } from "./fixtures/fetch-stub";
+import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 
 // Env BEFORE importing the route — the route + its libs read these at call
 // time. Open Brain env is deliberately SET rather than deleted: deleting it
@@ -72,7 +72,7 @@ const stub = new FetchStub();
 /** Roster empty, waiver on file — the path that runs all the way to Stripe. */
 function installHappyPath() {
   stub
-    .on(/api\.notion\.com\/v1\/databases\/.*\/query/, (call) => {
+    .on(/api\.notion\.com\/v1\/databases\/.*\/query/, (call: RecordedFetch) => {
       // Only the roster query filters on Group; anything else is the waiver
       // lookup, which must return a row so the gate opens.
       const isRoster = /"property":"Group"/.test(call.body);
