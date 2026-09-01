@@ -51,6 +51,12 @@ export const faq: FaqItem[] = [
       "If we cancel a session — for weather, a venue issue, or low enrollment — you get an automatic full refund to your original payment method, no action needed. Our sessions are outdoors, so we watch the forecast for every date and call off any session that isn’t safe to play. Outside of an NGA cancellation, registrations are non-refundable: please register only when you’re confident your child can attend, since we can’t offer credits or transfers for missed sessions. The free 30-minute evaluation is always free and never charged.",
   },
   {
+    question: "Do you have a referral discount? How does it work?",
+    answer:
+      "Yes — it runs through our free newsletter. Every parent on the newsletter has a personal referral link (it’s in your welcome email and every weekly issue). Share it with another family: when they join the newsletter through your link and book their child’s first drop-in, you BOTH get 50% off your next session. You’ll each get a single-use code by email — just paste it in at checkout when you book your next slot. There’s no limit: every new friend who joins and plays earns you another 50%-off session. Two things to know — the discount applies to your next visit (not your friend’s first one), and your friend should use the same email to sign up and to book so we can match the reward.",
+    cta: { label: "Join the newsletter to get your link", href: "/newsletter" },
+  },
+  {
     question: "Is pickleball safe for kids?",
     answer:
       "Yes. Pickleball is one of the safest racket sports for children: the court is smaller than tennis, the paddle is lightweight, and the ball moves at lower speeds than a tennis ball. USA Pickleball’s official youth progression uses color-coded balls (Red, Orange, Green, Yellow) with reduced bounce and compression so kids learn proper technique before the game speeds up. Our coaches are trained in youth-appropriate drills, warmups, and game formats.",
