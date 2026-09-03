@@ -93,10 +93,12 @@ variation), promote it to the feed pattern with a private access path rather
 than parsing harder.
 
 The schedule is CONFIRMED (Stef's Fall 2026 schedule PDF, updated revision
-2026-08-13, plus the 2026-08-16 Friday venue change from Sam): five clubs,
-Mon Brookeville / Tue Derwood / Wed Silver Spring / Thu Olney (Belmont) /
-Fri Olney (Olney ES — was Sherwood ES, Sandy Spring, until 2026-08-16; the
-`sandy-spring-fri` key is kept so its calendar blocks update in place), with
+2026-08-13, plus two later venue changes from Sam): five clubs,
+Mon Brookeville / Tue Derwood / Wed North Potomac (DuFief ES — was Rosemary
+Hills ES, Silver Spring, until 2026-09-03) / Thu Olney (Belmont) /
+Fri Olney (Olney ES — was Sherwood ES, Sandy Spring, until 2026-08-16). Both
+moved clubs KEEP their original key (`silver-spring-wed`, `sandy-spring-fri`)
+so their calendar blocks update in place rather than churning, with
 real MCPS-reconciled session dates — the gaps in each club's date list are
 school closures, so a "missing" week is not an error. Every club now has a
 published time (Mon/Tue/Thu/Fri 3:30–4:30 PM, Wed 4:00–5:00 PM), so no EC

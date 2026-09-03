@@ -127,10 +127,12 @@ export const RECURRING_TEMPLATES: readonly RecurringTemplate[] = [
   // ── Wednesday ages 8–11 block (added 2026-08-13, first session Sept 2) ───
   // Sits between the afternoon school clubs and the Wednesday Link & Dink
   // night: Red & Orange courts for kids 8–11 who are newer to the game. 5:30
-  // (not 5:00) because the Rosemary Hills EC club runs to 5:00 PM in Silver
-  // Spring from Sept 16 on — 5:30 leaves the drive to Wood and hands off into
-  // the 6:30 L&D night. `startsOn` keeps the Monday cron from back-filling
-  // August Wednesdays.
+  // (not 5:00) because the Wednesday EC club runs to 5:00 PM from Sept 16 on —
+  // 5:30 leaves the drive to Wood and hands off into the 6:30 L&D night. That
+  // club moved Silver Spring → North Potomac on 2026-09-03 (a LONGER drive to
+  // Rockville), so 5:30 is now the floor, not slack: re-check it before this
+  // template is ever flipped back to active. `startsOn` keeps the Monday cron
+  // from back-filling August Wednesdays.
   //
   // active:false as of 2026-08-23 (Sam): every upcoming drop-in row was
   // cancelled that day, so NO template may seed new ones. This was the last

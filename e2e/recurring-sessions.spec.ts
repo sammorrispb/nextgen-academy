@@ -155,8 +155,9 @@ test.describe("recurring templates (weekend move 2026-07-21)", () => {
     const wed = template("Wood Wednesday Ages 8–11");
     expect(wed.active).toBe(false);
     expect(wed.weekday).toBe(3);
-    // 5:30, not 5:00 — the Rosemary Hills EC club ends 5:00 PM in Silver
-    // Spring on Wednesdays from Sept 16, so 5:00 at Wood isn't drivable.
+    // 5:30, not 5:00 — the Wednesday EC club ends 5:00 PM from Sept 16, so
+    // 5:00 at Wood isn't drivable. That club moved to North Potomac on
+    // 2026-09-03, which only lengthens the drive.
     expect(wed.startTime).toBe("5:30 PM");
     expect(wed.endTime).toBe("6:30 PM");
     expect(wed.levels).toEqual(["Red", "Orange"]);
