@@ -15,14 +15,6 @@
 // The only consumer is the Google Calendar mirror (`skills/calendar-sync.md`),
 // which reads this file directly and emits town-only calendar blocks.
 //
-// AGE FLOOR — the one documented exception. NGA's own rule is 6–16 strict, no
-// under-6 on-ramp, and it is unchanged: every NGA form still starts at 6. The
-// Rosemary Hills club is a PreK–2 school, so EC asked for an intro format
-// covering ages 5–8 and Sam agreed (2026-07-23 thread). That narrower/lower
-// band belongs to EC's program, so it lives here as a per-club `ageMin` —
-// exactly how `MVF_AGE_MIN = 8` narrows in its own file rather than moving an
-// academy-wide constant. Do not propagate `ageMin: 5` to any NGA surface.
-//
 // SCHEDULE CONFIRMED — Stef's Fall 2026 schedule PDF (updated revision,
 // 2026-08-13), which supersedes the July hold email in three ways: (1) session
 // dates are real and already reconciled against the MCPS 2026–27 calendar
@@ -40,6 +32,19 @@
 // UPDATE 2026-08-16 (Sam): the Friday club moved from Sherwood ES (Sandy
 // Spring) to Olney ES (Olney), 3:30–4:30 PM — superseding the Friday line of
 // the 2026-08-13 PDF. Session dates are unchanged.
+//
+// UPDATE 2026-09-03 (Sam): the Wednesday club moved from Rosemary Hills ES
+// (Silver Spring) to DuFief ES (North Potomac) — superseding the Wednesday
+// line of the 2026-08-13 PDF. Time (4:00–5:00 PM) and session dates are
+// unchanged; only the venue moved. DuFief is 15001 DuFief Drive, Gaithersburg
+// 20878 by mailing address but North Potomac by community, and `town` is the
+// one field that leaves this file, so it reads North Potomac on the calendar.
+//
+// This move RETIRED the age-floor exception this file used to carry. The
+// 5–8 band was granted because Rosemary Hills is a PreK–2 building; DuFief is
+// K–5, so the Wednesday club reverts to `ageMin: 7` like the other four and
+// NGA's 6–16 rule now has no carve-out anywhere in this program. Re-open one
+// only if a partner asks and Sam agrees again — don't infer it from a date.
 
 /** Registration, payment, insurance and releases all sit with the partner. */
 export const EC_PARTNER_NAME = "Enrichment Collective";
@@ -121,16 +126,18 @@ export const EC_CLUBS: readonly EcClub[] = [
       "8 sessions. Was the Wednesday club in the July hold; no club 11/3 (Election Day) or 11/17.",
   },
   {
+    // Key predates the 2026-09-03 move to DuFief ES (the club started life at
+    // Rosemary Hills ES, Silver Spring) and is kept so existing calendar blocks
+    // update in place on their key — same rule as `olney-mon` and
+    // `sandy-spring-fri`.
     key: "silver-spring-wed",
     weekdayLabel: "Wednesday",
-    town: "Silver Spring, MD",
-    schoolName: "Rosemary Hills ES",
+    town: "North Potomac, MD",
+    schoolName: "DuFief ES",
     startTime: "4:00 PM",
     endTime: "5:00 PM",
-    // PreK–2 school. See the AGE FLOOR note at the top of this file: this is
-    // an Enrichment Collective program, and it does not change NGA's 6–16 rule.
-    ageMin: 5,
-    ageMax: 8,
+    ageMin: 7,
+    ageMax: null,
     status: "confirmed",
     dates: [
       "2026-09-16",
@@ -145,7 +152,7 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-11-18",
     ],
     notes:
-      "10 sessions. K–2 school — intro-to-pickleball format for 5–8 year olds. Was the Tuesday club in the July hold.",
+      "10 sessions. Was the Tuesday club in the July hold; moved from Rosemary Hills ES (Silver Spring) to DuFief ES (North Potomac) 2026-09-03, same time and dates. The 5–8 intro format retired with the move — DuFief is K–5, so this club is 7+ like the others.",
   },
   {
     key: "belmont-thu",
