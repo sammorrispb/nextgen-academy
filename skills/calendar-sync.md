@@ -46,9 +46,14 @@ the calendar event description to claim ownership of it.
   and as of 2026-08-13 no EC club does either (every club time is published) —
   but the rule outlives any one season's data.
 - **MVF venues are per-program, not per-file.** Only the Aug 27 intro is at
-  Apple Ridge; Fall I is at Watkins Mill and Fall II is at North Creek. Each
-  fall session is also two separate MVF activities (Red/Orange 5:30 PM,
-  Green/Yellow 6:30 PM), so a session is two calendar blocks per Thursday.
+  Apple Ridge; both fall sessions are at North Creek (Fall I moved there from
+  Watkins Mill on 2026-08-27 — `WATKINS_MILL` survives only as the renovation
+  contingency). Each fall session is also two separate MVF activities
+  (Red/Orange 5:30 PM, Green/Yellow 6:30 PM), so a session is two calendar
+  blocks per Thursday. **If the calendar and the feed ever disagree on an MVF
+  venue, do not sync — a hand-patched calendar block usually means a partner
+  moved the venue and `src/data/mvf.ts` has not caught up yet. Fix the file
+  first, then sync.**
 - **Keys must stay stable.** A key is a promise to the calendar that this item is
   the same real-world event as last run. Changing key derivation orphans every
   event built from the old scheme — the sync's adoption step softens that, but

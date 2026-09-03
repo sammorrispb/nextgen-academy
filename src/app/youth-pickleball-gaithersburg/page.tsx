@@ -28,12 +28,12 @@ export default function GaithersburgPage() {
       city="Gaithersburg"
       slug="youth-pickleball-gaithersburg"
       intro="Gaithersburg is home turf for our summer camps — this year's June and July camp weeks ran at Gaithersburg High School — and our fall MVF classes run next door in Montgomery Village. This season's weekly group sessions for kids 6–16 run on weekend evenings at Earle B. Wood MS in Rockville and Walter Johnson HS in Bethesda. Start with a free 30-minute evaluation."
-      whereWePlay="We've coached Gaithersburg kids at Ridgeview Middle School in past seasons, run summer camp weeks at Gaithersburg High School, and teach fall MVF classes next door in Montgomery Village — the Aug 27 intro at Apple Ridge, Session I at Watkins Mill, Session II at North Creek. The current weekend sessions run at Wood MS (Saturdays) and Walter Johnson HS (Sundays) — one court per level, four players per court."
+      whereWePlay="We've coached Gaithersburg kids at Ridgeview Middle School in past seasons, run summer camp weeks at Gaithersburg High School, and teach fall MVF classes next door in Montgomery Village — the Aug 27 intro at Apple Ridge, then both fall sessions at North Creek. The current weekend sessions run at Wood MS (Saturdays) and Walter Johnson HS (Sundays) — one court per level, four players per court."
       cityFaq={[
         {
           question: "Do you run anything in Gaithersburg itself?",
           answer:
-            "Yes — our summer camp weeks run at Gaithersburg High School, and our fall MVF classes run in Montgomery Village next door (Apple Ridge, Watkins Mill, and North Creek). The weekly weekend group sessions currently run in Rockville (Saturdays) and Bethesda (Sundays) — the schedule page has the current lineup.",
+            "Yes — our summer camp weeks run at Gaithersburg High School, and our fall MVF classes run in Montgomery Village next door (Apple Ridge for the intro, North Creek for both fall sessions). The weekly weekend group sessions currently run in Rockville (Saturdays) and Bethesda (Sundays) — the schedule page has the current lineup.",
         },
       ]}
     />

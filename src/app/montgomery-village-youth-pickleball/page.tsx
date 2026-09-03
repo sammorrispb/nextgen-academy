@@ -363,11 +363,13 @@ export default function MontgomeryVillagePage() {
           </div>
 
           <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-2 tracking-tight">
-            Fall Session I &mdash; Watkins Mill
+            Fall Session I &mdash; North Creek
           </h3>
           <p className="text-ngpa-white/70 mb-5">
             Six Thursdays, Sept 3 &ndash; Oct 8. Red/Orange plays first,
-            Green/Yellow follows.
+            Green/Yellow follows. MVF may move Thursday classes to Watkins Mill
+            if the North Creek court renovation starts mid-session &mdash;
+            they&rsquo;ll let registered families know.
           </p>
           <div className="space-y-5">
             {fallOne.map((program) => (
