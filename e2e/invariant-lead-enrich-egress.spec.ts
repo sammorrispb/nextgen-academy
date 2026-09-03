@@ -173,3 +173,144 @@ test.describe("lead-enrich — egress", () => {
     expect(retried["Last Contact Date"]).toBeTruthy();
   });
 });
+
+// Open Brain's writeback_nga_crm job is the second caller of this surface. It
+// arrives with its own channel label, its own marker prefix, and activities it
+// may push out of order — so the extra invariants are: the marker keeps the two
+// callers from stacking the same message, ids from different systems never
+// collide on one token, and Last Contact Date only ever moves forward.
+test.describe("lead-enrich — Open Brain as a caller", () => {
+  const ACTIVITY = "3f2c9d1e-6b7a-4c8d-9e0f-1a2b3c4d5e6f";
+  const GMAIL_ID = "1a0530ccffa5f925";
+
+  test("an Open Brain activity renders its own label and an [ob:] marker", async () => {
+    installWorld(stub);
+    const res = await runLeadEnrich(
+      input({ channel: "iMessage", messageSource: "open_brain", messageId: ACTIVITY, observedAt: "2026-08-31" }),
+    );
+
+    expect(res.body.wrote).toBe(true);
+    expect(res.body.pageId, "the caller's ledger needs the row it landed on").toBe(PAGE);
+    const notes = JSON.parse(patches()[0].body).properties.Notes.rich_text[0].text.content;
+    expect(notes).toContain(`2026-08-31 · iMessage: ${input().summary} [ob:${ACTIVITY}]`);
+  });
+
+  test("a replayed Open Brain activity is a no-op, not a second line", async () => {
+    installWorld(stub, [
+      crmRow({ Notes: { rich_text: [{ plain_text: `2026-08-31 · iMessage: earlier [ob:${ACTIVITY}]` }] } }),
+    ]);
+    const res = await runLeadEnrich(input({ messageSource: "open_brain", messageId: ACTIVITY }));
+
+    expect(res.body.duplicate).toBe(true);
+    expect(patches()).toHaveLength(0);
+  });
+
+  test("the same Gmail message from two callers is one line, not two", async () => {
+    // A mail scan wrote it first; Open Brain pushes the same email keyed on
+    // the Gmail id it carries in lead_activities.payload.message_guid.
+    installWorld(stub, [
+      crmRow({
+        Notes: { rich_text: [{ plain_text: `2026-08-29 · Email: from the mail scan [gm:${GMAIL_ID}]` }] },
+      }),
+    ]);
+    const res = await runLeadEnrich(input({ messageSource: "gmail", messageId: GMAIL_ID, channel: "Email" }));
+
+    expect(res.body.duplicate).toBe(true);
+    expect(patches()).toHaveLength(0);
+  });
+
+  test("ids from different systems never collide on one token", async () => {
+    installWorld(stub, [
+      crmRow({ Notes: { rich_text: [{ plain_text: "2026-08-29 · Email: earlier [gm:abc123]" }] } }),
+    ]);
+    await runLeadEnrich(input({ messageSource: "imessage", messageId: "abc123", channel: "iMessage" }));
+
+    expect(patches()).toHaveLength(1);
+    const notes = JSON.parse(patches()[0].body).properties.Notes.rich_text[0].text.content;
+    expect(notes).toContain("[gm:abc123]");
+    expect(notes).toContain("[im:abc123]");
+  });
+
+  test("Last Contact Date never moves backwards", async () => {
+    installWorld(stub, [crmRow({ "Last Contact Date": { date: { start: "2026-09-01" } } })]);
+    await runLeadEnrich(input({ observedAt: "2026-08-20", messageSource: "open_brain", messageId: ACTIVITY }));
+
+    expect(patches(), "the line itself must still land").toHaveLength(1);
+    const props = JSON.parse(patches()[0].body).properties;
+    expect(props.Notes).toBeTruthy();
+    expect(
+      Object.keys(props),
+      "an older activity must not drag the row's last-heard-from date back",
+    ).not.toContain("Last Contact Date");
+  });
+
+  test("Last Contact Date does move forward", async () => {
+    installWorld(stub, [crmRow({ "Last Contact Date": { date: { start: "2026-09-01" } } })]);
+    await runLeadEnrich(input({ observedAt: "2026-09-02" }));
+
+    const props = JSON.parse(patches()[0].body).properties;
+    expect(props["Last Contact Date"].date.start).toBe("2026-09-02");
+  });
+
+  test("a parent whose CRM email differs only in case is still their family", async () => {
+    // Notion's `equals` is exact; the `contains` fallback is re-checked with
+    // case-insensitive equality so it cannot widen past the one address.
+    const lookalike = { ...crmRow({ "Parent Email": { email: "parent@enrichegress.test.au" } }), id: "other-family" };
+    stub
+      .onDynamic("databases/enrich-egress-db/query", (call) =>
+        call.body.includes('"equals"')
+          ? { status: 200, json: { results: [], has_more: false } }
+          : {
+              status: 200,
+              json: {
+                results: [lookalike, crmRow({ "Parent Email": { email: "Parent@EnrichEgress.test" } })],
+                has_more: false,
+              },
+            },
+      )
+      .on(/\/pages\//, { id: PAGE, properties: {} })
+      .install();
+    const res = await runLeadEnrich(input({ parentEmail: "parent@enrichegress.test" }));
+
+    expect(res.body.matched).toBe(true);
+    expect(res.body.pageId, "the lookalike domain must not be picked").toBe(PAGE);
+  });
+
+  test("a phone-only parent matches on digits, not formatting", async () => {
+    const otherFamily = { ...crmRow({ "Parent Phone": { phone_number: "(301) 555-0134" } }), id: "other-family" };
+    stub
+      .on("databases/enrich-egress-db/query", {
+        results: [otherFamily, crmRow({ "Parent Phone": { phone_number: "(240) 555-0134" } })],
+        has_more: false,
+      })
+      .on(/\/pages\//, { id: PAGE, properties: {} })
+      .install();
+    const res = await runLeadEnrich({
+      parentPhone: "+12405550134",
+      summary: "Texted about Saturday",
+      channel: "iMessage",
+      messageSource: "open_brain",
+      messageId: ACTIVITY,
+    });
+
+    expect(res.body.matched).toBe(true);
+    expect(res.body.pageId, "same last four digits is not the same family").toBe(PAGE);
+    const query = JSON.parse(stub.callsTo("/query")[0].body);
+    expect(query.filter.phone_number.contains).toBe("0134");
+  });
+
+  test("called as Open Brain it still reaches Notion only and never writes Status or Level", async () => {
+    installWorld(stub);
+    await runLeadEnrich(input({ channel: "Note", messageSource: "open_brain", messageId: ACTIVITY }));
+
+    expect(stub.calls.length).toBeGreaterThan(0);
+    for (const call of stub.calls) {
+      expect(new URL(call.url).host).toBe("api.notion.com");
+    }
+    for (const call of patches()) {
+      const props = JSON.parse(call.body).properties ?? {};
+      expect(Object.keys(props)).not.toContain("Status");
+      expect(Object.keys(props)).not.toContain("Level");
+    }
+  });
+});
