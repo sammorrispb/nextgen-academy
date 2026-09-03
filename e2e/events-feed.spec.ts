@@ -190,17 +190,26 @@ test.describe("events feed — MVF", () => {
     expect(advanced.endTime).toBe("7:30 PM");
   });
 
-  test("each program lands at its own MVF venue — the fall sessions move", () => {
+  test("each program lands at its own MVF venue — per-program, not one constant", () => {
     const items = buildMvfEvents(MVF_PROGRAMS, ORIGIN);
 
     const venueFor = (prefix: string) =>
       items.find((i) => i.key.startsWith(prefix))!.location;
 
+    // The intro sits at a different venue from both fall sessions, which is
+    // what pins `venue` as per-program rather than a single MVF constant.
     expect(venueFor("mvf:intro:")).toContain("Apple Ridge");
-    expect(venueFor("mvf:fall-1-beginner:")).toContain("Watkins Mill");
-    expect(venueFor("mvf:fall-1-advanced:")).toContain("Watkins Mill");
+    expect(venueFor("mvf:fall-1-beginner:")).toContain("North Creek");
+    expect(venueFor("mvf:fall-1-advanced:")).toContain("North Creek");
     expect(venueFor("mvf:fall-2-beginner:")).toContain("North Creek");
     expect(venueFor("mvf:fall-2-advanced:")).toContain("North Creek");
+
+    // Fall I moved Watkins Mill -> North Creek on 2026-08-27 (MVF, Marnovan
+    // Alvero). Watkins Mill is now only the renovation CONTINGENCY, so no
+    // program may publish it — a silent revert to the Rec Guide fails here.
+    for (const item of items) {
+      expect(item.location).not.toContain("Watkins Mill");
+    }
   });
 
   test("no seat counts leak through the MVF capacity field", () => {

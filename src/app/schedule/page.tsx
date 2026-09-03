@@ -275,8 +275,8 @@ export default async function SchedulePage() {
               </p>
               <p className="text-sm text-ngpa-muted mt-0.5">
                 Intro class Aug 27 at Apple Ridge + two six-week Thursday
-                sessions at Watkins Mill and North Creek, ages 8&ndash;16
-                &middot; register through the Montgomery Village Foundation.
+                sessions at North Creek, ages 8&ndash;16 &middot; register
+                through the Montgomery Village Foundation.
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-teal text-ngpa-deep font-heading font-bold group-hover:bg-ngpa-teal-bright transition-colors min-h-[48px]">

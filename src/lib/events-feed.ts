@@ -236,9 +236,11 @@ export function buildCampEvents(camps: Camp[], origin: string): EventFeedItem[] 
 /**
  * MVF programs → one item per class date, expanded weekly from `startDate`.
  *
- * The venue is per-program, not per-file: MVF moves the fall sessions between
- * Apple Ridge, Watkins Mill, and North Creek, so a single MVF venue constant
- * would put two thirds of these classes at the wrong courts.
+ * The venue is per-program, not per-file: the intro sits at Apple Ridge while
+ * both fall sessions run at North Creek, and MVF has already moved one of them
+ * mid-cycle (Fall I, Watkins Mill -> North Creek, 2026-08-27). A single MVF
+ * venue constant would put classes at the wrong courts the next time that
+ * happens.
  *
  * `parseTimeRange` returning null still falls back to an all-day item. MVF has
  * published every time for Fall 2026, so that path is unreachable today — it

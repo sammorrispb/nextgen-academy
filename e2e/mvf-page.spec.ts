@@ -49,10 +49,11 @@ test.describe("/montgomery-village-youth-pickleball", () => {
       await expect(card).toContainText(program.timeLabel);
       await expect(card).toContainText(program.venue.name);
     }
-    // The fall sessions are at different venues — a regression to one venue is
-    // the exact drift this pins.
+    // Venues are per-program: the intro is elsewhere, both fall sessions are
+    // at North Creek since MVF moved Fall I there on 2026-08-27. A regression
+    // that republishes Watkins Mill to families is the exact drift this pins.
     await expect(page.getByTestId("mvf-program-fall-1-beginner")).toContainText(
-      "Watkins Mill",
+      "North Creek",
     );
     await expect(page.getByTestId("mvf-program-fall-2-beginner")).toContainText(
       "North Creek",
@@ -129,8 +130,10 @@ test.describe("/montgomery-village-youth-pickleball", () => {
     expect(sportsEvents.length).toBeGreaterThanOrEqual(MVF_PROGRAMS.length);
     const joined = bodies.join("\n");
     expect(joined).toContain("Apple Ridge Pickleball Courts");
-    expect(joined).toContain("Watkins Mill Pickleball Courts");
     expect(joined).toContain("North Creek Pickleball Courts");
+    // Watkins Mill is the contingency venue only — it must not reach JSON-LD,
+    // which is what search engines and assistants read back to families.
+    expect(joined).not.toContain("Watkins Mill Pickleball Courts");
     expect(joined).toContain('"price":8');
     expect(joined).toContain('"price":90');
     expect(joined).toContain('"price":100');

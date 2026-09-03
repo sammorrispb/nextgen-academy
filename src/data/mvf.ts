@@ -9,9 +9,10 @@
 // to carry in three ways worth remembering:
 //   1. Each fall session is TWO separate MVF activities, one per skill bracket,
 //      registered independently — not one class with brackets inside it.
-//   2. The venue MOVES. Only the Aug 27 intro is at Apple Ridge; Fall I is at
-//      Watkins Mill and Fall II is at North Creek. `venue` is therefore
-//      per-program — there is no single MVF venue constant any more.
+//   2. The venue MOVES. Only the Aug 27 intro is at Apple Ridge; both fall
+//      sessions are at North Creek (see the 2026-08-27 note below — the Rec
+//      Guide had Fall I at Watkins Mill). `venue` is therefore per-program —
+//      there is no single MVF venue constant any more.
 //   3. Times are published, so nothing here ships `timeLabel: null`.
 //
 // Prices are MVF's. Their portal API returns no fee to an unauthenticated
@@ -19,6 +20,23 @@
 // (montgomeryvillage.com download id 937, p. 15) carries them — every price,
 // activity number, venue, date and time below was verified against it
 // 2026-08-09. If MVF changes a fee, this file is the only place to fix it.
+//
+// 2026-08-27 (Marnovan Alvero, MVF) — SUPERSEDES the Rec Guide on Fall I's
+// venue, and is the newer source of the two. **North Creek is the default**
+// while the court-renovation timeline is unresolved; if renovations begin
+// mid-session MVF relocates Thursday youth classes to Watkins Mill. So the
+// Rec-Guide-verified `WATKINS_MILL` is now the CONTINGENCY, not the plan —
+// it stays exported and named in the fall copy for exactly that reason, and
+// must not be deleted as "unused". MVF's note covered Session I explicitly;
+// Session II was already North Creek and was not re-confirmed, so it is
+// unchanged here. Anything published from this file should tell families to
+// confirm with MVF before heading out, because the venue can still move.
+//
+// This correction took 7 days to land: the note arrived 08-27, the calendar
+// was hand-patched, and this file kept saying Watkins Mill until 2026-09-03 —
+// so /calendar-sync was reading a stale venue out of the feed and trying to
+// "fix" the correct calendar back to the wrong court. When a partner moves a
+// venue, this file is the fix; a calendar edit alone silently rots.
 //
 // 2026-08-25: MVF renamed all five activities with a "Youth Pickleball" prefix
 // and the portal's URL slugs changed to match (activity IDs and numbers are
@@ -58,6 +76,12 @@ export const APPLE_RIDGE: MvfVenue = {
   postalCode: "20886",
 };
 
+/**
+ * CONTINGENCY venue, not a scheduled one. No program points here as of
+ * 2026-09-03 — MVF named it as where Thursday fall classes relocate if the
+ * North Creek court renovation starts mid-session. Kept exported and
+ * referenced in the fall copy on purpose; do not prune as unused.
+ */
 export const WATKINS_MILL: MvfVenue = {
   name: "Watkins Mill Pickleball Courts",
   center: "Watkins Mill Recreation Area",
@@ -139,7 +163,7 @@ export const MVF_PROGRAMS: MvfProgram[] = [
     registerUrl:
       "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/youth-pickleball-fall-i-beginner-ages-8-to-16/5790",
     levelLabel: "Red / Orange",
-    venue: WATKINS_MILL,
+    venue: NORTH_CREEK,
     dateLabel: "Sept 3 – Oct 8, 2026",
     startDate: "2026-09-03",
     endDate: "2026-10-08",
@@ -161,7 +185,7 @@ export const MVF_PROGRAMS: MvfProgram[] = [
     registerUrl:
       "https://apm.activecommunities.com/montgomeryvillage/Activity_Search/youth-pickleball-fall-i-advanced-ages-8-to-16/9360",
     levelLabel: "Green / Yellow",
-    venue: WATKINS_MILL,
+    venue: NORTH_CREEK,
     dateLabel: "Sept 3 – Oct 8, 2026",
     startDate: "2026-09-03",
     endDate: "2026-10-08",
