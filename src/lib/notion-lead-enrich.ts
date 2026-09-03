@@ -1,9 +1,12 @@
 /**
  * Append-an-inquiry engine for the NGA Player CRM.
  *
- * ONE writer shared by two callers so they cannot drift:
+ * ONE writer shared by three callers so they cannot drift:
  *  - /api/lead + /api/contact, when a family we already know inquires again;
- *  - /api/lead-enrich, when the mail-scan routine learns something over email.
+ *  - /api/lead-enrich, for anything learned OFF the website: Open Brain's
+ *    writeback_nga_crm job pushes a parent's email, an iMessage, a meeting note
+ *    or a coach's own note here twice a day (its lead_activities are the
+ *    source), and a mail-scan routine may call it directly.
  *
  * Before this, a repeat inquiry from a known parent hit the dedup branch in
  * /api/lead and wrote NOTHING — no new row, no update — so a second child, a
@@ -35,7 +38,33 @@ export interface FamilyRow {
   notes: string;
   location: string;
   landingPage: string;
+  /** As stored on the row — needed to settle a loose lookup client-side. */
+  parentEmail: string;
+  parentPhone: string;
+  /** YYYY-MM-DD or "" — the floor Last Contact Date may not drop below. */
+  lastContactDate: string;
 }
+
+export type MessageSource = "gmail" | "imessage" | "open_brain";
+export const MESSAGE_SOURCES: readonly MessageSource[] = ["gmail", "imessage", "open_brain"];
+/** Prefix inside the Notes marker. Short because Notes is capped ~2000 chars. */
+const MARKER_PREFIX: Record<MessageSource, string> = { gmail: "gm", imessage: "im", open_brain: "ob" };
+
+/** The labels a caller may render before the colon. A caller must not invent
+ * vocabulary in Notes any more than in a select option. */
+export const ENRICH_CHANNELS = [
+  "Email",
+  "iMessage",
+  "Text",
+  "WhatsApp",
+  "Meeting",
+  "Note",
+  "Call",
+  "Form",
+] as const;
+
+/** Opaque ids only — a marker must stay one token for the replay guard to find it. */
+export const MESSAGE_ID_RE = /^[A-Za-z0-9._-]{1,80}$/;
 
 export interface InquiryEntry {
   /** ISO date-only, America/New_York. Callers pass `todayET()`. */
@@ -44,8 +73,12 @@ export interface InquiryEntry {
   channel: string;
   /** One-line human summary. */
   summary: string;
-  /** Gmail message id, when this came from a mail scan. Makes replay a no-op. */
+  /** The message's own id when it has one (Gmail id, iMessage GUID) or the
+   * Open Brain activity id. Makes replay a no-op — see markerFor. */
   messageId?: string;
+  /** Which id space messageId lives in; picks the marker prefix. Defaults to
+   * gmail so the original `[gm:<id>]` lines keep matching. */
+  messageSource?: MessageSource;
   /** Only written when the row's own value is empty. */
   location?: string;
   landingPage?: string;
@@ -73,11 +106,20 @@ export function todayET(now: Date = new Date()): string {
   }).format(now);
 }
 
-/** The one-line record appended to Notes. The `[gm:<id>]` marker is what makes
- * a re-run of the mail scan idempotent without a new Notion property. */
+/** The replay marker for an entry: `[gm:<gmail id>]`, `[im:<iMessage GUID>]` or
+ * `[ob:<activity id>]`. Keyed on the message's OWN id where it has one, so a
+ * line Open Brain pushes and a line a mail scan writes for the same email
+ * dedupe against each other instead of stacking. Null when there is no id. */
+export function markerFor(entry: Pick<InquiryEntry, "messageId" | "messageSource">): string | null {
+  if (!entry.messageId) return null;
+  return `[${MARKER_PREFIX[entry.messageSource ?? "gmail"]}:${entry.messageId}]`;
+}
+
+/** The one-line record appended to Notes. The marker is what makes a re-run of
+ * any caller idempotent without a new Notion property. */
 export function renderInquiryLine(entry: InquiryEntry): string {
-  const marker = entry.messageId ? ` [gm:${entry.messageId}]` : "";
-  return `${entry.date} · ${entry.channel}: ${entry.summary}${marker}`;
+  const marker = markerFor(entry);
+  return `${entry.date} · ${entry.channel}: ${entry.summary}${marker ? ` ${marker}` : ""}`;
 }
 
 /** Append a line, trimming the OLDEST middle entries if we'd blow the cap. The
@@ -123,27 +165,48 @@ export async function findFamilyRows(
   const trimmedPhone = phone?.trim();
   if (!trimmedEmail && !trimmedPhone) return [];
 
-  const filter = trimmedEmail
-    ? { property: "Parent Email", email: { equals: trimmedEmail } }
-    : { property: "Parent Phone", phone_number: { equals: trimmedPhone } };
+  const query = async (filter: Record<string, unknown>): Promise<FamilyRow[]> => {
+    try {
+      const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
+        method: "POST",
+        headers: notionHeaders(notionKey),
+        // Newest first, so rows[0] is the row a fresh inquiry should append to.
+        body: JSON.stringify({
+          filter,
+          sorts: [{ timestamp: "created_time", direction: "descending" }],
+          page_size: 50,
+        }),
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as { results?: NotionPage[] };
+      return (data.results ?? []).map(toFamilyRow);
+    } catch {
+      return [];
+    }
+  };
 
-  try {
-    const res = await fetch(`${NOTION_API}/databases/${playerCrmDbId()}/query`, {
-      method: "POST",
-      headers: notionHeaders(notionKey),
-      // Newest first, so rows[0] is the row a fresh inquiry should append to.
-      body: JSON.stringify({
-        filter,
-        sorts: [{ timestamp: "created_time", direction: "descending" }],
-        page_size: 50,
-      }),
-    });
-    if (!res.ok) return [];
-    const data = (await res.json()) as { results?: NotionPage[] };
-    return (data.results ?? []).map(toFamilyRow);
-  } catch {
-    return [];
+  if (trimmedEmail) {
+    const exact = await query({ property: "Parent Email", email: { equals: trimmedEmail } });
+    if (exact.length > 0) return exact;
+    // A parent who typed Jane@Gmail.com on the form and whose address reaches
+    // us lowercased from Open Brain is one family, not a stranger. `equals` is
+    // Notion's exact match; `contains` is the looser net, and the re-check is
+    // case-insensitive equality so it cannot widen past the one address.
+    const needle = trimmedEmail.toLowerCase();
+    const loose = await query({ property: "Parent Email", email: { contains: needle } });
+    return loose.filter((r) => r.parentEmail.trim().toLowerCase() === needle);
   }
+
+  // Phones are stored as typed — "(240) 555-0134" beside "+12405550134" — so
+  // an exact match on formatting misses the same family. Cast a narrow net on
+  // the last four digits and settle it on the normalized ten.
+  const digits = trimmedPhone!.replace(/\D/g, "");
+  const last10 = digits.slice(-10);
+  if (last10.length < 10) {
+    return query({ property: "Parent Phone", phone_number: { equals: trimmedPhone } });
+  }
+  const loose = await query({ property: "Parent Phone", phone_number: { contains: last10.slice(-4) } });
+  return loose.filter((r) => r.parentPhone.replace(/\D/g, "").endsWith(last10));
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -157,6 +220,13 @@ function toFamilyRow(page: NotionPage): FamilyRow {
     notes: readPlainText(p["Notes"]),
     location: p["Location"]?.select?.name ?? "",
     landingPage: readPlainText(p["Landing Page"]),
+    parentEmail: typeof p["Parent Email"]?.email === "string" ? p["Parent Email"].email : "",
+    parentPhone:
+      typeof p["Parent Phone"]?.phone_number === "string" ? p["Parent Phone"].phone_number : "",
+    lastContactDate:
+      typeof p["Last Contact Date"]?.date?.start === "string"
+        ? p["Last Contact Date"].date.start.slice(0, 10)
+        : "",
   };
 }
 
@@ -242,8 +312,9 @@ export async function appendLeadInquiry(
       current = toFamilyRow((await get.json()) as NotionPage);
     }
 
-    // Replay guard. A re-run of the mail scan must not double-append.
-    if (entry.messageId && current.notes.includes(`[gm:${entry.messageId}]`)) {
+    // Replay guard. A re-run of ANY caller must not double-append.
+    const marker = markerFor(entry);
+    if (marker && current.notes.includes(marker)) {
       return { updated: false, pageId, duplicate: true };
     }
 
@@ -251,8 +322,13 @@ export async function appendLeadInquiry(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const properties: Record<string, any> = {
       Notes: { rich_text: [{ text: { content: composeNotes(current.notes, line) } }] },
-      "Last Contact Date": { date: { start: entry.date } },
     };
+    // Last Contact Date only ever moves forward. Open Brain pushes oldest-first
+    // and retries stragglers days later; an older line must not drag the row's
+    // "last heard from" back behind a newer one.
+    if (!current.lastContactDate || entry.date >= current.lastContactDate) {
+      properties["Last Contact Date"] = { date: { start: entry.date } };
+    }
     // Fill-if-empty only: an operator's value outranks anything we derived.
     if (entry.location && !current.location) {
       properties["Location"] = { select: { name: entry.location } };

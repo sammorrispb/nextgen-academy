@@ -111,3 +111,61 @@ test.describe("lead-enrich — authorization fails closed", () => {
     expect(stub.calls).toHaveLength(0);
   });
 });
+
+// The vocabulary a caller may put into Notes is closed, the same way Location
+// is: Open Brain (or anything else holding the secret) must not be able to
+// invent a channel label, a marker prefix, or a marker that breaks the replay
+// guard's one-token assumption.
+test.describe("lead-enrich — the caller's vocabulary is closed", () => {
+  const OB = {
+    channel: "iMessage",
+    messageSource: "open_brain",
+    messageId: "3f2c9d1e-6b7a-4c8d-9e0f-1a2b3c4d5e6f",
+  };
+
+  test("accepts the Open Brain shape", async () => {
+    stub.on("databases/enrich-authz-db/query", { results: [], has_more: false }).install();
+    const res = await enrichPOST(req({ authorization: `Bearer ${GOOD}` }, validBody(OB)));
+    expect(res.status).toBe(200);
+  });
+
+  test("rejects a channel label outside ENRICH_CHANNELS", async () => {
+    stub.install();
+    const res = await enrichPOST(
+      req({ authorization: `Bearer ${GOOD}` }, validBody({ ...OB, channel: "Carrier pigeon" })),
+    );
+    expect(res.status).toBe(400);
+    expect(stub.calls).toHaveLength(0);
+  });
+
+  test("rejects an unknown messageSource", async () => {
+    stub.install();
+    const res = await enrichPOST(
+      req({ authorization: `Bearer ${GOOD}` }, validBody({ ...OB, messageSource: "slack" })),
+    );
+    expect(res.status).toBe(400);
+    expect(stub.calls).toHaveLength(0);
+  });
+
+  test("rejects a messageId that is not one opaque token", async () => {
+    stub.install();
+    const res = await enrichPOST(
+      req({ authorization: `Bearer ${GOOD}` }, validBody({ ...OB, messageId: "abc 123] [gm:x" })),
+    );
+    expect(res.status).toBe(400);
+    expect(stub.calls).toHaveLength(0);
+  });
+
+  test("dryRun renders the caller's label and marker without touching Notion", async () => {
+    stub.install();
+    const res = await enrichPOST(
+      req({ authorization: `Bearer ${GOOD}` }, validBody({ ...OB, dryRun: true, observedAt: "2026-08-31" })),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.wrote).toBe(false);
+    expect(body.line).toContain("2026-08-31 · iMessage:");
+    expect(body.line).toContain(`[ob:${OB.messageId}]`);
+    expect(stub.calls).toHaveLength(0);
+  });
+});
