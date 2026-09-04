@@ -50,10 +50,23 @@ the calendar event description to claim ownership of it.
   Watkins Mill on 2026-08-27 — `WATKINS_MILL` survives only as the renovation
   contingency). Each fall session is also two separate MVF activities
   (Red/Orange 5:30 PM, Green/Yellow 6:30 PM), so a session is two calendar
-  blocks per Thursday. **If the calendar and the feed ever disagree on an MVF
-  venue, do not sync — a hand-patched calendar block usually means a partner
-  moved the venue and `src/data/mvf.ts` has not caught up yet. Fix the file
-  first, then sync.**
+  blocks per Thursday. **If the calendar and the feed disagree on a venue,
+  read the calendar block's DESCRIPTION before deciding which side is right.**
+  A block this sync wrote has a known shape: one context line, a blank line,
+  then the `— synced by nga-cal-sync · key:…` marker. Extra prose beyond that
+  shape — e.g. a dated `VENUE UPDATE (partner, YYYY-MM-DD — person)` line — is a
+  human recording something the repo may not have yet.
+  - **Extra prose present** → the calendar is probably NEWER. Leave those
+    events alone, report them, and fix `src/data/mvf.ts` before syncing them.
+  - **Description is sync-shaped and only the venue differs** → the FILE is
+    newer (someone corrected the source, which is the intended order). Sync
+    normally; this is not an anomaly.
+
+  **Hold the affected events only — never the whole run.** The other namespaces
+  (`nga-sess`, `nga-camp`, `nga-fall`, `nga-ec`, `ld`) are unrelated and must
+  still reconcile. A blanket halt on an unattended daily job fails closed with
+  no alerting, and the only way to unblock it would be to hand-patch the
+  calendar — the exact anti-pattern this rule exists to kill.
 - **Keys must stay stable.** A key is a promise to the calendar that this item is
   the same real-world event as last run. Changing key derivation orphans every
   event built from the old scheme — the sync's adoption step softens that, but

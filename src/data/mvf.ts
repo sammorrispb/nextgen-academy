@@ -54,7 +54,7 @@ export const MVF_REGISTRATION_NOTE =
   "Registration is open now and runs through the Montgomery Village Foundation — you register and pay on MVF's site, not ours. Each class below is its own MVF activity, so register for the bracket and session you want. Heads up: MVF raises registration fees by 10% starting three days before each session's first class, so registering early saves a little too.";
 
 export const MVF_VENUE_FOOTNOTE =
-  "The venue changes between sessions — check the location on each class before you register.";
+  "Each class lists its own venue — check the location before you register.";
 
 export interface MvfVenue {
   /** Court name as MVF publishes it to parents. */
@@ -77,10 +77,17 @@ export const APPLE_RIDGE: MvfVenue = {
 };
 
 /**
- * CONTINGENCY venue, not a scheduled one. No program points here as of
- * 2026-09-03 — MVF named it as where Thursday fall classes relocate if the
- * North Creek court renovation starts mid-session. Kept exported and
- * referenced in the fall copy on purpose; do not prune as unused.
+ * CONTINGENCY venue, not a scheduled one. No `MvfProgram.venue` points here as
+ * of 2026-09-03 — MVF named it as where Thursday fall classes relocate if the
+ * North Creek court renovation starts mid-session.
+ *
+ * It IS imported and rendered, by the Fall Session I blurb on
+ * `/montgomery-village-youth-pickleball`, which names the fallback court from
+ * `WATKINS_MILL.name` rather than a hardcoded string. That import is the whole
+ * point: it keeps published contingency copy and this record from drifting
+ * apart, and it means a dead-export sweep sees a real reference instead of
+ * trusting a comment. If you remove that usage, this constant becomes genuinely
+ * dead — decide deliberately, don't let it rot.
  */
 export const WATKINS_MILL: MvfVenue = {
   name: "Watkins Mill Pickleball Courts",

@@ -97,6 +97,14 @@ test.describe("/montgomery-village-youth-pickleball", () => {
     // MVF seat counts live in MVF's portal; nothing here reads them, so any
     // copy implying we'll warn a parent that a class is filling is a promise
     // the system cannot keep.
+    //
+    // Widened 2026-09-04: the same failure isn't only about SEATS. A venue-move
+    // blurb once said MVF "will let registered families know" — NGA has no
+    // channel to send that and no way to verify MVF sent it, and it contradicts
+    // mvf.ts's own instruction to tell families to confirm before heading out.
+    // A parent who reads "they'll let you know" waits passively and drives to
+    // the wrong court. Any second-hand promise that someone else will notify
+    // belongs here, not just seat alerts.
     const body = (await page.locator("body").innerText()).toLowerCase();
     for (const claim of [
       "close to full",
@@ -104,6 +112,10 @@ test.describe("/montgomery-village-youth-pickleball", () => {
       "when a spot opens",
       "alert you when",
       "notify you when a",
+      "let registered families know",
+      "let you know",
+      "we'll notify",
+      "they'll notify",
     ]) {
       expect(body, `page must not promise: ${claim}`).not.toContain(claim);
     }

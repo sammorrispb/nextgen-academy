@@ -8,6 +8,7 @@ import {
   MVF_REGISTRATION_NOTE,
   MVF_REGISTRATION_SEARCH_URL,
   MVF_VENUE_FOOTNOTE,
+  WATKINS_MILL,
   type MvfProgram,
   type MvfVenue,
 } from "@/data/mvf";
@@ -366,9 +367,9 @@ export default function MontgomeryVillagePage() {
           </h3>
           <p className="text-ngpa-white/70 mb-5">
             Six Thursdays, Sept 3 &ndash; Oct 8. Red/Orange plays first,
-            Green/Yellow follows. MVF may move Thursday classes to Watkins Mill
-            if the North Creek court renovation starts mid-session &mdash;
-            they&rsquo;ll let registered families know.
+            Green/Yellow follows. If the North Creek court renovation starts
+            mid-session, MVF may move Thursday classes to{" "}
+            {WATKINS_MILL.name} &mdash; check with MVF before you head out.
           </p>
           <div className="space-y-5">
             {fallOne.map((program) => (
@@ -380,8 +381,8 @@ export default function MontgomeryVillagePage() {
             Fall Session II &mdash; North Creek
           </h3>
           <p className="text-ngpa-white/70 mb-5">
-            Six Thursdays, Oct 15 &ndash; Nov 19, at a different venue &mdash;
-            same format, same coaches.
+            Six Thursdays, Oct 15 &ndash; Nov 19 &mdash; same courts as
+            Session I, same format, same coaches.
           </p>
           <div className="space-y-5">
             {fallTwo.map((program) => (
