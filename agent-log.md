@@ -5,6 +5,15 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-04 — The MVF tournament card came off the Montgomery Village SEO page too, and the data constant went with it
+
+- **Situation:** The entry below flagged that `MvfTournamentCard` on `/montgomery-village-youth-pickleball` still rendered the Sept 5 event with no date gate. Sam asked for it removed. With the newsletter block already gone, that card was the last consumer of `MVF_TOURNAMENT`.
+- **Decision:** Removed the "Want game day too?" section and the component, and deleted `MVF_TOURNAMENT` from `mvf.ts` rather than leaving a dated one-shot constant nobody renders — the same reasoning as retiring `FALL_POLL_SPOTS_PER_GROUP` once nothing read it. The newsletter spec's data drift guard went with it (nothing left to guard). `APPLE_RIDGE` stays: the Aug 27 MVF intro session is at that venue. The page's `SportsEvent` JSON-LD is untouched — it only ever described the MVF classes, never the tournament.
+- **Risk:** Copy-only on a show-pony SEO page; no payments, auth, or minor PII. The page still prerenders (build green) and its browser spec now asserts the card's absence instead of its href. `mvf-page.spec.ts` is browser-driven and outside PR CI, so it was run locally against `npm run dev`. **Rollback:** revert the commit.
+- **Change:** DELETED `src/components/MvfTournamentCard.tsx`. MODIFIED `src/app/montgomery-village-youth-pickleball/page.tsx`, `src/data/mvf.ts`, `e2e/mvf-page.spec.ts`, `e2e/weekly-newsletter.spec.ts`, `src/lib/events-feed.ts` + `skills/calendar-sync.md` (comments no longer name the constant).
+
+---
+
 ## 2026-09-03 — The MVF tournament card and the referral link came out of the newsletter; the referral perk came out of the welcome email with it
 
 - **Situation:** Sam read the Sept 3 issue and asked for two blocks gone: the MVF tournament card (a one-shot Sept 5 event he considers passed) and the "Bring a friend" referral link, because the referral program isn't set up. The tournament card was already date-gated through its Sept 6 rain date, so the Sept 10 issue would have dropped it on its own — but it carried a hardcoded "Sept 5" eyebrow and would have been dead code with a stale date literal from then on. The referral link was harder to leave alone than it looked: the welcome email carried the same link and the same "you both get 50% off" promise, and its fallback copy said "every Thursday issue carries your personal link" — a sentence this change would have made false.

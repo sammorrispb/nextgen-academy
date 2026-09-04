@@ -18,7 +18,6 @@ import {
   fallSeasonSlotsFor,
   FALL_SEASON_TITLE,
 } from "../src/data/fall-season-2026";
-import { MVF_TOURNAMENT } from "../src/data/mvf";
 import {
   COACH_PHONE_DISPLAY,
   WHATSAPP_LD_GROUP_URL,
@@ -351,29 +350,13 @@ test.describe("weeklyNewsletterHtml", () => {
 
   test("carries no tournament card — the Sept 5 MVF block was removed, not gated", () => {
     // It used to lead every issue through the rain date. Sam pulled it
-    // 2026-09-03; the /montgomery-village-youth-pickleball card is the only
-    // surface that still renders MVF_TOURNAMENT.
+    // 2026-09-03, and the /montgomery-village-youth-pickleball card followed
+    // on 2026-09-04, so MVF_TOURNAMENT is gone from mvf.ts entirely.
     for (const rendered of [weeklyNewsletterHtml(baseInput), weeklyNewsletterText(baseInput)]) {
       expect(rendered).not.toContain("Tournament day");
       expect(rendered).not.toContain("Register with your partner");
       expect(rendered).not.toContain("linkanddink.com/popup");
     }
-  });
-
-  test("MVF tournament data matches the live L&D event (drift guard)", () => {
-    // Guards the MvfTournamentCard on /montgomery-village-youth-pickleball now
-    // that the newsletter no longer renders the event. The brackets label must
-    // match what L&D's registration actually offers (community-os migration
-    // 20260801161136 fixed the stale Advanced Beginner / Intermediate /
-    // Advanced set).
-    expect([...MVF_TOURNAMENT.brackets]).toEqual([
-      "Playing",
-      "Competing",
-      "Tournament Level",
-    ]);
-    expect(MVF_TOURNAMENT.rainDate).toBe("2026-09-06");
-    expect(MVF_TOURNAMENT.venue.name).toBe("Apple Ridge Pickleball Courts");
-    expect(MVF_TOURNAMENT.prices.map((p) => p.usd)).toEqual([25, 35]);
   });
 
   test("no parent-facing copy uses the word 'crew'", () => {

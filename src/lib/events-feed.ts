@@ -23,9 +23,9 @@
  * map 1:1 onto a calendar block.
  *
  * Deliberately NOT included:
- *   - The MVF tournament. It's a Link & Dink event (`MVF_TOURNAMENT.url` points
- *     at the L&D event page) and is owned by the `ld:` key namespace — emitting
- *     it here too would double-create it downstream.
+ *   - The MVF tournament. It's a Link & Dink event (registration lives on the
+ *     L&D event page) and is owned by the `ld:` key namespace — emitting it here
+ *     too would double-create it downstream.
  *   - League seasons. `LEAGUE_SEASONS` carries a start and end date but no
  *     per-session dates and no times, and the venue isn't booked
  *     (`exactLocation` is empty). There is nothing schedulable to emit yet.

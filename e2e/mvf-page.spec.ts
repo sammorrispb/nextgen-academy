@@ -4,7 +4,6 @@ import { test, expect } from "@playwright/test";
 import {
   MVF_PROGRAMS,
   MVF_REGISTRATION_SEARCH_URL,
-  MVF_TOURNAMENT,
 } from "../src/data/mvf";
 
 const PAGE_PATH = "/montgomery-village-youth-pickleball";
@@ -148,15 +147,11 @@ test.describe("/montgomery-village-youth-pickleball", () => {
     await expect(page.locator("#newsletter input#email")).toBeVisible();
   });
 
-  test("tournament cross-promo links out to Link & Dink safely", async ({ page }) => {
+  test("carries no tournament cross-promo (the Sept 5 card was removed 2026-09-04)", async ({ page }) => {
     await page.goto(PAGE_PATH);
-    const card = page.getByTestId("mvf-tournament-card");
-    await expect(card).toBeVisible();
-    await expect(card).toHaveAttribute("href", MVF_TOURNAMENT.url);
-    await expect(card).toHaveAttribute("target", "_blank");
-    await expect(card).toHaveAttribute("rel", /noopener/);
-    await expect(card).toContainText("$25");
-    await expect(card).toContainText("$35");
+    await expect(page.getByTestId("mvf-tournament-card")).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText("Want game day too?");
+    await expect(page.locator("body")).not.toContainText("Tournament day");
   });
 
   test("is linked from the global Navbar (desktop direct, mobile via hamburger)", async ({
