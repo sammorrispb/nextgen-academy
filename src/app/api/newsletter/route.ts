@@ -283,14 +283,10 @@ export async function POST(request: NextRequest) {
       }),
     ];
     if (shouldSendWelcome) {
-      const referralUrl = referralToken
-        ? `${SITE_ORIGIN}/newsletter?ref=${encodeURIComponent(referralToken)}`
-        : null;
       const welcomeInput = {
         parentFirst,
         scheduleUrl: SCHEDULE_URL,
         crewInterestUrl: CREW_INTEREST_URL,
-        referralUrl,
       };
       emailPromises.push(
         resend.emails.send({

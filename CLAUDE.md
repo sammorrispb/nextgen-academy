@@ -152,7 +152,7 @@ If any optional integration's env var is missing, that step logs a warning and i
 - **`Landing Page`** (rich_text) was added to the Player CRM for this. `appendLeadInquiry` is fail-soft on it anyway: a Notion rejection naming an OPTIONAL property (`Location` / `Landing Page`) retries once without it, so a missing column costs the attribution but never the Notes append — the same lesson as `createNotionPageSourceFailSoft`.
 
 ### Newsletter signup (`/newsletter` + `/api/newsletter`)
-Free, top-of-funnel offer: a cold parent says yes to the free thing first; price and referral come later (in the welcome email). Surfaces: a dedicated `/newsletter` landing page (`src/app/newsletter/page.tsx`) and an embedded `#newsletter` section on the home page (between `#contact-form` and `#faq`). Both render `src/components/NewsletterForm.tsx` (parent name + email + child age; validated by `src/lib/validate-newsletter.ts`). "Newsletter" links live in the navbar (`links` array) and the footer "Explore" list.
+Free, top-of-funnel offer: a cold parent says yes to the free thing first; price is teased later, never quoted. Surfaces: a dedicated `/newsletter` landing page (`src/app/newsletter/page.tsx`) and an embedded `#newsletter` section on the home page (between `#contact-form` and `#faq`). Both render `src/components/NewsletterForm.tsx` (parent name + email + child age; validated by `src/lib/validate-newsletter.ts`). "Newsletter" links live in the navbar (`links` array) and the footer "Explore" list.
 
 `POST /api/newsletter` (`src/app/api/newsletter/route.ts`) mirrors `/api/waitlist`:
 1. Validate (parentName/email/childAge) → 400 `{ error, errors }`.
@@ -160,10 +160,10 @@ Free, top-of-funnel offer: a cold parent says yes to the free thing first; price
 3. Guard `RESEND_API_KEY` (500 if missing — the welcome email is the core value).
 4. **Decode referral**: if the form payload carries `ref` (captured from `/newsletter?ref=<token>`), `verifyReferralToken()` decodes the referrer's email. Self-referrals are silently dropped. A fresh `Referral Token` is signed over the new subscriber's email and stamped on the row.
 5. **Notion dedup-and-create** into the NGA Newsletter Subscribers DB (`NOTION_NEWSLETTER_DB_ID`): query by Email; if found, skip create; else create with Parent Name (title), Email, Child Age (number), Status=Active, Marketing Opt-In=true, Welcome Sent=false, `Referral Token`, `Referred By`, `Referral Rewarded`=false, `Coupons Issued`=0. Skipped gracefully if env vars missing.
-6. **Resend**: welcome email to the subscriber (template `src/lib/email/newsletter-welcome.ts`, bcc admin, replyTo `nextgenacademypb@gmail.com`) carrying the personalized forward link + `/crew` CTA + a short admin notification. Flips `Welcome Sent`=true after a successful send; suppresses the welcome only if dedup found an already-welcomed row.
+6. **Resend**: welcome email to the subscriber (template `src/lib/email/newsletter-welcome.ts`, bcc admin, replyTo `nextgenacademypb@gmail.com`) carrying the `/crew` CTA and a plain forward ask (the personalized referral link came out 2026-09-03 — see the referral payout section) + a short admin notification. Flips `Welcome Sent`=true after a successful send; suppresses the welcome only if dedup found an already-welcomed row.
 7. **Open Brain** ingest (`source: "nga_newsletter_signup"`, includes `referred_by` in metadata), awaited.
 
-**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/monthly). The only live price is the single $20 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. The welcome email references the referral perk ("you both get 50% off your next drop-in") as a percentage rather than a dollar amount, so a parent never reads a base price that isn't real yet. Keep it that way until a real $25/monthly product exists in Stripe.
+**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/monthly). The only live price is the single $20 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. Keep it that way until a real $25/monthly product exists in Stripe.
 
 ### Empty-state waitlist (`/api/waitlist` + `OpenNowOffers`)
 The form that renders ONLY when there are zero open sessions — on `/schedule` and in
@@ -226,7 +226,9 @@ Never publishes anything publicly — Sam owns whether the submission becomes a 
 **Follow-up automation — `GET /api/cron/crew-followup`** (Bearer `CRON_SECRET`, schedule `0 15 * * *` UTC). Reads still-actionable rows (Status New/Reviewed; routed families — Polled/Closed — are never re-touched) via `fetchActionableCrewInterest()`. Stage logic is pure (`src/lib/crew-followup.ts`): **day 3+** → one internal digest to Sam (`sam.morris2131@gmail.com`, CC admin) listing each waiting family with its strongest candidate crew (`findCandidateMatches`: same color + age ±3 + ≥1 shared day + area overlap; sub-level only ranks) and the count of open sessions that fit — flips `Nudge Sent`. **Day 7+** → a parent re-engagement email (`src/lib/email/crew-followup-parent.ts`, BCC admin) with the matching open sessions — flips `Reengagement Sent` + `Nudge Sent`. Re-engage wins when both are due (cron-gap first touch). Egresses only to Notion + Resend; recipients are parent/admin only. Idempotency columns `Nudge Sent` / `Reengagement Sent` live on the Crew Interest DB. Pinned by `e2e/invariant-crew-followup-egress.spec.ts` (+ `e2e/invariant-crew-interest-pii-egress.spec.ts` for the sub-level field's egress).
 
 ### Newsletter referral payout (Stripe webhook branch)
-Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src/lib/referral-token.ts`, signing key `REFERRAL_TOKEN_SECRET` → falls back to `NGA_ADMIN_SECRET`). Both the weekly newsletter and the welcome email surface it as a personalized `?ref=<token>` link on `/newsletter`. When a friend signs up via that link, their row gets `Referred By` set to the referrer's email.
+Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src/lib/referral-token.ts`, signing key `REFERRAL_TOKEN_SECRET` → falls back to `NGA_ADMIN_SECRET`). When a friend signs up via a `/newsletter?ref=<token>` link, their row gets `Referred By` set to the referrer's email.
+
+**No recipient-facing email promotes the link any more (Sam, 2026-09-03: the program isn't set up).** The weekly newsletter and the welcome email both dropped the personalized `?ref=` link and the "you both get 50% off" framing for a plain forward ask — together, because the welcome copy used to promise that every Thursday issue carries the link. The plumbing below is intact but dormant: tokens are still stamped at signup, `/newsletter?ref=` still decodes, and the webhook branch still fires for any link already in a parent's inbox. Switching the payout itself off is a Slop-Free-Zone (webhook) change and needs its own approval; restoring the promotion is a template change once the program is real.
 
 **Reward fires on the friend's first paid drop-in** (not at signup). In `src/app/api/stripe/webhook/route.ts`, the `checkout.session.completed` fan-out includes `processReferralReward(session)` (`src/lib/referral-rewards.ts`), which:
 1. Looks up the friend's subscriber row by `customer_email`.
@@ -252,9 +254,11 @@ while the plain-text part had them. Pinned by `e2e/invariant-email-signature.spe
 
 **The fall season leads the issue while registration is open (2026-08-20).** The Aug 20
 issue shipped with no fall block at all while `/fall` was live with all 16 seats unsold,
-and it led instead with a camp that had ended that morning. The season block sits above
-even the MVF tournament card and owns the subject line (`fallHasOpenSeats`) until both
-groups fill — it is the one thing in the email a family can only buy once. It renders
+and it led instead with a camp that had ended that morning. The season block leads the
+issue and owns the subject line (`fallHasOpenSeats`) until both groups fill — it is the
+one thing in the email a family can only buy once. (The MVF tournament card that used to
+sit between it and the sessions came out 2026-09-03 — a one-shot Sept 5 event, pulled
+at Sam's request rather than left to its rain-date gate.) It renders
 from `fall-2026.ts` + `fall-season-2026.ts` (so it can't fall off the way an Approved
 Notion row can), gated on the same `NEXT_PUBLIC_FALL_REGISTRATION_OPEN` flag `/fall`
 reads plus the season's own last Sunday, so it retires itself. It quotes the real $225
@@ -274,7 +278,7 @@ On top of the open sessions, the Thursday cron (`/api/cron/weekly-newsletter`) n
 - **Forming crews now** — up to 5 Open polls from `fetchOpenPolls()`, each with day/time/location/level + Yes-vote progress label, linking to `/poll/<slug>`. Hidden when none.
 - **Crew interest CTA** — always renders; copy adapts to whether polls are present ("None of these fit?" vs "Want a regular crew?").
 - **Private lessons card** — routes to `/#contact-form` for parents whose kid isn't ready for group play. (Since the 2026-06-18 policy change, Red/Orange kids are welcome at the cron-seeded weekly evenings too — Ridgeview Mon / Redland Tue / Westland Wed run all four levels, Shannon Thu currently Green/Yellow per its template — so the card frames privates as *also*-available 1:1 work, not the only Red/Orange option.)
-- **Bring the crew (referral)** — personalized `/newsletter?ref=<token>` link with the 50% off framing. Falls back to a generic forward ask if `REFERRAL_TOKEN_SECRET`/`NGA_ADMIN_SECRET` aren't configured.
+- **Forward ask** — a plain "forward this email" card, no link and no perk. It carried a personalized `/newsletter?ref=<token>` link with 50%-off framing until 2026-09-03 (see "Newsletter referral payout").
 
 ### Eval-lead re-engagement (`POST /api/eval-reengagement`)
 One-time (re-runnable) outreach inviting existing eval leads to opt into the newsletter. `?secret=$NGA_ADMIN_SECRET`-gated. Queries the lead CRM (`NOTION_DB_ID`), classifies every row with `src/lib/lead-segmentation.ts` (`classifyLead`), and sends the brand-reviewed `eval-reengagement` template (`src/lib/email/*`) only to the **ELIGIBLE** bucket — deduped by email, per-recipient via Resend (BCC admin). **The DD-derived rule lives in code here:** OFF-LIMITS = Source CourtReserve/Google Sheet, any CR-event history, DD-era season (Fall 2025 / Winter 2026), or DD/CR in notes; ELIGIBLE = clean own-marketing sources (Website / Lead Form / Facebook Ad / etc.); everything else (empty/Evaluation/Referral source) is AMBIGUOUS and **never mailed**. Always `{"dryRun": true}` first to verify the eligible count + recipient list before a live send. Pricing teased, not quoted; the email is an opt-in invite (no unsubscribe token — recipients join via `/newsletter`). **Opt-outs:** ticking the `Quarantine` checkbox on a lead's CRM row makes `classifyLead` return `off_limits` before any provenance check, suppressing that lead from BOTH lead-marketing senders (camp-outreach + eval-reengagement). See `docs/unsubscribe-runbook.md` for the full opt-out SOP (newsletter vs lead-CRM vs SMS).

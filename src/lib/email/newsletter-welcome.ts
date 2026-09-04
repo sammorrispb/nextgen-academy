@@ -12,29 +12,21 @@ interface NewsletterWelcomeInput {
   scheduleUrl: string;
   /** /crew route — surfaced as the "I want a regular crew" next step. */
   crewInterestUrl?: string;
-  /** Personalized /newsletter?ref=<token> link for the referral perk card. */
-  referralUrl?: string | null;
 }
 
 export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
-  const { parentFirst, childFirst, scheduleUrl, crewInterestUrl, referralUrl } =
-    input;
+  const { parentFirst, childFirst, scheduleUrl, crewInterestUrl } = input;
   const kid = childFirst?.trim() ? escape(childFirst) : "your kid";
 
-  const referralBlock = referralUrl
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring the crew</p>
-      <p style="margin:0 0 8px 0;color:${c.text};font-size:14px;line-height:1.55;">
-        Forward this email to one parent whose kid would love this. When they sign up through your link and play their first session, you both get <strong>50% off</strong> your next drop-in.
-      </p>
-      <p style="margin:0;color:${c.muted};font-size:12px;line-height:1.5;">Your forward link: <a href="${referralUrl}" style="${s.link}text-decoration:underline;">${escape(referralUrl)}</a></p>
-    </div>`
-    : `
+  // A plain forward ask, on purpose. The personalized referral link and its
+  // "you both get 50% off" perk came out 2026-09-03 (the referral program isn't
+  // set up), here and in the weekly issue together — this card used to promise
+  // that every Thursday issue carries the link.
+  const forwardBlock = `
     <div style="${s.cardAccent}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring the crew</p>
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">
-        Know another kid who&rsquo;d love this? Forward this email &mdash; every Thursday issue carries your personal link, and when a friend signs up and plays you both get 50% off your next session.
+        Know another kid who&rsquo;d love this? Forward this email &mdash; the community grows because parents like you make the introduction.
       </p>
     </div>`;
 
@@ -85,7 +77,7 @@ export function newsletterWelcomeHtml(input: NewsletterWelcomeInput): string {
 
     ${crewBlock}
 
-    ${referralBlock}
+    ${forwardBlock}
 
 
     <div style="${s.footer}">
@@ -130,18 +122,10 @@ export function newsletterWelcomeText(input: NewsletterWelcomeInput): string {
     );
   }
 
-  if (input.referralUrl) {
-    lines.push(
-      `Bring the crew: forward this email to one parent whose kid would love this. When they sign up through your link and play their first session, you both get 50% off your next drop-in.`,
-      `Your forward link: ${input.referralUrl}`,
-      "",
-    );
-  } else {
-    lines.push(
-      `Bring the crew: know another kid who'd love this? Forward this email — every Thursday issue carries your personal link, and when a friend signs up and plays you both get 50% off your next session.`,
-      "",
-    );
-  }
+  lines.push(
+    `Bring the crew: know another kid who'd love this? Forward this email — the community grows because parents like you make the introduction.`,
+    "",
+  );
 
   lines.push(
     "",

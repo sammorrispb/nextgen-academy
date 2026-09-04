@@ -13,7 +13,6 @@ import {
 } from "@/data/mvf";
 import JsonLd from "@/components/JsonLd";
 import NewsletterForm from "@/components/NewsletterForm";
-import MvfTournamentCard from "@/components/MvfTournamentCard";
 import TrackedCTA from "@/components/TrackedCTA";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 
@@ -464,19 +463,6 @@ export default function MontgomeryVillagePage() {
           <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
             <NewsletterForm submitLabel="Keep Me Posted →" />
           </div>
-        </div>
-      </section>
-
-      {/* ─── Tournament cross-promo ───────────── */}
-      <section className="bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-            More in Montgomery Village
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-6 tracking-tight">
-            Want game day too?
-          </h2>
-          <MvfTournamentCard />
         </div>
       </section>
     </>

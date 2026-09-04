@@ -4,7 +4,6 @@ import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { fetchActiveSubscribers } from "@/lib/notion-newsletter";
 import { pickWeeklyTip } from "@/lib/newsletter-tips";
 import { signUnsubscribeToken } from "@/lib/newsletter-token";
-import { signReferralToken } from "@/lib/referral-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
 import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
 import {
@@ -17,7 +16,6 @@ import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
 import { CAMP_AGE_MIN, CAMP_OPTIONS, upcomingCamps } from "@/data/camps";
-import { MVF_TOURNAMENT, mvfTournamentIsUpcoming } from "@/data/mvf";
 import {
   FALL_PUBLIC_AREA,
   FALL_SEASON_LABEL,
@@ -334,25 +332,6 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   const campUrl = appendUtm(`${SITE_ORIGIN}/camp`, "camp", utmCampaign);
   const campPriceFromUsd = Math.min(...CAMP_OPTIONS.map((o) => o.priceUsd));
 
-  // MVF tournament highlight — tops every issue through the rain date, then
-  // drops out on its own. Derived from mvf.ts so it can't fall off the issue
-  // the way a hand-drafted Notion row can.
-  const mvfTournament = mvfTournamentIsUpcoming(todayIso)
-    ? {
-        title: MVF_TOURNAMENT.title,
-        dateLabel: MVF_TOURNAMENT.dateLabel,
-        timeLabel: MVF_TOURNAMENT.timeLabel,
-        venueLine: `${MVF_TOURNAMENT.venue.name}, ${MVF_TOURNAMENT.venue.locality}`,
-        ageMin: MVF_TOURNAMENT.ageMin,
-        format: MVF_TOURNAMENT.format,
-        bracketsLabel: MVF_TOURNAMENT.brackets.join(" / "),
-        priceResidentUsd: MVF_TOURNAMENT.prices[0].usd,
-        priceNonResidentUsd: MVF_TOURNAMENT.prices[1].usd,
-        rainDateLabel: MVF_TOURNAMENT.rainDateLabel,
-        url: appendUtm(MVF_TOURNAMENT.url, "mvf-tournament", utmCampaign),
-      }
-    : null;
-
   // Fall season — the lead block and, while seats remain, the subject line.
   const fallSeason = await loadFallSeason(todayIso, utmCampaign);
 
@@ -398,18 +377,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       ? `${SITE_ORIGIN}/api/newsletter/unsubscribe?token=${encodeURIComponent(token)}`
       : `${SITE_ORIGIN}/newsletter`;
 
-    // Prefer the stamped Referral Token (issued at signup) so the same link
-    // appears in every issue; fall back to signing on the fly if older rows
-    // never got one.
-    const refToken = sub.referralToken || signReferralToken(sub.email);
-    const referralUrl = refToken
-      ? `${SITE_ORIGIN}/newsletter?ref=${encodeURIComponent(refToken)}`
-      : null;
-
     const input = {
       parentFirst,
       fallSeason,
-      mvfTournament,
       sessions,
       laterSessions,
       openPolls,
@@ -420,7 +390,6 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       scheduleUrl,
       crewInterestUrl,
       unsubscribeUrl,
-      referralUrl,
       origin: SITE_ORIGIN,
       utmCampaign,
       camps,
@@ -452,13 +421,11 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   }
 
   // QA / archive copy to the admin inbox so Sam sees exactly what went out.
-  // Uses a no-op unsubscribe link (admin isn't a subscriber row) and a
-  // sample referral URL so the forward block renders.
+  // Uses a no-op unsubscribe link (admin isn't a subscriber row).
   try {
     const adminInput = {
       parentFirst: "Coach",
       fallSeason,
-      mvfTournament,
       sessions,
       laterSessions,
       openPolls,
@@ -469,9 +436,6 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       scheduleUrl,
       crewInterestUrl,
       unsubscribeUrl: `${SITE_ORIGIN}/newsletter`,
-      referralUrl: signReferralToken("sample@example.com")
-        ? `${SITE_ORIGIN}/newsletter?ref=${encodeURIComponent(signReferralToken("sample@example.com") ?? "")}`
-        : null,
       origin: SITE_ORIGIN,
       utmCampaign,
       camps,

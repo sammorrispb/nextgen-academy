@@ -64,9 +64,9 @@ the calendar event description to claim ownership of it.
 
 ## Deliberately not in the feed
 
-- **The MVF tournament** — it's a Link & Dink event (`MVF_TOURNAMENT.url` points
-  at the L&D event page) and belongs to the `ld:` key namespace. Emitting it here
-  too would double-create it.
+- **The MVF tournament** — it's a Link & Dink event (registration lives on the
+  L&D event page) and belongs to the `ld:` key namespace. Emitting it here too
+  would double-create it.
 - **League seasons** (`src/data/leagues.ts`) — a start and end date, but no
   per-session dates, no times, and `exactLocation` is empty (venue not booked).
   There is nothing schedulable yet.

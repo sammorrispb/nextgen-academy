@@ -62,11 +62,11 @@ export interface NewsletterFallGroup {
 export interface WeeklyNewsletterInput {
   parentFirst: string;
   /**
-   * Fall season registration — the top block while registration is open, ahead
-   * of even the tournament card. A season is the one thing in this email a
-   * family can only buy once: 8 seats a group, full-season commitment, and the
-   * door closes when the first Sunday arrives. A drop-in they miss this week
-   * runs again next week; a season they miss is gone until next fall.
+   * Fall season registration — the top block while registration is open. A
+   * season is the one thing in this email a family can only buy once: 8 seats
+   * a group, full-season commitment, and the door closes when the first Sunday
+   * arrives. A drop-in they miss this week runs again next week; a season they
+   * miss is gone until next fall.
    *
    * The price is real (a live Stripe product), so this block quotes it — the
    * no-quoting rule targets prices that don't exist yet. Null hides the block;
@@ -82,27 +82,6 @@ export interface WeeklyNewsletterInput {
     priceUsd: number;
     groups: NewsletterFallGroup[];
     /** UTM-stamped /fall registration URL. */
-    url: string;
-  } | null;
-  /**
-   * MVF tournament highlight — the top block until the event. Null hides it;
-   * the cron gates on date (through the rain date) via `mvfTournamentIsUpcoming`.
-   * Prices are the real MVF registration fees (already public on the register
-   * page), so this block may quote them — camps precedent, not the teased
-   * drop-in price. Registration is on Link & Dink's surface, never NGA's.
-   */
-  mvfTournament: {
-    title: string;
-    dateLabel: string;
-    timeLabel: string;
-    venueLine: string; // "Apple Ridge Pickleball Courts, Montgomery Village"
-    ageMin: number;
-    format: string;
-    bracketsLabel: string; // "Playing / Competing / Tournament Level"
-    priceResidentUsd: number;
-    priceNonResidentUsd: number;
-    rainDateLabel: string;
-    /** UTM-stamped register URL (p3.linkanddink.com). */
     url: string;
   } | null;
   sessions: NewsletterSessionGroup[];
@@ -135,8 +114,6 @@ export interface WeeklyNewsletterInput {
   scheduleUrl: string;
   crewInterestUrl: string;
   unsubscribeUrl: string;
-  /** Personalized forward URL: /newsletter?ref=<signed-token>. Null when the signing key isn't configured. */
-  referralUrl: string | null;
   /** Site origin for absolute links inside the poll cards. */
   origin: string;
   /**
@@ -199,7 +176,6 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
     fallSeason,
-    mvfTournament,
     sessions,
     laterSessions,
     openPolls,
@@ -209,7 +185,6 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     scheduleUrl,
     crewInterestUrl,
     unsubscribeUrl,
-    referralUrl,
     origin,
     utmCampaign,
     camps,
@@ -225,8 +200,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
 
   // Fall season — the lead block while registration is open. Derived from the
-  // season data files by the cron, so (like camps and the tournament) it can't
-  // fall off the issue the way a hand-drafted Notion row can.
+  // season data files by the cron, so (like camps) it can't fall off the issue
+  // the way a hand-drafted Notion row can.
   const fallBlock = fallSeason
     ? `
     <div style="${s.cardAccent}">
@@ -241,20 +216,6 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
         .join("")}
       <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">$${fallSeason.priceUsd} per player for the full season &middot; first come, first serve. Can&rsquo;t make all ${fallSeason.weeks}? Reply and we&rsquo;ll put you on the sub list.</p>
       <p style="margin:14px 0 0 0;"><a href="${fallSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">Register for the season &rarr;</a></p>
-    </div>`
-    : "";
-
-  // MVF tournament highlight — leads the issue until the event so no family
-  // hears about tournament day after it happened. Registration is on Link &
-  // Dink; this card only links out.
-  const mvfBlock = mvfTournament
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Tournament day &mdash; Sept 5</p>
-      <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(mvfTournament.title)}</p>
-      <p style="margin:0 0 8px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(mvfTournament.dateLabel)}, ${escape(mvfTournament.timeLabel)} at ${escape(mvfTournament.venueLine)}. Ages ${mvfTournament.ageMin}+ &mdash; ${escape(mvfTournament.format.toLowerCase())}, so every pair gets a full morning of games. Brackets: ${escape(mvfTournament.bracketsLabel)}.</p>
-      <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;">$${mvfTournament.priceResidentUsd} resident &middot; $${mvfTournament.priceNonResidentUsd} non-resident, per player &middot; partner required &middot; rain date ${escape(mvfTournament.rainDateLabel)}.</p>
-      <p style="margin:14px 0 0 0;"><a href="${mvfTournament.url}" style="${s.link}font-weight:700;text-decoration:none;">Register with your partner &rarr;</a></p>
     </div>`
     : "";
 
@@ -390,18 +351,10 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0;"><a href="${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}" style="${s.link}font-weight:700;text-decoration:none;">Get a free evaluation &rarr;</a></p>
     </div>`;
 
-  // Forward card — personalized when the signing key is configured so the
-  // referral payout (50% off both parents after the friend's first paid
-  // session) can attribute correctly. Falls back to a plain forward ask if
-  // not. Sharper framing than the old "bring a friend" line.
-  const forwardBlock = referralUrl
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring a friend</p>
-      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">Forward this email to one parent whose kid would love this. When they sign up through your link and play their first session, you both get <strong>50% off</strong> your next drop-in.</p>
-      <p style="margin:0;color:${c.muted};font-size:12px;line-height:1.5;">Your forward link: <a href="${referralUrl}" style="${s.link}text-decoration:underline;">${escape(referralUrl)}</a></p>
-    </div>`
-    : `
+  // Forward card — a plain ask, on purpose. The personalized referral link
+  // ("you both get 50% off") came out 2026-09-03: the referral program isn't
+  // set up, and a perk this email can't honor is a promise, not a nudge.
+  const forwardBlock = `
     <div style="${s.cardAccent}">
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">Know a kid who&rsquo;d love this? Forward this email &mdash; the community grows because parents like you make the introduction.</p>
     </div>`;
@@ -422,8 +375,6 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     ${whatsappGroupsTopHtml()}
 
     ${fallBlock}
-
-    ${mvfBlock}
 
     ${sessionBlock}
 
@@ -466,7 +417,6 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
     fallSeason,
-    mvfTournament,
     sessions,
     laterSessions,
     openPolls,
@@ -476,7 +426,6 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     scheduleUrl,
     crewInterestUrl,
     unsubscribeUrl,
-    referralUrl,
     origin,
     utmCampaign,
     camps,
@@ -507,17 +456,6 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
       "",
       `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.`,
       `Register for the season: ${fallSeason.url}`,
-      "",
-    );
-  }
-
-  if (mvfTournament) {
-    lines.push(
-      "Tournament day — Sept 5:",
-      `${mvfTournament.title}`,
-      `${mvfTournament.dateLabel}, ${mvfTournament.timeLabel} at ${mvfTournament.venueLine}. Ages ${mvfTournament.ageMin}+ — ${mvfTournament.format.toLowerCase()}, so every pair gets a full morning of games. Brackets: ${mvfTournament.bracketsLabel}.`,
-      `$${mvfTournament.priceResidentUsd} resident · $${mvfTournament.priceNonResidentUsd} non-resident, per player · partner required · rain date ${mvfTournament.rainDateLabel}.`,
-      `Register with your partner: ${mvfTournament.url}`,
       "",
     );
   }
@@ -618,18 +556,10 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     "",
   );
 
-  if (referralUrl) {
-    lines.push(
-      `Forward this email to one parent whose kid would love this. When they sign up through your link and play their first session, you both get 50% off your next drop-in.`,
-      `Your forward link: ${referralUrl}`,
-      "",
-    );
-  } else {
-    lines.push(
-      `Know a kid who'd love this? Forward this email — the community grows because parents like you make the introduction.`,
-      "",
-    );
-  }
+  lines.push(
+    `Know a kid who'd love this? Forward this email — the community grows because parents like you make the introduction.`,
+    "",
+  );
 
   lines.push(
     `See you on the court — better than yesterday, together.`,
