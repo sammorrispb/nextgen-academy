@@ -266,8 +266,3 @@ export const MVF_TOURNAMENT = {
   priceUnit: "player",
   url: "https://p3.linkanddink.com/popup/mvf-pickleball-tournament-2026",
 } as const;
-
-/** Promote the tournament through its rain date (ET-calendar inclusive). */
-export function mvfTournamentIsUpcoming(todayIso: string): boolean {
-  return todayIso <= MVF_TOURNAMENT.rainDate;
-}

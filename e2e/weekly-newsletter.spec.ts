@@ -18,7 +18,7 @@ import {
   fallSeasonSlotsFor,
   FALL_SEASON_TITLE,
 } from "../src/data/fall-season-2026";
-import { MVF_TOURNAMENT, mvfTournamentIsUpcoming } from "../src/data/mvf";
+import { MVF_TOURNAMENT } from "../src/data/mvf";
 import {
   COACH_PHONE_DISPLAY,
   WHATSAPP_LD_GROUP_URL,
@@ -31,7 +31,6 @@ const ORIGIN = "https://nextgenpbacademy.com";
 const baseInput: WeeklyNewsletterInput = {
   parentFirst: "Lauren",
   fallSeason: null,
-  mvfTournament: null,
   sessions: [
     {
       dateLong: "Saturday, May 23",
@@ -50,7 +49,6 @@ const baseInput: WeeklyNewsletterInput = {
   scheduleUrl: `${ORIGIN}/schedule`,
   crewInterestUrl: `${ORIGIN}/crew`,
   unsubscribeUrl: `${ORIGIN}/api/newsletter/unsubscribe?token=abc`,
-  referralUrl: `${ORIGIN}/newsletter?ref=signed-token-abc`,
   origin: ORIGIN,
   utmCampaign: "weekly-2026-06-04",
   camps: [],
@@ -95,17 +93,17 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(html).not.toContain("spot left");
   });
 
-  test("personalized forward link surfaces with the 50% referral offer", () => {
-    const html = weeklyNewsletterHtml(baseInput);
-    expect(html).toContain("Bring a friend");
-    expect(html).toContain("50% off");
-    expect(html).toContain("/newsletter?ref=signed-token-abc");
-  });
-
-  test("falls back to generic forward ask when no referral URL is configured", () => {
-    const html = weeklyNewsletterHtml({ ...baseInput, referralUrl: null });
-    expect(html).not.toMatch(/\?ref=/);
-    expect(html).toContain("Forward this email");
+  test("the forward ask carries no referral link and promises no discount", () => {
+    // The personalized /newsletter?ref= link and its "you both get 50% off"
+    // perk came out 2026-09-03 — the referral program isn't set up, and a perk
+    // the business can't honor is a promise, not a nudge.
+    for (const rendered of [weeklyNewsletterHtml(baseInput), weeklyNewsletterText(baseInput)]) {
+      expect(rendered).toContain("Forward this email");
+      expect(rendered).not.toMatch(/\?ref=/);
+      expect(rendered).not.toContain("forward link");
+      expect(rendered).not.toMatch(/\d+% off/);
+      expect(rendered).not.toContain("Bring a friend");
+    }
   });
 
   test("crew interest CTA always renders, with copy that adapts to poll presence", () => {
@@ -187,14 +185,11 @@ test.describe("weeklyNewsletterHtml", () => {
       `${ORIGIN}/poll/sat-4pm-green?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-2026-06-04&utm_content=poll`,
     );
     expect(html).toContain("utm_campaign=weekly-2026-06-04");
-    // The referral forward link stays clean (own ref attribution, shown verbatim).
-    expect(html).toContain(`${ORIGIN}/newsletter?ref=signed-token-abc"`);
     // Unsubscribe link is never UTM-tagged.
     expect(html).not.toContain("unsubscribe?token=abc&utm");
   });
 
   test("quotes no hard prices in session/tip/CTA blocks (drop-in $40 stays on /schedule only)", () => {
-    // Allow "50% off" in the referral block but no dollar prices.
     const html = weeklyNewsletterHtml(baseInput);
     expect(html).not.toMatch(/\$\d/);
   });
@@ -352,70 +347,25 @@ test.describe("weeklyNewsletterHtml", () => {
     ]);
   });
 
-  // ---- MVF tournament highlight (top block until the event) ----
+  // ---- MVF tournament ----
 
-  // Mirrors the cron's projection of MVF_TOURNAMENT.
-  const mvfInput: WeeklyNewsletterInput = {
-    ...baseInput,
-    mvfTournament: {
-      title: "MVF Pickleball Tournament by Link and Dink",
-      dateLabel: "Saturday, September 5, 2026",
-      timeLabel: "8:30 AM – 3:00 PM",
-      venueLine: "Apple Ridge Pickleball Courts, Montgomery Village",
-      ageMin: 9,
-      format: "Same-partner round robin into single elimination",
-      bracketsLabel: "Playing / Competing / Tournament Level",
-      priceResidentUsd: 25,
-      priceNonResidentUsd: 35,
-      rainDateLabel: "Sunday, September 6",
-      url: "https://p3.linkanddink.com/popup/mvf-pickleball-tournament-2026?utm_source=newsletter",
-    },
-  };
-
-  test("renders the tournament block in HTML and text with date, brackets, real prices, and rain date", () => {
-    for (const rendered of [weeklyNewsletterHtml(mvfInput), weeklyNewsletterText(mvfInput)]) {
-      expect(rendered).toContain("MVF Pickleball Tournament by Link and Dink");
-      expect(rendered).toContain("Saturday, September 5, 2026");
-      expect(rendered).toContain("Playing / Competing / Tournament Level");
-      expect(rendered).toContain("$25");
-      expect(rendered).toContain("$35");
-      expect(rendered).toContain("partner required");
-      expect(rendered).toContain("Sunday, September 6");
-      expect(rendered).toContain(
-        "https://p3.linkanddink.com/popup/mvf-pickleball-tournament-2026?utm_source=newsletter",
-      );
+  test("carries no tournament card — the Sept 5 MVF block was removed, not gated", () => {
+    // It used to lead every issue through the rain date. Sam pulled it
+    // 2026-09-03; the /montgomery-village-youth-pickleball card is the only
+    // surface that still renders MVF_TOURNAMENT.
+    for (const rendered of [weeklyNewsletterHtml(baseInput), weeklyNewsletterText(baseInput)]) {
+      expect(rendered).not.toContain("Tournament day");
+      expect(rendered).not.toContain("Register with your partner");
+      expect(rendered).not.toContain("linkanddink.com/popup");
     }
   });
 
-  test("the tournament block leads the issue — above the sessions block", () => {
-    const html = weeklyNewsletterHtml(mvfInput);
-    expect(html.indexOf("Tournament day")).toBeGreaterThan(-1);
-    expect(html.indexOf("Tournament day")).toBeLessThan(
-      html.indexOf("This week&rsquo;s sessions"),
-    );
-    // Same when there are no open sessions (fallback card).
-    const noSessions = weeklyNewsletterHtml({ ...mvfInput, sessions: [] });
-    expect(noSessions.indexOf("Tournament day")).toBeLessThan(
-      noSessions.indexOf("No open sessions this week"),
-    );
-  });
-
-  test("hides the tournament block entirely when null", () => {
-    expect(weeklyNewsletterHtml(baseInput)).not.toContain("Tournament day");
-    expect(weeklyNewsletterText(baseInput)).not.toContain("Tournament day");
-  });
-
-  test("mvfTournamentIsUpcoming promotes through the rain date, then stops", () => {
-    expect(mvfTournamentIsUpcoming("2026-08-13")).toBe(true);
-    expect(mvfTournamentIsUpcoming("2026-09-05")).toBe(true);
-    expect(mvfTournamentIsUpcoming("2026-09-06")).toBe(true);
-    expect(mvfTournamentIsUpcoming("2026-09-07")).toBe(false);
-  });
-
   test("MVF tournament data matches the live L&D event (drift guard)", () => {
-    // The brackets label must match what L&D's registration actually offers
-    // (community-os migration 20260801161136 fixed the stale
-    // Advanced Beginner / Intermediate / Advanced set).
+    // Guards the MvfTournamentCard on /montgomery-village-youth-pickleball now
+    // that the newsletter no longer renders the event. The brackets label must
+    // match what L&D's registration actually offers (community-os migration
+    // 20260801161136 fixed the stale Advanced Beginner / Intermediate /
+    // Advanced set).
     expect([...MVF_TOURNAMENT.brackets]).toEqual([
       "Playing",
       "Competing",
@@ -455,13 +405,12 @@ test.describe("weeklyNewsletterHtml", () => {
 });
 
 test.describe("weeklyNewsletterText", () => {
-  test("mirrors the fill meter, weather, and referral block in plain text", () => {
+  test("mirrors the fill meter, weather, and forward ask in plain text", () => {
     const text = weeklyNewsletterText(baseInput);
     expect(text).toContain("14 of 16 in — 2 to go");
     expect(text).toContain("▰▰▰▰▱");
     expect(text).toContain("Forecast: Sunny, 75°");
-    expect(text).toContain("50% off");
-    expect(text).toContain("/newsletter?ref=signed-token-abc");
+    expect(text).toContain("Forward this email");
     expect(text).toContain(
       "Unsubscribe: https://nextgenpbacademy.com/api/newsletter/unsubscribe",
     );
@@ -625,27 +574,10 @@ test.describe("weekly newsletter — fall season block", () => {
     ]);
   });
 
-  test("leads the issue — above the tournament card and this week's sessions", () => {
-    const html = weeklyNewsletterHtml({
-      ...baseInput,
-      fallSeason,
-      mvfTournament: {
-        title: MVF_TOURNAMENT.title,
-        dateLabel: MVF_TOURNAMENT.dateLabel,
-        timeLabel: MVF_TOURNAMENT.timeLabel,
-        venueLine: "Apple Ridge Pickleball Courts, Montgomery Village",
-        ageMin: MVF_TOURNAMENT.ageMin,
-        format: MVF_TOURNAMENT.format,
-        bracketsLabel: MVF_TOURNAMENT.brackets.join(" / "),
-        priceResidentUsd: MVF_TOURNAMENT.prices[0].usd,
-        priceNonResidentUsd: MVF_TOURNAMENT.prices[1].usd,
-        rainDateLabel: MVF_TOURNAMENT.rainDateLabel,
-        url: "https://p3.linkanddink.com/register",
-      },
-    });
+  test("leads the issue — above this week's sessions", () => {
+    const html = weeklyNewsletterHtml({ ...baseInput, fallSeason });
     const fallAt = html.indexOf("Fall season");
     expect(fallAt).toBeGreaterThan(-1);
-    expect(fallAt).toBeLessThan(html.indexOf("Tournament day"));
     expect(fallAt).toBeLessThan(html.indexOf("This week&rsquo;s sessions"));
   });
 
