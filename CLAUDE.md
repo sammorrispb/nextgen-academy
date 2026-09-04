@@ -228,9 +228,9 @@ Never publishes anything publicly — Sam owns whether the submission becomes a 
 ### Newsletter referral payout (Stripe webhook branch)
 Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src/lib/referral-token.ts`, signing key `REFERRAL_TOKEN_SECRET` → falls back to `NGA_ADMIN_SECRET`). When a friend signs up via a `/newsletter?ref=<token>` link, their row gets `Referred By` set to the referrer's email.
 
-**No recipient-facing email promotes the link any more (Sam, 2026-09-03: the program isn't set up).** The weekly newsletter and the welcome email both dropped the personalized `?ref=` link and the "you both get 50% off" framing for a plain forward ask — together, because the welcome copy used to promise that every Thursday issue carries the link. The plumbing below is intact but dormant: tokens are still stamped at signup, `/newsletter?ref=` still decodes, and the webhook branch still fires for any link already in a parent's inbox. Switching the payout itself off is a Slop-Free-Zone (webhook) change and needs its own approval; restoring the promotion is a template change once the program is real.
+**No recipient-facing email promotes the link any more (Sam, 2026-09-03: the program isn't set up).** The weekly newsletter and the welcome email both dropped the personalized `?ref=` link and the "you both get 50% off" framing for a plain forward ask — together, because the welcome copy used to promise that every Thursday issue carries the link. The tracking half is intact but dormant: tokens are still stamped at signup and `/newsletter?ref=` still decodes, so a link already in a parent's inbox still sets `Referred By` — but nothing pays out any more (next paragraph). Restoring the promotion is a template change once the program is real.
 
-**Reward fires on the friend's first paid drop-in** (not at signup). In `src/app/api/stripe/webhook/route.ts`, the `checkout.session.completed` fan-out includes `processReferralReward(session)` (`src/lib/referral-rewards.ts`), which:
+**The payout is switched OFF (Sam's explicit go, 2026-09-04).** The webhook's `checkout.session.completed` fan-out no longer calls `processReferralReward` — pinned by `e2e/invariant-webhook-no-referral-payout.spec.ts`, which greps the route source because the fan-out rides `after()` and the pure harness can't observe it. `src/lib/referral-rewards.ts` and its idempotency spec stay as the unwired reference implementation; re-enabling is one line in the fan-out plus retiring that pin, and is a Slop-Free-Zone change. When it was wired, on the friend's first paid drop-in (not at signup) it:
 1. Looks up the friend's subscriber row by `customer_email`.
 2. No-ops if there's no `Referred By` or `Referral Rewarded` is already true (idempotent on webhook retries).
 3. Looks up the referrer row by the `Referred By` email. If the referrer isn't (or no longer is) a subscriber, flips `Referral Rewarded`=true on the friend's row and skips the payout (prevents retry storms on lapsed referrers).
@@ -238,7 +238,7 @@ Every newsletter subscriber gets an HMAC-signed `Referral Token` at signup (`src
 5. Emails both parents (`src/lib/email/referral-friend-reward.ts`, `src/lib/email/referral-referrer-reward.ts`, BCC admin).
 6. Flips `Referral Rewarded`=true on the friend's row and increments `Coupons Issued` on both rows.
 
-Promo codes work at checkout because `/api/checkout/route.ts` already passes `allow_promotion_codes: true` to Stripe Checkout. No `STRIPE_REFERRAL_PRICE_ID` env var is needed — the coupon mints inline. Failure of any step is logged + swallowed so a Notion blip never blocks the user's success page or triggers a Stripe webhook retry storm.
+Promo codes would work at checkout because `/api/checkout/route.ts` already passes `allow_promotion_codes: true` to Stripe Checkout. No `STRIPE_REFERRAL_PRICE_ID` env var is needed — the coupon mints inline. Failure of any step is logged + swallowed so a Notion blip never blocks the user's success page or triggers a Stripe webhook retry storm.
 
 ### Weekly newsletter blocks (per issue)
 **Community WhatsApp invites lead the issue (2026-08-19).** Both groups render as a
