@@ -1,3 +1,9 @@
+// UNWIRED since 2026-09-04 (Sam's call): the Stripe webhook no longer calls
+// processReferralReward — the referral program isn't set up, and no email has
+// promoted the /newsletter?ref= link since 2026-09-03. Kept, with its
+// idempotency spec, as the reference implementation should the program become
+// real; re-enabling is one line in the webhook's after() fan-out (a Slop-Free
+// Zone change) plus retiring invariant-webhook-no-referral-payout.spec.ts.
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";

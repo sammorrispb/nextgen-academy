@@ -21,7 +21,6 @@ import { fillGoal, fillBar, fillLabel } from "@/lib/fill-meter";
 import { whatsappInviteText } from "@/lib/email/whatsapp-invite";
 import { sendSms, bookingConfirmationSms } from "@/lib/sms";
 import { signCancelToken } from "@/lib/cancel-token";
-import { processReferralReward } from "@/lib/referral-rewards";
 import { syncPlayerFromDropIn } from "@/lib/notion-player-sync";
 import {
   createClusterRegistrationResult,
@@ -451,8 +450,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, row_create_failed: true });
   }
 
-  // Everything below is best-effort: a flaky email/SMS/referral/increment must
-  // NOT block the ack, or Stripe could time out and retry (re-running this on a
+  // Everything below is best-effort: a flaky email/SMS/increment must NOT
+  // block the ack, or Stripe could time out and retry (re-running this on a
   // row that now exists). Run it AFTER the response is sent, concurrently.
   after(async () => {
     // Bump the registered count BEFORE the parent email so the confirmation's
@@ -472,12 +471,11 @@ export async function POST(req: NextRequest) {
       emailAdmin(session),
       emailParent(session, fill),
       sendConfirmationSms(session, row),
-      // Referral payout: if this parent signed up to the newsletter via someone
-      // else's forward link and this is their first paid drop-in, mint two
-      // single-use 50%-off promo codes (friend + referrer) and email both.
-      // No-op when the friend isn't a subscriber, has no Referred By, or has
-      // already been rewarded.
-      processReferralReward(session),
+      // The newsletter referral payout — two 50%-off promo codes minted on a
+      // referred subscriber's first paid drop-in — was unhooked from this
+      // fan-out 2026-09-04: the program isn't set up and no email promotes the
+      // link. The unwired implementation stays in src/lib; the pin is
+      // invariant-webhook-no-referral-payout.spec.ts.
       // Mirror the registration into the Player CRM so a paid website signup
       // lands a player row (or refreshes Last Attended on the existing one) —
       // the lead form already wrote to the Player DB, the drop-in path didn't.
