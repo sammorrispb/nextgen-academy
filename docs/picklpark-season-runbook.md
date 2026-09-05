@@ -5,12 +5,21 @@ Two products share one Saturday and one court booking in Frederick:
 | Time | What | Sells through | State |
 |---|---|---|---|
 | 2:00–3:00 PM | **Open Court** — all levels, ages 6–16, $20 drop-in | `/schedule` (the normal drop-in stack) | **LIVE** — Sep 12/19/26 seeded 2026-08-31; cron extends weekly |
-| 3:00–4:00 PM | **Red & Orange Ball** season | `/picklpark` | ships DARK |
-| 4:00–5:00 PM | **Green & Yellow Ball** season | `/picklpark` | ships DARK |
+| 3:00–4:00 PM | **Red & Orange Ball** season | `/picklpark` | **OPEN** from the 2026-09-05 merge — flag is now a kill switch |
+| 4:00–5:00 PM | **Green & Yellow Ball** season | `/picklpark` | **OPEN** (same) |
 
-The season surface ships DARK: `/picklpark` shows the closed state and
-`/api/checkout-picklpark` 503s until the env trio below is set. Nothing here
-requires a deploy after the code lands — going live is operator steps only.
+**2026-09-05 (Sam): the season moved up two weeks — Sep 19 – Oct 24, makeup hold
+Oct 31 — and sells from the site as the second fall option beside the Walter
+Johnson Sunday season** (`/fall` and `/picklpark` cross-link while both are
+open). Each hour is 30 minutes of coached drills, then 30 minutes of game play.
+Registration is **open by default** through the last Saturday;
+`NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` is a **kill switch** (unset or `true`
+= open, any other value — use `false` — closes the form on every surface), no
+longer a launch flag. `/api/checkout-picklpark` still 503s if the Stripe price
+env is missing; it is set in prod. The earlier posture (ship dark, hold the flag
+until after the first Open Court) is history below, kept because the reasoning
+about the cold market still holds — the one Open Court on Sep 12 is now the only
+on-ramp before the season starts.
 
 ## Why the Open Court hour exists, and why it runs first
 
@@ -33,11 +42,15 @@ crons, coach check-in, attendance and the cancel/refund paths for free.
 
 ## The season
 
-6 Saturdays, **Oct 3 – Nov 7 2026** at The Pickl Park, 355 Ballenger Center Dr,
+6 Saturdays, **Sep 19 – Oct 24 2026** at The Pickl Park, 355 Ballenger Center Dr,
 Frederick, MD 21703. Red & Orange Ball 3:00–4:00 PM, Green & Yellow Ball
-4:00–5:00 PM. 2 pickleball courts, **$225/player** full-season commitment. One
-held date **Nov 14**. Config: `src/data/picklpark-2026.ts` (edit surface for
-dates/blocks/courts) + `src/data/picklpark-season-2026.ts` (price/slug).
+4:00–5:00 PM — each hour **30 minutes of coached drills, then 30 minutes of game
+play** (`PICKLPARK_SESSION_FORMAT`). 2 pickleball courts, **$225/player**
+full-season commitment. One held date **Oct 31** (Halloween; a makeup there ends
+at 5, before trick-or-treat — swap in Nov 7 if you'd rather). Config:
+`src/data/picklpark-2026.ts` (edit surface for dates/blocks/courts/format) +
+`src/data/picklpark-season-2026.ts` (price/slug). Was Oct 3 – Nov 7 with a Nov 14
+hold until 2026-09-05.
 
 **Bands, not single colours.** With no evaluations in this market, a four-way
 split would ask parents to self-select a level they can't know. Two bands is
@@ -60,9 +73,13 @@ price without it is selling the shorter hour and none of the reason.
    default on the one programme where the margin is thinnest. **Also ask for a
    co-marketing send to the Pickl Park member list** — with zero CRM presence in
    Frederick, that list is the best lead source available.
-2. **Book the courts**: 2 courts, Saturdays **2–5 PM**, Sep 12 → Nov 7, plus a
-   hold on Nov 14. Three hours × 2 courts × 6 weeks = 36 court-hours for the
-   season, plus 2 court-hours a week for Open Court.
+2. **Book the courts**: 2 courts, Saturdays **2–5 PM**, Sep 12 → Oct 24, plus a
+   hold on Oct 31. Three hours × 2 courts × 6 weeks = 36 court-hours for the
+   season, plus 2 court-hours a week for Open Court. **Reconcile the dates with
+   Amar first:** the court-time proposal sent to him lists the Next Gen Saturdays
+   as Sep 26 – Oct 31, and the plan before 2026-09-05 was Oct 3 – Nov 7 — neither
+   matches the Sep 19 – Oct 24 (+ Oct 31 hold) the site now sells. The booking
+   has to cover Sep 19 and Sep 26 as season Saturdays, not just Open Court.
 3. ~~**Notion — Sessions DB**: add **`All Levels`** to the `Level` select.~~
    **DONE 2026-08-31.** The four colour options were preserved. Still to do:
    add `Frederick` to the Player CRM `Location` select and `The Pickl Park` to
@@ -103,13 +120,16 @@ price without it is selling the shorter hour and none of the reason.
    NOTION_PICKLPARK_REGS_DB_ID=febf59e72797405995a9606d677fc9f6
    ```
 
-   **`NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` is still deliberately UNSET —
-   hold it until after the first Open Court (~Sep 12–19)**, Sam's call
-   2026-08-31. The first two alone are safe: the page keeps its closed state and
-   no form renders, so nobody can reach checkout. Opening before any Open Court
-   has run would sell cold, which is the outcome the Open Court hour exists to
-   avoid.
-7b. **Cheap pre-check once the flag flips.** With registration open,
+   **`NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` — leave it UNSET; unset now means
+   OPEN.** The 2026-08-31 plan held this flag until after the first Open Court so
+   the season would never sell cold. Sam's 2026-09-05 call (list the season as a
+   fall option with sign-ups, starting Sep 19) superseded that: the code merged
+   that day opens registration by default through the last Saturday, and the
+   flag became a kill switch — set it to `false` (any value other than blank or
+   `true`) for a no-go, a sell-out, or to pull the form early; a `NEXT_PUBLIC_`
+   var is inlined at build time, so a redeploy follows the change. The cold-market
+   risk did not go away — it moved to the go/no-go call at T−72h (Sep 16).
+7b. **Cheap pre-check now that registration is open.** With registration open,
     `/picklpark` calls `countPicklParkRegistrations` per band. A readable DB
     returns 0 and each group card shows **"Spots open"**; an unreadable one
     returns `null` and the card shows **no seat status at all**. Blank status on
@@ -136,10 +156,14 @@ price without it is selling the shorter hour and none of the reason.
    reconciliation leg was NOT exercised**, because no charge existed to refund.
    Everything upstream of it is covered; test that leg against the first genuine
    paid registration, or with a $225 live + refund if you want it proven sooner.
-9. **Run `/calendar-sync`** — the seven existing Saturday holds are at the OLD
-   1–3 PM Green & Yellow shape and are now wrong. The sync retimes the
-   `nga-pp:saturday:<date>` season blocks to 3–5 PM and picks up Open Court
-   separately as an ordinary session row.
+9. **Run `/calendar-sync` after the 2026-09-05 merge deploys** — the
+   `nga-pp:saturday:<date>` season blocks on the calendar still carry the old
+   Oct 3 – Nov 14 dates; the feed now emits Sep 19 – Oct 24 plus the Oct 31
+   hold, so the sync creates the two September blocks, updates the shared
+   October ones, and deletes Nov 7 / Nov 14. (The earlier retime from the 1–3 PM
+   Green & Yellow shape to 3–5 PM is folded into the same pass.) Open Court is
+   picked up separately as an ordinary session row. The sync reads the LIVE
+   feed, so running it before the deploy re-asserts the old dates.
 10. **Announce**: the weekly NGA newsletter has no derived Pickl Park block yet —
     use an Approved Newsletter Drafts row **with `Expires At` set** (multi-week
     content rule), or build the derived block mirroring the fall one later.
@@ -151,10 +175,11 @@ price without it is selling the shorter hour and none of the reason.
   coaching wage and the Frederick drive it is nearer 10. Below the minimum,
   cancel and refund in full with a personal call — the same discipline the L&D
   block runs on. It does not limp.
-- **Halloween (Oct 31)** is currently a season Saturday (ends at 5, before
-  trick-or-treat). To skip it instead: in `picklpark-2026.ts` move `2026-10-31`
-  out of `PICKLPARK_SATURDAYS` and `2026-11-14` in — decide BEFORE the first
-  confirmation email ships, since every email lists the dates.
+- **Halloween (Oct 31)** is the held MAKEUP date since the 2026-09-05 move, not a
+  season Saturday (a makeup there would end at 5, before trick-or-treat). To hold
+  Nov 7 instead: in `picklpark-2026.ts` swap `PICKLPARK_MAKEUP_DATES` — decide
+  BEFORE the first confirmation email ships, since every email names the makeup
+  date.
 - **Seat counts are per band and DERIVED** (`PICKLPARK_SLOTS_BY_GROUP`). Both
   bands hold 2 courts × 4 = 8 today. To change one, edit
   `PICKLPARK_PLAYERS_PER_COURT` or book another court — never

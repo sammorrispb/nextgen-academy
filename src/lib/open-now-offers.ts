@@ -19,6 +19,7 @@ import {
   PICKLPARK_SEASON_PRICE_USD,
 } from "@/data/picklpark-season-2026";
 import { LEAGUE_SEASONS } from "@/data/leagues";
+import { picklParkRegistrationOpen } from "@/lib/picklpark-registration-window";
 
 /**
  * What a parent can act on TODAY — shared by the empty-state offer block and
@@ -115,12 +116,19 @@ export function buildOpenNowOffers(
   return offers;
 }
 
-/** Reads the same public flags `/fall` and `/picklpark` do. */
-export function openNowFlags(): OpenNowFlags {
+/**
+ * The same gates `/fall` and `/picklpark` read. Fall is still the ships-dark
+ * flag; Pickl Park is open by default through its last Saturday with the flag
+ * as a kill switch (see picklpark-registration-window.ts), which is why this
+ * needs today's date.
+ */
+export function openNowFlags(todayIso: string): OpenNowFlags {
   return {
     fallRegistrationOpen:
       process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true",
-    picklParkRegistrationOpen:
-      process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN === "true",
+    picklParkRegistrationOpen: picklParkRegistrationOpen(
+      todayIso,
+      process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN,
+    ),
   };
 }

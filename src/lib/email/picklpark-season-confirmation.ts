@@ -1,4 +1,7 @@
-import { PICKLPARK_INDOOR_NOTE } from "@/data/picklpark-2026";
+import {
+  PICKLPARK_INDOOR_NOTE,
+  PICKLPARK_SESSION_FORMAT,
+} from "@/data/picklpark-2026";
 import { signatureExtrasText } from "./signature";
 /**
  * Pickl Park Saturday season registration confirmation — the parent's "you're
@@ -77,7 +80,7 @@ export function buildPicklParkSeasonConfirmationEmail(
     "",
     `Where: ${venue}`,
     "",
-    `Each Saturday is a full hour on dedicated pickleball courts — coached practice first, then a rotating-partner round robin, so ${childFirst} partners with everyone in the group across the season.`,
+    `Each Saturday is a full hour on dedicated pickleball courts — ${PICKLPARK_SESSION_FORMAT}. The games run as a rotating-partner round robin, so ${childFirst} partners with everyone in the group across the season.`,
     "",
     PICKLPARK_INDOOR_NOTE,
     "",
