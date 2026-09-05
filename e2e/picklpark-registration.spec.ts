@@ -21,6 +21,8 @@ import {
   PICKLPARK_SATURDAYS,
   PICKLPARK_PICKLEBALL_COURTS,
   PICKLPARK_PLAYERS_PER_COURT,
+  PICKLPARK_SEASON_LABEL,
+  PICKLPARK_SESSION_FORMAT,
   PICKLPARK_SLOTS_BY_GROUP,
   PICKLPARK_START_TIME,
   PICKLPARK_VENUE,
@@ -122,10 +124,15 @@ test.describe("picklpark season product data stays consistent", () => {
     expect(PICKLPARK_YOUTH_BLOCKS[0].startTime).toBe(PICKLPARK_START_TIME);
   });
 
-  test("six Saturdays Oct 3 – Nov 7, all actually Saturdays, makeup Nov 14", () => {
+  test("six Saturdays Sep 19 – Oct 24, all actually Saturdays, makeup Oct 31", () => {
+    // Moved up two weeks 2026-09-05 (Sam) from Oct 3 – Nov 7. The first
+    // Saturday sits one week after the first Open Court (Sep 12), so exactly
+    // one on-ramp hour runs before the season starts.
     expect(PICKLPARK_SATURDAYS).toHaveLength(6);
-    expect(PICKLPARK_SATURDAYS[0]).toBe("2026-10-03");
-    expect(PICKLPARK_SATURDAYS[5]).toBe("2026-11-07");
+    expect(PICKLPARK_SATURDAYS[0]).toBe("2026-09-19");
+    expect(PICKLPARK_SATURDAYS[5]).toBe("2026-10-24");
+    expect(PICKLPARK_MAKEUP_DATES).toEqual(["2026-10-31"]);
+    expect(PICKLPARK_SEASON_LABEL).toBe("September 19 – October 24, 2026");
     for (const iso of [...PICKLPARK_SATURDAYS, ...PICKLPARK_MAKEUP_DATES]) {
       // UTC-noon parse is deliberate — date-only strings must never go
       // through a local-midnight Date on a UTC build server.
@@ -292,14 +299,21 @@ test.describe("picklpark season confirmation email", () => {
     const { subject, text } = build();
     expect(subject).toContain("Red & Orange Ball");
     expect(text).toContain("Saturdays 3:00–4:00 PM");
-    expect(text).toContain("Saturday, October 3");
-    expect(text).toContain("Saturday, November 7");
+    expect(text).toContain("Saturday, September 19");
+    expect(text).toContain("Saturday, October 24");
     for (const iso of PICKLPARK_SATURDAYS) {
       const day = Number(iso.split("-")[2]);
       expect(text).toContain(` ${day}`);
     }
     expect(text).toContain(PICKLPARK_VENUE);
-    expect(text).toContain("November 14");
+    expect(text).toContain("October 31");
+  });
+
+  test("spells out the hour — 30 minutes of drills, 30 of games (Sam, 2026-09-05)", () => {
+    const { text } = build();
+    expect(text).toContain(PICKLPARK_SESSION_FORMAT);
+    expect(PICKLPARK_SESSION_FORMAT).toContain("30 minutes of coached drills");
+    expect(PICKLPARK_SESSION_FORMAT).toContain("30 minutes of game play");
   });
 
   test("quotes the real paid amount (season price exists in Stripe)", () => {

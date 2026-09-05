@@ -121,7 +121,7 @@ test.describe("child PII egress (registration path)", () => {
           group_label: "Red & Orange Ball",
           group_time: "3:00–4:00 PM",
           season_title: "Next Gen Pickl Park Saturday Season",
-          season_label: "October 3 – November 7, 2026",
+          season_label: "September 19 – October 24, 2026",
           venue: "The Pickl Park, 355 Ballenger Center Dr, Frederick, MD 21703",
           parent_email: "parent@example.com",
           emergency_name: "Emergency Person",

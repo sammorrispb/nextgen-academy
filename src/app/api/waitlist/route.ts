@@ -219,10 +219,8 @@ export async function POST(request: NextRequest) {
   // Same offers the empty-state block renders — a waitlist confirmation is the
   // one message these parents consented to, and most never opt into marketing,
   // so it has to carry what they can act on today.
-  const offersHtml = buildOpenNowOffers(
-    new Date().toISOString().slice(0, 10),
-    openNowFlags(),
-  )
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const offersHtml = buildOpenNowOffers(todayIso, openNowFlags(todayIso))
     .map(
       (offer) => `
     <div style="background: #0C1F47; padding: 18px 20px; border-radius: 8px; margin: 0 0 12px;">
