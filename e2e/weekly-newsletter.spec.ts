@@ -19,6 +19,19 @@ import {
   FALL_SEASON_TITLE,
 } from "../src/data/fall-season-2026";
 import {
+  PICKLPARK_INDOOR_NOTE,
+  PICKLPARK_SATURDAYS,
+  PICKLPARK_SEASON_LABEL,
+  PICKLPARK_SEASON_WEEKS,
+  PICKLPARK_SESSION_FORMAT,
+} from "../src/data/picklpark-2026";
+import {
+  PICKLPARK_SEASON_GROUPS,
+  PICKLPARK_SEASON_PRICE_USD,
+  PICKLPARK_SEASON_TITLE,
+  picklParkSeasonSlotsFor,
+} from "../src/data/picklpark-season-2026";
+import {
   COACH_PHONE_DISPLAY,
   WHATSAPP_LD_GROUP_URL,
   WHATSAPP_NGA_GROUP_URL,
@@ -600,6 +613,137 @@ test.describe("weekly newsletter — fall season block", () => {
         spotsLeft: null,
       }),
     ).toBe("");
+  });
+});
+
+test.describe("weekly newsletter — Pickl Park season block", () => {
+  // The second fall option (Saturdays, indoors, Frederick). Mirrors what the
+  // cron builds from picklpark-2026.ts + picklpark-season-2026.ts, so a change
+  // to dates, price, venue or the drills/games split shows up here first.
+  const picklParkSeason = {
+    title: PICKLPARK_SEASON_TITLE,
+    seasonLabel: PICKLPARK_SEASON_LABEL,
+    weeks: PICKLPARK_SEASON_WEEKS,
+    venueLine: "The Pickl Park, Frederick, MD",
+    priceUsd: PICKLPARK_SEASON_PRICE_USD,
+    sessionFormat: PICKLPARK_SESSION_FORMAT,
+    indoorNote: PICKLPARK_INDOOR_NOTE,
+    groups: PICKLPARK_SEASON_GROUPS.map((g) => ({
+      label: g.label,
+      timeLabel: g.timeLabel,
+      spotsLeft: picklParkSeasonSlotsFor(g.group),
+    })),
+    url: `${ORIGIN}/picklpark`,
+  };
+  const fallSeason = {
+    title: FALL_SEASON_TITLE,
+    seasonLabel: FALL_SEASON_LABEL,
+    weeks: FALL_SEASON_WEEKS,
+    venueLine: "Walter Johnson High School, Bethesda, MD",
+    priceUsd: FALL_SEASON_PRICE_USD,
+    groups: FALL_SEASON_GROUPS.map((g) => ({
+      label: g.label,
+      timeLabel: g.timeLabel,
+      spotsLeft: fallSeasonSlotsFor(g.group),
+    })),
+    url: `${ORIGIN}/fall`,
+  };
+
+  test("hides the block when the season isn't being promoted — absent or null", () => {
+    for (const input of [
+      baseInput,
+      { ...baseInput, picklParkSeason: null },
+    ] as WeeklyNewsletterInput[]) {
+      expect(weeklyNewsletterHtml(input)).not.toContain("Pickl Park");
+      expect(weeklyNewsletterText(input)).not.toContain("Pickl Park");
+    }
+  });
+
+  test("renders dates, venue, both bands, the drills/games split, the indoor promise, price and CTA", () => {
+    const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason };
+    for (const rendered of [
+      weeklyNewsletterHtml(input),
+      weeklyNewsletterText(input),
+    ]) {
+      expect(rendered).toContain("Pickl Park Saturday season");
+      expect(rendered).toContain(PICKLPARK_SEASON_LABEL);
+      expect(rendered).toContain("The Pickl Park, Frederick, MD");
+      // HTML escapes the ampersand, plain text does not — either form is the band.
+      expect(
+        rendered.includes("Red &amp; Orange Ball") ||
+          rendered.includes("Red & Orange Ball"),
+      ).toBe(true);
+      expect(
+        rendered.includes("Green &amp; Yellow Ball") ||
+          rendered.includes("Green & Yellow Ball"),
+      ).toBe(true);
+      expect(rendered).toContain("Saturdays 3:00–4:00 PM");
+      expect(rendered).toContain("Saturdays 4:00–5:00 PM");
+      expect(rendered).toContain(PICKLPARK_SESSION_FORMAT);
+      // $225 buys 60-minute blocks here against Walter Johnson's 90 — the
+      // indoor promise is the reason, and it has to travel with the price.
+      expect(rendered).toContain(PICKLPARK_INDOOR_NOTE);
+      expect(rendered).toContain(`$${PICKLPARK_SEASON_PRICE_USD}`);
+      expect(rendered).toContain(`${ORIGIN}/picklpark`);
+    }
+  });
+
+  test("the season the email advertises is the season in the data files", () => {
+    expect(PICKLPARK_SATURDAYS).toHaveLength(PICKLPARK_SEASON_WEEKS);
+    expect(PICKLPARK_SEASON_LABEL).toContain("September 19");
+    expect(PICKLPARK_SEASON_GROUPS.map((g) => g.label)).toEqual([
+      "Red & Orange Ball",
+      "Green & Yellow Ball",
+    ]);
+    expect(PICKLPARK_SESSION_FORMAT).toContain("30 minutes of coached drills");
+  });
+
+  test("sits directly under the fall block and above this week's sessions", () => {
+    const html = weeklyNewsletterHtml({ ...baseInput, fallSeason, picklParkSeason });
+    const fallAt = html.indexOf("Fall season");
+    const picklParkAt = html.indexOf("Pickl Park Saturday season");
+    const sessionsAt = html.indexOf("This week&rsquo;s sessions");
+    expect(fallAt).toBeGreaterThan(-1);
+    expect(picklParkAt).toBeGreaterThan(fallAt);
+    expect(picklParkAt).toBeLessThan(sessionsAt);
+  });
+
+  test("leads the issue on its own when the fall season is not promoted", () => {
+    const html = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
+    expect(html).not.toContain("Fall season");
+    const picklParkAt = html.indexOf("Pickl Park Saturday season");
+    expect(picklParkAt).toBeGreaterThan(-1);
+    expect(picklParkAt).toBeLessThan(html.indexOf("This week&rsquo;s sessions"));
+  });
+
+  test("a full band reads as full and the seat line never publishes capacity", () => {
+    const html = weeklyNewsletterHtml({
+      ...baseInput,
+      picklParkSeason: {
+        ...picklParkSeason,
+        groups: [
+          { ...picklParkSeason.groups[0], spotsLeft: 2 },
+          { ...picklParkSeason.groups[1], spotsLeft: 0 },
+        ],
+      },
+    });
+    expect(html).toContain("Filling up");
+    expect(html).toContain("Full — ask about the sub list");
+    expect(html).not.toMatch(/\d+ of \d+ spots left/);
+    expect(html).not.toMatch(/\d+ spots open/);
+  });
+
+  test("an unreadable roster prints no seat status for a band", () => {
+    const html = weeklyNewsletterHtml({
+      ...baseInput,
+      picklParkSeason: {
+        ...picklParkSeason,
+        groups: picklParkSeason.groups.map((g) => ({ ...g, spotsLeft: null })),
+      },
+    });
+    expect(html).toContain("Saturdays 3:00–4:00 PM");
+    expect(html).not.toContain("Spots open");
+    expect(html).not.toContain("Full — ask about the sub list");
   });
 });
 

@@ -164,9 +164,15 @@ price without it is selling the shorter hour and none of the reason.
    Green & Yellow shape to 3–5 PM is folded into the same pass.) Open Court is
    picked up separately as an ordinary session row. The sync reads the LIVE
    feed, so running it before the deploy re-asserts the old dates.
-10. **Announce**: the weekly NGA newsletter has no derived Pickl Park block yet —
-    use an Approved Newsletter Drafts row **with `Expires At` set** (multi-week
-    content rule), or build the derived block mirroring the fall one later.
+10. ~~**Announce**: the weekly NGA newsletter has no derived Pickl Park block yet~~
+    **DONE 2026-09-06** — the Thursday newsletter carries a derived Pickl Park
+    block directly under the fall-season block (`loadPicklParkSeason` in
+    `src/app/api/cron/weekly-newsletter/route.ts`), gated on the same
+    registration window as `/picklpark`, with per-band seat status from the live
+    roster. It owns the subject line when it is the only season with seats, and
+    shares it ("Two fall seasons are open…") while the Sunday season is also
+    open. No Approved Drafts row is needed; use one only for a one-off note
+    (a coach intro, a photo day) and set `Expires At` if it must ship twice.
 
 ## Standing decisions / open calls
 

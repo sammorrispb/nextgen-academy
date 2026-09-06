@@ -84,6 +84,37 @@ export interface WeeklyNewsletterInput {
     /** UTM-stamped /fall registration URL. */
     url: string;
   } | null;
+  /**
+   * Pickl Park Saturday season — the SECOND fall option (Frederick, indoors),
+   * rendered directly under the fall block while its registration is open.
+   * Same rules as `fallSeason`: a live Stripe price, so the block quotes it;
+   * seat counts from the live roster, fail-soft; null (or absent) hides it.
+   * The cron gates on the season's own registration window — open by default
+   * through the last Saturday, `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` as
+   * the kill switch (the opposite posture from the fall flag, on purpose).
+   * Optional rather than required so existing fixtures and callers keep
+   * type-checking; absent means "not promoted", exactly like null.
+   */
+  picklParkSeason?: {
+    title: string;
+    /** "September 19 – October 24, 2026" */
+    seasonLabel: string;
+    weeks: number;
+    /** "The Pickl Park, Frederick, MD" */
+    venueLine: string;
+    priceUsd: number;
+    /** "30 minutes of coached drills, then 30 minutes of game play" */
+    sessionFormat: string;
+    /**
+     * PICKLPARK_INDOOR_NOTE — the sentence that earns price parity with the
+     * outdoor MoCo season. A block that quotes $225 without it is selling the
+     * shorter hour and none of the reason.
+     */
+    indoorNote: string;
+    groups: NewsletterFallGroup[];
+    /** UTM-stamped /picklpark registration URL. */
+    url: string;
+  } | null;
   sessions: NewsletterSessionGroup[];
   /**
    * Open sessions beyond the weekly window, so parents can plan ahead.
@@ -167,15 +198,24 @@ export function fallSpotsLabel(g: NewsletterFallGroup): string {
   return seatStatusLabel(g.spotsLeft, { fullLabel: "Full — ask about the sub list" }) ?? "";
 }
 
-function fallGroupLine(g: NewsletterFallGroup): string {
+function seasonGroupLine(g: NewsletterFallGroup, dayWord: string): string {
   const spots = fallSpotsLabel(g);
-  return `Sundays ${g.timeLabel}${spots ? ` · ${spots}` : ""}`;
+  return `${dayWord} ${g.timeLabel}${spots ? ` · ${spots}` : ""}`;
+}
+
+function fallGroupLine(g: NewsletterFallGroup): string {
+  return seasonGroupLine(g, "Sundays");
+}
+
+function picklParkGroupLine(g: NewsletterFallGroup): string {
+  return seasonGroupLine(g, "Saturdays");
 }
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
     fallSeason,
+    picklParkSeason,
     sessions,
     laterSessions,
     openPolls,
@@ -216,6 +256,28 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
         .join("")}
       <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">$${fallSeason.priceUsd} per player for the full season &middot; first come, first serve. Can&rsquo;t make all ${fallSeason.weeks}? Reply and we&rsquo;ll put you on the sub list.</p>
       <p style="margin:14px 0 0 0;"><a href="${fallSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">Register for the season &rarr;</a></p>
+    </div>`
+    : "";
+
+  // Pickl Park Saturday season — the other fall option, right under the fall
+  // block. Derived from picklpark-2026.ts + picklpark-season-2026.ts by the
+  // cron for the same reason: a season that a family can only buy once must
+  // never fall off the issue the way an Approved Notion row can.
+  const picklParkBlock = picklParkSeason
+    ? `
+    <div style="${s.cardAccent}">
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturday season &mdash; registration is open</p>
+      <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(picklParkSeason.title)} &mdash; ${escape(picklParkSeason.seasonLabel)}</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${picklParkSeason.weeks} Saturdays indoors at ${escape(picklParkSeason.venueLine)} &mdash; every ball color welcome. Each hour is ${escape(picklParkSeason.sessionFormat)}, and the games run as a rotating-partner round robin, so your kid plays with everyone in their group across the season. One registration covers all ${picklParkSeason.weeks} Saturdays.</p>
+      ${picklParkSeason.groups
+        .map(
+          (g) =>
+            `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;"><strong>${escape(g.label)}</strong> &mdash; <span style="color:${c.muted};">${escape(picklParkGroupLine(g))}</span></p>`,
+        )
+        .join("")}
+      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(picklParkSeason.indoorNote)}</p>
+      <p style="margin:8px 0 0 0;color:${c.muted};font-size:13px;">$${picklParkSeason.priceUsd} per player for the full season &middot; first come, first serve. Can&rsquo;t make all ${picklParkSeason.weeks}? Reply and we&rsquo;ll put you on the sub list.</p>
+      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">Register for the Saturday season &rarr;</a></p>
     </div>`
     : "";
 
@@ -376,6 +438,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 
     ${fallBlock}
 
+    ${picklParkBlock}
+
     ${sessionBlock}
 
     ${laterBlock}
@@ -417,6 +481,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   const {
     parentFirst,
     fallSeason,
+    picklParkSeason,
     sessions,
     laterSessions,
     openPolls,
@@ -456,6 +521,25 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
       "",
       `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.`,
       `Register for the season: ${fallSeason.url}`,
+      "",
+    );
+  }
+
+  if (picklParkSeason) {
+    lines.push(
+      "Pickl Park Saturday season — registration is open:",
+      `${picklParkSeason.title} — ${picklParkSeason.seasonLabel}`,
+      `${picklParkSeason.weeks} Saturdays indoors at ${picklParkSeason.venueLine} — every ball color welcome. Each hour is ${picklParkSeason.sessionFormat}, and the games run as a rotating-partner round robin, so your kid plays with everyone in their group across the season. One registration covers all ${picklParkSeason.weeks} Saturdays.`,
+      "",
+    );
+    for (const g of picklParkSeason.groups) {
+      lines.push(`  ${g.label} — ${picklParkGroupLine(g)}`);
+    }
+    lines.push(
+      "",
+      picklParkSeason.indoorNote,
+      `$${picklParkSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${picklParkSeason.weeks}? Reply and we'll put you on the sub list.`,
+      `Register for the Saturday season: ${picklParkSeason.url}`,
       "",
     );
   }
