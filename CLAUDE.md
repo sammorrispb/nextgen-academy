@@ -267,6 +267,19 @@ reads plus the season's own last Sunday, so it retires itself. It quotes the rea
 counts come from the live roster and fail SOFT: a null from `countFallRegistrations`
 prints the group size, never a fabricated count.
 
+**The Pickl Park Saturday season rides directly under the fall block (2026-09-06).** Same
+contract, second fall option: rendered from `picklpark-2026.ts` + `picklpark-season-2026.ts`
+(title, dates, `PICKLPARK_SESSION_FORMAT`, `PICKLPARK_INDOOR_NOTE`, the two bands, $225),
+gated on the season's own registration window (`picklParkRegistrationOpen()` — open by
+default through the last Saturday, `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` as the kill
+switch, the opposite posture from the fall flag), seat status per band from
+`countPicklParkRegistrations` failing SOFT to no status. The subject line names whichever
+season still has seats: both open → "Two fall seasons are open — Sundays in Bethesda,
+Saturdays in Frederick"; fall only → the existing subject; Pickl Park only → "Saturday
+season at The Pickl Park is open — Next Gen". `picklParkSeason` is optional on
+`WeeklyNewsletterInput` (absent = null = not promoted) so older fixtures keep compiling.
+Pinned by the "Pickl Park season block" tests in `e2e/weekly-newsletter.spec.ts`.
+
 **Two stale-content rules the same issue taught us.** (1) Camps come from
 `upcomingCamps(todayIso)` — `startDate > today`, NOT `endDate >= today`, which kept a
 camp in the issue on its own final morning. (2) The plan-ahead block (`laterSessions`,
@@ -348,6 +361,7 @@ The one-shot notice to families who had **already paid** when the season moved f
 - **`SessionLevel` gained `"All Levels"`** (`src/lib/notion-sessions.ts`) so one mixed Open Court row exists instead of four colour courts. It is deliberately **outside** `ALL_LEVELS` (it's `OPEN_LEVEL` in `recurring-templates.ts`) — listing it inside would seed a fifth court on every all-levels evening. **Every colour-matching caller must funnel through `onColorLadder()`**, which EXCLUDES open rows rather than aliasing them to `null`: `post-eval-followup-run` treats a null level as a match for any rally-ready kid, so aliasing would have mailed Rockville families an invite to Frederick. Applied in crew-interest, crew-followup, crew-autoreserve and post-eval.
 - **The Pickl Park Saturday template is the ONLY active `recurring-templates.ts` entry** since the 2026-08-23 blackout. Different venue, different county, different day from every dark MoCo template, so it cannot re-stock them — pinned by `e2e/recurring-sessions.spec.ts`.
 - **Egress:** the checkout route reads Notion (roster + waiver) and writes Stripe metadata only — the roster row is the webhook's job. `NOTION_PICKLPARK_REGS_DB_ID` is a child-PII destination, pinned by `e2e/invariant-picklpark-registration-pii-egress.spec.ts` (checkout side) + `e2e/invariant-child-pii-egress.spec.ts` (webhook side).
+- **The weekly newsletter carries a derived Pickl Park block (2026-09-06)** directly under the fall-season block, gated on the same registration window as the page, with per-band seat status from the live roster. See "Weekly newsletter blocks" above. No Approved Drafts row is needed to keep the season in the Thursday issue.
 - **Registration is OPEN BY DEFAULT (2026-09-05) — the flag is a kill switch, not a launch flag.** `STRIPE_PICKLPARK_SEASON_PRICE_ID` + `NOTION_PICKLPARK_REGS_DB_ID` are SET in production (2026-08-31). `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` used to be the third leg of a ships-dark trio, held until after the first Open Court so the season never sold cold; Sam's 2026-09-05 call to list it as a fall option with sign-ups supersedes that hold, and with a Sep 19 start there was no room to wait. So `picklParkRegistrationOpen()` (`src/lib/picklpark-registration-window.ts`) renders the form while today ≤ the season's last Saturday whenever the flag is **unset or `true`**; **any other value (`false`, `no`, `0`) closes it** — fail-closed on a typo, because an operator setting it is trying to stop sales. The same gate drives the empty-state offer card and the `/fall` cross-link. `/fall` keeps the opposite, ships-dark posture on purpose (`NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true"`), and `/api/checkout-picklpark` still 503s if the price env is missing. Pinned by `e2e/picklpark-registration-window.spec.ts`. **The write path is proven end to end** — a live $0 smoke test (single-use 100%-off promo) landed a roster row, a Player CRM row, an Open Brain activity and both emails, then was reversed; the one leg it could NOT exercise is `charge.refunded`, since a $0 checkout mints no PaymentIntent. **Go/no-go minimum: 8 paid across both bands, decided at T−72h** — below that, cancel and refund. Full ops detail: `docs/picklpark-season-runbook.md`.
 - **Saturday afternoon is not a named cell on the Pickl Park rate card** — the court-time proposal covers Mon–Wed mornings and Tue–Thu evenings only, and its own rule is that an unnamed cell defaults to the higher neighbour. Settle it with Amar in the same conversation as the others.
 - **SEO posture unchanged** — one venue addition, not a market expansion. No Frederick city page; `SERVICE_AREAS`/`NGA_POSTAL_ADDRESS` stay Montgomery County. `LEAD_AREAS` (`src/data/lead-areas.ts`, now shared by `/api/waitlist` and `EmptyStateWaitlist` instead of duplicated) does carry `Frederick`.

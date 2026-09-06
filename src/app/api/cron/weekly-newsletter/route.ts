@@ -31,6 +31,22 @@ import {
 } from "@/data/fall-season-2026";
 import { countFallRegistrations } from "@/lib/notion-fall-registrations";
 import {
+  PICKLPARK_INDOOR_NOTE,
+  PICKLPARK_PUBLIC_AREA,
+  PICKLPARK_SEASON_LABEL,
+  PICKLPARK_SEASON_WEEKS,
+  PICKLPARK_SESSION_FORMAT,
+  PICKLPARK_VENUE_SHORT,
+} from "@/data/picklpark-2026";
+import {
+  PICKLPARK_SEASON_GROUPS,
+  PICKLPARK_SEASON_PRICE_USD,
+  PICKLPARK_SEASON_TITLE,
+  picklParkSeasonSlotsFor,
+} from "@/data/picklpark-season-2026";
+import { countPicklParkRegistrations } from "@/lib/notion-picklpark-registrations";
+import { picklParkRegistrationOpen } from "@/lib/picklpark-registration-window";
+import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
   type NewsletterFallGroup,
@@ -215,12 +231,67 @@ async function loadFallSeason(
   };
 }
 
-/** True while at least one fall group still has a seat we know about. */
-function fallHasOpenSeats(
-  fallSeason: { groups: NewsletterFallGroup[] } | null,
+/**
+ * Pickl Park Saturday season block input, or null when it shouldn't be
+ * promoted. Gated on the SAME window /picklpark reads (open by default
+ * through the last Saturday, NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN as the
+ * kill switch), so the email can never advertise a form the page isn't
+ * showing. Seat counts fail SOFT exactly like the fall block: a Notion miss
+ * prints no status rather than a count that might be wrong.
+ */
+async function loadPicklParkSeason(
+  todayIso: string,
+  utmCampaign: string,
+): Promise<{
+  title: string;
+  seasonLabel: string;
+  weeks: number;
+  venueLine: string;
+  priceUsd: number;
+  sessionFormat: string;
+  indoorNote: string;
+  groups: NewsletterFallGroup[];
+  url: string;
+} | null> {
+  if (
+    !picklParkRegistrationOpen(
+      todayIso,
+      process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN,
+    )
+  ) {
+    return null;
+  }
+
+  const groups: NewsletterFallGroup[] = [];
+  for (const option of PICKLPARK_SEASON_GROUPS) {
+    const taken = await countPicklParkRegistrations(option.group);
+    groups.push({
+      label: option.label,
+      timeLabel: option.timeLabel,
+      spotsLeft:
+        taken === null ? null : picklParkSeasonSlotsFor(option.group) - taken,
+    });
+  }
+
+  return {
+    title: PICKLPARK_SEASON_TITLE,
+    seasonLabel: PICKLPARK_SEASON_LABEL,
+    weeks: PICKLPARK_SEASON_WEEKS,
+    venueLine: `${PICKLPARK_VENUE_SHORT}, ${PICKLPARK_PUBLIC_AREA}`,
+    priceUsd: PICKLPARK_SEASON_PRICE_USD,
+    sessionFormat: PICKLPARK_SESSION_FORMAT,
+    indoorNote: PICKLPARK_INDOOR_NOTE,
+    groups,
+    url: appendUtm(`${SITE_ORIGIN}/picklpark`, "picklpark-season", utmCampaign),
+  };
+}
+
+/** True while at least one group in a season still has a seat we know about. */
+function seasonHasOpenSeats(
+  season: { groups: NewsletterFallGroup[] } | null,
 ): boolean {
-  if (!fallSeason) return false;
-  return fallSeason.groups.some((g) => g.spotsLeft === null || g.spotsLeft > 0);
+  if (!season) return false;
+  return season.groups.some((g) => g.spotsLeft === null || g.spotsLeft > 0);
 }
 
 export const GET = withCronAlert("weekly-newsletter", async () => {
@@ -334,6 +405,8 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
 
   // Fall season — the lead block and, while seats remain, the subject line.
   const fallSeason = await loadFallSeason(todayIso, utmCampaign);
+  // Pickl Park Saturday season — the second fall option, right under it.
+  const picklParkSeason = await loadPicklParkSeason(todayIso, utmCampaign);
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const resend = resendApiKey ? new Resend(resendApiKey) : null;
@@ -353,9 +426,20 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   // simply runs again next week. It steps aside the moment both groups fill.
   // Below that, camp outranks polls/plan-ahead/tip but never open courts — a
   // bookable session in the next 9 days is the more urgent ask.
-  const subject = fallHasOpenSeats(fallSeason)
-    ? "Fall season registration is open — Next Gen"
-    : sessions.length
+  //
+  // The Pickl Park Saturday season is the same kind of one-shot buy, so it
+  // owns the subject on the same terms: both open → say so; only one open →
+  // that one. Bethesda families who can't do Sundays and Frederick families
+  // who never heard of the Sunday season each get a subject that names theirs.
+  const fallOpen = seasonHasOpenSeats(fallSeason);
+  const picklParkOpen = seasonHasOpenSeats(picklParkSeason);
+  const subject = fallOpen && picklParkOpen
+    ? "Two fall seasons are open — Sundays in Bethesda, Saturdays in Frederick"
+    : fallOpen
+      ? "Fall season registration is open — Next Gen"
+      : picklParkOpen
+        ? "Saturday season at The Pickl Park is open — Next Gen"
+        : sessions.length
       ? "Open courts this week — Next Gen"
       : camps.length
         ? "Camp is coming up — Next Gen"
@@ -380,6 +464,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     const input = {
       parentFirst,
       fallSeason,
+      picklParkSeason,
       sessions,
       laterSessions,
       openPolls,
@@ -540,6 +625,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     fall_registration_open: fallSeason !== null,
     fall_spots_left: fallSeason
       ? fallSeason.groups.map((g) => `${g.label}:${g.spotsLeft ?? "unknown"}`).join(" ")
+      : "",
+    picklpark_registration_open: picklParkSeason !== null,
+    picklpark_spots_left: picklParkSeason
+      ? picklParkSeason.groups.map((g) => `${g.label}:${g.spotsLeft ?? "unknown"}`).join(" ")
       : "",
     open_polls: openPolls.length,
     news_items: news.length,
