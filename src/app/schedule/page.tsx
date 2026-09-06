@@ -35,6 +35,7 @@ import {
   PICKLPARK_PUBLIC_AREA,
   PICKLPARK_SEASON_LABEL,
   PICKLPARK_SEASON_WEEKS,
+  PICKLPARK_SESSION_FORMAT,
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
 import {
@@ -231,7 +232,7 @@ export default async function SchedulePage() {
           >
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
-                New &middot; Frederick
+                Fall 2026 Season &middot; Frederick
               </p>
               <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
                 {PICKLPARK_SEASON_WEEKS === 6 ? "Six" : PICKLPARK_SEASON_WEEKS}{" "}
@@ -246,7 +247,8 @@ export default async function SchedulePage() {
                     {g.label} {g.timeLabel}
                   </span>
                 ))}{" "}
-                &middot; ${PICKLPARK_SEASON_PRICE_USD} per player. Open Court{" "}
+                &middot; ${PICKLPARK_SEASON_PRICE_USD} per player. Each hour is{" "}
+                {PICKLPARK_SESSION_FORMAT}. Open Court{" "}
                 {PICKLPARK_OPEN_COURT_START_TIME}&ndash;
                 {PICKLPARK_OPEN_COURT_END_TIME.replace(" PM", "")} PM every
                 Saturday, all levels, drop in.

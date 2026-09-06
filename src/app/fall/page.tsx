@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import FallRegistrationForm from "@/components/FallRegistrationForm";
 import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import JsonLd from "@/components/JsonLd";
@@ -19,6 +20,17 @@ import {
 } from "@/data/fall-season-2026";
 import { countFallRegistrations } from "@/lib/notion-fall-registrations";
 import { familySiteUrl } from "@/lib/urls";
+import {
+  PICKLPARK_PUBLIC_AREA,
+  PICKLPARK_SEASON_LABEL,
+  PICKLPARK_SESSION_FORMAT,
+  PICKLPARK_VENUE_SHORT,
+} from "@/data/picklpark-2026";
+import { PICKLPARK_SEASON_GROUPS } from "@/data/picklpark-season-2026";
+import {
+  picklParkRegistrationOpen,
+  picklParkTodayET,
+} from "@/lib/picklpark-registration-window";
 
 // Converted from the demand-sizing survey to the season REGISTRATION page once
 // Sam confirmed the terms (2026-08-14) and a real Stripe price backs checkout —
@@ -55,6 +67,12 @@ function sundayLabel(iso: string): string {
 export default async function FallPage() {
   const registrationOpen =
     process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true";
+  // The other fall option (Saturdays, indoors, Frederick). Reads the Pickl Park
+  // season's own gate, so the card retires the moment that season closes.
+  const picklParkOpen = picklParkRegistrationOpen(
+    picklParkTodayET(),
+    process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN,
+  );
 
   const spotsTaken: Partial<Record<FallSeasonGroup, number | null>> = {};
   if (registrationOpen) {
@@ -224,6 +242,37 @@ export default async function FallPage() {
               Venue: {FALL_VENUE}.
             </p>
           </div>
+
+          {picklParkOpen && (
+            <Link
+              href="/picklpark"
+              className="group mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/10 p-5 sm:p-6 hover:border-ngpa-lime transition-colors"
+            >
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
+                  Also this fall &middot; Saturdays in {PICKLPARK_PUBLIC_AREA}
+                </p>
+                <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
+                  Prefer Saturdays, or closer to Frederick? There&rsquo;s an
+                  indoor season too.
+                </p>
+                <p className="text-sm text-ngpa-muted mt-0.5">
+                  Six Saturdays at {PICKLPARK_VENUE_SHORT},{" "}
+                  {PICKLPARK_SEASON_LABEL} &middot;{" "}
+                  {PICKLPARK_SEASON_GROUPS.map((g, i) => (
+                    <span key={g.group}>
+                      {i > 0 && ", "}
+                      {g.label} {g.timeLabel}
+                    </span>
+                  ))}{" "}
+                  &middot; every ball color welcome, {PICKLPARK_SESSION_FORMAT}.
+                </p>
+              </div>
+              <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
+                See the Saturday season &rarr;
+              </span>
+            </Link>
+          )}
         </div>
       </section>
 

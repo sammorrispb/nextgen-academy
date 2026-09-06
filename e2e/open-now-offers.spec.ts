@@ -30,7 +30,7 @@ const LAST_SUNDAY = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
 const DAY_AFTER_SEASON = "2026-10-26";
 const LEAGUE_DEADLINE = LEAGUE_SEASONS[0].registrationDeadline;
 const LAST_SATURDAY = PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1];
-const DAY_AFTER_PICKLPARK = "2026-11-08";
+const DAY_AFTER_PICKLPARK = "2026-10-25";
 
 test.describe("buildOpenNowOffers", () => {
   test("the free evaluation is always offered", () => {

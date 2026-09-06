@@ -4,16 +4,23 @@
 // Johnson HS Sunday season); the two seasons run in parallel and share nothing
 // but the shape, so editing one can never move the other.
 //
-// SHAPE DECIDED (Sam, 2026-08-25; RESHAPED 2026-08-31): Saturdays at The Pickl
-// Park in Frederick, Oct 3 – Nov 7. The Saturday now runs 2–5 PM in three
-// one-hour blocks:
+// SHAPE DECIDED (Sam, 2026-08-25; RESHAPED 2026-08-31; MOVED EARLIER
+// 2026-09-05): Saturdays at The Pickl Park in Frederick, Sep 19 – Oct 24. The
+// Saturday runs 2–5 PM in three one-hour blocks:
 //
 //   2:00–3:00  Open Court — all levels, $20 drop-in, NOT part of this season.
 //              It is an ordinary NGA Sessions row (see recurring-templates.ts)
 //              so it inherits the whole drop-in stack, and it reaches the
 //              calendar through the sessions feed rather than from this file.
-//   3:00–4:00  Red & Orange Ball  ┐ the season proper — what /picklpark sells
-//   4:00–5:00  Green & Yellow Ball ┘
+//   3:00–4:00  Red & Orange Ball  ┐ the season proper — what /picklpark sells:
+//   4:00–5:00  Green & Yellow Ball ┘ 30 minutes of coached drills, then 30 of
+//                                    game play (PICKLPARK_SESSION_FORMAT below)
+//
+// 2026-09-05 (Sam): the season moved up two weeks, from Oct 3 – Nov 7 to
+// Sep 19 – Oct 24, and is sold as the second fall option beside the Walter
+// Johnson Sunday season rather than waiting for the Open Court hour to warm the
+// market first. Open Court still runs from Sep 12, so exactly one Open Court
+// precedes the first season Saturday.
 //
 // The season groups are BANDS, not single colors, because Frederick is a cold
 // market: the Player CRM holds zero families there, so nobody has been
@@ -29,10 +36,11 @@
 // single-venue addition, not an SEO market expansion — the site's positioning
 // stays MoCo.
 //
-// Oct 31 is Halloween. The season currently RUNS that Saturday (it ends at 5,
-// before trick-or-treat); if Sam decides to skip it instead, move "2026-10-31"
-// out of PICKLPARK_SATURDAYS and "2026-11-14" in — a one-file edit, before the
-// first confirmation email ships, since every email lists the dates.
+// Oct 31 is Halloween. Since the 2026-09-05 move it is no longer a season
+// Saturday — it is the one held MAKEUP date (a session there would end at 5,
+// before trick-or-treat, so it is usable). To hold Nov 7 instead, swap it in
+// PICKLPARK_MAKEUP_DATES — a one-file edit, best made before the first
+// confirmation email ships, since every email names the makeup date.
 
 import { PLAYERS_PER_PICKLEBALL_COURT } from "./venue-parking";
 
@@ -116,12 +124,12 @@ export const PICKLPARK_VENUE_SHORT = "The Pickl Park";
  * about, and a season is a hand-checked calendar decision anyway.
  */
 export const PICKLPARK_SATURDAYS = [
+  "2026-09-19",
+  "2026-09-26",
   "2026-10-03",
   "2026-10-10",
   "2026-10-17",
   "2026-10-24",
-  "2026-10-31",
-  "2026-11-07",
 ] as const;
 
 /**
@@ -130,10 +138,19 @@ export const PICKLPARK_SATURDAYS = [
  * closure or a coach out sick. The Walter Johnson season holds two dates
  * because it is outdoors and genuinely might not happen.
  */
-export const PICKLPARK_MAKEUP_DATES = ["2026-11-14"] as const;
+export const PICKLPARK_MAKEUP_DATES = ["2026-10-31"] as const;
 
 /** Human range for copy, e.g. email subject lines and page headers. */
-export const PICKLPARK_SEASON_LABEL = "October 3 – November 7, 2026";
+export const PICKLPARK_SEASON_LABEL = "September 19 – October 24, 2026";
+
+/**
+ * How each one-hour block runs (Sam, 2026-09-05). One string, reused by the
+ * page, the group cards, the schedule callout and the confirmation email, so
+ * a parent reads the same split everywhere and a later change is one edit.
+ * Drop it into a sentence: "Each hour is ${PICKLPARK_SESSION_FORMAT}, …".
+ */
+export const PICKLPARK_SESSION_FORMAT =
+  "30 minutes of coached drills, then 30 minutes of game play";
 
 /**
  * The one sentence that earns price parity with the outdoor Montgomery County

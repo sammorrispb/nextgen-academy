@@ -17,7 +17,7 @@ import {
  */
 export default function OpenNowOffers() {
   const todayIso = new Date().toISOString().slice(0, 10);
-  const offers = buildOpenNowOffers(todayIso, openNowFlags());
+  const offers = buildOpenNowOffers(todayIso, openNowFlags(todayIso));
 
   if (offers.length === 0) return null;
 
