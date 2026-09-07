@@ -1,48 +1,41 @@
-// Pickl Park Fall 2026 Saturday season config — the single source of truth for
-// the /picklpark registration page, its confirmation email, and the events
-// feed's Pickl Park items. Structural sibling of fall-2026.ts (the Walter
-// Johnson HS Sunday season); the two seasons run in parallel and share nothing
-// but the shape, so editing one can never move the other.
+// Pickl Park Fall 2026 Saturday — the SATURDAY ITSELF: its dates, venue,
+// makeup date and indoor promise. What is SOLD on that Saturday, and by whom,
+// lives in picklpark-leagues-2026.ts.
 //
-// SHAPE DECIDED (Sam, 2026-08-25; RESHAPED 2026-08-31; MOVED EARLIER
-// 2026-09-05): Saturdays at The Pickl Park in Frederick, Sep 19 – Oct 24. The
-// Saturday runs 2–5 PM in three one-hour blocks:
+// WHO SELLS IT CHANGED (Sam, 2026-09-07). NGA used to sell a $225 season here
+// — Red & Orange 3:00–4:00 and Green & Yellow 4:00–5:00, with a $20 all-levels
+// Open Court at 2:00 as the on-ramp. The Pickl Park now sells the Saturday
+// itself through podplay, as two six-week leagues:
 //
-//   2:00–3:00  Open Court — all levels, $20 drop-in, NOT part of this season.
-//              It is an ordinary NGA Sessions row (see recurring-templates.ts)
-//              so it inherits the whole drop-in stack, and it reaches the
-//              calendar through the sessions feed rather than from this file.
-//   3:00–4:00  Red & Orange Ball  ┐ the season proper — what /picklpark sells:
-//   4:00–5:00  Green & Yellow Ball ┘ 30 minutes of coached drills, then 30 of
-//                                    game play (PICKLPARK_SESSION_FORMAT below)
+//   2:00–3:00  Kid's Drill and Play (ages 8–13)  — replaces the Open Court hour
+//   3:00–4:30  Youth League (ages 10+)           — replaces BOTH season blocks
 //
-// 2026-09-05 (Sam): the season moved up two weeks, from Oct 3 – Nov 7 to
-// Sep 19 – Oct 24, and is sold as the second fall option beside the Walter
-// Johnson Sunday season rather than waiting for the Open Court hour to warm the
-// market first. Open Court still runs from Sep 12, so exactly one Open Court
-// precedes the first season Saturday.
+// So: `PICKLPARK_YOUTH_BLOCKS`, `PICKLPARK_OPEN_COURT_*`, the seat maps and
+// everything in picklpark-season-2026.ts describe products that NO LONGER RUN.
+// They are still imported by the retired checkout machinery (the Stripe
+// webhook branch, the success page, the cancel path) which stays on disk for
+// the historical rows; a separate cleanup removes them. NOTHING PUBLIC MAY
+// RENDER THEM — a surface that prints "Red & Orange Ball 3:00–4:00 PM" is
+// advertising a block that was cancelled. `picklpark-leagues.spec.ts` and the
+// consumers listed there are the guard.
 //
-// The season groups are BANDS, not single colors, because Frederick is a cold
-// market: the Player CRM holds zero families there, so nobody has been
-// evaluated and a four-way split would ask parents to self-select a level they
-// cannot know. Two bands is the same call MVF and the weekend drop-in
-// templates already make.
+// What is unchanged and still true: the six Saturdays (Sep 19 – Oct 24, and
+// yes 9/26 — podplay's listing showed only five, which is a podplay bug), the
+// Oct 31 makeup hold, the venue, and the indoors-so-every-week-runs promise.
+// Both leagues run all six.
 //
-// The Open Court hour running FIRST is deliberate — a family trying pickleball
-// for the first time at 2:00 watches the season groups play at 3:00, which is
-// the only moment on the calendar where the thing being sold is visible.
+// Structural sibling of fall-2026.ts (the Walter Johnson HS Sunday season);
+// the two run in parallel and share nothing but the shape, so editing one can
+// never move the other.
 //
-// This is NGA's first partner-venue season outside Montgomery County; it is a
-// single-venue addition, not an SEO market expansion — the site's positioning
-// stays MoCo.
-//
-// Oct 31 is Halloween. Since the 2026-09-05 move it is no longer a season
-// Saturday — it is the one held MAKEUP date (a session there would end at 5,
-// before trick-or-treat, so it is usable). To hold Nov 7 instead, swap it in
-// PICKLPARK_MAKEUP_DATES — a one-file edit, best made before the first
-// confirmation email ships, since every email names the makeup date.
+// Frederick is a cold market — the Player CRM held zero Frederick families
+// when this was planned. The Open Court hour was the on-ramp that fixed that;
+// with it retired, Kid's Drill and Play is now the entire entry point, and it
+// caps at 8–13. There is no Frederick on-ramp for a 6–7 or a 14–16 year old.
+// That is a known, accepted gap (Sam, 2026-09-07), not an oversight.
 
 import { PLAYERS_PER_PICKLEBALL_COURT } from "./venue-parking";
+import { PICKLPARK_LEAGUES } from "./picklpark-leagues-2026";
 
 /**
  * Pickleball courts NGA books per Saturday under the standing Pickl Park
@@ -54,9 +47,19 @@ export const PICKLPARK_PICKLEBALL_COURTS = 2;
 
 export const PICKLPARK_SEASON_WEEKS = 6;
 
-/** Season window — Red & Orange then Green & Yellow, back to back. */
-export const PICKLPARK_START_TIME = "3:00 PM";
-export const PICKLPARK_END_TIME = "5:00 PM";
+/**
+ * The Saturday's public window — first league on to last league off, DERIVED
+ * from picklpark-leagues-2026 so the calendar feed can never advertise an hour
+ * nobody is on court for.
+ *
+ * It used to be a typed 3:00–5:00 PM: the two NGA season blocks, with the $20
+ * Open Court hour at 2:00 deliberately EXCLUDED so the feed sold the season
+ * rather than the drop-in. Since 2026-09-07 the 2:00 hour IS a league (Kid's
+ * Drill and Play), so the window legitimately opens at 2:00 and closes at 4:30.
+ */
+export const PICKLPARK_START_TIME = PICKLPARK_LEAGUES[0].startTime;
+export const PICKLPARK_END_TIME =
+  PICKLPARK_LEAGUES[PICKLPARK_LEAGUES.length - 1].endTime;
 
 /**
  * The Open Court hour that precedes the season. Here only so the page and the

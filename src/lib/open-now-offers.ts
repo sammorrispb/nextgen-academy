@@ -9,17 +9,13 @@ import {
   FALL_SEASON_PRICE_USD,
 } from "@/data/fall-season-2026";
 import {
-  PICKLPARK_SATURDAYS,
   PICKLPARK_SEASON_LABEL,
   PICKLPARK_VENUE_SHORT,
   PICKLPARK_PUBLIC_AREA,
 } from "@/data/picklpark-2026";
-import {
-  PICKLPARK_SEASON_GROUPS,
-  PICKLPARK_SEASON_PRICE_USD,
-} from "@/data/picklpark-season-2026";
+import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
 import { LEAGUE_SEASONS } from "@/data/leagues";
-import { picklParkRegistrationOpen } from "@/lib/picklpark-registration-window";
+import { picklParkLeaguesOpen } from "@/lib/picklpark-registration-window";
 
 /**
  * What a parent can act on TODAY — shared by the empty-state offer block and
@@ -54,7 +50,7 @@ export function buildOpenNowOffers(
   todayIso: string,
   flags: OpenNowFlags,
 ): OpenNowOffer[] {
-  const { fallRegistrationOpen, picklParkRegistrationOpen } = flags;
+  const { fallRegistrationOpen } = flags;
   const offers: OpenNowOffer[] = [
     {
       href: "/free-evaluation",
@@ -82,19 +78,20 @@ export function buildOpenNowOffers(
     });
   }
 
-  // Same gate /picklpark reads: the env flag AND the season's own last
-  // Saturday, so the card retires itself the way the fall one does.
-  const lastSaturday = PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1];
-  if (picklParkRegistrationOpen && todayIso <= lastSaturday) {
-    const groupLine = PICKLPARK_SEASON_GROUPS.map(
-      (g) => `${g.label} ${g.timeLabel}`,
+  // Pickl Park no longer keys off a registration flag — NGA doesn't sell it.
+  // The leagues are advertised while the Saturday is still running, so this
+  // card retires itself on the last Saturday the way the fall one does.
+  // No price: The Pickl Park quotes at the point of sale.
+  if (picklParkLeaguesOpen(todayIso)) {
+    const leagueLine = PICKLPARK_LEAGUES.map(
+      (l) => `${l.title} ${l.timeLabel} (${l.ageLabel})`,
     ).join(" · ");
     offers.push({
       href: "/picklpark",
       eyebrow: "Registering now",
-      title: "Pickl Park Saturday season",
-      detail: `Six Saturdays indoors, ${PICKLPARK_SEASON_LABEL}, at ${PICKLPARK_VENUE_SHORT} in ${PICKLPARK_PUBLIC_AREA}. ${groupLine}. $${PICKLPARK_SEASON_PRICE_USD} for the season.`,
-      cta: "See the season",
+      title: "Pickl Park Saturday leagues",
+      detail: `Six Saturdays indoors, ${PICKLPARK_SEASON_LABEL}, at ${PICKLPARK_VENUE_SHORT} in ${PICKLPARK_PUBLIC_AREA}. ${leagueLine}. Coached by Next Gen, registered with The Pickl Park.`,
+      cta: "See both leagues",
     });
   }
 
@@ -117,18 +114,24 @@ export function buildOpenNowOffers(
 }
 
 /**
- * The same gates `/fall` and `/picklpark` read. Fall is still the ships-dark
- * flag; Pickl Park is open by default through its last Saturday with the flag
- * as a kill switch (see picklpark-registration-window.ts), which is why this
- * needs today's date.
+ * The gate `/fall` reads. Fall is still the ships-dark flag.
+ *
+ * `picklParkRegistrationOpen` is retained on the shape but is always false —
+ * NGA stopped selling the Pickl Park season on 2026-09-07 and the Saturday's
+ * own card is now gated on `picklParkLeaguesOpen(todayIso)` inside
+ * `buildOpenNowOffers`, not on this flag. Kept rather than removed so the
+ * field's disappearance can't silently change a caller's object literal.
  */
-export function openNowFlags(todayIso: string): OpenNowFlags {
+export function openNowFlags(
+  ...ignored: [todayIso?: string]
+): OpenNowFlags {
+  // `todayIso` is accepted and discarded: the Pickl Park card it used to gate
+  // now reads the calendar inside buildOpenNowOffers, and the fall flag is
+  // date-independent. Kept in the signature so existing call sites compile.
+  void ignored;
   return {
     fallRegistrationOpen:
       process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true",
-    picklParkRegistrationOpen: picklParkRegistrationOpen(
-      todayIso,
-      process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN,
-    ),
+    picklParkRegistrationOpen: false,
   };
 }

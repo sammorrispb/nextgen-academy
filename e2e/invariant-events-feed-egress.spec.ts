@@ -188,16 +188,27 @@ test.describe("events feed — egress invariants", () => {
     }
   });
 
-  test("the feed does NOT claim the Open Court hour — sessions own it", () => {
-    // Open Court is an ordinary Sessions-DB row and already reaches the feed
-    // through buildSessionEvents. Emitting it here too would double-create it
-    // on the calendar mirror, the same reason the MVF tournament is absent.
+  test("the Saturday window now opens at 2:00 — the hour is a league, not a drop-in", () => {
+    // INVERTED 2026-09-07. This used to assert the feed did NOT start at
+    // PICKLPARK_OPEN_COURT_START_TIME: the 2:00 hour was a $20 Open Court
+    // drop-in, an ordinary Sessions-DB row that already reached the feed
+    // through buildSessionEvents, so emitting it here too would double-create
+    // it on the calendar mirror.
+    //
+    // The Open Court is retired (its recurring template is inactive) and The
+    // Pickl Park now sells that hour as the Kid's Drill and Play league. It is
+    // no longer a Sessions row, so there is nothing to double-create — and a
+    // feed that still began at 3:00 would hide a league from the calendar.
     const feed = buildEventsFeed(
       { sessions: [] },
       "https://nextgenpbacademy.com",
     );
-    for (const item of feed.filter((i) => i.source === "picklpark")) {
-      expect(item.startTime).not.toBe(PICKLPARK_OPEN_COURT_START_TIME);
+    const picklpark = feed.filter((i) => i.source === "picklpark");
+    expect(picklpark.length).toBeGreaterThan(0);
+    for (const item of picklpark) {
+      expect(item.startTime).toBe(PICKLPARK_OPEN_COURT_START_TIME);
+      expect(item.startTime).toBe("2:00 PM");
+      expect(item.endTime).toBe("4:30 PM");
     }
   });
 

@@ -108,6 +108,12 @@ export default function RootLayout({
             { "@type": "City", name: "Chevy Chase" },
             { "@type": "City", name: "Olney" },
             { "@type": "City", name: "Silver Spring" },
+            // Out-of-county partner venue: NGA coaches the Saturday leagues at
+            // The Pickl Park (Sam, 2026-09-07). See EXTENDED_SERVICE_AREAS in
+            // lib/seo.ts for why this widens areaServed but not the MoCo city
+            // ladder that drives the footer and the landing pages.
+            { "@type": "AdministrativeArea", name: "Frederick County, MD" },
+            { "@type": "City", name: "Frederick" },
           ],
           founder: [
             { "@type": "Person", name: "Sam Morris" },

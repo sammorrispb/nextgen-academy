@@ -23,6 +23,26 @@ export const SERVICE_AREAS = [
 export type ServiceCity = (typeof SERVICE_AREAS)[number];
 
 /**
+ * Areas served OUTSIDE Montgomery County, where NGA coaches at a named partner
+ * venue. Separate from SERVICE_AREAS on purpose (Sam, 2026-09-07).
+ *
+ * Frederick joined when NGA began coaching the Saturday leagues at The Pickl
+ * Park. It belongs in `areaServed` — a family in Frederick genuinely can bring
+ * their kid to us. It does NOT belong in SERVICE_AREAS, which is the MoCo city
+ * ladder that drives the footer's "Areas we serve" block, the per-city
+ * "nearby areas" cross-links and the city landing pages: Frederick has no
+ * landing page, and listing it as "nearby" to Bethesda would be a lie that
+ * dilutes nine tuned local-SEO pages.
+ *
+ * So: the structured data widens, the local-SEO surface doesn't. Give an
+ * out-of-county area its own landing page and it graduates to its own entry
+ * here with a slug — not into SERVICE_AREAS.
+ */
+export const EXTENDED_SERVICE_AREAS = [
+  { county: "Frederick County, MD", city: "Frederick" },
+] as const;
+
+/**
  * The live city landing pages (subset of SERVICE_AREAS with a dedicated
  * route). ONE source of truth for the sitemap, the footer "Areas we serve"
  * block, and the per-city "nearby areas" links — a new city page ships by
@@ -66,11 +86,18 @@ export const NGA_POSTAL_ADDRESS = {
   addressCountry: "US",
 } as const;
 
-/** Wraps SERVICE_AREAS into schema.org City entities, county first. */
+/**
+ * Wraps the service area into schema.org entities, county first: Montgomery
+ * County and its cities, then each out-of-county area NGA actually coaches in.
+ */
 export function areaServedJsonLd() {
   return [
     { "@type": "AdministrativeArea", name: "Montgomery County, MD" },
     ...SERVICE_AREAS.map((c) => ({ "@type": "City" as const, name: c })),
+    ...EXTENDED_SERVICE_AREAS.flatMap((a) => [
+      { "@type": "AdministrativeArea" as const, name: a.county },
+      { "@type": "City" as const, name: a.city },
+    ]),
   ];
 }
 

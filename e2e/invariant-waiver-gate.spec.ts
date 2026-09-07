@@ -122,8 +122,15 @@ test.describe("all paid checkout routes — gate precedes Stripe (source invaria
     "checkout-league/route.ts",
     "checkout-cluster/route.ts",
     "checkout-fall/route.ts",
-    "checkout-picklpark/route.ts",
   ];
+
+  // RETIRED 2026-09-07 — no longer a paid checkout route, so the
+  // gate-before-Stripe invariant has nothing to assert about it. The Pickl
+  // Park sells both Saturday leagues through podplay and this route returns
+  // 410. Listed separately rather than silently dropped: a route leaving this
+  // array must be because it stopped taking money, and the test below is what
+  // proves that rather than assuming it.
+  const RETIRED_ROUTES = ["checkout-picklpark/route.ts"];
 
   for (const rel of ROUTES) {
     test(`${rel} calls hasWaiverOnFile before checkout.sessions.create`, () => {
@@ -136,6 +143,21 @@ test.describe("all paid checkout routes — gate precedes Stripe (source invaria
       expect(gateAt, "gate call missing").toBeGreaterThan(-1);
       expect(stripeAt, "stripe create missing").toBeGreaterThan(-1);
       expect(gateAt).toBeLessThan(stripeAt);
+    });
+  }
+
+  for (const rel of RETIRED_ROUTES) {
+    test(`${rel} takes no payment at all — no Stripe, no waiver gate needed`, () => {
+      const src = readFileSync(
+        join(__dirname, "..", "src", "app", "api", rel),
+        "utf8",
+      );
+      // A retired payment route is exactly where a future edit quietly
+      // reopens a charge — and it would reopen it WITHOUT the waiver gate,
+      // since it is no longer in ROUTES above. So assert the absence.
+      expect(src).not.toContain("checkout.sessions.create");
+      expect(src).not.toContain("getStripe");
+      expect(src).toContain("410");
     });
   }
 });
