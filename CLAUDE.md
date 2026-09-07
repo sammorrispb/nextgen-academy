@@ -366,6 +366,62 @@ The one-shot notice to families who had **already paid** when the season moved f
 - **Saturday afternoon is not a named cell on the Pickl Park rate card** — the court-time proposal covers Mon–Wed mornings and Tue–Thu evenings only, and its own rule is that an unnamed cell defaults to the higher neighbour. Settle it with Amar in the same conversation as the others.
 - **SEO posture unchanged** — one venue addition, not a market expansion. No Frederick city page; `SERVICE_AREAS`/`NGA_POSTAL_ADDRESS` stay Montgomery County. `LEAD_AREAS` (`src/data/lead-areas.ts`, now shared by `/api/waitlist` and `EmptyStateWaitlist` instead of duplicated) does carry `Frederick`.
 
+### Monday Girls Beginner Group — Wood MS (`/monday-girls`)
+**A hand-recruited girls-only peer block, not a public season.** It exists because
+Amanda Stone told Sam (2026-08-03) that her daughter had trained elsewhere and enjoyed it
+but *the group was all boys* — she would not book an evaluation without "additional girl
+energy". Sam proposed a girls-only group around that objection and recruited it family by
+family over text. **The peer group IS the product**; the ball-colour ladder is not what
+these families bought.
+
+**Terms (Sam, 2026-08-23; RE-DATED 2026-09-04):** Mondays 6:00–7:00 PM at Earle B. Wood
+Middle School, Rockville. **$225 for the 6-session block, paid up front.** Sold as
+Sept 14 – Oct 19 originally; **Mon Sep 21 is Yom Kippur + an MCPS closure**, so the block
+skips it and runs **Sep 14 – Oct 26**. `MONDAY_GIRLS_MONDAYS` is written out, never
+computed — a generated weekly range would silently put the closure back, and
+`e2e/monday-girls-season.spec.ts` pins its absence. **Every recruiting text quoted the old
+end date**, so the page, the success page and the confirmation email each name the skipped
+Monday *and its reason* rather than shipping different dates silently.
+
+- **Config is `src/data/monday-girls-2026.ts`** (dates, venue, times, the skipped date +
+  reason, rain dates, the derived seat map) + `monday-girls-season-2026.ts` (slug, title,
+  $225, price env var). Editing the block is a one-file change.
+- **Seats are DERIVED** — 1 tennis court × 2 pickleball courts × 4 players = 8. Keyed by
+  group in a `Record` even though there is exactly ONE group, so adding a second cohort
+  can't reintroduce the shared-scalar bug `invariant-fall-seat-cap-per-group.spec.ts`
+  exists for. **To change capacity, change the booking or `MONDAY_GIRLS_PLAYERS_PER_COURT`
+  — never `PLAYERS_PER_PICKLEBALL_COURT`.**
+- **The advertised age band is 7–10; the validator is the site-wide 6–16.** Sam recruited
+  it as "ages 8–10", but the one CONFIRMED player is 7 — a form pinned to the advertised
+  band would have rejected the only family who had already said yes. The band was widened
+  DOWN to the roster that exists, not up to one we hope for. Whether a girl fits a beginner
+  peer group is a coach's call at placement, not a birth-year comparison at checkout.
+- **The registration gate has THREE legs** (`src/lib/monday-girls-registration-window.ts`),
+  one more than `/picklpark`: the kill-switch flag, the calendar, **and the Stripe price
+  env being set**. `/picklpark` renders its form and lets checkout answer 503; these
+  families were recruited by hand over text, so a form that collects a child's birth year
+  and *then* reveals it cannot charge is worse than a closed state. **Registration closes
+  after the block's FIRST session**, not its last — it sells all 6 sessions up front, so
+  full price in week four would charge for sessions nobody ran; the closed state points at
+  Coach Sam for a prorated conversation instead of hiding.
+- **`noindex`, and deliberately ABSENT from `/api/events/feed`.** A girls-only group of
+  7–10-year-olds at a named middle school on a precise recurring evening is the exact risk
+  the Enrichment Collective clubs are kept off every public surface for. The link is meant
+  to be texted, not found. The Wood Monday hold is already on the Fall 2026 master schedule
+  for calendar purposes.
+- **Egress:** the checkout route reads Notion (roster + waiver) and writes Stripe metadata
+  only — the roster row is the webhook's job (`kind=monday-girls`).
+  `NOTION_MONDAY_GIRLS_REGS_DB_ID` is a child-PII destination, pinned by
+  `e2e/invariant-monday-girls-pii-egress.spec.ts`.
+- **Refund posture** mirrors Pickl Park: parent withdrawal → none (stated at checkout, in
+  the form, and in the confirmation email from the first sale); NGA cancellation →
+  prorated over sessions not yet delivered, today inclusive. Two rain dates are the stated
+  remedy for a washout.
+- **Ships dark until BOTH envs are set.** `/api/checkout-monday-girls` 503s without
+  `STRIPE_MONDAY_GIRLS_PRICE_ID`, and the page hides the form on the same check.
+  Pinned by `e2e/monday-girls-registration-window.spec.ts` + the ships-dark case in the
+  egress spec.
+
 ### Enrichment Collective after-school clubs (`src/data/enrichment-collective.ts`)
 Fall 2026 "Coach Sam" clubs that **Enrichment Collective** runs in MCPS schools — Mon Greenwood (Brookeville) / Tue Candlewood (Derwood) / Wed DuFief ES (North Potomac) / Thu Belmont (Olney) / Fri Olney ES (Olney). Partner-run like MVF: EC owns registration and payment, carries the general liability insurance, and collects the waivers and media releases, so **the NGA waiver gate does not apply** and no NGA Stripe path is involved. Sam is a 1099 contractor to EC.
 
@@ -566,6 +622,15 @@ See `.env.example`. Categories:
   (`false`) closes registration everywhere it is offered — the page, the empty-state
   offer card, the `/fall` cross-link. Set it to `false` for a no-go or to pull the form
   early. See the "Pickl Park Saturdays" section above.
+- `STRIPE_MONDAY_GIRLS_PRICE_ID` + `NOTION_MONDAY_GIRLS_REGS_DB_ID` — the Monday Girls
+  block pair. The price env is the charge guard AND the page's render guard
+  (`/api/checkout-monday-girls` 503s and `/monday-girls` hides the form without it), so
+  the block ships fully dark until the $225 product exists on NGA Stripe. Never point
+  `NOTION_MONDAY_GIRLS_REGS_DB_ID` at the Fall or Pickl Park Regs DB — capacity is scoped
+  by `Group` alone, so the blocks would cross-count seats.
+- `NEXT_PUBLIC_MONDAY_GIRLS_REGISTRATION_OPEN` — kill switch, same posture as the Pickl
+  Park flag. Unset or `true` = the form renders through the block's FIRST session; any
+  other value closes it everywhere.
 - `NOTION_CURRICULUM_DB_ID` — NGA Curriculum Overrides DB (one row per overridden
   curriculum string, read by `/coach/fall-playbook`). Optional. **UNSET = the override
   layer is dark** and the playbook renders the code defaults with no network call —
