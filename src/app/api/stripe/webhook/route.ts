@@ -42,6 +42,17 @@ import {
   PICKLPARK_MAKEUP_DATES,
   PICKLPARK_SATURDAYS,
 } from "@/data/picklpark-2026";
+import { cancelMondayGirlsByPaymentIntent } from "@/lib/cancel-monday-girls";
+import {
+  createMondayGirlsRegistrationResult,
+  findMondayGirlsRegByCheckoutId,
+} from "@/lib/notion-monday-girls-registrations";
+import { buildMondayGirlsConfirmationEmail } from "@/lib/email/monday-girls-confirmation";
+import {
+  MONDAY_GIRLS_MONDAYS,
+  MONDAY_GIRLS_RAIN_DATES,
+  MONDAY_GIRLS_SKIPPED_DATE,
+} from "@/data/monday-girls-2026";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import { findCampBySlug } from "@/data/camps";
@@ -361,6 +372,15 @@ export async function POST(req: NextRequest) {
   // 8-seat cap — so the row create is the critical path here too.
   if (metaString(session.metadata ?? {}, "kind") === "picklpark") {
     return handlePicklParkCheckout(session);
+  }
+
+  // Monday Girls Beginner Group registrations carry kind=monday-girls and
+  // follow the fall/picklpark pattern exactly: a dedicated roster DB that
+  // doubles as the idempotency key, whose Confirmed count gates
+  // /api/checkout-monday-girls' seat cap — so the row create is the critical
+  // path here too.
+  if (metaString(session.metadata ?? {}, "kind") === "monday-girls") {
+    return handleMondayGirlsCheckout(session);
   }
 
   const m = session.metadata ?? {};
@@ -1212,6 +1232,156 @@ async function handlePicklParkCheckout(session: Stripe.Checkout.Session) {
   return NextResponse.json({ received: true, picklpark: true, rosterFailed });
 }
 
+async function emailMondayGirlsAdmin(
+  session: Stripe.Checkout.Session,
+  rosterFailed: boolean,
+) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const birthYear = Number(metaString(m, "child_birth_year")) || 0;
+  const age = birthYear ? `${new Date().getFullYear() - birthYear}` : "?";
+
+  const subject = `New MONDAY GIRLS reg: ${metaString(m, "child_first_name")} — ${metaString(m, "group_label")}`;
+  const lines = [
+    `Block: ${metaString(m, "season_title")} — ${metaString(m, "season_label")}`,
+    `Group: ${metaString(m, "group_label")} (${metaString(m, "group_time")})`,
+    "",
+    `Parent: ${metaString(m, "parent_name")}`,
+    `Email: ${payerEmail(session) || metaString(m, "parent_email")}`,
+    `Phone: ${metaString(m, "parent_phone")}`,
+    `Player: ${metaString(m, "child_first_name")} (age ${age})`,
+    `Emergency: ${metaString(m, "emergency_name")} · ${metaString(m, "emergency_phone")}`,
+    `Allergies/medical: ${metaString(m, "allergies") || "none listed"}`,
+    "",
+    `Paid: $${amount}`,
+    `Stripe: ${session.id}`,
+    ...(rosterFailed
+      ? [
+          "",
+          "⚠️ ROSTER WRITE FAILED (permanent) — this registration is NOT in the Monday Girls Registrations DB. Backfill the row by hand or the seat count undersells the cap.",
+        ]
+      : []),
+  ];
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to: ADMIN_NOTIFY,
+    subject,
+    text: lines.join("\n"),
+  });
+  if (error)
+    console.error("[stripe-webhook] monday-girls admin email rejected", error);
+}
+
+async function emailMondayGirlsParent(session: Stripe.Checkout.Session) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = payerEmail(session);
+  if (!apiKey) return;
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return;
+
+  const resend = new Resend(apiKey);
+  const m = session.metadata ?? {};
+  const { subject, text } = buildMondayGirlsConfirmationEmail({
+    parentFirst: metaString(m, "parent_name").split(/\s+/)[0] || "there",
+    childFirst: metaString(m, "child_first_name") || "your player",
+    timeLabel: metaString(m, "group_time"),
+    amountUsd: ((session.amount_total ?? 0) / 100).toFixed(2),
+    venue: metaString(m, "venue"),
+    mondays: MONDAY_GIRLS_MONDAYS,
+    skippedDate: MONDAY_GIRLS_SKIPPED_DATE,
+    rainDates: MONDAY_GIRLS_RAIN_DATES,
+  });
+
+  const { error } = await resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    bcc: ADMIN_EMAIL,
+    replyTo: REPLY_TO,
+    subject,
+    text,
+  });
+  if (error)
+    console.error("[stripe-webhook] monday-girls parent email rejected", error);
+}
+
+async function handleMondayGirlsCheckout(session: Stripe.Checkout.Session) {
+  const m = session.metadata ?? {};
+
+  // The roster row IS the idempotency key — a redelivered event no-ops here.
+  if (await findMondayGirlsRegByCheckoutId(session.id)) {
+    return NextResponse.json({ received: true, idempotent: true });
+  }
+
+  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
+  const created = await createMondayGirlsRegistrationResult({
+    parentName: metaString(m, "parent_name"),
+    parentEmail,
+    parentPhone: metaString(m, "parent_phone"),
+    childFirstName: metaString(m, "child_first_name"),
+    childBirthYear: Number(metaString(m, "child_birth_year")) || 0,
+    group: metaString(m, "group"),
+    amountPaidUsd: (session.amount_total ?? 0) / 100,
+    stripeCheckoutSessionId: session.id,
+    stripePaymentIntentId:
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : (session.payment_intent?.id ?? null),
+    smsConsent: metaString(m, "sms_consent") === "true",
+    smsConsentText: metaString(m, "sms_consent_text"),
+    emergencyName: metaString(m, "emergency_name"),
+    emergencyPhone: metaString(m, "emergency_phone"),
+    allergies: metaString(m, "allergies"),
+  });
+
+  if (created === "transient") {
+    // 500 → Stripe redelivers; the idempotency check makes the retry safe.
+    return NextResponse.json(
+      { error: "monday-girls roster write failed (transient)" },
+      { status: 500 },
+    );
+  }
+  // "permanent": same posture as fall/picklpark — the family keeps their seat;
+  // a mis-schema'd Notion DB at launch must not claw back a real registration.
+  // The admin email flags the missing row for a hand backfill.
+  const rosterFailed = created === "permanent";
+
+  after(async () => {
+    await Promise.allSettled([
+      emailMondayGirlsAdmin(session, rosterFailed),
+      emailMondayGirlsParent(session),
+      syncPlayerFromDropIn({
+        parentName: metaString(m, "parent_name"),
+        parentEmail,
+        parentPhone: metaString(m, "parent_phone"),
+        childFirstName: metaString(m, "child_first_name"),
+        childBirthYear: Number(metaString(m, "child_birth_year")) || 0,
+        sessionDate: MONDAY_GIRLS_MONDAYS[0],
+        location: metaString(m, "venue"),
+      }),
+      ingestToOpenBrain({
+        business: "nga",
+        source: "nga_monday_girls_registration",
+        name: metaString(m, "parent_name"),
+        email: parentEmail || undefined,
+        phone: metaString(m, "parent_phone") || undefined,
+        interest: `${metaString(m, "season_title")} (${metaString(m, "group_label")})`,
+        metadata: {
+          season_label: metaString(m, "season_label"),
+          group: metaString(m, "group"),
+          child_first_name: metaString(m, "child_first_name"),
+          child_birth_year: Number(metaString(m, "child_birth_year")) || 0,
+          amount_paid_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
+          stripe_session: session.id,
+        },
+      }),
+    ]);
+  });
+
+  return NextResponse.json({ received: true, mondayGirls: true, rosterFailed });
+}
+
 async function handleChargeRefunded(charge: Stripe.Charge) {
   const piId =
     typeof charge.payment_intent === "string"
@@ -1263,6 +1433,31 @@ async function handleChargeRefunded(charge: Stripe.Charge) {
           refunded: true,
           picklpark: true,
           ...picklpark,
+        });
+      }
+
+      // Not Pickl Park either. The Monday Girls block is the last roster with
+      // Confirmed-row-holds-a-seat semantics, so it gets the same reconcile.
+      // Only reached when all three prior lookups miss, so drop-in, fall and
+      // Pickl Park behavior are unchanged. A partial_refund verdict from the
+      // Pickl Park leg already paged Sam — don't re-run the search past a
+      // roster that actually matched the PI.
+      if (picklpark.reason === "not_found") {
+        const mondayGirls = await cancelMondayGirlsByPaymentIntent(piId, {
+          fullyRefunded: charge.refunded === true,
+          amountRefundedUsd: (charge.amount_refunded ?? 0) / 100,
+        });
+        if (mondayGirls.ok) {
+          return NextResponse.json({
+            received: true,
+            refunded: true,
+            mondayGirls: true,
+            ...mondayGirls,
+          });
+        }
+        return NextResponse.json({
+          received: true,
+          skipped: mondayGirls.reason,
         });
       }
       return NextResponse.json({ received: true, skipped: picklpark.reason });
