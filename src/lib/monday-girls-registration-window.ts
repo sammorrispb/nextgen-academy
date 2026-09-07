@@ -6,27 +6,33 @@ import { MONDAY_GIRLS_SEASON_PRICE_ENV_VAR } from "@/data/monday-girls-season-20
  * the page and the form so the two can never disagree about whether the season
  * is for sale.
  *
- * THREE legs, and the third is the one this block adds over
- * picklpark-registration-window:
+ * It returns a REASON, not a boolean. A single `false` collapsed four very
+ * different states into one, and the page then had to pick one explanation for
+ * all of them — so a visitor arriving before launch was told the block was
+ * already "under way", which was simply untrue. Each closed state now carries
+ * copy that matches why it is closed.
  *
- *  1. KILL SWITCH — NEXT_PUBLIC_MONDAY_GIRLS_REGISTRATION_OPEN. Unset/blank and
- *     "true" both mean "let the calendar decide"; ANY other value closes. An
+ * The legs, in the order they are checked:
+ *
+ *  1. NOT CONFIGURED — the Stripe price env AND the Notion roster env must both
+ *     exist. The price env is the charge guard. The ROSTER env matters just as
+ *     much and is easy to miss: with a price but no roster DB, the capacity gate
+ *     reads an empty list, the duplicate guard never fires, the webhook's row
+ *     create fail-softs to "ok", and `rosterFailed` stays false — so a family
+ *     pays $225 and leaves NO row, NO seat count and NO admin warning. Silent
+ *     money-without-a-roster is worse than a closed form, so both envs gate.
+ *     (`/api/checkout-monday-girls` enforces the same pair, so a direct POST
+ *     cannot get past a form that never rendered.)
+ *
+ *  2. CLOSED BY FLAG — NEXT_PUBLIC_MONDAY_GIRLS_REGISTRATION_OPEN. Unset/blank
+ *     and "true" both mean "let the calendar decide"; ANY other value closes. An
  *     operator setting this env var is trying to STOP sales, so "false", "no",
  *     "0" and a typo all fail closed rather than open.
  *
- *  2. CALENDAR — registration closes after the block's FIRST session. This
- *     block is a 6-session prepaid product: selling the full $225 in week four
- *     would charge a family for three sessions nobody delivered. A late joiner
- *     after week one is a prorated conversation with Coach Sam, not a checkout
- *     — which is why the closed state points at him rather than hiding.
- *
- *  3. PRICE CONFIGURED — the Stripe price env must exist. /picklpark renders
- *     its form on legs 1–2 alone and lets /api/checkout-picklpark answer 503,
- *     so a parent can fill in every field and their child's birth year before
- *     learning the season cannot charge. These families were recruited by hand
- *     over text; sending them to a dead form is worse than showing them a
- *     closed one. Gating the render on the same env var the route requires
- *     means the form only ever appears when checkout can actually complete.
+ *  3. SEASON STARTED — registration closes after the block's FIRST session.
+ *     This block is a 6-session prepaid product: selling the full $225 in week
+ *     four would charge a family for three sessions nobody delivered. A late
+ *     joiner is a prorated conversation with Coach Sam, not a checkout.
  *
  * Pure and injected (no `new Date()`, no `process.env` here) so specs pin the
  * boundaries instead of the clock and the environment. ISO date-only strings
@@ -36,28 +42,50 @@ import { MONDAY_GIRLS_SEASON_PRICE_ENV_VAR } from "@/data/monday-girls-season-20
 export const MONDAY_GIRLS_REGISTRATION_FLAG_ENV =
   "NEXT_PUBLIC_MONDAY_GIRLS_REGISTRATION_OPEN";
 
+export const MONDAY_GIRLS_ROSTER_DB_ENV_VAR = "NOTION_MONDAY_GIRLS_REGS_DB_ID";
+
 /**
  * Last day the block is sold at full price — its FIRST session, derived never
  * typed.
  */
 export const MONDAY_GIRLS_REGISTRATION_CLOSES: string = MONDAY_GIRLS_MONDAYS[0];
 
+/**
+ * `not_configured` is the ships-dark state and is deliberately indistinguishable
+ * to a visitor from "we're still setting up" — it never implies the block ran.
+ */
+export type MondayGirlsRegistrationState =
+  | "open"
+  | "not_configured"
+  | "closed_by_flag"
+  | "season_started";
+
 export interface MondayGirlsRegistrationGate {
   todayIso: string;
   flag: string | undefined;
   /** Whether the Stripe price env var is set. */
   priceConfigured: boolean;
+  /** Whether the Notion roster DB env var is set. */
+  rosterConfigured: boolean;
 }
 
-export function mondayGirlsRegistrationOpen({
+export function mondayGirlsRegistrationState({
   todayIso,
   flag,
   priceConfigured,
-}: MondayGirlsRegistrationGate): boolean {
-  if (!priceConfigured) return false;
+  rosterConfigured,
+}: MondayGirlsRegistrationGate): MondayGirlsRegistrationState {
+  if (!priceConfigured || !rosterConfigured) return "not_configured";
   const value = (flag ?? "").trim().toLowerCase();
-  if (value !== "" && value !== "true") return false;
-  return todayIso <= MONDAY_GIRLS_REGISTRATION_CLOSES;
+  if (value !== "" && value !== "true") return "closed_by_flag";
+  if (todayIso > MONDAY_GIRLS_REGISTRATION_CLOSES) return "season_started";
+  return "open";
+}
+
+export function mondayGirlsRegistrationOpen(
+  gate: MondayGirlsRegistrationGate,
+): boolean {
+  return mondayGirlsRegistrationState(gate) === "open";
 }
 
 /** Today (America/New_York) as YYYY-MM-DD — the repo's todayET() pattern. */
@@ -68,15 +96,22 @@ export function mondayGirlsTodayET(): string {
 }
 
 /**
- * The gate as the live site evaluates it. Server-only: it reads the non-public
- * Stripe price env var, so never call this from a client component.
+ * The gate as the live site evaluates it. Server-only: it reads non-public env
+ * vars, so never call this from a client component.
  */
-export function mondayGirlsRegistrationOpenNow(): boolean {
-  return mondayGirlsRegistrationOpen({
+export function mondayGirlsRegistrationStateNow(): MondayGirlsRegistrationState {
+  return mondayGirlsRegistrationState({
     todayIso: mondayGirlsTodayET(),
     flag: process.env.NEXT_PUBLIC_MONDAY_GIRLS_REGISTRATION_OPEN,
     priceConfigured: Boolean(
       process.env[MONDAY_GIRLS_SEASON_PRICE_ENV_VAR]?.trim(),
     ),
+    rosterConfigured: Boolean(
+      process.env[MONDAY_GIRLS_ROSTER_DB_ENV_VAR]?.trim(),
+    ),
   });
+}
+
+export function mondayGirlsRegistrationOpenNow(): boolean {
+  return mondayGirlsRegistrationStateNow() === "open";
 }

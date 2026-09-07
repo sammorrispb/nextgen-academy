@@ -397,8 +397,13 @@ Monday *and its reason* rather than shipping different dates silently.
   DOWN to the roster that exists, not up to one we hope for. Whether a girl fits a beginner
   peer group is a coach's call at placement, not a birth-year comparison at checkout.
 - **The registration gate has THREE legs** (`src/lib/monday-girls-registration-window.ts`),
-  one more than `/picklpark`: the kill-switch flag, the calendar, **and the Stripe price
-  env being set**. `/picklpark` renders its form and lets checkout answer 503; these
+  one more than `/picklpark`: the kill-switch flag, the calendar, **and BOTH envs being
+  set** — the Stripe price *and* the Notion roster DB. The roster leg is the one that is
+  easy to miss and the reason it exists: with a price but no roster DB the capacity gate
+  reads an empty list, the duplicate guard never fires, and the webhook's row create
+  fail-softs to `"ok"` with `rosterFailed` false — so a family pays $225 and leaves no
+  row, no seat count and **no admin warning**. `/api/checkout-monday-girls` enforces the
+  same pair as the direct-POST backstop. `/picklpark` renders its form and lets checkout answer 503; these
   families were recruited by hand over text, so a form that collects a child's birth year
   and *then* reveals it cannot charge is worse than a closed state. **Registration closes
   after the block's FIRST session**, not its last — it sells all 6 sessions up front, so
@@ -417,10 +422,19 @@ Monday *and its reason* rather than shipping different dates silently.
   the form, and in the confirmation email from the first sale); NGA cancellation →
   prorated over sessions not yet delivered, today inclusive. Two rain dates are the stated
   remedy for a washout.
-- **Ships dark until BOTH envs are set.** `/api/checkout-monday-girls` 503s without
-  `STRIPE_MONDAY_GIRLS_PRICE_ID`, and the page hides the form on the same check.
-  Pinned by `e2e/monday-girls-registration-window.spec.ts` + the ships-dark case in the
+- **Ships dark until BOTH envs are set.** `/api/checkout-monday-girls` 503s unless
+  `STRIPE_MONDAY_GIRLS_PRICE_ID` **and** `NOTION_MONDAY_GIRLS_REGS_DB_ID` are both
+  present, and the page hides the form on the same pair. The gate returns a **reason**
+  (`not_configured` / `closed_by_flag` / `season_started`), not a boolean — a single
+  `false` made the page tell a pre-launch visitor the block was already "under way".
+  Pinned by `e2e/monday-girls-registration-window.spec.ts` + the ships-dark cases in the
   egress spec.
+- **There is no `/api/cancel-monday-girls-registration` route** (fall and Pickl Park both
+  have one). `cancelMondayGirlsRegistration()` exists and is tested but is currently
+  unreachable, so an NGA-side prorated cancellation is computed by hand from
+  `monday-girls-refund-policy.ts` and refunded in the Stripe Dashboard — `charge.refunded`
+  still reconciles the roster row and emails the parent. Adding the route is a
+  Slop-Free-Zone change and needs its own approval.
 
 ### Enrichment Collective after-school clubs (`src/data/enrichment-collective.ts`)
 Fall 2026 "Coach Sam" clubs that **Enrichment Collective** runs in MCPS schools — Mon Greenwood (Brookeville) / Tue Candlewood (Derwood) / Wed DuFief ES (North Potomac) / Thu Belmont (Olney) / Fri Olney ES (Olney). Partner-run like MVF: EC owns registration and payment, carries the general liability insurance, and collects the waivers and media releases, so **the NGA waiver gate does not apply** and no NGA Stripe path is involved. Sam is a 1099 contractor to EC.

@@ -17,7 +17,7 @@ import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 export interface MondayGirlsCancellationInput {
   parentFirst: string;
   childFirst: string;
-  /** "Green Ball" / "Yellow Ball" */
+  /** "Girls Beginner" */
   groupLabel: string;
   /** Dollars returned, e.g. "175.00". "0.00"/empty → withdrawal without refund. */
   refundedUsd: string;

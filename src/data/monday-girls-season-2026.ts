@@ -4,10 +4,11 @@
 //
 // WHY $225 — the same number the Walter Johnson Sunday season and the Pickl
 // Park Saturday season charge. It buys 6 × 60 min here against Walter Johnson's
-// 6 × 90; what closes that gap is the group, not the clock. This is a four-seat
-// peer block, so a player gets roughly a quarter of a coach's attention for the
-// full hour rather than a share of a larger court — and the girls-only cohort
-// is the thing these families said yes to.
+// 6 × 90; what closes that gap is the group, not the clock. It is a small peer
+// block on one court (see MONDAY_GIRLS_SLOTS_BY_GROUP for the derived cap —
+// never restate the number here, that is how the fall season's copy drifted),
+// so a player gets real coaching time every week rather than a place in a
+// line — and the girls-only cohort is the thing these families said yes to.
 //
 // Until 2026-09-07 this block had NO Stripe product at all and payment was
 // collected by hand, one text at a time. That is what this file ends.

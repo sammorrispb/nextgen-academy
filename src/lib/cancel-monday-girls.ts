@@ -143,7 +143,9 @@ async function sendCancellationEmail(
   const input = {
     parentFirst: row.parentName.split(" ")[0] || row.parentName || "there",
     childFirst: row.childFirstName || "your player",
-    groupLabel: option?.label ?? `${row.group} Ball`,
+    // No " Ball" suffix: this block's group is "Girls Beginner", not a ball
+    // colour, so the picklpark-style fallback rendered "Girls Beginner Ball".
+    groupLabel: option?.label ?? row.group,
     refundedUsd: refundedUsd.toFixed(2),
     mondayGirlsUrl: `${SITE_ORIGIN}/monday-girls`,
   };
@@ -317,7 +319,7 @@ export async function cancelMondayGirlsByPaymentIntent(
 
   // PARTIAL refund → the family is still enrolled. Touch nothing, page Sam.
   if (!refund.fullyRefunded) {
-    const message = `Partial refund of $${refund.amountRefundedUsd.toFixed(2)} on Monday Girls registration for ${row.childFirstName} (${row.group}, ${row.parentEmail}). The roster row was left Confirmed — they are STILL ENROLLED and still hold a seat. If this was meant to cancel the registration, do it through /api/cancel-monday-girls-registration so the seat frees and the parent is emailed.`;
+    const message = `Partial refund of $${refund.amountRefundedUsd.toFixed(2)} on Monday Girls registration for ${row.childFirstName} (${row.group}, ${row.parentEmail}). The roster row was left Confirmed — they are STILL ENROLLED and still hold a seat. If this was meant to cancel the registration, refund the rest in the Stripe Dashboard — the charge.refunded webhook then frees the seat and emails the parent. (There is no /api/cancel-monday-girls-registration route yet, unlike fall and Pickl Park, so an NGA-side prorated cancellation is currently computed by hand from monday-girls-refund-policy.ts.)`;
     await alertAdmin(
       `[NGA] Partial refund on a Monday Girls registration — no action taken`,
       message,
