@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   MONDAY_GIRLS_REGISTRATION_CLOSES,
   mondayGirlsRegistrationOpen,
+  mondayGirlsRegistrationState,
 } from "../src/lib/monday-girls-registration-window";
 import { MONDAY_GIRLS_MONDAYS } from "../src/data/monday-girls-2026";
 
@@ -12,9 +13,10 @@ const OPEN = {
   todayIso: "2026-09-08",
   flag: undefined,
   priceConfigured: true,
+  rosterConfigured: true,
 };
 
-test.describe("Monday Girls registration window — the price leg", () => {
+test.describe("Monday Girls registration window — the configuration legs", () => {
   test("NO Stripe price ⇒ closed, whatever the flag and date say", () => {
     // The leg /picklpark doesn't have. Without it a hand-recruited parent can
     // fill in their child's birth year and only then meet a 503.
@@ -30,8 +32,58 @@ test.describe("Monday Girls registration window — the price leg", () => {
     ).toBe(false);
   });
 
-  test("price configured ⇒ open on an in-window day", () => {
+  test("NO Notion roster DB ⇒ closed, even with a Stripe price set", () => {
+    // The regression that matters: with a price but no roster DB the capacity
+    // gate reads empty, the duplicate guard never fires, and the webhook's row
+    // create fail-softs to "ok" with rosterFailed=false — a family pays $225
+    // and leaves no row, no seat count and NO admin warning. Silent.
+    expect(
+      mondayGirlsRegistrationOpen({ ...OPEN, rosterConfigured: false }),
+    ).toBe(false);
+    expect(
+      mondayGirlsRegistrationState({ ...OPEN, rosterConfigured: false }),
+    ).toBe("not_configured");
+  });
+
+  test("both envs configured ⇒ open on an in-window day", () => {
     expect(mondayGirlsRegistrationOpen(OPEN)).toBe(true);
+    expect(mondayGirlsRegistrationState(OPEN)).toBe("open");
+  });
+});
+
+test.describe("Monday Girls registration window — the closed REASON", () => {
+  // A single boolean made the page pick one explanation for every closed state,
+  // so a visitor arriving pre-launch was told the block was already under way.
+  test("an unconfigured block never reports as started", () => {
+    expect(
+      mondayGirlsRegistrationState({
+        ...OPEN,
+        priceConfigured: false,
+        rosterConfigured: false,
+      }),
+    ).toBe("not_configured");
+  });
+
+  test("the kill switch and the calendar are distinguishable", () => {
+    expect(mondayGirlsRegistrationState({ ...OPEN, flag: "false" })).toBe(
+      "closed_by_flag",
+    );
+    expect(
+      mondayGirlsRegistrationState({ ...OPEN, todayIso: "2026-09-15" }),
+    ).toBe("season_started");
+  });
+
+  test("not-configured outranks every other reason", () => {
+    // Config is checked first on purpose: a block that cannot charge is not
+    // "closed because the season started", whatever the date says.
+    expect(
+      mondayGirlsRegistrationState({
+        ...OPEN,
+        priceConfigured: false,
+        flag: "false",
+        todayIso: "2026-12-01",
+      }),
+    ).toBe("not_configured");
   });
 });
 

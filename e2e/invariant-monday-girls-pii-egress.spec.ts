@@ -149,6 +149,48 @@ test.describe("Monday Girls registration — child-PII egress", () => {
     expect(rendered).not.toContain(ALLERGY_TEXT);
   });
 
+  test("the duplicate refusal echoes ONLY the name this parent just typed", async () => {
+    // This branch was unexercised. It is the one refusal that deliberately
+    // names a child — the parent's own input, read back to that same parent so
+    // "already registered" is intelligible. What must never leak is ANOTHER
+    // family's child, which the roster query returns in full.
+    stub
+      .on(/api\.notion\.com\/v1\/databases\/.*\/query/, {
+        results: [
+          {
+            id: "row-self",
+            properties: {
+              "Child First Name": { rich_text: [{ plain_text: CHILD_NAME }] },
+              "Parent Email": { email: PARENT_EMAIL },
+            },
+          },
+          {
+            id: "row-other",
+            properties: {
+              "Child First Name": {
+                rich_text: [{ plain_text: "Someoneelseskid" }],
+              },
+              "Parent Email": { email: "another-family@example.com" },
+            },
+          },
+        ],
+      })
+      .install();
+
+    const res = await POST(req(body()));
+    expect(res.status).toBe(409);
+    const json = await res.json();
+    expect(json.code).toBe("duplicate_registration");
+    const rendered = JSON.stringify(json);
+    // The asker's own child, echoed back to the asker.
+    expect(rendered).toContain(CHILD_NAME);
+    // Never another family's child, nor their email.
+    expect(rendered).not.toContain("Someoneelseskid");
+    expect(rendered).not.toContain("another-family@example.com");
+    expect(rendered).not.toContain(ALLERGY_TEXT);
+    expect(rendered).not.toContain(EMERGENCY_NAME);
+  });
+
   test("the waiver refusal carries no child PII", async () => {
     stub
       .on(/api\.notion\.com\/v1\/databases\/.*\/query/, (call: RecordedFetch) =>
@@ -181,7 +223,7 @@ test.describe("Monday Girls registration — child-PII egress", () => {
   });
 });
 
-test.describe("Monday Girls registration — ships dark without a price", () => {
+test.describe("Monday Girls registration — ships dark until BOTH envs are set", () => {
   test("no Stripe price ⇒ 503 and ZERO egress", async () => {
     const saved = process.env.STRIPE_MONDAY_GIRLS_PRICE_ID;
     delete process.env.STRIPE_MONDAY_GIRLS_PRICE_ID;
@@ -189,11 +231,28 @@ test.describe("Monday Girls registration — ships dark without a price", () => 
     try {
       const res = await POST(req(body()));
       expect(res.status).toBe(503);
-      // The price check runs BEFORE the roster read, so a season with no
+      // The config check runs BEFORE the roster read, so a block with no
       // product never touches Notion or reveals a roster.
       expect(stub.calls).toHaveLength(0);
     } finally {
       process.env.STRIPE_MONDAY_GIRLS_PRICE_ID = saved;
+    }
+  });
+
+  test("no Notion roster DB ⇒ 503, even with a Stripe price set", async () => {
+    // Without this leg the sale completes and leaves nothing behind: the
+    // capacity gate reads empty, the duplicate guard never fires, and the
+    // webhook's row create fail-softs to "ok" with rosterFailed=false, so not
+    // even the admin email flags it. Refusing the sale is the safer failure.
+    const saved = process.env.NOTION_MONDAY_GIRLS_REGS_DB_ID;
+    delete process.env.NOTION_MONDAY_GIRLS_REGS_DB_ID;
+    stub.install();
+    try {
+      const res = await POST(req(body()));
+      expect(res.status).toBe(503);
+      expect(stub.calls).toHaveLength(0);
+    } finally {
+      process.env.NOTION_MONDAY_GIRLS_REGS_DB_ID = saved;
     }
   });
 });

@@ -18,6 +18,7 @@ import {
   type MondayGirlsRegistrationData,
 } from "@/lib/validate-monday-girls-registration";
 import { fetchMondayGirlsRegistrationKeys } from "@/lib/notion-monday-girls-registrations";
+import { MONDAY_GIRLS_ROSTER_DB_ENV_VAR } from "@/lib/monday-girls-registration-window";
 import {
   hasWaiverOnFile,
   buildWaiverSignUrl,
@@ -55,10 +56,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
   }
 
+  // BOTH envs gate, not just the price. With a price but no roster DB the
+  // capacity gate reads an empty list, the duplicate guard never fires, and the
+  // webhook's row create fail-softs to "ok" with rosterFailed=false — so a
+  // family would pay $225 and leave no row, no seat count and no admin warning.
+  // Silent money-without-a-roster is the one outcome worth refusing a sale for.
+  // The page's gate checks the same pair; this is the direct-POST backstop.
   const priceId = process.env[MONDAY_GIRLS_SEASON_PRICE_ENV_VAR];
-  if (!priceId) {
+  const rosterDbId = process.env[MONDAY_GIRLS_ROSTER_DB_ENV_VAR];
+  if (!priceId || !rosterDbId) {
     console.error(
-      `[checkout-monday-girls] missing Stripe price env ${MONDAY_GIRLS_SEASON_PRICE_ENV_VAR}`,
+      `[checkout-monday-girls] not configured — ${MONDAY_GIRLS_SEASON_PRICE_ENV_VAR}: ${priceId ? "set" : "MISSING"}, ${MONDAY_GIRLS_ROSTER_DB_ENV_VAR}: ${rosterDbId ? "set" : "MISSING"}`,
     );
     return NextResponse.json(
       { error: "Registration isn't open yet — please check back soon." },

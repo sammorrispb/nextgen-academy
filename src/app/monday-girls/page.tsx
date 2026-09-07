@@ -22,7 +22,7 @@ import {
   MONDAY_GIRLS_SEASON_PRICE_USD,
   MONDAY_GIRLS_SEASON_TITLE,
 } from "@/data/monday-girls-season-2026";
-import { mondayGirlsRegistrationOpenNow } from "@/lib/monday-girls-registration-window";
+import { mondayGirlsRegistrationStateNow } from "@/lib/monday-girls-registration-window";
 import { countMondayGirlsRegistrations } from "@/lib/notion-monday-girls-registrations";
 
 // The Monday Girls Beginner Group registration page.
@@ -66,7 +66,8 @@ function mondayLabel(iso: string): string {
 }
 
 export default async function MondayGirlsPage() {
-  const registrationOpen = mondayGirlsRegistrationOpenNow();
+  const registrationState = mondayGirlsRegistrationStateNow();
+  const registrationOpen = registrationState === "open";
   // Only read the roster when the form will actually render — a Notion call on
   // a closed page buys nothing. null = unknown, and the form hides the count
   // rather than showing a wrong one.
@@ -209,23 +210,46 @@ export default async function MondayGirlsPage() {
           <MondayGirlsRegistrationForm spotsTaken={spotsTaken} />
         ) : (
           <div className="bg-ngpa-panel/85 backdrop-blur rounded-2xl p-6 sm:p-8 border border-ngpa-slate/60 shadow-xl shadow-black/20 text-center">
+            {/* Copy per REASON. One shared "the block is under way" message was
+                wrong for two of the three closed states — it told a visitor
+                arriving before launch that they had missed a block that had not
+                started. */}
             <p className="font-heading text-lg font-black text-ngpa-white">
-              Online registration is closed for this block
+              {registrationState === "season_started"
+                ? "Online registration is closed for this block"
+                : "Sign-ups aren't open just yet"}
             </p>
             <p className="text-ngpa-white/70 text-sm mt-2">
-              The block sells as all {MONDAY_GIRLS_SEASON_SESSIONS} sessions up
-              front, so we stop selling it online once it&rsquo;s under way
-              &mdash; charging full price for sessions we didn&rsquo;t run
-              wouldn&rsquo;t be right. If you&rsquo;d still like your daughter
-              to join, text Coach Sam at{" "}
-              <a
-                href="tel:+13013254731"
-                className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
-              >
-                301-325-4731
-              </a>{" "}
-              and he&rsquo;ll sort out a fair price for the sessions that are
-              left.
+              {registrationState === "season_started" ? (
+                <>
+                  The block sells as all {MONDAY_GIRLS_SEASON_SESSIONS} sessions
+                  up front, so we stop selling it online once it&rsquo;s under
+                  way &mdash; charging full price for sessions we didn&rsquo;t
+                  run wouldn&rsquo;t be right. If you&rsquo;d still like your
+                  daughter to join, text Coach Sam at{" "}
+                  <a
+                    href="tel:+13013254731"
+                    className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+                  >
+                    301-325-4731
+                  </a>{" "}
+                  and he&rsquo;ll sort out a fair price for the sessions that
+                  are left.
+                </>
+              ) : (
+                <>
+                  We&rsquo;re putting the last pieces of this block in place.
+                  Text Coach Sam at{" "}
+                  <a
+                    href="tel:+13013254731"
+                    className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+                  >
+                    301-325-4731
+                  </a>{" "}
+                  and he&rsquo;ll hold your daughter&rsquo;s spot &mdash;
+                  there&rsquo;s room, and nothing below has changed.
+                </>
+              )}
             </p>
             <Link
               href="/schedule"
