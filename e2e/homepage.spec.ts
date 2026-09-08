@@ -193,11 +193,14 @@ test.describe("Level Cards", () => {
 // ─── Yellow Ball CTA ──────────────────────────────
 
 test.describe("Yellow Ball CTA", () => {
-  test("shows $20 per slot drop-in copy", async ({ page }) => {
+  // Yellow Ball is invite-only with custom scheduling — the drop-in rate never
+  // applied to it, so the card quotes no price at all (Sam, 2026-09-08).
+  test("quotes no price", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText("$20").first()).toBeVisible();
-    await expect(page.getByText(/per 1-hour slot/i).first()).toBeVisible();
-    await expect(page.getByText(/Drop-in/i).first()).toBeVisible();
+    const card = page.getByTestId("yellowball-cta");
+    await expect(card).toBeVisible();
+    await expect(card).not.toContainText("$");
+    await expect(card).not.toContainText(/per 1-hour/i);
   });
 
   test("links to the inquiry page", async ({ page }) => {

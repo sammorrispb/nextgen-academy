@@ -2,7 +2,10 @@ import TrackedCTA from "@/components/TrackedCTA";
 
 export default function YellowBallCTA() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-ngpa-panel via-ngpa-deep to-ngpa-panel border border-ngpa-skill-yellow/30 rounded-3xl p-8 sm:p-10">
+    <div
+      data-testid="yellowball-cta"
+      className="relative overflow-hidden bg-gradient-to-br from-ngpa-panel via-ngpa-deep to-ngpa-panel border border-ngpa-skill-yellow/30 rounded-3xl p-8 sm:p-10"
+    >
       {/* Yellow accent glow */}
       <div
         aria-hidden="true"
@@ -23,18 +26,6 @@ export default function YellowBallCTA() {
           3.0 or above. Small groups of 3&ndash;5 athletes, custom scheduling,
           and focused preparation for tournament play.
         </p>
-
-        <div className="bg-ngpa-deep/60 rounded-xl p-5 mb-7 border border-ngpa-slate/60 max-w-md">
-          <div className="flex items-baseline gap-2 mb-1.5">
-            <span className="font-mono font-bold text-3xl text-ngpa-skill-yellow">
-              $20
-            </span>
-            <span className="text-sm text-ngpa-white/65">per 1-hour slot</span>
-          </div>
-          <p className="text-xs text-ngpa-white/60 leading-relaxed">
-            Drop-in &middot; non-refundable &middot; same group rate for Green &amp; Yellow Ball. Private-lesson rates (Red, Orange) quoted after the evaluation.
-          </p>
-        </div>
 
         <TrackedCTA
           href="/yellowball/inquiry"
