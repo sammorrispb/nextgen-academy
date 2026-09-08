@@ -16,6 +16,7 @@ import {
   PICKLPARK_LEAGUE_COACH_EMAIL,
   PICKLPARK_LEAGUE_PLACEMENT_NOTE,
   picklParkLeagueSignupOpen,
+  picklParkLeagueStartHour24,
 } from "@/data/picklpark-leagues-2026";
 import {
   FALL_PUBLIC_AREA,
@@ -100,7 +101,11 @@ export default async function PicklParkPage() {
     "@type": "SportsEvent",
     name: `${league.podplayTitle} — ${PICKLPARK_SEASON_LABEL}`,
     description: league.blurb,
-    startDate: `${PICKLPARK_SATURDAYS[0]}T${league.startTime === "2:00 PM" ? "14:00" : "15:00"}:00-04:00`,
+    // Hour PARSED from startTime, never pattern-matched against one literal:
+    // a ternary on "2:00 PM" silently publishes the wrong hour the day a
+    // league moves. -04:00 is correct for the whole season and the Oct 31
+    // makeup (US DST ends 2026-11-01).
+    startDate: `${PICKLPARK_SATURDAYS[0]}T${picklParkLeagueStartHour24(league)}:00-04:00`,
     endDate: PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1],
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     organizer: {
@@ -201,8 +206,11 @@ export default async function PicklParkPage() {
                       {league.levelLabel}
                     </Link>
                   </p>
-                  <p className="text-ngpa-white/80 leading-relaxed mb-5">
+                  <p className="text-ngpa-white/80 leading-relaxed mb-2">
                     {league.blurb}
+                  </p>
+                  <p className="text-sm text-ngpa-muted mb-5">
+                    Each session: {league.sessionFormat}.
                   </p>
 
                   {leaguesOpen ? (

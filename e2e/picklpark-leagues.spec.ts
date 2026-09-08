@@ -3,6 +3,8 @@ import {
   PICKLPARK_LEAGUES,
   PICKLPARK_LEAGUE_COACH_EMAIL,
   findPicklParkLeague,
+  picklParkLeagueStartHour24,
+  PICKLPARK_LEAGUES_FORMAT_LINE,
 } from "../src/data/picklpark-leagues-2026";
 import {
   PICKLPARK_SATURDAYS,
@@ -133,3 +135,70 @@ test("the $20 Saturday Open Court no longer seeds", () => {
   expect(openCourt).toBeDefined();
   expect(openCourt?.active).toBe(false);
 });
+
+// ── Review findings, 2026-09-07 (PR #321) ───────────────────────────────────
+
+test("each league states its OWN split — 90 minutes is not 30 plus 30", () => {
+  // The retired blocks were both 60 minutes, so one shared
+  // PICKLPARK_SESSION_FORMAT worked. Youth League is 90; describing it as
+  // "30 minutes of drills, then 30 of game play" leaves a third of the
+  // session unaccounted for to a parent reading the page.
+  const intro = findPicklParkLeague("drill-and-play")!;
+  const league = findPicklParkLeague("youth-league")!;
+  expect(intro.sessionFormat).toContain("30 minutes");
+  expect(league.sessionFormat).toContain("45 minutes");
+  expect(league.sessionFormat).not.toContain("30 minutes");
+
+  // Each league's halves must actually add up to its own slot length.
+  for (const l of PICKLPARK_LEAGUES) {
+    const halves = [...l.sessionFormat.matchAll(/(\d+) minutes/g)].map((m) =>
+      Number(m[1]),
+    );
+    expect(halves).toHaveLength(2);
+    expect(halves[0] + halves[1]).toBe(minutesBetween(l.startTime, l.endTime));
+  }
+});
+
+test("the one-sentence line for BOTH leagues quotes no minute count", () => {
+  // The two split differently, so any single number is wrong for one of them.
+  expect(PICKLPARK_LEAGUES_FORMAT_LINE).not.toMatch(/\d+ minutes/);
+  expect(PICKLPARK_LEAGUES_FORMAT_LINE).toContain("half");
+});
+
+test("JSON-LD start hours are parsed from startTime, not pattern-matched", () => {
+  expect(picklParkLeagueStartHour24(findPicklParkLeague("drill-and-play")!)).toBe(
+    "14:00",
+  );
+  expect(picklParkLeagueStartHour24(findPicklParkLeague("youth-league")!)).toBe(
+    "15:00",
+  );
+  // A moved league must follow, not silently fall through to 15:00.
+  expect(
+    picklParkLeagueStartHour24({
+      ...findPicklParkLeague("drill-and-play")!,
+      startTime: "1:00 PM",
+    }),
+  ).toBe("13:00");
+  expect(
+    picklParkLeagueStartHour24({
+      ...findPicklParkLeague("drill-and-play")!,
+      startTime: "9:30 AM",
+    }),
+  ).toBe("09:30");
+  expect(() =>
+    picklParkLeagueStartHour24({
+      ...findPicklParkLeague("drill-and-play")!,
+      startTime: "noon",
+    }),
+  ).toThrow();
+});
+
+/** Minutes between two "h:mm AM/PM" strings. Test-local on purpose. */
+function minutesBetween(start: string, end: string): number {
+  const toMin = (t: string) => {
+    const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(t.trim())!;
+    return ((Number(m[1]) % 12) + (m[3].toUpperCase() === "PM" ? 12 : 0)) * 60 +
+      Number(m[2]);
+  };
+  return toMin(end) - toMin(start);
+}

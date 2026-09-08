@@ -33,10 +33,12 @@ import {
   PICKLPARK_PUBLIC_AREA,
   PICKLPARK_SEASON_LABEL,
   PICKLPARK_SEASON_WEEKS,
-  PICKLPARK_SESSION_FORMAT,
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
-import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
+import {
+  PICKLPARK_LEAGUES,
+  PICKLPARK_LEAGUES_FORMAT_LINE,
+} from "@/data/picklpark-leagues-2026";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -242,7 +244,7 @@ export default async function SchedulePage() {
                     {l.title} {l.timeLabel} ({l.ageLabel})
                   </span>
                 ))}{" "}
-                &middot; {PICKLPARK_SESSION_FORMAT}. Coached by Next Gen,
+                &middot; {PICKLPARK_LEAGUES_FORMAT_LINE}. Coached by Next Gen,
                 registered with The Pickl Park.
               </p>
             </div>

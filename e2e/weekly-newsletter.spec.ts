@@ -25,7 +25,10 @@ import {
   PICKLPARK_SEASON_WEEKS,
   PICKLPARK_SESSION_FORMAT,
 } from "../src/data/picklpark-2026";
-import { PICKLPARK_LEAGUES } from "../src/data/picklpark-leagues-2026";
+import {
+  PICKLPARK_LEAGUES,
+  PICKLPARK_LEAGUES_FORMAT_LINE,
+} from "../src/data/picklpark-leagues-2026";
 import {
   COACH_PHONE_DISPLAY,
   WHATSAPP_LD_GROUP_URL,
@@ -624,7 +627,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     seasonLabel: PICKLPARK_SEASON_LABEL,
     weeks: PICKLPARK_SEASON_WEEKS,
     venueLine: "The Pickl Park, Frederick, MD",
-    sessionFormat: PICKLPARK_SESSION_FORMAT,
+    sessionFormat: PICKLPARK_LEAGUES_FORMAT_LINE,
     indoorNote: PICKLPARK_INDOOR_NOTE,
     groups: PICKLPARK_LEAGUES.map((l) => ({
       label: `${l.title} (${l.ageLabel})`,
@@ -677,7 +680,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
       expect(rendered).toContain("Saturdays 3:00–4:30 PM");
       expect(rendered).toContain("Ages 8–13");
       expect(rendered).toContain("Ages 10+");
-      expect(rendered).toContain(PICKLPARK_SESSION_FORMAT);
+      expect(rendered).toContain(PICKLPARK_LEAGUES_FORMAT_LINE);
       expect(rendered).toContain(PICKLPARK_INDOOR_NOTE);
       expect(rendered).toContain(`${ORIGIN}/picklpark`);
       // The Pickl Park quotes at the point of sale. A price here is a second
@@ -701,7 +704,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
   test("sits directly under the fall block and above this week's sessions", () => {
     const html = weeklyNewsletterHtml({ ...baseInput, fallSeason, picklParkSeason });
     const fallAt = html.indexOf("Fall season");
-    const picklParkAt = html.indexOf("Pickl Park Saturday season");
+    const picklParkAt = html.indexOf("Pickl Park Saturdays in Frederick");
     const sessionsAt = html.indexOf("This week&rsquo;s sessions");
     expect(fallAt).toBeGreaterThan(-1);
     expect(picklParkAt).toBeGreaterThan(fallAt);
@@ -711,7 +714,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
   test("leads the issue on its own when the fall season is not promoted", () => {
     const html = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
     expect(html).not.toContain("Fall season");
-    const picklParkAt = html.indexOf("Pickl Park Saturday season");
+    const picklParkAt = html.indexOf("Pickl Park Saturdays in Frederick");
     expect(picklParkAt).toBeGreaterThan(-1);
     expect(picklParkAt).toBeLessThan(html.indexOf("This week&rsquo;s sessions"));
   });
@@ -731,6 +734,26 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     expect(html).toContain("Full — ask about the sub list");
     expect(html).not.toMatch(/\d+ of \d+ spots left/);
     expect(html).not.toMatch(/\d+ spots open/);
+  });
+
+  test("the HTML eyebrow matches the text branch and claims no NGA registration", () => {
+    // The HTML said "Pickl Park Saturday season — registration is open" while
+    // the text branch said something else, and NGA registration for this
+    // Saturday returns 410. BRAND_GUIDELINES requires plain-text parity.
+    const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason };
+    const html = weeklyNewsletterHtml(input);
+    const text = weeklyNewsletterText(input);
+    expect(html).not.toContain("Pickl Park Saturday season");
+    expect(html).toContain("two leagues, registering now");
+    expect(text).toContain("two leagues, registering now");
+  });
+
+  test("the block quotes no minute count — the two leagues split differently", () => {
+    // Drill and Play is 30/30, Youth League 45/45. One shared number is wrong
+    // for one of them, so the shared sentence says "half".
+    const rendered = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
+    expect(rendered).not.toMatch(/\d+ minutes of coached drills/);
+    expect(rendered).toContain("first half");
   });
 
   test("no seat status is printed for a league — we don't hold that roster", () => {
