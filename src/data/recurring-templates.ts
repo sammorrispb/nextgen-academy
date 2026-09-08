@@ -120,8 +120,8 @@ export const RECURRING_TEMPLATES: readonly RecurringTemplate[] = [
     maxCourts: PICKLPARK_PICKLEBALL_COURTS,
     startsOn: "2026-09-12",
     notes:
-      "Open Court — every level welcome, ages 6–16. One hour indoors at The Pickl Park, drop in week by week. Runs right before the Saturday season groups.",
-    active: true,
+      "RETIRED 2026-09-07 — The Pickl Park now sells this hour itself as the six-week Kid's Drill and Play league (ages 8–13), registered through podplay. A $20 all-levels drop-in can no longer run at 2:00 without double-booking it. Kept on file because the cold-market reasoning above is still the argument for whatever replaces it as the Frederick on-ramp.",
+    active: false,
   },
 
   // ── Wednesday ages 8–11 block (added 2026-08-13, first session Sept 2) ───

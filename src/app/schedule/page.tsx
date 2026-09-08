@@ -30,18 +30,13 @@ import {
   FALL_SEASON_PRICE_USD,
 } from "@/data/fall-season-2026";
 import {
-  PICKLPARK_OPEN_COURT_END_TIME,
-  PICKLPARK_OPEN_COURT_START_TIME,
   PICKLPARK_PUBLIC_AREA,
   PICKLPARK_SEASON_LABEL,
   PICKLPARK_SEASON_WEEKS,
   PICKLPARK_SESSION_FORMAT,
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
-import {
-  PICKLPARK_SEASON_GROUPS,
-  PICKLPARK_SEASON_PRICE_USD,
-} from "@/data/picklpark-season-2026";
+import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -217,7 +212,7 @@ export default async function SchedulePage() {
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              See the season &rarr;
+              See both leagues &rarr;
             </span>
           </Link>
         </div>
@@ -241,21 +236,18 @@ export default async function SchedulePage() {
               </p>
               <p className="text-sm text-ngpa-muted mt-0.5">
                 {PICKLPARK_SEASON_LABEL} &middot;{" "}
-                {PICKLPARK_SEASON_GROUPS.map((g, i) => (
-                  <span key={g.group}>
+                {PICKLPARK_LEAGUES.map((l, i) => (
+                  <span key={l.slug}>
                     {i > 0 && ", "}
-                    {g.label} {g.timeLabel}
+                    {l.title} {l.timeLabel} ({l.ageLabel})
                   </span>
                 ))}{" "}
-                &middot; ${PICKLPARK_SEASON_PRICE_USD} per player. Each hour is{" "}
-                {PICKLPARK_SESSION_FORMAT}. Open Court{" "}
-                {PICKLPARK_OPEN_COURT_START_TIME}&ndash;
-                {PICKLPARK_OPEN_COURT_END_TIME.replace(" PM", "")} PM every
-                Saturday, all levels, drop in.
+                &middot; {PICKLPARK_SESSION_FORMAT}. Coached by Next Gen,
+                registered with The Pickl Park.
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              See the season &rarr;
+              See both leagues &rarr;
             </span>
           </Link>
         </div>

@@ -38,14 +38,8 @@ import {
   PICKLPARK_SESSION_FORMAT,
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
-import {
-  PICKLPARK_SEASON_GROUPS,
-  PICKLPARK_SEASON_PRICE_USD,
-  PICKLPARK_SEASON_TITLE,
-  picklParkSeasonSlotsFor,
-} from "@/data/picklpark-season-2026";
-import { countPicklParkRegistrations } from "@/lib/notion-picklpark-registrations";
-import { picklParkRegistrationOpen } from "@/lib/picklpark-registration-window";
+import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
+import { picklParkLeaguesOpen } from "@/lib/picklpark-registration-window";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
@@ -247,42 +241,38 @@ async function loadPicklParkSeason(
   seasonLabel: string;
   weeks: number;
   venueLine: string;
-  priceUsd: number;
+  priceUsd?: number;
   sessionFormat: string;
   indoorNote: string;
   groups: NewsletterFallGroup[];
   url: string;
 } | null> {
-  if (
-    !picklParkRegistrationOpen(
-      todayIso,
-      process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN,
-    )
-  ) {
+  // Gated on whether the Saturday is RUNNING, not on whether NGA is selling
+  // it. NGA retired its own Pickl Park checkout on 2026-09-07; keeping this on
+  // the sales flag would have silently dropped Frederick out of the newsletter
+  // entirely, which is the opposite of what retiring the checkout meant.
+  if (!picklParkLeaguesOpen(todayIso)) {
     return null;
   }
 
-  const groups: NewsletterFallGroup[] = [];
-  for (const option of PICKLPARK_SEASON_GROUPS) {
-    const taken = await countPicklParkRegistrations(option.group);
-    groups.push({
-      label: option.label,
-      timeLabel: option.timeLabel,
-      spotsLeft:
-        taken === null ? null : picklParkSeasonSlotsFor(option.group) - taken,
-    });
-  }
+  // No seat counts and no price: The Pickl Park owns both. `spotsLeft: null`
+  // makes seatStatusLabel render nothing rather than guess, and omitting
+  // priceUsd drops the price line from the HTML and the text parity together.
+  const groups: NewsletterFallGroup[] = PICKLPARK_LEAGUES.map((league) => ({
+    label: `${league.title} (${league.ageLabel})`,
+    timeLabel: league.timeLabel,
+    spotsLeft: null,
+  }));
 
   return {
-    title: PICKLPARK_SEASON_TITLE,
+    title: "Pickl Park Saturday Leagues",
     seasonLabel: PICKLPARK_SEASON_LABEL,
     weeks: PICKLPARK_SEASON_WEEKS,
     venueLine: `${PICKLPARK_VENUE_SHORT}, ${PICKLPARK_PUBLIC_AREA}`,
-    priceUsd: PICKLPARK_SEASON_PRICE_USD,
     sessionFormat: PICKLPARK_SESSION_FORMAT,
     indoorNote: PICKLPARK_INDOOR_NOTE,
     groups,
-    url: appendUtm(`${SITE_ORIGIN}/picklpark`, "picklpark-season", utmCampaign),
+    url: appendUtm(`${SITE_ORIGIN}/picklpark`, "picklpark-leagues", utmCampaign),
   };
 }
 

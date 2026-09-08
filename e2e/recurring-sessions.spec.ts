@@ -137,15 +137,12 @@ test.describe("recurring templates (weekend move 2026-07-21)", () => {
     // stock fresh OPEN rows past the cancelled run and reopen a schedule meant
     // to be dark. Flip one back to `active: true` to resume.
     //
-    // Widened from "no template auto-seeds" on 2026-08-31: the Pickl Park
-    // Saturday Open Court is deliberately active. It is a different venue in a
-    // different county on a day none of these templates run, so turning it on
-    // cannot re-stock any of them — which is what this assertion now pins.
-    const moco = RECURRING_TEMPLATES.filter(
-      (t) => !t.location.includes("Pickl Park"),
-    );
-    expect(moco.length).toBeGreaterThan(0);
-    expect(moco.filter((t) => t.active)).toEqual([]);
+    // NARROWED BACK on 2026-09-07: the Pickl Park Saturday Open Court was the
+    // one deliberately-active template between 2026-08-31 and now. It is
+    // retired — The Pickl Park sells that 2:00 hour itself as a podplay league
+    // — so once again NOTHING auto-seeds, and this asserts the whole file.
+    expect(RECURRING_TEMPLATES.length).toBeGreaterThan(0);
+    expect(RECURRING_TEMPLATES.filter((t) => t.active)).toEqual([]);
   });
 
   test("Wednesday ages 8–11 block is retained and still valid (added 2026-08-13)", () => {
@@ -261,18 +258,21 @@ test.describe("Pickl Park Saturday Open Court template", () => {
     (t) => t.titleBase === "Pickl Park Saturday Open Court",
   )!;
 
-  test("exists, is active, and is the only active template", () => {
+  test("is RETIRED — kept on file, but seeds nothing", () => {
+    // Retired 2026-09-07. The Pickl Park now sells this 2:00 hour itself as
+    // the six-week Kid's Drill and Play league (ages 8–13), registered through
+    // podplay, so a $20 all-levels drop-in can no longer run in it without
+    // double-booking the court.
+    //
+    // Kept rather than deleted for row-family idempotency: Sep 12 is already
+    // seeded, and the legacyTitlePrefixes are what stop a future re-activation
+    // from creating a duplicate row family for the same evening.
     expect(openCourt).toBeDefined();
-    expect(openCourt.active).toBe(true);
-    // Every MoCo template has been dark since the 2026-08-23 blackout and
-    // must stay that way — flipping this one on must not have woken them.
-    const active = RECURRING_TEMPLATES.filter((t) => t.active);
-    expect(active.map((t) => t.titleBase)).toEqual([
-      "Pickl Park Saturday Open Court",
-    ]);
+    expect(openCourt.active).toBe(false);
+    expect(RECURRING_TEMPLATES.filter((t) => t.active)).toEqual([]);
   });
 
-  test("validates, and seeds Saturdays at the Pickl Park venue", () => {
+  test("still validates and keeps its Saturday shape, so it can be revived", () => {
     expect(validateTemplate(openCourt)).toEqual([]);
     expect(openCourt.weekday).toBe(6);
     expect(openCourt.location).toBe(PICKLPARK_VENUE);

@@ -25,12 +25,7 @@ import {
   PICKLPARK_SEASON_WEEKS,
   PICKLPARK_SESSION_FORMAT,
 } from "../src/data/picklpark-2026";
-import {
-  PICKLPARK_SEASON_GROUPS,
-  PICKLPARK_SEASON_PRICE_USD,
-  PICKLPARK_SEASON_TITLE,
-  picklParkSeasonSlotsFor,
-} from "../src/data/picklpark-season-2026";
+import { PICKLPARK_LEAGUES } from "../src/data/picklpark-leagues-2026";
 import {
   COACH_PHONE_DISPLAY,
   WHATSAPP_LD_GROUP_URL,
@@ -618,20 +613,23 @@ test.describe("weekly newsletter — fall season block", () => {
 
 test.describe("weekly newsletter — Pickl Park season block", () => {
   // The second fall option (Saturdays, indoors, Frederick). Mirrors what the
-  // cron builds from picklpark-2026.ts + picklpark-season-2026.ts, so a change
-  // to dates, price, venue or the drills/games split shows up here first.
+  // cron builds from picklpark-2026.ts + picklpark-leagues-2026.ts.
+  //
+  // REBUILT 2026-09-07: no `priceUsd` and every `spotsLeft` is null, because
+  // The Pickl Park sells both leagues and owns both numbers. The fixture keeps
+  // them absent on purpose — if the template ever starts rendering a price or
+  // a seat count for Frederick again, the assertions below go red.
   const picklParkSeason = {
-    title: PICKLPARK_SEASON_TITLE,
+    title: "Pickl Park Saturday Leagues",
     seasonLabel: PICKLPARK_SEASON_LABEL,
     weeks: PICKLPARK_SEASON_WEEKS,
     venueLine: "The Pickl Park, Frederick, MD",
-    priceUsd: PICKLPARK_SEASON_PRICE_USD,
     sessionFormat: PICKLPARK_SESSION_FORMAT,
     indoorNote: PICKLPARK_INDOOR_NOTE,
-    groups: PICKLPARK_SEASON_GROUPS.map((g) => ({
-      label: g.label,
-      timeLabel: g.timeLabel,
-      spotsLeft: picklParkSeasonSlotsFor(g.group),
+    groups: PICKLPARK_LEAGUES.map((l) => ({
+      label: `${l.title} (${l.ageLabel})`,
+      timeLabel: l.timeLabel,
+      spotsLeft: null,
     })),
     url: `${ORIGIN}/picklpark`,
   };
@@ -659,41 +657,43 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     }
   });
 
-  test("renders dates, venue, both bands, the drills/games split, the indoor promise, price and CTA", () => {
+  test("renders dates, venue, both leagues, the drills/games split, the indoor promise and CTA — and NO price", () => {
     const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason };
     for (const rendered of [
       weeklyNewsletterHtml(input),
       weeklyNewsletterText(input),
     ]) {
-      expect(rendered).toContain("Pickl Park Saturday season");
+      expect(rendered).toContain("Pickl Park Saturday Leagues");
       expect(rendered).toContain(PICKLPARK_SEASON_LABEL);
       expect(rendered).toContain("The Pickl Park, Frederick, MD");
-      // HTML escapes the ampersand, plain text does not — either form is the band.
+      // HTML escapes the apostrophe, plain text does not — either is the title.
       expect(
-        rendered.includes("Red &amp; Orange Ball") ||
-          rendered.includes("Red & Orange Ball"),
+        rendered.includes("Kid&rsquo;s Drill and Play") ||
+          rendered.includes("Kid&#39;s Drill and Play") ||
+          rendered.includes("Kid's Drill and Play"),
       ).toBe(true);
-      expect(
-        rendered.includes("Green &amp; Yellow Ball") ||
-          rendered.includes("Green & Yellow Ball"),
-      ).toBe(true);
-      expect(rendered).toContain("Saturdays 3:00–4:00 PM");
-      expect(rendered).toContain("Saturdays 4:00–5:00 PM");
+      expect(rendered).toContain("Youth League");
+      expect(rendered).toContain("Saturdays 2:00–3:00 PM");
+      expect(rendered).toContain("Saturdays 3:00–4:30 PM");
+      expect(rendered).toContain("Ages 8–13");
+      expect(rendered).toContain("Ages 10+");
       expect(rendered).toContain(PICKLPARK_SESSION_FORMAT);
-      // $225 buys 60-minute blocks here against Walter Johnson's 90 — the
-      // indoor promise is the reason, and it has to travel with the price.
       expect(rendered).toContain(PICKLPARK_INDOOR_NOTE);
-      expect(rendered).toContain(`$${PICKLPARK_SEASON_PRICE_USD}`);
       expect(rendered).toContain(`${ORIGIN}/picklpark`);
+      // The Pickl Park quotes at the point of sale. A price here is a second
+      // copy that can only go stale, and it is not ours to publish.
+      expect(rendered).not.toMatch(/\$\s*\d/);
+      // And no invented seat count from a roster we no longer hold.
+      expect(rendered).not.toMatch(/spots? left/i);
     }
   });
 
   test("the season the email advertises is the season in the data files", () => {
     expect(PICKLPARK_SATURDAYS).toHaveLength(PICKLPARK_SEASON_WEEKS);
     expect(PICKLPARK_SEASON_LABEL).toContain("September 19");
-    expect(PICKLPARK_SEASON_GROUPS.map((g) => g.label)).toEqual([
-      "Red & Orange Ball",
-      "Green & Yellow Ball",
+    expect(PICKLPARK_LEAGUES.map((l) => l.title)).toEqual([
+      "Kid's Drill and Play",
+      "Youth League",
     ]);
     expect(PICKLPARK_SESSION_FORMAT).toContain("30 minutes of coached drills");
   });
@@ -733,15 +733,15 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     expect(html).not.toMatch(/\d+ spots open/);
   });
 
-  test("an unreadable roster prints no seat status for a band", () => {
-    const html = weeklyNewsletterHtml({
-      ...baseInput,
-      picklParkSeason: {
-        ...picklParkSeason,
-        groups: picklParkSeason.groups.map((g) => ({ ...g, spotsLeft: null })),
-      },
-    });
-    expect(html).toContain("Saturdays 3:00–4:00 PM");
+  test("no seat status is printed for a league — we don't hold that roster", () => {
+    // `spotsLeft: null` was the "Notion roster unreadable" case when NGA held
+    // the roster. Since 2026-09-07 it is the PERMANENT state for Frederick:
+    // The Pickl Park owns registration, so there is no count to read and
+    // silence beats a guess. Same rendering path, different reason.
+    const html = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
+    expect(picklParkSeason.groups.every((g) => g.spotsLeft === null)).toBe(true);
+    expect(html).toContain("Saturdays 2:00–3:00 PM");
+    expect(html).toContain("Saturdays 3:00–4:30 PM");
     expect(html).not.toContain("Spots open");
     expect(html).not.toContain("Full — ask about the sub list");
   });

@@ -6,7 +6,6 @@ import {
 import { FALL_SUNDAYS } from "../src/data/fall-2026";
 import { FALL_SEASON_PRICE_USD } from "../src/data/fall-season-2026";
 import { PICKLPARK_SATURDAYS } from "../src/data/picklpark-2026";
-import { PICKLPARK_SEASON_PRICE_USD } from "../src/data/picklpark-season-2026";
 import { LEAGUE_SEASONS } from "../src/data/leagues";
 
 /** Only the fall season open. */
@@ -92,39 +91,39 @@ test.describe("buildOpenNowOffers", () => {
     expect(league!.cta).not.toMatch(/\$\d/);
   });
 
-  test("the Pickl Park season shows only while its flag is on AND it runs", () => {
-    // Its own flag, not the fall one — the two seasons run in parallel this
-    // autumn and a shared gate would have shown Frederick to MoCo families
-    // (and hidden it from Frederick ones) depending on the wrong env var.
-    const open = buildOpenNowOffers("2026-08-31", picklParkOnly(true)).map(
-      (o) => o.href,
-    );
-    expect(open).toContain("/picklpark");
-    expect(open).not.toContain("/fall");
-
-    const flagOff = buildOpenNowOffers("2026-08-31", picklParkOnly(false)).map(
-      (o) => o.href,
-    );
-    expect(flagOff).not.toContain("/picklpark");
+  test("the Pickl Park leagues show while the Saturday runs, flag or no flag", () => {
+    // REPOSTURED 2026-09-07: this card no longer keys off a registration flag.
+    // NGA doesn't sell Frederick any more, so gating the ADVERTISEMENT on the
+    // retired sales flag would hide two live leagues. It gates on the calendar.
+    for (const flag of [true, false]) {
+      const hrefs = buildOpenNowOffers("2026-08-31", picklParkOnly(flag)).map(
+        (o) => o.href,
+      );
+      expect(hrefs, String(flag)).toContain("/picklpark");
+    }
 
     // Last Saturday still counts; the day after does not.
     expect(
-      buildOpenNowOffers(LAST_SATURDAY, picklParkOnly(true)).map((o) => o.href),
+      buildOpenNowOffers(LAST_SATURDAY, picklParkOnly(false)).map((o) => o.href),
     ).toContain("/picklpark");
     expect(
-      buildOpenNowOffers(DAY_AFTER_PICKLPARK, picklParkOnly(true)).map(
+      buildOpenNowOffers(DAY_AFTER_PICKLPARK, picklParkOnly(false)).map(
         (o) => o.href,
       ),
     ).not.toContain("/picklpark");
   });
 
-  test("the Pickl Park card quotes its own price, from the data file", () => {
-    const card = buildOpenNowOffers("2026-08-31", picklParkOnly(true)).find(
+  test("the Pickl Park card names both leagues and quotes no price", () => {
+    const card = buildOpenNowOffers("2026-08-31", picklParkOnly(false)).find(
       (o) => o.href === "/picklpark",
     );
     expect(card).toBeDefined();
-    expect(card!.detail).toContain(`$${PICKLPARK_SEASON_PRICE_USD}`);
     expect(card!.detail).toContain("Frederick");
+    expect(card!.detail).toContain("Kid's Drill and Play");
+    expect(card!.detail).toContain("Youth League");
+    // The Pickl Park quotes at the point of sale; a second copy here can only
+    // go stale.
+    expect(card!.detail).not.toMatch(/\$\s*\d/);
   });
 
   test("both seasons can be offered at once, each from its own flag", () => {

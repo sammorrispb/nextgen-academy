@@ -339,13 +339,13 @@ export function buildPicklParkEvents(origin: string): EventFeedItem[] {
   return [
     ...PICKLPARK_SATURDAYS.map((date) => ({
       ...shared(date),
-      title: "NGA Pickl Park Season — Red/Orange + Green/Yellow",
+      title: "NGA Pickl Park Saturday — Drill and Play + Youth League",
       tentative: false,
       status: "Open" as const,
     })),
     ...PICKLPARK_MAKEUP_DATES.map((date) => ({
       ...shared(date),
-      title: "[TENTATIVE] NGA Pickl Park Season — makeup date hold",
+      title: "[TENTATIVE] NGA Pickl Park Saturday — makeup date hold",
       tentative: true,
       status: "Tentative" as const,
     })),

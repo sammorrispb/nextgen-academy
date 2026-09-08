@@ -26,9 +26,9 @@ import {
   PICKLPARK_SESSION_FORMAT,
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
-import { PICKLPARK_SEASON_GROUPS } from "@/data/picklpark-season-2026";
+import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
 import {
-  picklParkRegistrationOpen,
+  picklParkLeaguesOpen,
   picklParkTodayET,
 } from "@/lib/picklpark-registration-window";
 
@@ -67,12 +67,12 @@ function sundayLabel(iso: string): string {
 export default async function FallPage() {
   const registrationOpen =
     process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true";
-  // The other fall option (Saturdays, indoors, Frederick). Reads the Pickl Park
-  // season's own gate, so the card retires the moment that season closes.
-  const picklParkOpen = picklParkRegistrationOpen(
-    picklParkTodayET(),
-    process.env.NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN,
-  );
+  // The other fall option (Saturdays, indoors, Frederick). Gated on whether
+  // the Saturday is still RUNNING, not on whether NGA is selling it — NGA
+  // stopped selling Pickl Park on 2026-09-07 and The Pickl Park registers both
+  // leagues itself. Tying this to the retired checkout would have hidden two
+  // live leagues from the page our paying families actually land on.
+  const picklParkOpen = picklParkLeaguesOpen(picklParkTodayET());
 
   const spotsTaken: Partial<Record<FallSeasonGroup, number | null>> = {};
   if (registrationOpen) {
@@ -253,23 +253,24 @@ export default async function FallPage() {
                   Also this fall &middot; Saturdays in {PICKLPARK_PUBLIC_AREA}
                 </p>
                 <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                  Prefer Saturdays, or closer to Frederick? There&rsquo;s an
-                  indoor season too.
+                  Prefer Saturdays, or closer to Frederick? There are two
+                  indoor leagues too.
                 </p>
                 <p className="text-sm text-ngpa-muted mt-0.5">
                   Six Saturdays at {PICKLPARK_VENUE_SHORT},{" "}
                   {PICKLPARK_SEASON_LABEL} &middot;{" "}
-                  {PICKLPARK_SEASON_GROUPS.map((g, i) => (
-                    <span key={g.group}>
+                  {PICKLPARK_LEAGUES.map((l, i) => (
+                    <span key={l.slug}>
                       {i > 0 && ", "}
-                      {g.label} {g.timeLabel}
+                      {l.title} {l.timeLabel} ({l.ageLabel})
                     </span>
                   ))}{" "}
-                  &middot; every ball color welcome, {PICKLPARK_SESSION_FORMAT}.
+                  &middot; {PICKLPARK_SESSION_FORMAT}. Coached by Next Gen,
+                  registered with The Pickl Park.
                 </p>
               </div>
               <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-                See the Saturday season &rarr;
+                See both leagues &rarr;
               </span>
             </Link>
           )}

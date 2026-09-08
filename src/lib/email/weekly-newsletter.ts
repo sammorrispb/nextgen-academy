@@ -102,17 +102,19 @@ export interface WeeklyNewsletterInput {
     weeks: number;
     /** "The Pickl Park, Frederick, MD" */
     venueLine: string;
-    priceUsd: number;
+    /**
+     * OMITTED since 2026-09-07 — The Pickl Park sells both leagues itself and
+     * quotes at the point of sale, so this email publishes no Frederick price.
+     * Kept optional rather than deleted so the MoCo season block, which does
+     * quote, can keep sharing this shape.
+     */
+    priceUsd?: number;
     /** "30 minutes of coached drills, then 30 minutes of game play" */
     sessionFormat: string;
-    /**
-     * PICKLPARK_INDOOR_NOTE — the sentence that earns price parity with the
-     * outdoor MoCo season. A block that quotes $225 without it is selling the
-     * shorter hour and none of the reason.
-     */
+    /** PICKLPARK_INDOOR_NOTE — all six Saturdays actually run. */
     indoorNote: string;
     groups: NewsletterFallGroup[];
-    /** UTM-stamped /picklpark registration URL. */
+    /** UTM-stamped /picklpark URL. */
     url: string;
   } | null;
   sessions: NewsletterSessionGroup[];
@@ -268,7 +270,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <div style="${s.cardAccent}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturday season &mdash; registration is open</p>
       <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(picklParkSeason.title)} &mdash; ${escape(picklParkSeason.seasonLabel)}</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${picklParkSeason.weeks} Saturdays indoors at ${escape(picklParkSeason.venueLine)} &mdash; every ball color welcome. Each hour is ${escape(picklParkSeason.sessionFormat)}, and the games run as a rotating-partner round robin, so your kid plays with everyone in their group across the season. One registration covers all ${picklParkSeason.weeks} Saturdays.</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${picklParkSeason.weeks} Saturdays indoors at ${escape(picklParkSeason.venueLine)} &mdash; two leagues, back to back. Each runs ${escape(picklParkSeason.sessionFormat)}. Coached by Next Gen; The Pickl Park handles registration.</p>
       ${picklParkSeason.groups
         .map(
           (g) =>
@@ -276,8 +278,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
         )
         .join("")}
       <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(picklParkSeason.indoorNote)}</p>
-      <p style="margin:8px 0 0 0;color:${c.muted};font-size:13px;">$${picklParkSeason.priceUsd} per player for the full season &middot; first come, first serve. Can&rsquo;t make all ${picklParkSeason.weeks}? Reply and we&rsquo;ll put you on the sub list.</p>
-      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">Register for the Saturday season &rarr;</a></p>
+      ${picklParkSeason.priceUsd ? `<p style="margin:8px 0 0 0;color:${c.muted};font-size:13px;">$${picklParkSeason.priceUsd} per player for the full season.</p>` : ""}
+      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">See both leagues &rarr;</a></p>
     </div>`
     : "";
 
@@ -527,21 +529,21 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
 
   if (picklParkSeason) {
     lines.push(
-      "Pickl Park Saturday season — registration is open:",
+      "Pickl Park Saturdays in Frederick — two leagues, registering now:",
       `${picklParkSeason.title} — ${picklParkSeason.seasonLabel}`,
-      `${picklParkSeason.weeks} Saturdays indoors at ${picklParkSeason.venueLine} — every ball color welcome. Each hour is ${picklParkSeason.sessionFormat}, and the games run as a rotating-partner round robin, so your kid plays with everyone in their group across the season. One registration covers all ${picklParkSeason.weeks} Saturdays.`,
+      `${picklParkSeason.weeks} Saturdays indoors at ${picklParkSeason.venueLine} — two leagues, back to back. Each runs ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.`,
       "",
     );
     for (const g of picklParkSeason.groups) {
       lines.push(`  ${g.label} — ${picklParkGroupLine(g)}`);
     }
-    lines.push(
-      "",
-      picklParkSeason.indoorNote,
-      `$${picklParkSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${picklParkSeason.weeks}? Reply and we'll put you on the sub list.`,
-      `Register for the Saturday season: ${picklParkSeason.url}`,
-      "",
-    );
+    lines.push("", picklParkSeason.indoorNote);
+    if (picklParkSeason.priceUsd) {
+      lines.push(
+        `$${picklParkSeason.priceUsd} per player for the full season.`,
+      );
+    }
+    lines.push(`See both leagues: ${picklParkSeason.url}`, "");
   }
 
   if (sessions.length > 0) {
