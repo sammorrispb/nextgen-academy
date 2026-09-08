@@ -23,10 +23,12 @@ import { familySiteUrl } from "@/lib/urls";
 import {
   PICKLPARK_PUBLIC_AREA,
   PICKLPARK_SEASON_LABEL,
-  PICKLPARK_SESSION_FORMAT,
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
-import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
+import {
+  PICKLPARK_LEAGUES,
+  PICKLPARK_LEAGUES_FORMAT_LINE,
+} from "@/data/picklpark-leagues-2026";
 import {
   picklParkLeaguesOpen,
   picklParkTodayET,
@@ -265,8 +267,8 @@ export default async function FallPage() {
                       {l.title} {l.timeLabel} ({l.ageLabel})
                     </span>
                   ))}{" "}
-                  &middot; {PICKLPARK_SESSION_FORMAT}. Coached by Next Gen,
-                  registered with The Pickl Park.
+                  &middot; {PICKLPARK_LEAGUES_FORMAT_LINE}. Coached by Next
+                  Gen, registered with The Pickl Park.
                 </p>
               </div>
               <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
