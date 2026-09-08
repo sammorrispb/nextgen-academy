@@ -77,9 +77,9 @@ export default async function CommitSuccessPage({
                 You&rsquo;re locked in.
               </h1>
               <p className="text-ngpa-white/75 text-base sm:text-lg max-w-md mx-auto mb-6">
-                We&rsquo;ll auto-reserve your spot each week and charge $20 the
-                morning each session opens. A receipt and skip-this-week link
-                land in your inbox.
+                We&rsquo;ll auto-reserve your spot each week and charge the
+                standard drop-in rate the morning each session opens. A receipt
+                and skip-this-week link land in your inbox.
               </p>
               <Link
                 href="/schedule"

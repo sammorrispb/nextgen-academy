@@ -73,8 +73,10 @@ export default async function CommitPage({ params }: PageProps) {
           </h1>
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Same time, same court, same crew. We&rsquo;ll auto-reserve {payload.childFirstName}&rsquo;s
-            spot each week and charge $20 to your card only when their seat actually
-            opens. Skip any week with one tap &mdash; we&rsquo;ll refund automatically.
+            spot each week and charge your card the standard drop-in rate &mdash; the
+            same one you paid for the first session &mdash; only when their seat
+            actually opens. Skip any week with one tap &mdash; we&rsquo;ll refund
+            automatically.
           </p>
         </div>
       </section>

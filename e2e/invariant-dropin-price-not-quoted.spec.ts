@@ -10,6 +10,10 @@ import {
 } from "../src/lib/email/post-eval-followup";
 import { postSessionHtml, postSessionText } from "../src/lib/email/post-session";
 import { crewConfirmedHtml, crewConfirmedText } from "../src/lib/email/crew-confirmed";
+import {
+  commitConfirmationHtml,
+  commitConfirmationText,
+} from "../src/lib/email/commit-confirmation";
 
 /**
  * The drop-in rate is not quoted on any parent-facing surface (Sam,
@@ -17,13 +21,15 @@ import { crewConfirmedHtml, crewConfirmedText } from "../src/lib/email/crew-conf
  * the amount on the Stripe checkout page — but no page, feed, or marketing
  * email prints a figure for it.
  *
- * DELIBERATE EXCEPTION, do not "fix" by widening this spec: the four
- * card-on-file surfaces (/commit/[token], CommitForm, /commit/[token]/success,
- * commit-confirmation.ts) still state the per-week amount. That flow saves a
- * card via a Stripe `mode: "setup"` session, which shows the parent NO amount,
- * and the autoreserve cron then charges off-session. Stripping the figure
- * there would take a recurring charge authorization with the amount disclosed
- * nowhere — a dark pattern, not a copy cleanup.
+ * That includes the four card-on-file surfaces (/commit/[token], CommitForm,
+ * /commit/[token]/success, commit-confirmation.ts), which briefly kept the
+ * per-week figure and lost it on Sam's explicit call (2026-09-08). That flow
+ * saves a card via a Stripe `mode: "setup"` session, which shows the parent NO
+ * amount, and the autoreserve cron then charges off-session — so the copy has
+ * to carry the disclosure that the figure used to: every one of those surfaces
+ * ties the charge to the rate the parent ALREADY paid for the first session,
+ * and to the weeks it applies to. Keep that anchor if you edit this copy;
+ * "we'll charge your card" on its own is not the same promise.
  */
 
 function makeSession(over: Partial<NgaSession> = {}): NgaSession {
@@ -123,5 +129,28 @@ test.describe("drop-in price is not quoted on parent-facing surfaces", () => {
     expect(crewConfirmedHtml(crew)).toContain("Book session 1");
     expect(crewConfirmedHtml(crew)).not.toContain("$");
     expect(crewConfirmedText(crew)).not.toContain("$");
+  });
+
+  test("the card-on-file commit flow quotes no figure but keeps the anchor", () => {
+    const commit = {
+      parentFirst: "Hun",
+      childFirst: "Zoe",
+      crewDescription: "Saturdays at 2:00 PM in Frederick",
+      weeksCommitted: 4,
+      cardLast4: "4242",
+      manageUrl: "https://nextgenpbacademy.com/commit/tok/manage",
+    };
+    for (const body of [
+      commitConfirmationHtml(commit),
+      commitConfirmationText(commit),
+    ]) {
+      expect(body).not.toContain("$");
+      // A recurring-charge authorization still has to say WHAT is charged: the
+      // rate already paid, and only on weeks the seat opens.
+      expect(body).toMatch(/drop-in (rate|charge)/i);
+      expect(body).toMatch(/4242/);
+    }
+    expect(commitConfirmationHtml(commit)).toMatch(/only on weeks/i);
+    expect(commitConfirmationText(commit)).toMatch(/skip any week/i);
   });
 });
