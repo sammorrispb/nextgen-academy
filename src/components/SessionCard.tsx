@@ -107,7 +107,7 @@ export default function SessionCard({
           <ShareButton
             url={shareUrl}
             title={`${session.title} · ${session.startTime}`}
-            text={`Reserve a $20 drop-in slot at NGA — ${session.title}`}
+            text={`Reserve a drop-in slot at NGA — ${session.title}`}
           />
         </div>
       </div>

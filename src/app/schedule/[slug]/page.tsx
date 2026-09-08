@@ -63,7 +63,7 @@ export async function generateMetadata({
     publicLocation(session.location, session.publicArea),
   );
   const title = `${session.title} · ${dayLabel} · NGA Drop-in`;
-  const description = `$20 to reserve a 1-hour pickleball slot on ${dayLabel} at ${shortLoc}. ${session.registeredCount} of ${fillGoal(session)} signed up — help fill the court.`;
+  const description = `Reserve a 1-hour youth pickleball slot on ${dayLabel} at ${shortLoc}. ${session.registeredCount} of ${fillGoal(session)} signed up — help fill the court.`;
 
   return {
     title,
@@ -156,7 +156,7 @@ export default async function SessionPage({ params }: PageProps) {
           <SectionHeading
             eyebrow="Reserve a Slot"
             title="Lock in this session."
-            subtitle="$20 for one 1-hour slot. Drop-in only — no subscription, no commitment. Courts stay small on purpose."
+            subtitle="One 1-hour slot, drop-in only — no subscription, no commitment. Courts stay small on purpose."
           />
 
           <RegistrationNotice />
@@ -198,7 +198,7 @@ function SessionDetailCard({
 
   const shareUrl = `${SITE_ORIGIN}/schedule/${slug}`;
   const shareTitle = `${session.title} · ${session.startTime}`;
-  const shareText = `Reserve a $20 drop-in slot at NGA — ${session.title}, ${formatLongDate(session.date)}`;
+  const shareText = `Reserve a drop-in slot at NGA — ${session.title}, ${formatLongDate(session.date)}`;
 
   return (
     <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-6 sm:p-8 transition-colors hover:border-ngpa-teal/40">

@@ -5,7 +5,7 @@
 export const LLMS_TXT = `# Next Gen Pickleball Academy — nextgenpbacademy.com
 
 > Youth pickleball academy for kids ages 6–16 in Montgomery County, MD.
-> Free 30-minute evaluations, small-group sessions ($20 drop-in), private
+> Free 30-minute evaluations, small-group drop-in sessions, private
 > lessons, summer camps, and the invite-only Yellow Ball tournament track.
 
 This file follows the llms.txt convention (https://llmstxt.org/). It lists the
@@ -33,9 +33,9 @@ agent-consumable surface of this host.
 ## Key pages
 
 - https://nextgenpbacademy.com/ — Home: programs, coaches, FAQ, lead form.
-- https://nextgenpbacademy.com/schedule — Live session schedule + $20 drop-in
-  registration (Stripe checkout; a one-time parent waiver is required before the
-  first paid session).
+- https://nextgenpbacademy.com/schedule — Live session schedule + drop-in
+  registration (Stripe checkout, which is where the price is shown; a one-time
+  parent waiver is required before the first paid session).
 - https://nextgenpbacademy.com/free-evaluation — Book a free 30-minute skill
   evaluation (the standard entry point for new families).
 - https://nextgenpbacademy.com/camp — Summer camps.

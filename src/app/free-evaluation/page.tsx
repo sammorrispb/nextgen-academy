@@ -190,10 +190,11 @@ export default function FreeEvaluationPage() {
                   <p className="text-ngpa-white/55 text-xs mt-2.5 leading-relaxed">
                     After the eval, group sessions are{" "}
                     <span className="text-ngpa-white/80 font-bold">
-                      $20 each
+                      drop-in
                     </span>{" "}
-                    &mdash; drop in anytime. No contracts. Private-lesson rates
-                    quoted after we see your child play.
+                    &mdash; come when it fits your week. No contracts. Session
+                    and private-lesson rates come with your placement, after we
+                    see your child play.
                   </p>
                 </div>
                 <LeadForm submitLabel="Schedule my free evaluation" />

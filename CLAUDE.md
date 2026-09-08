@@ -163,7 +163,7 @@ Free, top-of-funnel offer: a cold parent says yes to the free thing first; price
 6. **Resend**: welcome email to the subscriber (template `src/lib/email/newsletter-welcome.ts`, bcc admin, replyTo `nextgenacademypb@gmail.com`) carrying the `/crew` CTA and a plain forward ask (the personalized referral link came out 2026-09-03 — see the referral payout section) + a short admin notification. Flips `Welcome Sent`=true after a successful send; suppresses the welcome only if dedup found an already-welcomed row.
 7. **Open Brain** ingest (`source: "nga_newsletter_signup"`, includes `referred_by` in metadata), awaited.
 
-**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/monthly). The only live price is the single $20 drop-in (`STRIPE_DROPIN_PRICE_ID`), shown on `/schedule`. Keep it that way until a real $25/monthly product exists in Stripe.
+**Pricing copy is teased, not quoted.** Neither the page nor the welcome email carries hard prices ($25/monthly). Keep it that way until a real $25/monthly product exists in Stripe. **The drop-in rate is no longer quoted anywhere either (Sam, 2026-09-08)** — it still charges `STRIPE_DROPIN_PRICE_ID`, but the figure came off `/schedule`, the FAQ, the SEO pages, llms.txt, the SportsEvent JSON-LD offer and every marketing email; parents see the amount on the Stripe checkout page. Only the season products (fall, Pickl Park, Monday Girls, camps, league) quote a price. See "Drop-in registration flow".
 
 ### Empty-state waitlist (`/api/waitlist` + `OpenNowOffers`)
 The form that renders ONLY when there are zero open sessions — on `/schedule` and in
@@ -350,7 +350,7 @@ The one-shot notice to families who had **already paid** when the season moved f
 
 | Time | What | Sells through |
 |---|---|---|
-| 2:00–3:00 | **Open Court** — all levels, ages 6–16, $20 drop-in | `/schedule` (the ordinary drop-in stack) |
+| 2:00–3:00 | **Open Court** — all levels, ages 6–16, drop-in | `/schedule` (the ordinary drop-in stack) |
 | 3:00–4:00 | **Red & Orange Ball** season | `/picklpark` |
 | 4:00–5:00 | **Green & Yellow Ball** season | `/picklpark` |
 
@@ -506,13 +506,13 @@ modules directly, so an override can never turn them green-when-they-should-be-r
 The calendar sync itself is **agent-side, not an API integration** (a Google Calendar API client would mean OAuth/service-account credentials and a refresh-token store in production for a mirror one person reads — `docs/admin-reduction-roadmap.md` deferred it for the same reason). The canonical algorithm — key convention, legacy-key adoption, reconcile loop, 20%-deletion cap, "never touch an unmarked event" — lives in **community-os `.claude/skills/calendar-sync/SKILL.md`** (invoke `/calendar-sync`), because half the events are Link & Dink; `skills/calendar-sync.md` here is the NGA side of the contract and community-os `docs/CALENDAR_SYNC.md` is the L&D side. A daily Routine runs it against `sam.morris2131@gmail.com`; run it on demand after editing any schedule.
 
 ### Drop-in registration flow (`/schedule` + Stripe)
-Pricing is **$20 per 1-hour slot, drop-in only — no subscription, no refunds**. Sessions split into Early and Late slots — pick one or both (two slots = 2 × $20 until the planned $35 two-hour bundle ships). Each session opens for registration **30 days ahead** and caps at 4 players per pickleball court.
+Pricing is **one flat rate per 1-hour slot, drop-in only — no subscription, no refunds**. The rate is `STRIPE_DROPIN_PRICE_ID` (still $20) and is **never printed on a parent-facing surface** as of 2026-09-08 — the parent first sees it on the Stripe checkout page, so any new page, feed or email must describe the format ("one hour, drop-in") and let checkout state the number. Pinned by `e2e/invariant-dropin-price-not-quoted.spec.ts`, which also documents the one deliberate exception: the four card-on-file surfaces (`/commit/[token]`, `CommitForm`, the commit success page, `commit-confirmation.ts`) DO state the weekly amount, because that flow saves a card through a Stripe `mode: "setup"` session that shows no amount and the autoreserve cron then charges off-session. Sessions split into Early and Late slots — pick one or both (two slots = two drop-in charges until the planned two-hour bundle ships). Each session opens for registration **30 days ahead** and caps at 4 players per pickleball court.
 
 Source of truth for the public class schedule is the **NGA Sessions Schedule** Notion DB (`NOTION_SESSIONS_DB_ID`). Sam edits it (or a connected Google Sheet); the site reads it via `src/lib/notion-sessions.ts` with 5-min ISR.
 
 User flow:
 1. Parent visits `/schedule`, picks one open session.
-2. Form → `POST /api/checkout` creates a Stripe Checkout Session ($20, qty 1) on NGA Stripe `acct_1TU4iSBpXOfTC961` with metadata `{parent, child, sessionId}`.
+2. Form → `POST /api/checkout` creates a Stripe Checkout Session (the drop-in price, qty 1) on NGA Stripe `acct_1TU4iSBpXOfTC961` with metadata `{parent, child, sessionId}`.
 3. Parent pays in Stripe Checkout, lands on `/schedule/success`.
 4. `/api/stripe/webhook` (signed by `STRIPE_WEBHOOK_SECRET`) on `checkout.session.completed`:
    - Sends real-time email to `nextgenacademypb@gmail.com` via Resend.
@@ -621,7 +621,7 @@ See `.env.example`. Categories:
 - `NOTION_WAIVERS_DB_ID` — NGA Waivers DB (`8ff69033-db0b-4d96-a8df-ead6b6ac7682`); one signed one-time waiver per parent. Read by the pre-checkout waiver gate. UNSET = gate fails open (checkout never blocked); set it to enforce.
 - `STRIPE_SECRET_KEY` — NGA Stripe acct `acct_1TU4iSBpXOfTC961`.
 - `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret.
-- `STRIPE_DROPIN_PRICE_ID` — price ID for the single $20 NGA Drop-in slot product.
+- `STRIPE_DROPIN_PRICE_ID` — price ID for the single NGA Drop-in slot product. The charge is unchanged ($20); it is simply no longer quoted on any parent-facing surface — Stripe Checkout is where a parent sees it.
 - `NOTION_CREW_INTEREST_DB_ID` — NGA Crew Interest DB (the no-active-poll fallback form). Optional — endpoint logs + continues if unset.
 - `NOTION_NEWS_DB_ID` — NGA Youth Pickleball News DB (scraped news queue Sam triages for the weekly newsletter). Optional — scraper runs as a dry-run if unset, weekly newsletter just hides the news block.
 - `NOTION_NEWSLETTER_DRAFTS_DB_ID` — NGA Newsletter Drafts DB (Coach-voice longform sections drafted Wednesday by the cloud drafter routine; Sam approves a row before Thu 6pm for the cron to inject as the "From Coach Sam" lead block). The weekly newsletter still ships without it (the lead block just hides), but as of 2026-08-05 an unset value raises a `config_missing` cron alert rather than no-opping green — a lead block that can never ship is a misconfiguration, not a preference. See the "Newsletter lead block — drafter pipeline" section above.

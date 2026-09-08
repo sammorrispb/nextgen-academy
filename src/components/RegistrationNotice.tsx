@@ -8,9 +8,9 @@ export default function RegistrationNotice() {
       </h3>
       <p className="text-base text-ngpa-white/80 leading-relaxed">
         <strong className="text-ngpa-white">
-          $20 per 1-hour slot.
+          One-hour slots, drop-in only.
         </strong>{" "}
-        Drop-in only — no subscription, no commitment. Pick the session below
+        No subscription, no commitment. Pick the session below
         that fits your child&rsquo;s level and date. Courts stay small, so
         reserve early. If we cancel a session
         for weather, you get an automatic full refund — otherwise payments are

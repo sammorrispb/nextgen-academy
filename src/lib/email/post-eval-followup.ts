@@ -85,13 +85,13 @@ export function buildPostEvalFollowupHtml(args: PostEvalEmailArgs): string {
 
   const isPrivateBridge = isPrivateBridgeLevel(args.level);
 
-  // The upcoming-sessions list + price + Reserve CTA, rendered only when we
-  // actually have lines to show.
+  // The upcoming-sessions list + Reserve CTA, rendered only when we
+  // actually have lines to show. No rate is quoted — parents see the price on
+  // the Stripe checkout page (Sam, 2026-09-08).
   const reservableBlock = args.sessionLines.length
     ? `<ul style="font-size: 15px; line-height: 1.7; padding-left: 20px;">${args.sessionLines
         .map((line) => `<li>${escape(line)}</li>`)
         .join("")}</ul>
-  <p style="font-size: 15px; line-height: 1.6;">$20 per 1-hour slot.</p>
   <p style="font-size: 15px; line-height: 1.6; margin: 16px 0;">
     <a href="${site.website}/schedule" style="${s.cta}">Reserve a slot</a>
   </p>`
