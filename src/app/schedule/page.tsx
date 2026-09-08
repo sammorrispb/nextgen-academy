@@ -288,7 +288,7 @@ export default async function SchedulePage() {
           <SectionHeading
             eyebrow="Upcoming Sessions"
             title="Pick a date and reserve your spot."
-            subtitle="$20 per 1-hour drop-in slot. Courts stay small on purpose."
+            subtitle="One-hour drop-in slots. Courts stay small on purpose."
           />
 
           <RegistrationNotice />

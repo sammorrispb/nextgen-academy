@@ -349,12 +349,12 @@ export default function MontgomeryCountyPage() {
             Pricing
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Transparent, drop-in pricing.
+            Drop-in, never a subscription.
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8">
             All group classes are{" "}
-            <strong className="text-ngpa-white font-bold">$20 per 1-hour slot</strong>,{" "}
-            drop-in only — no subscription, no commitment. Courts stay
+            <strong className="text-ngpa-white font-bold">one hour, drop-in only</strong>{" "}
+            — no subscription, no commitment. Courts stay
             small, so every kid gets real reps. Payments are
             non-refundable.{" "}
             <Link
@@ -367,12 +367,14 @@ export default function MontgomeryCountyPage() {
           </p>
           <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7">
             <div className="flex items-baseline gap-2 mb-2">
-              <span className="font-mono font-bold text-4xl text-ngpa-teal">$20</span>
-              <span className="text-ngpa-white/65">per 1-hour group slot</span>
+              <span className="font-mono font-bold text-4xl text-ngpa-teal">Free</span>
+              <span className="text-ngpa-white/65">30-minute evaluation</span>
             </div>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Same group rate across Orange, Green &amp; Yellow Ball.
-              Drop-in only. No monthly subscription. Non-refundable.
+              Start there — it decides your child&rsquo;s ball color and costs
+              nothing. After that it&rsquo;s one group rate across Orange, Green
+              &amp; Yellow Ball, shown at checkout before you pay. Drop-in only.
+              No monthly subscription. Non-refundable.
             </p>
           </div>
           <p className="text-sm text-ngpa-white/60 mt-5">

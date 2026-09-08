@@ -71,9 +71,11 @@ test.describe("buildPostEvalFollowupHtml — foundation levels (Red/Orange)", ()
       const html = buildPostEvalFollowupHtml(
         args(level, ["Tue, Jun 9 — Olney, MD · 6:00 PM"]),
       );
-      // Group drop-in is primary: the live line, price, and CTA all render.
+      // Group drop-in is primary: the live line and CTA render. No rate is
+      // quoted — the drop-in price came off every parent-facing surface on
+      // 2026-09-08 (Sam); parents see it on the Stripe checkout page.
       expect(html).toContain("Tue, Jun 9 — Olney, MD · 6:00 PM");
-      expect(html).toContain("$20");
+      expect(html).not.toContain("$");
       expect(html).toContain("Reserve a slot");
       // ...with private lessons still offered underneath as a fast-track.
       expect(html).toContain("Want to fast-track?");

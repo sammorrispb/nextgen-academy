@@ -167,7 +167,7 @@ export const blogPosts: BlogPost[] = [
         heading: "What the first hour looks like",
         paragraphs: [
           "Group sessions run one hour on a court capped at four players, so every kid gets constant reps — not line-standing. Expect an age-appropriate warmup, skill work built around their ball color, and plenty of actual play. Our coaching philosophy is a growth mindset: kids develop through effort, encouragement, and getting another rep, never through labels.",
-          "Sessions are $20 per one-hour slot, drop-in — no subscription, no season commitment. You register for the slots that fit your family's week, and if we ever cancel a session for weather, you get an automatic full refund.",
+          "Sessions are one hour, drop-in — no subscription, no season commitment. You register for the slots that fit your family's week, the price is shown at checkout before you pay, and if we ever cancel a session for weather, you get an automatic full refund.",
         ],
       },
       {

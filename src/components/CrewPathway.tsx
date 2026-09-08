@@ -4,9 +4,9 @@ import Link from "next/link";
  * "Crew Pathway" pitch — explains the 3-step funnel from one-off drop-in →
  * crew formation (via WhatsApp poll) → 4-week soft commit with auto-reserve.
  *
- * Per CLAUDE.md the only quotable price is the $20 drop-in; we tease "crew
- * pricing" qualitatively but never put a $25/$160/monthly number in front
- * of parents until a real product exists.
+ * No price is quoted here. The drop-in rate came off every public surface on
+ * 2026-09-08 (Sam) — parents see the amount on the Stripe checkout page — and
+ * crew pricing stays qualitative until a real product exists.
  *
  * Routes parents to /schedule (the actionable entry — book the first
  * session). The poll link and 4-week commit are reached via WhatsApp shares
@@ -17,7 +17,7 @@ export default function CrewPathway() {
     {
       n: "1",
       label: "Book a drop-in",
-      body: "Try a single session ($20, 1-hour slot, 4-player cap). No commitment — see if the format clicks for your kid.",
+      body: "Try a single session — one hour, 4-player cap. No commitment — see if the format clicks for your kid.",
       cta: { href: "/schedule", text: "See open sessions" },
     },
     {

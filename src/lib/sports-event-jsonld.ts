@@ -46,10 +46,11 @@ export function sportsEventJsonLd(session: NgaSession) {
       name: "Next Gen Pickleball Academy",
       url: "https://nextgenpbacademy.com",
     },
+    // No price is published on any public surface (Sam, 2026-09-08) — parents
+    // see the amount on the Stripe checkout page — so the Offer carries
+    // availability and the booking URL only, never a figure.
     offers: {
       "@type": "Offer",
-      price: "20",
-      priceCurrency: "USD",
       availability:
         session.spotsLeft > 0
           ? "https://schema.org/InStock"
