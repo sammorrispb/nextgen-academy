@@ -35,10 +35,12 @@ import {
   PICKLPARK_PUBLIC_AREA,
   PICKLPARK_SEASON_LABEL,
   PICKLPARK_SEASON_WEEKS,
-  PICKLPARK_SESSION_FORMAT,
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
-import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
+import {
+  PICKLPARK_LEAGUES,
+  PICKLPARK_LEAGUES_FORMAT_LINE,
+} from "@/data/picklpark-leagues-2026";
 import { picklParkLeaguesOpen } from "@/lib/picklpark-registration-window";
 import {
   weeklyNewsletterHtml,
@@ -269,7 +271,7 @@ async function loadPicklParkSeason(
     seasonLabel: PICKLPARK_SEASON_LABEL,
     weeks: PICKLPARK_SEASON_WEEKS,
     venueLine: `${PICKLPARK_VENUE_SHORT}, ${PICKLPARK_PUBLIC_AREA}`,
-    sessionFormat: PICKLPARK_SESSION_FORMAT,
+    sessionFormat: PICKLPARK_LEAGUES_FORMAT_LINE,
     indoorNote: PICKLPARK_INDOOR_NOTE,
     groups,
     url: appendUtm(`${SITE_ORIGIN}/picklpark`, "picklpark-leagues", utmCampaign),
@@ -422,13 +424,19 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   // that one. Bethesda families who can't do Sundays and Frederick families
   // who never heard of the Sunday season each get a subject that names theirs.
   const fallOpen = seasonHasOpenSeats(fallSeason);
-  const picklParkOpen = seasonHasOpenSeats(picklParkSeason);
-  const subject = fallOpen && picklParkOpen
-    ? "Two fall seasons are open — Sundays in Bethesda, Saturdays in Frederick"
+  // NOT seasonHasOpenSeats: every Pickl Park group now carries
+  // `spotsLeft: null` permanently, because The Pickl Park holds that roster,
+  // and that helper reads null as "has seats". Running the subject through it
+  // would make this branch unconditionally true and mail a weekly subject
+  // claiming an NGA season is open for a checkout that returns 410. The
+  // leagues ARE promotable while they run — they just aren't ours to "open".
+  const picklParkPromotable = picklParkSeason !== null;
+  const subject = fallOpen && picklParkPromotable
+    ? "Fall season is open, and Saturdays are on in Frederick"
     : fallOpen
       ? "Fall season registration is open — Next Gen"
-      : picklParkOpen
-        ? "Saturday season at The Pickl Park is open — Next Gen"
+      : picklParkPromotable
+        ? "Saturday youth leagues at The Pickl Park — Next Gen"
         : sessions.length
       ? "Open courts this week — Next Gen"
       : camps.length

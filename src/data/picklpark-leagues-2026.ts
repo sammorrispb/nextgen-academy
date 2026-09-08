@@ -47,6 +47,14 @@ export interface PicklParkLeague {
   /** "Ages 8–13" / "Ages 10+" — the podplay framing, not minAge–maxAge. */
   ageLabel: string;
   blurb: string;
+  /**
+   * How the hour splits, PER LEAGUE — "30 minutes of coached drills, then 30
+   * minutes of game play". Not one shared constant: the old blocks were both
+   * 60 minutes so a single string worked, but Youth League is 90, and a
+   * blanket "30 and 30" leaves a third of that session undescribed. Podplay
+   * says "first half / second half"; this spells the halves out.
+   */
+  sessionFormat: string;
   /** Podplay event permalink. The ONLY place a family registers. */
   signupUrl: string;
   /** ISO date-only when public signup opens. Omitted = open now. Set for the
@@ -69,6 +77,8 @@ export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
     minAge: 8,
     maxAge: 13,
     ageLabel: "Ages 8–13",
+    sessionFormat:
+      "30 minutes of coached drills, then 30 minutes of game play",
     blurb:
       "A fun, high-energy six-week season of drilling and playing pickleball. It's a great entry into the sport for a new or beginner player — no prior experience needed, equipment provided, and lots of chances to hit and move.",
     signupUrl:
@@ -86,6 +96,8 @@ export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
     minAge: 10,
     maxAge: LEAGUE_AGE_MAX,
     ageLabel: "Ages 10+",
+    sessionFormat:
+      "45 minutes of coached drills, then 45 minutes of game play",
     blurb:
       "Six weeks of weekly meetups: we drill and practice for the first half of each session, then play games for the second half. It's for players who already keep a rally going — serving and returning, dropping, driving, volleying, and moving around the court. Across the season they'll add more advanced technique, court positioning, and shot selection.",
     signupUrl:
@@ -113,6 +125,25 @@ export function picklParkLeagueSignupOpen(
 /** "Saturdays 2:00–3:00 PM · Ages 8–13" — one line, reused by every surface. */
 export function picklParkLeagueSummary(league: PicklParkLeague): string {
   return `${league.title} ${league.timeLabel} · ${league.ageLabel}`;
+}
+
+/**
+ * "each hour is drills then games" phrased for BOTH leagues at once, for the
+ * surfaces that describe the Saturday in one sentence (the /fall and
+ * /schedule cross-links, the newsletter). Says "half" rather than a minute
+ * count precisely because the two leagues split differently — 30/30 and
+ * 45/45 — so one number would be wrong for one of them.
+ */
+export const PICKLPARK_LEAGUES_FORMAT_LINE =
+  "each session is coached drills for the first half, then game play for the second";
+
+/** Start time as 24h "HH:MM", for JSON-LD. Parsed, never pattern-matched. */
+export function picklParkLeagueStartHour24(league: PicklParkLeague): string {
+  const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec(league.startTime.trim());
+  if (!m) throw new Error(`unparseable startTime: ${league.startTime}`);
+  let hour = Number(m[1]) % 12;
+  if (m[3].toUpperCase() === "PM") hour += 12;
+  return `${String(hour).padStart(2, "0")}:${m[2]}`;
 }
 
 /** The one-line "which one is my kid?" pointer, shared by page and emails. */
