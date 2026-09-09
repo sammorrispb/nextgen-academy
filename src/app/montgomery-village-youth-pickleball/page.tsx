@@ -2,13 +2,15 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
 import {
-  MVF_PROGRAMS,
   MVF_AGE_MIN,
   MVF_AGE_MAX,
   MVF_REGISTRATION_NOTE,
   MVF_REGISTRATION_SEARCH_URL,
   MVF_VENUE_FOOTNOTE,
   WATKINS_MILL,
+  upcomingMvfPrograms,
+  isMvfProgramInProgress,
+  mvfClassesRemaining,
   type MvfProgram,
   type MvfVenue,
 } from "@/data/mvf";
@@ -18,6 +20,16 @@ import TrackedCTA from "@/components/TrackedCTA";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 
 const PAGE_URL = `${SITE_URL}/montgomery-village-youth-pickleball`;
+
+// Re-render twice a day so a finished class stops being published without
+// waiting on a deploy. Baking the date at build time is what let the Aug 27
+// intro lead this page into September. Matches /camp.
+export const revalidate = 43200; // 12h
+
+/** Today in Eastern, as `YYYY-MM-DD` — the repo's todayET() pattern. */
+function todayET(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+}
 
 export const metadata: Metadata = {
   // Absolute title so the rendered <title> stays inside Google's ~60-char
@@ -234,10 +246,67 @@ function ProgramCard({ program }: { program: MvfProgram }) {
   );
 }
 
+/**
+ * The one honest thing we can say about a session a family is landing on late:
+ * how many classes have run, how many are left, and that the fee below is the
+ * whole session. What it costs to join mid-run is MVF's answer, not ours — we
+ * don't hold their fee schedule, and guessing at a prorate would be a price we
+ * invented (Sam, 2026-09-09).
+ */
+function InProgressNote({
+  program,
+  today,
+}: {
+  program: MvfProgram;
+  today: string;
+}) {
+  const remaining = mvfClassesRemaining(program, today);
+  const run = program.classCount - remaining;
+
+  return (
+    <div
+      className="rounded-2xl border border-ngpa-skill-yellow/40 bg-ngpa-skill-yellow/10 p-5 mb-5"
+      data-testid={`mvf-in-progress-${program.key}`}
+    >
+      <p className="text-base text-ngpa-white/90 leading-relaxed">
+        <strong className="font-bold text-ngpa-white">
+          This session has already started.
+        </strong>{" "}
+        {run} of {program.classCount} Thursdays {run === 1 ? "has" : "have"}{" "}
+        run, {remaining} to go. MVF still lists it, and the fee below is the
+        full-session price &mdash; ask MVF what it costs to join now before you
+        register.
+      </p>
+    </div>
+  );
+}
+
 export default function MontgomeryVillagePage() {
-  const intro = MVF_PROGRAMS.filter((p) => p.classCount === 1);
-  const fallOne = MVF_PROGRAMS.filter((p) => p.key.startsWith("fall-1"));
-  const fallTwo = MVF_PROGRAMS.filter((p) => p.key.startsWith("fall-2"));
+  // Date-driven, not hand-maintained: a class that has finished stops being
+  // published everywhere on this page at once — card, section heading, hero
+  // copy and the SportsEvent offer search engines read back to families.
+  const today = todayET();
+  const programs = upcomingMvfPrograms(today);
+
+  const intro = programs.filter((p) => p.classCount === 1);
+  const fallOne = programs.filter((p) => p.key.startsWith("fall-1"));
+  const fallTwo = programs.filter((p) => p.key.startsWith("fall-2"));
+
+  const sessionCount = [fallOne, fallTwo].filter((g) => g.length > 0).length;
+  const sessionsPhrase =
+    sessionCount === 2
+      ? "two six-week Thursday sessions"
+      : "a six-week Thursday session";
+  const heroPrograms = [
+    intro.length > 0 ? "an intro class" : null,
+    sessionCount > 0 ? sessionsPhrase : null,
+  ].filter(Boolean).join(", then ");
+  const programsHeading =
+    intro.length > 0
+      ? `One intro class. ${sessionCount === 2 ? "Two six-week sessions." : "A six-week session."}`
+      : sessionCount === 2
+        ? "Two six-week Thursday sessions."
+        : "A six-week Thursday session.";
 
   return (
     <>
@@ -247,7 +316,10 @@ export default function MontgomeryVillagePage() {
           { name: "MVF Youth Pickleball in Montgomery Village", url: PAGE_URL },
         ])}
       />
-      {MVF_PROGRAMS.map((program) => (
+      {/* Finished classes are deliberately absent: an offer that says InStock
+          for a class that already happened is what Google and every AI
+          scheduler reads back to a parent. */}
+      {programs.map((program) => (
         <JsonLd key={`mvf-event-${program.key}`} data={sportsEventJsonLd(program)} />
       ))}
 
@@ -264,13 +336,28 @@ export default function MontgomeryVillagePage() {
             <span className="text-ngpa-teal">Montgomery Village</span>.
           </h1>
           <p className="mt-6 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
-            Next Gen is running youth classes in Montgomery Village this fall
-            &mdash; an intro class in August, then two six-week Thursday
-            sessions for kids and teens ages {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX}.
-            Every level is welcome: each session runs a Red/Orange class and a
-            Green/Yellow class back to back, so your child gets real reps with
-            like-skilled players.
+            {programs.length > 0 ? (
+              <>
+                Next Gen is running youth classes in Montgomery Village this
+                fall &mdash; {heroPrograms} for kids and teens ages{" "}
+                {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX}. Every level is welcome: each
+                session runs a Red/Orange class and a Green/Yellow class back to
+                back, so your child gets real reps with like-skilled players.
+              </>
+            ) : (
+              <>
+                Next Gen&rsquo;s Montgomery Village classes for ages{" "}
+                {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX} have wrapped for this season.
+                Join the newsletter below and we&rsquo;ll post the next MVF
+                lineup there &mdash; or book a free evaluation and get your
+                child placed in a Next Gen session now.
+              </>
+            )}
           </p>
+          {/* "Registration is open" is a claim about classes that exist. With
+              nothing left on the calendar it is simply false, so it goes with
+              them rather than sitting there all winter. */}
+          {programs.length > 0 && (
           <p
             className="mt-5 inline-flex items-center gap-2 rounded-full bg-ngpa-teal/15 px-4 py-2 text-sm font-bold text-ngpa-teal-bright ring-1 ring-ngpa-teal/40"
             data-testid="mvf-registration-open-badge"
@@ -281,6 +368,7 @@ export default function MontgomeryVillagePage() {
             />
             Registration is open now through MVF
           </p>
+          )}
           <p className="mt-4 text-sm font-bold text-ngpa-teal-bright">
             In partnership with the Montgomery Village Foundation.
           </p>
@@ -320,13 +408,15 @@ export default function MontgomeryVillagePage() {
             Fall 2026 Programs
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            One intro class. Two six-week sessions.
+            {programsHeading}
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            Start with the one-evening intro class, roll into the fall sessions,
-            or do both. Each session runs a Red/Orange class and a Green/Yellow
-            class, registered separately &mdash; pick the one that fits your
-            child, or ask us and we&rsquo;ll place them.
+            {intro.length > 0 &&
+              "Start with the one-evening intro class, roll into the fall sessions, or do both. "}
+            Each session runs a Red/Orange class 5:30&ndash;6:30 PM and a
+            Green/Yellow class 6:30&ndash;7:30 PM, registered separately
+            &mdash; pick the one that fits your child, or ask us and
+            we&rsquo;ll place them.
           </p>
 
           {/* Registration note */}
@@ -353,42 +443,62 @@ export default function MontgomeryVillagePage() {
             </TrackedCTA>
           </div>
 
-          <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-5 tracking-tight">
-            Start here &mdash; the intro class
-          </h3>
-          <div className="space-y-5">
-            {intro.map((program) => (
-              <ProgramCard key={program.key} program={program} />
-            ))}
-          </div>
+          {intro.length > 0 && (
+            <>
+              <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-5 tracking-tight">
+                Start here &mdash; the intro class
+              </h3>
+              <div className="space-y-5">
+                {intro.map((program) => (
+                  <ProgramCard key={program.key} program={program} />
+                ))}
+              </div>
+            </>
+          )}
 
-          <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-2 tracking-tight">
-            Fall Session I &mdash; North Creek
-          </h3>
-          <p className="text-ngpa-white/70 mb-5">
-            Six Thursdays, Sept 3 &ndash; Oct 8. Red/Orange plays first,
-            Green/Yellow follows. If the North Creek court renovation starts
-            mid-session, MVF may move Thursday classes to{" "}
-            {WATKINS_MILL.name} &mdash; check with MVF before you head out.
-          </p>
-          <div className="space-y-5">
-            {fallOne.map((program) => (
-              <ProgramCard key={program.key} program={program} />
-            ))}
-          </div>
+          {fallOne.length > 0 && (
+            <>
+              <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-2 tracking-tight">
+                Fall Session I &mdash; North Creek
+              </h3>
+              <p className="text-ngpa-white/70 mb-5">
+                Six Thursdays, Sept 3 &ndash; Oct 8. Red/Orange plays first at
+                5:30 PM, Green/Yellow follows at 6:30 PM. If the North Creek
+                court renovation starts mid-session, MVF may move Thursday
+                classes to {WATKINS_MILL.name} &mdash; check with MVF before you
+                head out.
+              </p>
+              {isMvfProgramInProgress(fallOne[0], today) && (
+                <InProgressNote program={fallOne[0]} today={today} />
+              )}
+              <div className="space-y-5">
+                {fallOne.map((program) => (
+                  <ProgramCard key={program.key} program={program} />
+                ))}
+              </div>
+            </>
+          )}
 
-          <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-2 tracking-tight">
-            Fall Session II &mdash; North Creek
-          </h3>
-          <p className="text-ngpa-white/70 mb-5">
-            Six Thursdays, Oct 15 &ndash; Nov 19 &mdash; same courts as
-            Session I, same format, same coaches.
-          </p>
-          <div className="space-y-5">
-            {fallTwo.map((program) => (
-              <ProgramCard key={program.key} program={program} />
-            ))}
-          </div>
+          {fallTwo.length > 0 && (
+            <>
+              <h3 className="font-heading text-2xl font-black text-ngpa-white mt-12 mb-2 tracking-tight">
+                Fall Session II &mdash; North Creek
+              </h3>
+              <p className="text-ngpa-white/70 mb-5">
+                Six Thursdays, Oct 15 &ndash; Nov 19 &mdash; same courts as
+                Session I, same format, same coaches. Red/Orange 5:30&ndash;6:30
+                PM, Green/Yellow 6:30&ndash;7:30 PM.
+              </p>
+              {isMvfProgramInProgress(fallTwo[0], today) && (
+                <InProgressNote program={fallTwo[0]} today={today} />
+              )}
+              <div className="space-y-5">
+                {fallTwo.map((program) => (
+                  <ProgramCard key={program.key} program={program} />
+                ))}
+              </div>
+            </>
+          )}
 
           <p
             className="mt-8 text-sm text-ngpa-white/70"
@@ -412,10 +522,14 @@ export default function MontgomeryVillagePage() {
             We coach the same Red &rarr; Orange &rarr; Green &rarr; Yellow
             pathway we use across the academy. Red and Orange players are still
             learning to rally and get into games; Green and Yellow players play
-            games and focus on strategy. If you&rsquo;re between the two, start
-            at the intro class &mdash; we assess every kid there and tell you
-            which fall class to register for. No tryout, no pressure, just
-            placement.{" "}
+            games and focus on strategy. If you&rsquo;re between the two,
+            {intro.length > 0 ? (
+              <> start at the intro class &mdash; we assess every kid there and
+              tell you which fall class to register for.</>
+            ) : (
+              <> we&rsquo;ll tell you which class to register for.</>
+            )}{" "}
+            No tryout, no pressure, just placement.{" "}
             <Link
               href="/#levels"
               className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"

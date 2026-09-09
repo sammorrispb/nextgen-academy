@@ -251,3 +251,70 @@ export const MVF_PROGRAMS: MvfProgram[] = [
       "Game play and strategy at North Creek. Join for one session or both — Session I players keep developing, and new Green/Yellow players are welcome to start here.",
   },
 ];
+
+// ─── Lifecycle helpers ──────────────────────────────────────────────────────
+//
+// 2026-09-09: the Aug 27 intro class was still leading this page on Sept 9 —
+// first card, biggest type, under a "Start here" heading, with its $8 in the
+// SportsEvent offer as `InStock`. A parent's read was that $8 is what the
+// program costs; the actual $90/$100 session fee sat below the fold. Same
+// lesson `upcomingCamps` already carries: a date in a data file is not a
+// filter, and a season that ships every week rots the moment nothing prunes
+// it. Every surface that publishes MVF programs goes through these.
+
+/**
+ * The class dates of a program: `startDate`, then weekly. Anchored at noon UTC
+ * and stepped by whole days so it never off-by-ones on Vercel's UTC build
+ * servers (the repo-wide date-only hazard).
+ *
+ * Single source of truth for the weekly expansion — the events feed builds its
+ * per-class calendar items from this rather than re-deriving the same stride.
+ */
+export function mvfClassDates(program: MvfProgram): string[] {
+  const startMs = new Date(`${program.startDate}T12:00:00Z`).getTime();
+  return Array.from({ length: program.classCount }, (_, i) =>
+    new Date(startMs + i * 7 * 86_400_000).toISOString().slice(0, 10),
+  );
+}
+
+/** A program whose last class has already happened, as of `todayIso` (ET). */
+export function isMvfProgramPast(program: MvfProgram, todayIso: string): boolean {
+  return program.endDate < todayIso;
+}
+
+/**
+ * Programs a family can still act on. Deliberately `endDate`, not `startDate`
+ * — unlike a camp, an MVF session keeps taking registrations after week one
+ * (Sam, 2026-09-09), so a started session stays listed and carries the
+ * in-progress note below instead of vanishing.
+ */
+export function upcomingMvfPrograms(
+  todayIso: string,
+  programs: MvfProgram[] = MVF_PROGRAMS,
+): MvfProgram[] {
+  return programs.filter((p) => !isMvfProgramPast(p, todayIso));
+}
+
+/** Class dates of `program` still to come, today INCLUSIVE. */
+export function mvfClassesRemaining(
+  program: MvfProgram,
+  todayIso: string,
+): number {
+  return mvfClassDates(program).filter((date) => date >= todayIso).length;
+}
+
+/**
+ * A multi-week session that has started but not finished. Single-class
+ * programs are excluded: "already under way" is meaningless for one evening,
+ * and the day after, `isMvfProgramPast` has it anyway.
+ */
+export function isMvfProgramInProgress(
+  program: MvfProgram,
+  todayIso: string,
+): boolean {
+  return (
+    program.classCount > 1 &&
+    program.startDate <= todayIso &&
+    !isMvfProgramPast(program, todayIso)
+  );
+}

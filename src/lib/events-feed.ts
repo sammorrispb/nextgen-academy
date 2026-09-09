@@ -33,7 +33,7 @@
 import type { NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { CAMPS, CAMP_OPTIONS, campDays, type Camp } from "@/data/camps";
-import { MVF_PROGRAMS, type MvfProgram } from "@/data/mvf";
+import { MVF_PROGRAMS, mvfClassDates, type MvfProgram } from "@/data/mvf";
 import {
   FALL_RAIN_DATES,
   FALL_SUNDAYS,
@@ -257,8 +257,7 @@ export function buildMvfEvents(
     const { name, streetAddress, locality, region, postalCode } = program.venue;
     const location = `${name}, ${streetAddress}, ${locality}, ${region} ${postalCode}`;
 
-    return Array.from({ length: program.classCount }, (_, i) => {
-      const date = addDaysIso(program.startDate, i * 7);
+    return mvfClassDates(program).map((date, i) => {
       const suffix =
         program.classCount > 1 ? ` — class ${i + 1} of ${program.classCount}` : "";
       const tbd = range ? "" : " (time TBD)";
