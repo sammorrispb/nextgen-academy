@@ -45,6 +45,23 @@
 // K–5, so the Wednesday club reverts to `ageMin: 7` like the other four and
 // NGA's 6–16 rule now has no carve-out anywhere in this program. Re-open one
 // only if a partner asks and Sam agrees again — don't infer it from a date.
+//
+// UPDATE 2026-09-09 (Stef's revised schedule PDF, "Coach Sam — Weekly
+// Schedule", handed over by Sam 2026-09-09). Supersedes the 2026-08-13 PDF.
+// Session dates are untouched everywhere; exactly two things changed:
+//
+//   1. EVERY CLUB TIME MOVED. Mon-Thu are now 3:20-4:30 PM; Friday is
+//      3:50-5:00 PM. These are 70-minute blocks, not the 60-minute blocks
+//      the 2026-08-13 revision published, so the "dismissal + 5-10 min"
+//      derivation described above no longer describes them. The partner
+//      publishes the times and we copy them; we never compute them.
+//      Wednesday moved furthest: 4:00-5:00 PM -> 3:20-4:30 PM.
+//
+//   2. THE FRIDAY CLUB IS BACK AT SHERWOOD ES (Sandy Spring), 3:50-5:00 PM.
+//      This REVERSES the 2026-08-16 move to Olney ES recorded above. The
+//      revised PDF postdates that move — it already carries the 2026-09-03
+//      DuFief swap — and Sam confirmed 2026-09-09 that the PDF wins. Read
+//      the 2026-08-16 paragraph above as history, not as current state.
 
 /** Registration, payment, insurance and releases all sit with the partner. */
 export const EC_PARTNER_NAME = "Enrichment Collective";
@@ -85,7 +102,7 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Monday",
     town: "Brookeville, MD",
     schoolName: "Greenwood ES",
-    startTime: "3:30 PM",
+    startTime: "3:20 PM",
     endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
@@ -107,7 +124,7 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Tuesday",
     town: "Derwood, MD",
     schoolName: "Candlewood ES",
-    startTime: "3:30 PM",
+    startTime: "3:20 PM",
     endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
@@ -134,8 +151,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Wednesday",
     town: "North Potomac, MD",
     schoolName: "DuFief ES",
-    startTime: "4:00 PM",
-    endTime: "5:00 PM",
+    startTime: "3:20 PM",
+    endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
     status: "confirmed",
@@ -152,14 +169,14 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-11-18",
     ],
     notes:
-      "10 sessions. Was the Tuesday club in the July hold; moved from Rosemary Hills ES (Silver Spring) to DuFief ES (North Potomac) 2026-09-03, same time and dates. The 5–8 intro format retired with the move — DuFief is K–5, so this club is 7+ like the others.",
+      "10 sessions. Was the Tuesday club in the July hold; moved from Rosemary Hills ES (Silver Spring) to DuFief ES (North Potomac) 2026-09-03 with the time unchanged, then retimed 4:00-5:00 PM to 3:20-4:30 PM by Stef's 2026-09-09 PDF; dates unchanged. The 5–8 intro format retired with the move — DuFief is K–5, so this club is 7+ like the others.",
   },
   {
     key: "belmont-thu",
     weekdayLabel: "Thursday",
     town: "Olney, MD",
     schoolName: "Belmont",
-    startTime: "3:30 PM",
+    startTime: "3:20 PM",
     endTime: "4:30 PM",
     ageMin: 7,
     ageMax: null,
@@ -177,18 +194,19 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-11-19",
     ],
     notes:
-      "10 sessions. Nov 5 collides with the GSA activation (Nov 5–7) and MVF Fall Session II — needs resolving with Stef.",
+      "10 sessions. Nov 5 club coverage resolved 2026-09-03 — Stef arranged cover for Nov 5–6. The GSA activation (Nov 5–7) vs MVF Fall Session II collision on that date is a separate problem and still open.",
   },
   {
-    // Key predates the 2026-08-16 move to Olney ES (the club started life at
-    // Sherwood ES, Sandy Spring) and is kept so existing calendar blocks
-    // update in place on their key — same rule as `olney-mon` above.
+    // Key outlived a round trip: the club started at Sherwood ES (Sandy
+    // Spring), moved to Olney ES on 2026-08-16, then moved BACK to Sherwood on
+    // 2026-09-09, so the key matches the town again. Kept stable throughout so
+    // existing calendar blocks update in place — same rule as `olney-mon`.
     key: "sandy-spring-fri",
     weekdayLabel: "Friday",
-    town: "Olney, MD",
-    schoolName: "Olney ES",
-    startTime: "3:30 PM",
-    endTime: "4:30 PM",
+    town: "Sandy Spring, MD",
+    schoolName: "Sherwood ES",
+    startTime: "3:50 PM",
+    endTime: "5:00 PM",
     ageMin: 7,
     ageMax: null,
     status: "confirmed",
@@ -203,7 +221,7 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-11-20",
     ],
     notes:
-      "8 sessions. New fifth club, first announced in the confirmed PDF; moved from Sherwood ES (Sandy Spring) to Olney ES 2026-08-16, same dates. Starts a week+ after the others (9/25); no club 10/16.",
+      "8 sessions. New fifth club, first announced in the confirmed PDF. Moved to Olney ES 2026-08-16, then moved BACK to Sherwood ES (Sandy Spring) by Stef's 2026-09-09 revised PDF (confirmed by Sam 2026-09-09); dates unchanged throughout. Starts a week+ after the others (9/25); no club 10/16.",
   },
 ];
 
