@@ -17,8 +17,9 @@ One endpoint:
 GET https://nextgenpbacademy.com/api/events/feed
 ```
 
-Built by `src/lib/events-feed.ts` from four sources — Notion sessions, `CAMPS`,
-`MVF_PROGRAMS`, and the Fall 2026 dates. Every item carries a stable `key` of
+Built by `src/lib/events-feed.ts` from five sources — Notion sessions, `CAMPS`,
+`MVF_PROGRAMS`, the Fall 2026 dates, and the Pickl Park Saturdays
+(`nga-pp:saturday:<date>`). Every item carries a stable `key` of
 the form `<namespace>:<slug>:<YYYY-MM-DD>`, which is what the sync writes into
 the calendar event description to claim ownership of it.
 
@@ -31,6 +32,8 @@ the calendar event description to claim ownership of it.
 | Camp weeks | `src/data/camps.ts` | `/calendar-sync` |
 | MVF classes (venues, times, brackets, registration links) | `src/data/mvf.ts` | `/calendar-sync` |
 | Fall 2026 season dates | `src/data/fall-2026.ts` | `/calendar-sync` |
+| Pickl Park Saturday dates / makeup hold | `src/data/picklpark-2026.ts` | `/calendar-sync` |
+| Pickl Park league hours (the block's 2:00–4:30 window is derived from these) | `src/data/picklpark-leagues-2026.ts` | `/calendar-sync` |
 | Enrichment Collective clubs (incl. Stef's confirmed dates) | `src/data/enrichment-collective.ts` | `/calendar-sync` |
 
 ## Rules that bind any change to the feed
@@ -43,7 +46,7 @@ the calendar event description to claim ownership of it.
 - **Never invent a time.** An event whose hour isn't published ships
   `allDay: true` with `(time TBD)` in the title. No MVF class uses that path any
   more — MVF published every Fall 2026 time when enrollment opened 2026-08-07 —
-  and as of 2026-08-13 no EC club does either (every club time is published) —
+  and no EC club does either (every club time is published) —
   but the rule outlives any one season's data.
 - **MVF venues are per-program, not per-file.** Only the Aug 27 intro is at
   Apple Ridge; both fall sessions are at North Creek (Fall I moved there from
@@ -63,7 +66,7 @@ the calendar event description to claim ownership of it.
     normally; this is not an anomaly.
 
   **Hold the affected events only — never the whole run.** The other namespaces
-  (`nga-sess`, `nga-camp`, `nga-fall`, `nga-ec`, `ld`) are unrelated and must
+  (`nga-sess`, `nga-camp`, `nga-fall`, `nga-pp`, `nga-ec`, `ld`) are unrelated and must
   still reconcile. A blanket halt on an unattended daily job fails closed with
   no alerting, and the only way to unblock it would be to hand-patch the
   calendar — the exact anti-pattern this rule exists to kill.
@@ -110,15 +113,40 @@ derive, only to read. If EC ever needs computing (recurrence rules, per-school
 variation), promote it to the feed pattern with a private access path rather
 than parsing harder.
 
-The schedule is CONFIRMED (Stef's Fall 2026 schedule PDF, updated revision
-2026-08-13, plus two later venue changes from Sam): five clubs,
-Mon Brookeville / Tue Derwood / Wed North Potomac (DuFief ES — was Rosemary
-Hills ES, Silver Spring, until 2026-09-03) / Thu Olney (Belmont) /
-Fri Olney (Olney ES — was Sherwood ES, Sandy Spring, until 2026-08-16). Both
-moved clubs KEEP their original key (`silver-spring-wed`, `sandy-spring-fri`)
-so their calendar blocks update in place rather than churning, with
-real MCPS-reconciled session dates — the gaps in each club's date list are
-school closures, so a "missing" week is not an error. Every club now has a
-published time (Mon/Tue/Thu/Fri 3:30–4:30 PM, Wed 4:00–5:00 PM), so no EC
-block ships all-day any more — but the never-invent-a-time rule stands for
-any future club without one.
+The schedule is CONFIRMED (Stef's revised "Coach Sam — Weekly Schedule" PDF,
+2026-09-09, which supersedes the 2026-08-13 revision): five clubs,
+Mon Brookeville (Greenwood) / Tue Derwood (Candlewood) / Wed North Potomac
+(DuFief ES — was Rosemary Hills ES, Silver Spring, until 2026-09-03) /
+Thu Olney (Belmont) / Fri Sandy Spring (Sherwood ES — at Olney ES from
+2026-08-16 until the 2026-09-09 PDF moved it back). Keys never move with a
+club: `silver-spring-wed` keeps its old town in the key, and
+`sandy-spring-fri` matches its town again after the round trip. Blocks update
+in place rather than churning, so read `town` from the file, never from the
+key. Session dates are real and MCPS-reconciled — the gaps in each club's date
+list are school closures, so a "missing" week is not an error.
+
+Times: **Mon–Thu 3:20–4:30 PM, Fri 3:50–5:00 PM** (70-minute blocks, per the
+2026-09-09 PDF — the partner publishes them and we copy them, never derive them
+from dismissal). No EC block ships all-day, but the never-invent-a-time rule
+stands for any future club without one.
+
+**The calendar was hand-corrected ahead of the 2026-09-09 deploy.** The
+2026-09-12 `/calendar-sync` run found all 42 existing EC blocks already correct
+and created only the two missing Wednesdays (9/16, 9/23). The Nov 5 (Thu) and
+Nov 6 (Fri) blocks carry hand-written GSA notes beyond the sync's description
+shape — leave that prose alone (same rule as MVF venue notes above).
+
+## Pickl Park Saturdays — one block per Saturday
+
+Since nextgen-academy #321 (2026-09-07) The Pickl Park sells the Saturday on
+podplay as two leagues NGA coaches: Kid's Drill and Play 2:00–3:00 and Youth
+League 3:00–4:30. The feed emits ONE `nga-pp:saturday:<date>` block per
+Saturday, 2:00–4:30 PM, Sep 19 – Oct 24, plus a `[TENTATIVE]` Oct 31 makeup
+hold. The retired NGA season blocks and the Open Court hour
+(`nga-sess:pickl-park-saturday-open-court:*`) no longer exist in any source —
+the 2026-09-12 run deleted the seven that were still on the calendar.
+
+**A second writer shares this calendar.** The cloud routine `nga-cal-sync`
+(daily 7am ET) owns only `ld:`, `nga-sess:` and `nga-camp:`, never deletes, and
+excludes every L&D event at The Pickl Park. It never touches `nga-pp:` or
+`nga-ec:`, so the Saturday and club blocks are this skill's alone.
