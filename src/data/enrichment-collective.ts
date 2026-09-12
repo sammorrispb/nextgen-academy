@@ -63,6 +63,29 @@
 //      DuFief swap — and Sam confirmed 2026-09-09 that the PDF wins. Read
 //      the 2026-08-16 paragraph above as history, not as current state.
 
+// UPDATE 2026-09-12 (Stef, by text to Sam): THE WEDNESDAY CLUB STARTS 9/30,
+// NOT 9/16. DuFief was a late addition to the season. Stef's words: "They
+// were a late addition I took a gamble would be better enrolled than RHES
+// and I was right but we extended enrollment by 2 weeks." That two-week
+// enrollment extension pushed the first session back, so 2026-09-16 and
+// 2026-09-23 are dropped from `silver-spring-wed`, which now runs 8
+// sessions. The Google Calendar mirror was corrected the same day — both
+// blocks deleted by key, so a later `/calendar-sync` must not re-add them.
+//
+// This is a DATE change, the first one in this file. Every revision above
+// says "session dates are untouched"; do not pattern-match this one as
+// another time/venue edit, and do not read 9/16 and 9/23 as an MCPS-closure
+// gap — they are a later start, not a school closure.
+//
+// STILL OPEN: whether EC adds 12/2 and 12/9 at the back end to restore this
+// club to 10 sessions, or it simply runs 8. Stef said in the same thread she
+// had not written compensations yet, so it is still movable. Do NOT add
+// those two dates on inference — only once Stef states them.
+//
+// Stef confirmed in the same message that the FRIDAY club starts 9/25,
+// because MCPS is closed Fri 9/18. That already matches `sandy-spring-fri`
+// as written here — a confirmation, not a change.
+
 /** Registration, payment, insurance and releases all sit with the partner. */
 export const EC_PARTNER_NAME = "Enrichment Collective";
 export const EC_PARTNER_URL = "https://www.enrichmentcollective.com";
@@ -157,8 +180,6 @@ export const EC_CLUBS: readonly EcClub[] = [
     ageMax: null,
     status: "confirmed",
     dates: [
-      "2026-09-16",
-      "2026-09-23",
       "2026-09-30",
       "2026-10-07",
       "2026-10-14",
@@ -169,7 +190,7 @@ export const EC_CLUBS: readonly EcClub[] = [
       "2026-11-18",
     ],
     notes:
-      "10 sessions. Was the Tuesday club in the July hold; moved from Rosemary Hills ES (Silver Spring) to DuFief ES (North Potomac) 2026-09-03 with the time unchanged, then retimed 4:00-5:00 PM to 3:20-4:30 PM by Stef's 2026-09-09 PDF; dates unchanged. The 5–8 intro format retired with the move — DuFief is K–5, so this club is 7+ like the others.",
+      "8 sessions, 9/30 through 11/18. Starts 9/30, not 9/16 — see the 2026-09-12 update in the header. Was the Tuesday club in the July hold; moved from Rosemary Hills ES (Silver Spring) to DuFief ES (North Potomac) 2026-09-03 with the time unchanged, then retimed 4:00-5:00 PM to 3:20-4:30 PM by Stef's 2026-09-09 PDF; dates unchanged then, and changed 2026-09-12. The 5–8 intro format retired with the move — DuFief is K–5, so this club is 7+ like the others.",
   },
   {
     key: "belmont-thu",
