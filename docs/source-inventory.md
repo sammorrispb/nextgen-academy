@@ -22,6 +22,8 @@
 | src/app/schedule/page.tsx | page | 2026-06-10 | public drop-in schedule (Notion-fed) | high |
 | src/app/schedule/[slug]/page.tsx | page | 2026-06-11 | per-session detail + registration (deep-linked from emails — KEEP) | high |
 | src/app/schedule/success/page.tsx | page | 2026-06-11 | post-checkout confirmation | high |
+| src/app/coach/(authed)/fall-season/page.tsx + [group]/[week] | page ×2 | 2026-09-13 | season play: attendance → rotating-partner schedule → scores; week-6 seeding + double-elimination bracket (coach-gated, minor PII) | high |
+| src/app/fall/standings/[group]/[token]/page.tsx | page | 2026-09-13 | signed parent standings link — first names + records only, noindex, force-dynamic, token verified before any read | high |
 | src/app/schedule/cancel/page.tsx | page | 2026-05-19 | token-gated self-serve cancellation | high |
 | src/app/camp/page.tsx + [slug] + success | page ×3 | 2026-06-03 | summer camp listing, detail, confirmation | high |
 | src/app/clusters/page.tsx + [area] | page ×2 | 2026-06-09 | area-cluster program landing + per-area checkout | high |
@@ -99,6 +101,16 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | src/lib/newsletter-token.ts | 2026-05-21 | HMAC unsubscribe token — keyed on NGA_ADMIN_SECRET | high |
 | src/lib/referral-token.ts | 2026-05-25 | HMAC referral token — keyed on NGA_ADMIN_SECRET | high |
 | src/lib/session-cancel-token.ts | 2026-05-21 | HMAC coach cancel token — keyed on NGA_ADMIN_SECRET | high |
+| src/lib/standings-link-token.ts | 2026-09-13 | HMAC parent standings link (season play) — keyed on STANDINGS_LINK_SECRET ONLY, no admin fallback | high |
+
+**Season play (2026-09-13):**
+
+| path | last-commit | purpose | conf |
+|---|---|---|---|
+| src/lib/season-league/{types,prng,rotation,standings,scores,finals,names}.ts | 2026-09-13 | pure engine: singles+doubles court allocation, history-aware partner rotation, shrunk-win% standings, snake seeding, double elimination | high |
+| src/lib/notion-season-league.ts | 2026-09-13 | NGA Season League Games DB store — relations not names, find-or-create on the key title, schema probe (minor PII) | high |
+| src/lib/season-league-view.ts | 2026-09-13 | orchestration over engine + Notion: preview/save a day, scores, lock/unlock teams, bracket scores, the parent StandingsView (minor PII) | high |
+| src/app/coach/(authed)/fall-season/actions.ts | 2026-09-13 | thin requireCoach wrappers over season-league-view | high |
 
 **Child-PII libs (SLOP-FREE):**
 

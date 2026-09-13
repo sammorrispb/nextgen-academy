@@ -345,6 +345,76 @@ The one-shot notice to families who had **already paid** when the season moved f
 - **Read-only.** The engine never writes to Notion (pinned) — a refund, if a family takes it, is a separate deliberate act through the existing cancel path, not a side effect of the notice.
 - **No sent-flag column — a repeated live run RE-SENDS; always `{"dryRun": true}` first** (the body reports `scanned_rows`, `confirmed_rows` and the recipient list) and use `only` to retry a partial run.
 
+### Fall 2026 season play — rotating-partner standings + playoff (`/coach/fall-season`, 2026-09-13)
+The Walter Johnson Sunday season is run as a **rotating-partner league, one per colour
+group**: weeks 1–5 are league play, week 6 is a playoff. **NOT the "Fall 2026 League"
+product** (`src/data/leagues.ts`, `/league`, 14U/16U age divisions) — Open Brain records
+a family nearly being told the wrong product under that name, so parent-facing copy says
+"Fall Season standings" and nothing lives under `/league`. Code namespace `season-league`.
+
+- **Terms (Sam, 2026-09-13):** every round runs a **doubles court AND a singles court**
+  (`courtAllocation` in `src/lib/season-league/rotation.ts`: doubles first, singles on the
+  spare kids, then sits), games to 11 win by 2, three games per kid per Sunday. Six kids →
+  3 rounds, exactly 3 games each (2 doubles + 1 singles), nobody sits, ≈40 min. Seven →
+  4 rounds, one sits per round. Singles count in the standings like any game and the
+  table shows the doubles/singles split. This is what makes the block fit the clock; the
+  playbook's `SESSION_ARC_90` still says "Round robin (18 min)" and is Sam's curriculum
+  call to revise (pinned by `e2e/session-curriculum.spec.ts`, untouched here).
+- **Partner balance is history-aware, not a fixed table.** `planDay` reads every played
+  game of the season and chooses each round by exhaustive search (a few thousand
+  candidates at ten kids) to keep partner counts level, then opponents, then singles
+  load; deterministic per seed (`<group>-W<week>-A<attempt>`), so **Preview and Save
+  compute the same plan server-side and the client never sends games**. Five full
+  Sundays leave every pair at exactly 2 partnerships for 6 kids and within 1 for 7.
+  Rejected: community-os `rrDoublesGeneric` (one pivot plays every round at 6 and 7).
+- **Standings rank on SHRUNK win %** `(W+2)/(GP+4)` so a 3–0 Sunday can't outrank a 12–3
+  season (kids miss weeks and play 3 or 4 games); tiebreaks point-diff per game, then
+  points-for per game, then name. No head-to-head — noise in rotating doubles.
+- **Week 6 = snake seeding + double elimination** (`finals.ts`): 1+N, 2+N−1 …, an odd
+  lowest-ranked kid rides as a third on the last team; the coach can move kids before
+  locking; teams freeze at lock (`Phase = Team` rows carry the seed). The bracket is a
+  static blueprint of slots resolved from results — byes to top seeds and propagated, a
+  grand-final reset only when the losers-side team wins the final; real games are always
+  2T−2 (+1). Sam chose this over a captains' draft because a visible pick order can leave
+  a nine-year-old picked last in front of the group.
+- **One Notion DB, `NOTION_SEASON_LEAGUE_DB_ID` ("NGA Season League Games"), holds NO
+  names.** One row per game / day / team / playoff game (`Phase`); kids are `relation`
+  links to their Fall Registrations row and first names join at render, so the DB is
+  not a new child-PII destination. The title is an idempotency key (`G-W2-R1-C1`,
+  `Y-W6-DAY`, `Y-W6-T1`, `Y-W6-gf`) and every write is find-or-create on it; a Played row
+  is never overwritten by a save or a regenerate — only Scheduled rows are re-planned or
+  voided (a late arrival = re-check attendance and save again; played rounds stay). The
+  coach index probes the schema (`GET /v1/databases/{id}`) and lists missing/mistyped
+  properties, because a filter or create naming a missing property 400s silently.
+  **The DB must be shared with the "Player DB" integration by hand.** Reads ship dark:
+  env unset → banner, zero calls, nothing written.
+- **Roster = the Fall Registrations DB, live** (`fetchFallRosterForLeague`: id, first
+  name, group, status — nothing else). Only Confirmed kids can be checked in; a refunded
+  kid's played games still count for the kids who played them.
+- **Parent link: unlisted, full table — a logged waiver of the growth-only rule.** The
+  league blueprint for the separate `/league` product says "no child-vs-child leaderboard
+  shown to families" and the week-6 playbook `parentLine` says "never against each
+  other"; Sam waived both for THIS season (2026-09-13, agent-log). Mitigations: one
+  signed, unguessable URL per group (`src/lib/standings-link-token.ts`,
+  `/fall/standings/<group>/<token>`, `STANDINGS_LINK_SECRET` only — **no
+  `NGA_ADMIN_SECRET` fallback**, rotate to revoke), `noindex`, robots-disallowed, absent
+  from the sitemap, `force-dynamic` (a capability URL must never sit in the ISR cache),
+  token verified BEFORE any Notion read (a bad link costs zero fetches), and the view
+  carries first names, records and scores only — no ages, no parent fields, no
+  sitting/present lists. Sam pastes each link into that group's WhatsApp, which already
+  knows every kid.
+- **Actions** (`src/app/coach/(authed)/fall-season/actions.ts`) are thin `requireCoach`
+  wrappers over `src/lib/season-league-view.ts` (preview/save a day, score a game, seed/
+  lock/unlock teams, score a bracket game); every input is re-validated there (group,
+  week, ids ⊂ Confirmed roster, scores to-11-win-by-2 with an "ended on time" override
+  that still refuses ties).
+- Pinned by `e2e/season-league-{rotation,standings,finals,notion}.spec.ts`,
+  `e2e/standings-link-token.spec.ts`, `e2e/invariant-season-league-egress.spec.ts`
+  (Notion-only host, write bodies carry ids + scores and never a name or parent field,
+  Played rows untouched, bad token → zero fetches) and
+  `e2e/invariant-season-league-authz.spec.ts` (source pins: every action gated, pages
+  under `(authed)`, verify-before-read, no admin-secret fallback, noindex/robots/sitemap).
+
 ### Pickl Park Saturdays — Frederick (`/picklpark` + the Open Court drop-in)
 **NGA's first venue outside Montgomery County** (The Pickl Park, an 8-court indoor club at 355 Ballenger Center Dr, Frederick MD). Two products, one Saturday, one court booking of 2 courts, 2–5 PM. **Season: six Saturdays Sep 19 – Oct 24 2026, one held makeup date Oct 31** — moved up from Oct 3 – Nov 7 on 2026-09-05 (Sam) so it sells as the *second fall option* beside the Walter Johnson Sunday season; `/fall` and `/picklpark` cross-link while both are open. Each season hour is `PICKLPARK_SESSION_FORMAT` — 30 minutes of coached drills, then 30 minutes of game play — one constant reused by the page, the group cards, the `/schedule` callout and the confirmation email so the split can't drift.
 
@@ -645,6 +715,12 @@ See `.env.example`. Categories:
 - `NEXT_PUBLIC_MONDAY_GIRLS_REGISTRATION_OPEN` — kill switch, same posture as the Pickl
   Park flag. Unset or `true` = the form renders through the block's FIRST session; any
   other value closes it everywhere.
+- `NOTION_SEASON_LEAGUE_DB_ID` + `STANDINGS_LINK_SECRET` — the Fall 2026 season-play pair.
+  The DB holds the games (relations to the Fall Regs DB, no names) and MUST be shared with
+  the Player DB integration by hand; the secret signs the parent standings links and has
+  no admin-secret fallback (rotate it to revoke every link). Either unset = the coach
+  pages show a banner and the parent links 404; nothing is written. See "Fall 2026 season
+  play" above.
 - `NOTION_CURRICULUM_DB_ID` — NGA Curriculum Overrides DB (one row per overridden
   curriculum string, read by `/coach/fall-playbook`). Optional. **UNSET = the override
   layer is dark** and the playbook renders the code defaults with no network call —
@@ -677,8 +753,8 @@ NGA serves children ages 6–16; parents are the account holders and control eve
 Tests OBSERVE these files; they never modify them. Any change here goes through the IPAV loop (below) with its own approval:
 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
-- **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 5 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
-- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages, the 3 eval routes.
+- **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 8 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
 
