@@ -102,6 +102,42 @@ that league actually ships.** Don't silently edit one to match the other.
 Two rules that never bend: start the ritual when 5 minutes remain (skip under 3
 minutes or under 4 kids), and **cut the ritual, never the cleanup**.
 
+### Season play — the league part of the Sunday (2026-09-13)
+
+The season runs as a rotating-partner league, one per colour group, from
+`/coach/fall-season` (the coach dashboard has a "Fall season play →" pill). Every round
+uses BOTH courts — a doubles game and a singles game — so with six kids nobody sits and
+each kid plays exactly three games (two doubles, one singles), about 40 minutes; with
+seven, four rounds and one kid sits each round. **That block replaces the 18-minute round
+robin above and eats into the Skill Stack; the arc still describes the old split — Sam's
+curriculum call to revise, not a silent edit.**
+
+Each Sunday, on your phone:
+
+1. Open the Sunday (`Week n`). Every Confirmed kid starts checked in — tap to uncheck
+   whoever isn't here. "Rounds to add" is auto (3 for six kids, 4 for seven); trim it if
+   the clock is short.
+2. **Preview schedule**, glance at it, **Save schedule**. Rounds appear below with a score
+   box each. Doubles courts come first, the singles court last.
+3. Enter each score as it finishes (to 11, win by 2; tick "ended on time" if the clock
+   stopped it — never a tie). Standings update on the page and on the parent link.
+4. A kid arrives late or leaves? Re-check attendance and **Save — replace unplayed
+   rounds**. Played games are kept; only the unplayed rounds are re-planned around the new
+   list and the round numbers continue.
+5. Week 6: check attendance, **Seed the teams** (1+6, 2+5, 3+4 from the standings; an odd
+   lowest-ranked kid becomes a third on the last team; move anyone with the dropdown),
+   **Lock teams**, then score the bracket games marked "on deck" — double elimination,
+   single games to 11, on either court in any order. The champions banner appears on the
+   parent page when the final (and the reset, if the losers-side team wins it) is scored.
+
+The parent link for each group is on `/coach/fall-season` ("Copy parent link") — paste it
+into that group's WhatsApp once. It shows first names, records, scores and the bracket,
+nothing else, and it is unlisted: rotate `STANDINGS_LINK_SECRET` in Vercel to revoke it.
+
+Before the first Sunday: the "NGA Season League Games" Notion DB must exist, be **shared
+with the Player DB integration**, and `NOTION_SEASON_LEAGUE_DB_ID` + `STANDINGS_LINK_SECRET`
+must be set in Vercel. The index page's banner turns green when the schema probe passes.
+
 ## Court captains — before the first Sunday
 
 One parent volunteer per court. They run the clock, rotation, score and balls;

@@ -312,3 +312,80 @@ export async function countFallRegistrations(
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Season-league roster read (2026-09-13)
+// ---------------------------------------------------------------------------
+
+/** The little the league needs of a roster row: an id to key games on and a
+ * first name to render. No parent contact, birth year, emergency contact or
+ * allergy ever leaves this reader — pinned by
+ * e2e/invariant-season-league-egress.spec.ts. */
+export interface FallRosterPlayer {
+  pageId: string;
+  childFirstName: string;
+  group: string;
+  status: string;
+}
+
+export type FallRosterStatus = "ok" | "config_missing" | "query_failed";
+
+export interface FallRosterResult {
+  players: FallRosterPlayer[];
+  status: FallRosterStatus;
+}
+
+const ROSTER_MAX_PAGES = 5;
+
+/**
+ * Every registration row in a group, ALL statuses, paginated. The league
+ * schedules Confirmed kids only, but a refunded kid's played games still
+ * reference their id, so display needs the whole set. Never throws: env unset
+ * → config_missing with zero calls; a failed query → query_failed.
+ */
+export async function fetchFallRosterForLeague(group: string): Promise<FallRosterResult> {
+  const env = notionEnv();
+  if (!env) return { players: [], status: "config_missing" };
+
+  const players: FallRosterPlayer[] = [];
+  let cursor: string | undefined;
+  try {
+    for (let page = 0; page < ROSTER_MAX_PAGES; page += 1) {
+      const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
+        method: "POST",
+        headers: headers(env.notionKey),
+        body: JSON.stringify({
+          filter: { property: "Group", select: { equals: group } },
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {}),
+        }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(`[notion-fall-registrations] roster query failed ${res.status}`);
+        return { players: [], status: "query_failed" };
+      }
+      const data = (await res.json()) as {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        results?: any[];
+        has_more?: boolean;
+        next_cursor?: string | null;
+      };
+      for (const pageRow of data.results ?? []) {
+        const p = pageRow?.properties ?? {};
+        players.push({
+          pageId: String(pageRow?.id ?? ""),
+          childFirstName: p["Child First Name"]?.rich_text?.[0]?.plain_text ?? "",
+          group: p["Group"]?.select?.name ?? "",
+          status: p["Status"]?.select?.name ?? "",
+        });
+      }
+      if (!data.has_more || !data.next_cursor) break;
+      cursor = data.next_cursor;
+    }
+  } catch (err) {
+    console.error("[notion-fall-registrations] roster query threw", err);
+    return { players: [], status: "query_failed" };
+  }
+  return { players: players.filter((p) => p.pageId), status: "ok" };
+}

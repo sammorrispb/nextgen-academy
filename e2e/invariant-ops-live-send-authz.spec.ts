@@ -150,6 +150,7 @@ test.describe("ops actions wire the gates server-side (source pins)", () => {
       ["src", "app", "coach", "(authed)", "inbox", "actions.ts"],
       ["src", "app", "coach", "(authed)", "polls", "[slug]", "actions.ts"],
       ["src", "app", "coach", "(authed)", "[slug]", "actions.ts"],
+      ["src", "app", "coach", "(authed)", "fall-season", "actions.ts"],
     ];
     for (const parts of sites) {
       const s = readFileSync(join(__dirname, "..", ...parts), "utf8");
