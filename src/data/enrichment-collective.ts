@@ -13,7 +13,23 @@
 // earlier, because here the venue IS an elementary school. The exclusion is
 // enforced by `e2e/invariant-events-feed-egress.spec.ts`, not by memory.
 // The only consumer is the Google Calendar mirror (`skills/calendar-sync.md`),
-// which reads this file directly and emits town-only calendar blocks.
+// which reads this file directly and writes to Sam's PRIVATE calendar.
+//
+// UPDATE 2026-09-13 (Sam): that private calendar now carries the SCHOOL NAME
+// and STREET ADDRESS, not the town. Sam drives to these five buildings every
+// week and a town label is not an address. This splits what used to be one
+// rule into the two it was always doing:
+//
+//   PUBLIC surfaces -> the EC program does not appear AT ALL. Unchanged, and
+//                      still enforced by the egress spec. This is the rule
+//                      that actually protects the children.
+//   Sam's PRIVATE   -> school name + `exactLocation`. A private calendar is
+//   calendar           not a publishing surface.
+//
+// So `town` is no longer 'the only field that leaves': `schoolName` and
+// `exactLocation` leave too, to exactly one private destination. Any NEW
+// consumer inherits the PUBLIC rule by default — opt into the private one
+// deliberately, never by copying a line from the calendar path.
 //
 // SCHEDULE CONFIRMED — Stef's Fall 2026 schedule PDF (updated revision,
 // 2026-08-13), which supersedes the July hold email in three ways: (1) session
@@ -96,10 +112,16 @@ export const EC_REGISTRATION_NOTE =
 export interface EcClub {
   key: string;
   weekdayLabel: string;
-  /** Broad area. This is the ONLY location that ever leaves this file. */
+  /** Broad area. Fallback label when `exactLocation` is unset. */
   town: string;
   /** Named only where Stef has named it — never invent one. */
   schoolName: string | null;
+  /**
+   * Precise venue: school name + street address. PRIVATE CALENDAR ONLY.
+   * Same class of data as `camps.ts` `exactLocation`, under the same rule —
+   * it must never reach a public surface. Null falls back to `town`.
+   */
+  exactLocation: string | null;
   /** Display time, or null when the partner hasn't announced it. */
   startTime: string | null;
   endTime: string | null;
@@ -125,6 +147,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Monday",
     town: "Brookeville, MD",
     schoolName: "Greenwood ES",
+    exactLocation:
+      "Greenwood Elementary School, 3336 Gold Mine Rd, Brookeville, MD 20833",
     startTime: "3:20 PM",
     endTime: "4:30 PM",
     ageMin: 7,
@@ -147,6 +171,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Tuesday",
     town: "Derwood, MD",
     schoolName: "Candlewood ES",
+    exactLocation:
+      "Candlewood Elementary School, 7210 Osprey Dr, Rockville, MD 20855",
     startTime: "3:20 PM",
     endTime: "4:30 PM",
     ageMin: 7,
@@ -174,6 +200,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Wednesday",
     town: "North Potomac, MD",
     schoolName: "DuFief ES",
+    exactLocation:
+      "DuFief Elementary School, 15001 DuFief Dr, Gaithersburg, MD 20878",
     startTime: "3:20 PM",
     endTime: "4:30 PM",
     ageMin: 7,
@@ -196,7 +224,9 @@ export const EC_CLUBS: readonly EcClub[] = [
     key: "belmont-thu",
     weekdayLabel: "Thursday",
     town: "Olney, MD",
-    schoolName: "Belmont",
+    schoolName: "Belmont ES",
+    exactLocation:
+      "Belmont Elementary School, 19528 Olney Mill Rd, Olney, MD 20832",
     startTime: "3:20 PM",
     endTime: "4:30 PM",
     ageMin: 7,
@@ -226,6 +256,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Friday",
     town: "Sandy Spring, MD",
     schoolName: "Sherwood ES",
+    exactLocation:
+      "Sherwood Elementary School, 1401 Olney-Sandy Spring Rd, Sandy Spring, MD 20860",
     startTime: "3:50 PM",
     endTime: "5:00 PM",
     ageMin: 7,
@@ -250,9 +282,23 @@ export function findEcClub(key: string): EcClub | undefined {
   return EC_CLUBS.find((c) => c.key === key);
 }
 
-/** Calendar title for one club. Town only — never the school name. */
+/**
+ * Calendar title for one club. PRIVATE CALENDAR ONLY — names the school,
+ * falling back to the town where Stef has not named one.
+ * Never render this on a public surface; see the header.
+ */
 export function ecClubTitle(club: EcClub): string {
   const tbd = club.startTime === null ? " (time TBD)" : "";
   const prefix = club.status === "hold" ? "[HOLD] " : "";
-  return `${prefix}Coach Sam club — ${club.town.replace(/,\s*MD$/, "")} (${club.weekdayLabel.slice(0, 3)})${tbd}`;
+  const where = club.schoolName ?? club.town.replace(/,\s*MD$/, "");
+  return `${prefix}Coach Sam club — ${where} (${club.weekdayLabel.slice(0, 3)})${tbd}`;
+}
+
+/**
+ * Calendar location for one club. PRIVATE CALENDAR ONLY — the full street
+ * address, falling back to the town where no exact venue is recorded.
+ * Never render this on a public surface; see the header.
+ */
+export function ecClubLocation(club: EcClub): string {
+  return club.exactLocation ?? club.town;
 }

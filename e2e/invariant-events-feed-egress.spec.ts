@@ -6,6 +6,7 @@ import {
   EC_CLUBS,
   EC_PARTNER_NAME,
   EC_PARTNER_URL,
+  ecClubLocation,
   ecClubTitle,
 } from "../src/data/enrichment-collective";
 import {
@@ -93,7 +94,9 @@ test.describe("events feed — egress invariants", () => {
         if (street) expect(campJson).not.toContain(street);
       }
       // No street number anywhere on a camp item.
-      expect(campJson).not.toMatch(/\d{3,5}\s+[A-Z][a-z]+\s+(Dr|Rd|Ave|St|Blvd|Way)/);
+      expect(campJson).not.toMatch(
+        /\d{3,5}\s+[A-Z][a-z]+\s+(Dr|Rd|Ave|St|Blvd|Way)/,
+      );
     }
   });
 
@@ -120,6 +123,12 @@ test.describe("events feed — egress invariants", () => {
     // the venue IS the school, so the whole program stays off public surfaces
     // and lives only on Sam's private calendar (src/data/enrichment-collective.ts).
     //
+    // 2026-09-13: that private calendar now carries school NAMES and STREET
+    // ADDRESSES. Nothing about this public rule relaxed — the opposite. The
+    // file holds more sensitive data than it used to, so this spec is the
+    // load-bearing boundary between the two surfaces and asserts on the
+    // addresses as well as the names.
+    //
     // Asserted on EC-specific strings only — never on town names, which are
     // legitimate NGA locations and would make this spec fire spuriously the
     // day NGA runs a session in Olney.
@@ -139,6 +148,14 @@ test.describe("events feed — egress invariants", () => {
       expect(json).not.toContain(club.key);
       expect(json).not.toContain(ecClubTitle(club));
       if (club.schoolName) expect(json).not.toContain(club.schoolName);
+      // Added 2026-09-13, when this file gained street addresses so Sam's
+      // PRIVATE calendar could name the building he drives to. That is
+      // precisely the `camps.ts` exactLocation risk, so the widened data
+      // gets a widened guard: a school address must never reach the feed.
+      if (club.exactLocation) {
+        expect(json).not.toContain(club.exactLocation);
+      }
+      expect(json).not.toContain(ecClubLocation(club));
       // No EC session date may appear paired with an EC source marker.
       for (const date of club.dates) {
         expect(json).not.toContain(`nga-ec:${club.key}:${date}`);
