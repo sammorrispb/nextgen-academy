@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
 import { levels } from "@/data/levels";
+import { breadcrumbJsonLd, courseJsonLd, SITE_URL, type CourseTier } from "@/lib/seo";
 
 // The standalone "find your level" page. The four ball colors were only
 // defined inside the home page's #levels section, but the season registration
@@ -8,8 +10,10 @@ import { levels } from "@/data/levels";
 // explainer nearby — this page is the link target for that moment. Renders
 // from src/data/levels.ts (the same source the home page uses) so the two
 // surfaces can't drift.
+// The canonical "how do NGA levels work" page (AEO audit, 2026-09-13) — the old
+// SEO backlog's planned /tier-system now 301s here.
 export const metadata: Metadata = {
-  title: "Find Your Player's Level | Next Gen Pickleball Academy",
+  title: { absolute: "Red, Orange, Green, Yellow Ball Levels — Next Gen Academy" },
   description:
     "Red, Orange, Green, and Yellow Ball explained — how Next Gen places young players by skill, never age alone, and how to find the right group for your kid.",
   alternates: { canonical: "https://nextgenpbacademy.com/levels" },
@@ -29,9 +33,31 @@ const SOUNDS_LIKE: Record<string, string> = {
     "Competing seriously and ready for tournament-track training in a small, coach-curated group.",
 };
 
+const LEVELS_URL = `${SITE_URL}/levels`;
+
+/** One Course per ball color, from the same levels data the page renders. */
+const COURSE_TIERS: CourseTier[] = levels.map((level, i) => ({
+  name: `${level.label} — youth pickleball`,
+  description: `${level.focus} ${level.detail}`,
+  educationalLevel: level.tag,
+  minAge: Number.parseInt(level.ages, 10),
+  ballColor: (level.key[0].toUpperCase() + level.key.slice(1)) as CourseTier["ballColor"],
+  url: `${LEVELS_URL}#${level.key}`,
+  ...(i > 0 ? { prerequisite: levels[i - 1].label } : {}),
+}));
+
 export default function LevelsPage() {
   return (
     <div className="bg-ngpa-navy">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", url: `${SITE_URL}/` },
+          { name: "Levels", url: LEVELS_URL },
+        ])}
+      />
+      {COURSE_TIERS.map((tier) => (
+        <JsonLd key={tier.ballColor} data={courseJsonLd(tier)} />
+      ))}
       <section className="relative bg-ngpa-deep border-b border-ngpa-slate/40">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
           <p className="font-heading text-xs font-bold text-ngpa-lime uppercase tracking-[0.2em] mb-4">
@@ -62,7 +88,8 @@ export default function LevelsPage() {
             {levels.map((level) => (
               <article
                 key={level.key}
-                className="bg-ngpa-panel rounded-2xl border border-ngpa-slate/60 p-6 sm:p-7"
+                id={level.key}
+                className="bg-ngpa-panel rounded-2xl border border-ngpa-slate/60 p-6 sm:p-7 scroll-mt-24"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <span
@@ -103,6 +130,43 @@ export default function LevelsPage() {
                 )}
               </article>
             ))}
+          </div>
+
+          {/* Always-visible comparison table — the one-glance answer to "what's
+              the difference between the ball colors" for parents and answer
+              engines alike. Same data as the cards above. */}
+          <div className="mt-10">
+            <h2 className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-3">
+              The four levels side by side
+            </h2>
+            <div className="overflow-x-auto rounded-2xl border border-ngpa-slate/60">
+              <table className="w-full min-w-[36rem] text-left text-sm">
+                <thead className="bg-ngpa-panel text-ngpa-white/70">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 font-bold">Level</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Ages</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Stage</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Sounds like your kid if</th>
+                    <th scope="col" className="px-4 py-3 font-bold">Comes after</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {levels.map((level, i) => (
+                    <tr key={level.key} className="border-t border-ngpa-slate/50 align-top">
+                      <th scope="row" className="px-4 py-3 font-bold text-ngpa-white whitespace-nowrap">
+                        {level.label}
+                      </th>
+                      <td className="px-4 py-3 text-ngpa-white/80 whitespace-nowrap">{level.ages}</td>
+                      <td className="px-4 py-3 text-ngpa-white/80">{level.tag}</td>
+                      <td className="px-4 py-3 text-ngpa-white/80">{SOUNDS_LIKE[level.key]}</td>
+                      <td className="px-4 py-3 text-ngpa-white/80 whitespace-nowrap">
+                        {i === 0 ? "First paddle touch" : levels[i - 1].label}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div className="mt-8 bg-ngpa-slate/40 rounded-2xl border border-ngpa-slate/60 p-6 sm:p-7">

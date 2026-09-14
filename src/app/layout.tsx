@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import JsonLd from "@/components/JsonLd";
+import { organizationJsonLd } from "@/lib/seo";
 import PageViewTracker from "@/components/PageViewTracker";
 import UtmCapture from "@/components/UtmCapture";
 import "./globals.css";
@@ -80,46 +81,9 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${inter.variable} ${robotoMono.variable} antialiased bg-ngpa-navy text-ngpa-white`}
       >
-        <JsonLd data={{
-          "@context": "https://schema.org",
-          "@type": "SportsActivityLocation",
-          name: "Next Gen Pickleball Academy",
-          description: "Structured youth pickleball coaching for kids ages 6\u201316 in Montgomery County, MD.",
-          url: "https://nextgenpbacademy.com",
-          telephone: "301-325-4731",
-          email: "nextgenacademypb@gmail.com",
-          address: {
-            "@type": "PostalAddress",
-            addressLocality: "Montgomery County",
-            addressRegion: "MD",
-            addressCountry: "US",
-          },
-          sameAs: [
-            "https://www.instagram.com/nextgenpickleballacademy",
-            "https://www.sammorrispb.com",
-            "https://www.linkanddink.com",
-          ],
-          areaServed: [
-            { "@type": "AdministrativeArea", name: "Montgomery County, MD" },
-            { "@type": "City", name: "Bethesda" },
-            { "@type": "City", name: "Rockville" },
-            { "@type": "City", name: "Potomac" },
-            { "@type": "City", name: "Gaithersburg" },
-            { "@type": "City", name: "Chevy Chase" },
-            { "@type": "City", name: "Olney" },
-            { "@type": "City", name: "Silver Spring" },
-            // Out-of-county partner venue: NGA coaches the Saturday leagues at
-            // The Pickl Park (Sam, 2026-09-07). See EXTENDED_SERVICE_AREAS in
-            // lib/seo.ts for why this widens areaServed but not the MoCo city
-            // ladder that drives the footer and the landing pages.
-            { "@type": "AdministrativeArea", name: "Frederick County, MD" },
-            { "@type": "City", name: "Frederick" },
-          ],
-          founder: [
-            { "@type": "Person", name: "Sam Morris" },
-            { "@type": "Person", name: "Amine Lahlou" },
-          ],
-        }} />
+        {/* The one organization node — every other JSON-LD node references it
+            by @id (see organizationJsonLd in lib/seo.ts). */}
+        <JsonLd data={organizationJsonLd()} />
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-ngpa-lime focus:text-ngpa-black focus:font-bold focus:rounded-lg"

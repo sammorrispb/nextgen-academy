@@ -9,7 +9,7 @@ import CommitForm from "@/components/CommitForm";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Lock in 4 weeks — Next Gen Pickleball Academy",
+  title: "Lock in 4 weeks",
   description: "Auto-reserve the next 4 weekly crew sessions.",
   robots: { index: false, follow: false },
 };

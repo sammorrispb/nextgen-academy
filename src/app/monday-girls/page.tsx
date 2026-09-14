@@ -46,7 +46,7 @@ import { countMondayGirlsRegistrations } from "@/lib/notion-monday-girls-registr
 // that price exists (see monday-girls-registration-window.ts).
 
 export const metadata: Metadata = {
-  title: `Monday Girls Beginner Group — Register | Next Gen Pickleball Academy`,
+  title: "Monday Girls Beginner Group — Register",
   description: `${MONDAY_GIRLS_SEASON_SESSIONS} Monday evenings of girls-only beginner youth pickleball at ${MONDAY_GIRLS_VENUE_SHORT} in ${MONDAY_GIRLS_PUBLIC_AREA}, ${MONDAY_GIRLS_SEASON_LABEL}. Small group, $${MONDAY_GIRLS_SEASON_PRICE_USD} per player for the full block.`,
   robots: { index: false, follow: false },
   alternates: { canonical: "https://nextgenpbacademy.com/monday-girls" },

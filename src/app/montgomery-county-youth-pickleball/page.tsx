@@ -5,12 +5,12 @@ import { seo } from "@/data/seo";
 import { site } from "@/data/site";
 import { levels } from "@/data/levels";
 import { coaches } from "@/data/coaches";
-import { faq } from "@/data/faq";
+import { localFaq } from "@/data/faq";
 import { testimonials } from "@/data/testimonials";
 import JsonLd from "@/components/JsonLd";
 import LeadForm from "@/components/LeadForm";
 import TrackedCTA from "@/components/TrackedCTA";
-import { NGA_POSTAL_ADDRESS, areaServedJsonLd, CITY_LANDING_PAGES } from "@/lib/seo";
+import { NGA_POSTAL_ADDRESS, areaServedJsonLd, CITY_LANDING_PAGES, orgRef } from "@/lib/seo";
 
 export const metadata: Metadata = {
   // Absolute title so the rendered <title> stays inside Google's ~60-char
@@ -44,14 +44,7 @@ const SERVED_TOWNS = [
   "Aspen Hill",
 ];
 
-const LOCAL_FAQ_QUESTIONS = new Set([
-  "What ages do you accept?",
-  "How much do youth pickleball lessons cost at Next Gen?",
-  "Is pickleball safe for kids?",
-  "Which Montgomery County towns do you serve?",
-]);
-
-const localFaq = faq.filter((item) => LOCAL_FAQ_QUESTIONS.has(item.question));
+// The shared local FAQ subset lives in src/data/faq.ts (one copy).
 
 export default function MontgomeryCountyPage() {
   return (
@@ -95,11 +88,7 @@ export default function MontgomeryCountyPage() {
           email: "nextgenacademypb@gmail.com",
           address: NGA_POSTAL_ADDRESS,
           areaServed: areaServedJsonLd(),
-          parentOrganization: {
-            "@type": "SportsOrganization",
-            name: "Next Gen Pickleball Academy",
-            url: "https://nextgenpbacademy.com",
-          },
+          parentOrganization: orgRef(),
         }}
       />
 

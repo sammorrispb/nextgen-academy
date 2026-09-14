@@ -44,7 +44,7 @@ import {
 // exact "canonical page is right, a variant path is stale" miss the repo rule
 // warns about. Derive it and that can't happen again.
 export const metadata: Metadata = {
-  title: "Fall 2026 Season — Register | Next Gen Pickleball Academy",
+  title: { absolute: "Fall 2026 Youth Pickleball Season — Bethesda, MD | Next Gen" },
   description: [
     `Six Sundays of youth pickleball at ${FALL_VENUE_SHORT} in ${FALL_PUBLIC_AREA}, ${FALL_SEASON_LABEL}.`,
     FALL_SEASON_GROUPS.map((g) => `${g.label} ${g.timeLabel}`).join(", ") + ".",

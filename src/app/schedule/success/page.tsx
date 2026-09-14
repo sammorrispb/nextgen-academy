@@ -7,7 +7,7 @@ import { fillGoal } from "@/lib/fill-meter";
 import FillMeter from "@/components/FillMeter";
 
 export const metadata: Metadata = {
-  title: "Drop-in Confirmed · Next Gen Pickleball Academy",
+  title: "Drop-in Confirmed",
   description: "Your drop-in is reserved. See you on the court.",
   robots: { index: false, follow: false },
 };

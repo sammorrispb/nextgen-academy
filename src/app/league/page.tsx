@@ -6,6 +6,8 @@ import JsonLd from "@/components/JsonLd";
 import { site } from "@/data/site";
 import { LEAGUE_BANDS, LEAGUE_SEASONS } from "@/data/leagues";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+import { buildLeagueHubCards } from "@/lib/league-hub";
+import { picklParkTodayET } from "@/lib/picklpark-registration-window";
 
 // Dark go-live gate. The enrollment UI (season form + "Enroll" CTAs) only
 // appears when NEXT_PUBLIC_LEAGUE_ENROLLMENT_OPEN === "true". Two independent
@@ -21,22 +23,29 @@ const OPEN_SEASON = LEAGUE_SEASONS[0];
 // CTAs target the form card; its id swaps with the mode so the anchor resolves.
 const FORM_ANCHOR = ENROLLMENT_OPEN ? "enroll" : "interest";
 
+// /league is the youth-leagues landing page (AEO audit, 2026-09-13): the leagues and
+// seasons Next Gen coaches right now, each with who takes registration, then
+// the planned fixed-roster Next Gen league and its interest list. It used to
+// describe only the planned league while carrying Course schema, so answer
+// engines read an enrollable product that doesn't exist.
+const TITLE = "Youth Pickleball Leagues & Seasons — MoCo & Frederick, MD";
+const DESCRIPTION =
+  "Youth pickleball leagues in Montgomery County and Frederick, MD: the seasons Next Gen coaches now, who takes registration, and the league we're building.";
+
 export const metadata: Metadata = {
-  title: "Youth Pickleball League — Next Gen, Montgomery County, MD",
-  description:
-    "A structured, growth-only youth pickleball league for ages 6–16 in Montgomery County. Fixed-roster 8-session seasons, age divisions (7U/10U/14U/16U), real progress you can see — your kid vs. yesterday, never a leaderboard.",
+  title: { absolute: TITLE },
+  description: DESCRIPTION,
   alternates: { canonical: "/league" },
   openGraph: {
-    title: "Youth Pickleball League — Next Gen Pickleball Academy",
-    description:
-      "Fixed-roster, 8-session seasons by age division. Growth-only — every season tracks your kid's own progress, not a ranking.",
+    title: TITLE,
+    description: DESCRIPTION,
     url: `${SITE_URL}/league`,
+    images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Youth Pickleball League — Next Gen Pickleball Academy",
-    description:
-      "Fixed-roster, 8-session seasons by age division. Growth-only — your kid vs. yesterday.",
+    title: TITLE,
+    description: DESCRIPTION,
   },
 };
 
@@ -85,38 +94,41 @@ const HOW_IT_WORKS = [
 
 const LEAGUE_APP_URL = process.env.NEXT_PUBLIC_LEAGUE_APP_URL;
 
+// Cards retire on their own dates, so re-render on a timer rather than freezing
+// "today" at build time.
+export const revalidate = 300;
+
 export default function LeaguePage() {
+  const todayIso = picklParkTodayET();
+  const runningNow = buildLeagueHubCards(todayIso, {
+    fallRegistrationOpen: process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true",
+  });
   return (
     <>
       <JsonLd
         data={breadcrumbJsonLd([
           { name: "Home", url: SITE_URL },
-          { name: "Youth League", url: `${SITE_URL}/league` },
+          { name: "Youth Leagues", url: `${SITE_URL}/league` },
         ])}
       />
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "Course",
-          name: "Next Gen Youth Pickleball League",
-          description:
-            "A structured, growth-only youth pickleball league for ages 6–16 in Montgomery County, MD. Fixed-roster 8-session seasons banded by age (7U/10U/14U/16U), tracking each child's own progress rather than a ranking.",
-          educationalLevel: "Youth (ages 6–16)",
-          audience: {
-            "@type": "PeopleAudience",
-            audienceType: "Children",
-            suggestedMinAge: 6,
-            suggestedMaxAge: 16,
-          },
-          provider: {
-            "@type": "SportsOrganization",
-            name: "Next Gen Pickleball Academy",
-            url: SITE_URL,
-          },
-          teaches:
-            "Youth pickleball — technical skills, game strategy, and sportsmanship across a fixed-roster season",
-        }}
-      />
+      {/* ItemList of what actually runs — no Course node: the planned league
+          isn't a product yet, and the live seasons carry their own
+          SportsEvent schema on /fall, /picklpark and the MVF page. */}
+      {runningNow.length > 0 && (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: "Youth pickleball leagues and seasons running now",
+            itemListElement: runningNow.map((card, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: `${card.title} — ${card.where}`,
+              url: card.external ? card.href : `${SITE_URL}${card.href}`,
+            })),
+          }}
+        />
+      )}
 
       {/* ── Hero + interest form ─────────────────────────────────────── */}
       <section className="relative isolate overflow-hidden bg-ngpa-deep">
@@ -130,21 +142,22 @@ export default function LeaguePage() {
                   aria-hidden="true"
                   className="w-1.5 h-1.5 rounded-full bg-ngpa-teal animate-pulse"
                 />
-                Youth League · Coming Seasons
+                Youth leagues &amp; seasons
               </div>
 
               <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.02] tracking-tight">
-                A season, not a one-off.{" "}
-                <span className="text-ngpa-teal">Watch your kid grow.</span>
+                Youth pickleball leagues.{" "}
+                <span className="text-ngpa-teal">A season, not a one-off.</span>
               </h1>
 
               <p className="mt-6 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-                The Next Gen league turns drop-ins into a real season &mdash;
-                fixed-roster, eight sessions, the same crew every week. Kids play
-                in age divisions, level up Red &rarr; Orange &rarr; Green &rarr;
-                Yellow, and earn badges along the way. We&rsquo;re building it
-                now &mdash; tell us your kid&rsquo;s division and you&rsquo;ll be
-                first to enroll.
+                Your kid can join a Next Gen&ndash;coached league or season in
+                Montgomery County or Frederick right now &mdash; each one below
+                says who takes registration. We&rsquo;re also building the Next
+                Gen league: the same crew every week for eight sessions, grouped
+                by age, leveling up Red &rarr; Orange &rarr; Green &rarr; Yellow.
+                Tell us your kid&rsquo;s age group and you&rsquo;ll be first to
+                enroll.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
@@ -163,15 +176,16 @@ export default function LeaguePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
                 </a>
-                <Link
-                  href="/schedule"
+                <a
+                  href={runningNow.length > 0 ? "#running-now" : "/schedule"}
                   className="inline-flex items-center justify-center gap-2 px-7 py-4 border-2 border-ngpa-slate text-ngpa-white font-bold text-lg rounded-full hover:border-ngpa-teal hover:text-ngpa-teal transition-colors min-h-[48px]"
                 >
-                  Play a drop-in first
-                </Link>
+                  {runningNow.length > 0 ? "See what's running now" : "Play a drop-in first"}
+                </a>
               </div>
 
               <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ngpa-white/70">
+                <span className="font-bold text-ngpa-white/80">The planned league:</span>
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
                   Ages 6–16
@@ -209,6 +223,9 @@ export default function LeaguePage() {
                 ) : (
                   <>
                     <div className="px-5 pt-6 pb-3 text-center">
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-ngpa-teal mb-2">
+                        Planned &mdash; interest list only
+                      </p>
                       <p className="font-heading text-xl font-black text-ngpa-white tracking-tight">
                         Get on the league list
                       </p>
@@ -227,12 +244,94 @@ export default function LeaguePage() {
         </div>
       </section>
 
+      {/* ── Running now — the leagues and seasons that actually exist ── */}
+      <section
+        id="running-now"
+        className="relative bg-ngpa-black py-16 sm:py-20 px-4 sm:px-6 lg:px-10 scroll-mt-20"
+      >
+        <div className="max-w-6xl mx-auto">
+          <div className="max-w-2xl">
+            <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+              Running now
+            </p>
+            <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
+              Youth leagues and seasons on the calendar.
+            </h2>
+            <p className="text-lg text-ngpa-white/75 leading-relaxed">
+              Each one is coached by Next Gen. Registration happens wherever the
+              card says &mdash; some on this site, some with our partners.
+            </p>
+          </div>
+
+          {runningNow.length > 0 ? (
+            <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-5">
+              {runningNow.map((card) => {
+                const cta = card.external ? (
+                  <a
+                    href={card.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 inline-flex items-center justify-center px-6 py-3 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+                  >
+                    Go to {card.registrar}
+                  </a>
+                ) : (
+                  <Link
+                    href={card.href}
+                    className="mt-6 inline-flex items-center justify-center px-6 py-3 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+                  >
+                    See details
+                  </Link>
+                );
+                return (
+                  <article
+                    key={card.key}
+                    className="rounded-2xl bg-ngpa-panel border border-ngpa-slate/60 p-6 sm:p-7 flex flex-col"
+                  >
+                    <h3 className="font-heading text-xl font-bold text-ngpa-white">
+                      {card.title}
+                    </h3>
+                    <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+                      <dt className="text-ngpa-white/55">When</dt>
+                      <dd className="text-ngpa-white/85">
+                        <time dateTime={card.startsOn}>{card.when}</time>
+                      </dd>
+                      <dt className="text-ngpa-white/55">Where</dt>
+                      <dd className="text-ngpa-white/85">{card.where}</dd>
+                      <dt className="text-ngpa-white/55">Who</dt>
+                      <dd className="text-ngpa-white/85">
+                        {card.ages} &middot; {card.levels}
+                      </dd>
+                      <dt className="text-ngpa-white/55">Registration</dt>
+                      <dd className="text-ngpa-white font-semibold">{card.registrar}</dd>
+                    </dl>
+                    <div className="flex-1" />
+                    {cta}
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-8 text-ngpa-white/75">
+              No youth season is open right now.{" "}
+              <Link
+                href="/newsletter"
+                className="text-ngpa-teal font-semibold hover:text-ngpa-teal-bright underline-offset-4 hover:underline"
+              >
+                Get the next season by email
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+      </section>
+
       {/* ── How it works ─────────────────────────────────────────────── */}
       <section className="relative bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl">
             <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-              How a season works
+              The Next Gen league (planned)
             </p>
             <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
               Structured enough to grow. Fun enough to come back.

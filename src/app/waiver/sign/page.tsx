@@ -10,7 +10,7 @@ import {
 } from "@/data/waiver";
 
 export const metadata: Metadata = {
-  title: "Sign the Waiver · Next Gen Pickleball Academy",
+  title: "Sign the Waiver",
   description:
     "Sign the Next Gen Pickleball Academy liability waiver and media release once — it covers your child for every program.",
   robots: { index: false, follow: false },

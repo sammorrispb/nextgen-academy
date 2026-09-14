@@ -1,24 +1,27 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { site } from "@/data/site";
 import { trackEvent } from "@/lib/funnelClient";
+import { stickyCtaFor } from "@/lib/sticky-cta";
 
 export default function StickyMobileCTA() {
+  const cta = stickyCtaFor(usePathname());
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-ngpa-deep/95 backdrop-blur-md border-t border-ngpa-slate/60 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
       <div className="flex items-center gap-3 max-w-lg mx-auto">
         <a
-          href="#contact-form"
+          href={cta.href}
           onClick={() =>
             trackEvent("cta_click", {
-              label: "sticky_mobile_book_eval",
-              destination: "#contact-form",
+              label: cta.trackLabel,
+              destination: cta.href,
               section: "sticky_mobile",
             })
           }
           className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-sm rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-lg shadow-ngpa-teal/20"
         >
-          Free Evaluation
+          {cta.label}
         </a>
         <a
           href={`tel:${site.phone.replace(/\D/g, "")}`}

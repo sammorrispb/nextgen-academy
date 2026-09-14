@@ -1,6 +1,7 @@
 import type { NgaSession } from "@/lib/notion-sessions";
 import { formatSessionDateTimeIso } from "@/lib/session-time";
 import { inferCity } from "@/lib/venue-lookup";
+import { orgRef } from "@/lib/seo";
 
 /**
  * Schema.org SportsEvent for one drop-in session — shared by the home page and
@@ -41,11 +42,7 @@ export function sportsEventJsonLd(session: NgaSession) {
         addressCountry: "US",
       },
     },
-    organizer: {
-      "@type": "SportsOrganization",
-      name: "Next Gen Pickleball Academy",
-      url: "https://nextgenpbacademy.com",
-    },
+    organizer: orgRef(),
     // No price is published on any public surface (Sam, 2026-09-08) — parents
     // see the amount on the Stripe checkout page — so the Offer carries
     // availability and the booking URL only, never a figure.

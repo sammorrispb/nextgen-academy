@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { site } from "@/data/site";
-import { CITY_LANDING_PAGES } from "@/lib/seo";
+import { CITY_LANDING_PAGES, EXTENDED_AREA_LANDING_PAGES } from "@/lib/seo";
 import { familySiteUrl, familyMarketingRef, type FamilyDest } from "@/lib/urls";
 import { trackEvent } from "@/lib/funnelClient";
 
@@ -164,7 +164,7 @@ export default function Footer() {
                 All of Montgomery County
               </Link>
             </li>
-            {CITY_LANDING_PAGES.map(({ city, slug }) => (
+            {[...CITY_LANDING_PAGES, ...EXTENDED_AREA_LANDING_PAGES].map(({ city, slug }) => (
               <li key={slug}>
                 <Link href={`/${slug}`} className="hover:text-ngpa-teal transition-colors">
                   {city}
