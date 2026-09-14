@@ -29,6 +29,9 @@ export default function GermantownPage() {
       slug="youth-pickleball-germantown"
       intro="Germantown kids 6–16 train with us at venues a straight shot down I-270 — Sunday evenings at Walter Johnson High School in Bethesda, Saturdays at Earle B. Wood Middle School in Rockville — plus summer camp weeks in nearby Gaithersburg. Start with a free 30-minute evaluation and we'll find the slot that fits your drive."
       whereWePlay="The closest options from Germantown are usually the Gaithersburg summer camps and the fall MVF classes in Montgomery Village (Apple Ridge for the intro, North Creek for both fall sessions); the weekly group sessions run down-county on weekend evenings. Venue lineups change seasonally based on where families are — if enough Germantown families want a closer crew, tell us on the crew-interest form."
+      extraNearby={[
+        { label: "Youth pickleball in Frederick", href: "/youth-pickleball-frederick" },
+      ]}
       cityFaq={[
         {
           question: "Is there anything closer to Germantown?",

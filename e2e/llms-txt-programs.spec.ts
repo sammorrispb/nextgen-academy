@@ -83,6 +83,19 @@ test.describe("llms.txt publishes the active programs", () => {
     expect(flat(section)).toContain("Do not describe it as enrollable");
   });
 
+  test("the /league hub is described as listing what runs now, with its registrar", () => {
+    const txt = buildLlmsTxt(DURING);
+    const section = txt.slice(txt.indexOf("## Interest lists"));
+    expect(flat(section)).toContain("running now");
+    expect(flat(section)).toContain("who takes registration");
+  });
+
+  test("the Frederick landing page is a listed key page", () => {
+    expect(flat(buildLlmsTxt(DURING))).toContain(
+      "https://nextgenpbacademy.com/youth-pickleball-frederick",
+    );
+  });
+
   test("a season stays listed through its final date, then is dropped", () => {
     const lastSaturday = PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1];
     const lastSunday = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];

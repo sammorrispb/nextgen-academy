@@ -3,18 +3,20 @@ import type { Metadata } from "next";
 import CrewInterestForm from "@/components/CrewInterestForm";
 import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import JsonLd from "@/components/JsonLd";
+import { orgRef } from "@/lib/seo";
 import { site } from "@/data/site";
 
 export const metadata: Metadata = {
-  title: "Find your kid's pickleball crew — Next Gen, Montgomery County, MD",
+  title: { absolute: "Find Your Kid's Pickleball Crew — Montgomery County, MD" },
   description:
     "Tell us your kid's level and which days work. When Coach Sam has 3 other kids who match, he texts the WhatsApp link — same four kids every week, same court, same time.",
   alternates: { canonical: "/crew" },
   openGraph: {
-    title: "Find your kid's pickleball crew — Next Gen Pickleball Academy",
+    title: "Find Your Kid's Pickleball Crew — Montgomery County, MD",
     description:
       "Same four kids every week. Tell us when works and Coach Sam looks for the other three.",
     url: "https://nextgenpbacademy.com/crew",
+    images: ["/opengraph-image"],
   },
 };
 
@@ -35,11 +37,7 @@ export default function CrewPage() {
           url: "https://nextgenpbacademy.com/crew",
           description:
             "Tell us your kid's level and which days work. When Coach Sam has 3 other kids who match, the crew locks in.",
-          publisher: {
-            "@type": "Organization",
-            name: "Next Gen Pickleball Academy",
-            url: "https://nextgenpbacademy.com",
-          },
+          publisher: orgRef(),
         }}
       />
 

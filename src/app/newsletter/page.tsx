@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import NewsletterForm from "@/components/NewsletterForm";
 import JsonLd from "@/components/JsonLd";
+import { orgRef } from "@/lib/seo";
 import { site } from "@/data/site";
 
 const NEWSLETTER_TITLE = "Free Youth Pickleball Newsletter — Montgomery County, MD";
@@ -44,11 +45,7 @@ export default function NewsletterPage() {
           url: "https://nextgenpbacademy.com/newsletter",
           description:
             "Join Montgomery County's growing youth pickleball crew. Session times, monthly training spots, and coach tips — free.",
-          publisher: {
-            "@type": "Organization",
-            name: "Next Gen Pickleball Academy",
-            url: "https://nextgenpbacademy.com",
-          },
+          publisher: orgRef(),
         }}
       />
 

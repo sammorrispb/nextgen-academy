@@ -10,7 +10,7 @@ import {
 import { FALL_SEASON_TITLE } from "@/data/fall-season-2026";
 
 export const metadata: Metadata = {
-  title: "Season Confirmed · Next Gen Pickleball Academy",
+  title: "Season Confirmed",
   description: "Your player is registered for the fall season. See you Sunday.",
   robots: { index: false, follow: false },
 };

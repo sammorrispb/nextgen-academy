@@ -4,6 +4,10 @@ import { sportsEventJsonLd } from "../src/lib/sports-event-jsonld";
 import { LLMS_TXT } from "../src/lib/llms-txt";
 import { faq } from "../src/data/faq";
 import { blogPosts } from "../src/data/blog";
+import { FALL_SEASON_PRICE_USD } from "../src/data/fall-season-2026";
+
+/** The drop-in figure in any spacing/decimal form; season prices ($225, $200) pass. */
+const DROPIN_FIGURE = /\$\s?20(?![\d,])(?:\.00)?(?!\d)/;
 import {
   buildPostEvalFollowupHtml,
   LEVEL_DESCRIPTIONS,
@@ -78,10 +82,30 @@ test.describe("drop-in price is not quoted on parent-facing surfaces", () => {
   test("the FAQ cost answer explains the model without quoting a rate", () => {
     const cost = faq.find((f) => /how much/i.test(f.question));
     expect(cost, "the cost FAQ entry still exists").toBeTruthy();
-    expect(cost!.answer).not.toContain("$");
+    // Narrowed 2026-09-13 (AEO audit, Sam's call): the cost answer now names
+    // the SEASON and CAMP prices — products that already quote a price on
+    // their own pages — so "how much" queries get a concrete answer. What must
+    // never appear is the DROP-IN figure. The season figure is pinned to its
+    // constant so the answer can't carry a hand-typed price that drifts.
+    // Mutation check: append " $20" or " $20.00" to the answer → red.
+    expect(cost!.answer).not.toMatch(DROPIN_FIGURE);
+    expect(cost!.answer).toContain(`$${FALL_SEASON_PRICE_USD}`);
     // Still answers the question it asks: drop-in, no subscription, free eval.
     expect(cost!.answer).toMatch(/drop-in/i);
     expect(cost!.answer).toMatch(/free/i);
+  });
+
+  test("no FAQ answer prints the drop-in figure", () => {
+    for (const f of faq) expect(f.answer, f.question).not.toMatch(DROPIN_FIGURE);
+  });
+
+  test("the drop-in-figure pattern catches the figure and spares season prices", () => {
+    for (const bad of ["$20", "$ 20", "$20.", "$20.00", "costs $20 a slot"]) {
+      expect(bad, bad).toMatch(DROPIN_FIGURE);
+    }
+    for (const ok of ["$225", "$200", "$2,000", "$150", "$50"]) {
+      expect(ok, ok).not.toMatch(DROPIN_FIGURE);
+    }
   });
 
   test("no blog post quotes a drop-in rate", () => {

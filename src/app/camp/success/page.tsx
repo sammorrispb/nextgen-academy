@@ -5,7 +5,7 @@ import { findCampBySlug } from "@/data/camps";
 import { resolveCampWhere } from "@/lib/camp-reminder-schedule";
 
 export const metadata: Metadata = {
-  title: "Camp Confirmed · Next Gen Pickleball Academy",
+  title: "Camp Confirmed",
   description: "Your camper is registered. See you on the court.",
   robots: { index: false, follow: false },
 };

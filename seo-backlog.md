@@ -1,62 +1,48 @@
 # SEO/AEO Backlog — nextgenpbacademy.com
 
-Source of truth for the `seo-daily-sweep` agent. The agent reads this file each run,
-picks the highest-priority `[ ]` item with the smallest size, ships one PR, then
-moves the item to the **Done log** below.
+Source of truth for the `seo-daily-sweep` agent **when it runs**. As of
+2026-09-13 the sweep is **paused** for every site in `seo-sweep-state/state.json`
+(Sam's call — personal-site SEO is shelved this quarter). Un-pausing is Sam's
+decision; see `~/.claude/skills-tier-registry.md`. Until then this file is a
+plain backlog for hand-shipped work.
 
 ## Status legend
-`[ ]` open · `[~]` in-progress (claimed by today's run) · `[x]` done
+`[ ]` open · `[~]` in-progress · `[x]` done
 
 ## Task fields
 - **Priority**: P0 (blocking) / P1 (high value) / P2 (nice-to-have)
 - **Type**: schema / content / page / internal-link / technical
-- **Size**: S (≤200 LOC diff) / M (200–400 LOC) / L (400+ — agent must split before claiming)
+- **Size**: S (≤200 LOC diff) / M (200–400 LOC) / L (400+ — split before claiming)
 
 ## Hard rules for any work on this repo
 - Never reference Dill Dinkers, CourtReserve, or The Hub. NGA has relocated off DD facilities — no DD/CR cross-links anywhere. (`linkanddink.com` is a Sam Morris family brand, referenced in JSON-LD `sameAs` — family cross-links are allowed.)
 - Never push to main directly — always PR.
-- Never auto-merge.
 - Each city page must have unique substance — coach POV per location, hand-written. No template duplication.
-- Pricing: $20 per 1-hour drop-in slot, all tiers. Monthly subscription model is **retired** — never reference it. Source of truth: existing pricing components.
-- `npm run build` must pass before PR.
-- JSON-LD must validate via `seo-sweep-state/tools/validate-jsonld.mjs`.
+- **Pricing:** the drop-in rate is never printed on any public surface (Sam, 2026-09-08) — parents see it at Stripe checkout. Season and camp products quote their real Stripe price, derived from their data file. The Pickl Park and MVF set and show their own prices; never quote them. Pinned by `e2e/invariant-dropin-price-not-quoted.spec.ts`.
+- **Out-of-county pages** (Frederick) claim only what NGA runs there — see `src/data/frederick.ts`. Never the 6–16 ladder, never a free evaluation at a Frederick venue, never testimonials that don't exist.
+- **One organization entity:** every JSON-LD node references the org via `orgRef()` from `src/lib/seo.ts`. Never hand-write an inline `SportsOrganization` (pinned by `e2e/entity-graph.spec.ts`).
+- **Titles:** a plain-string `title` never contains "Next Gen" (the layout template adds the brand); use `{ absolute }` for a branded title. ≤60 chars. Pinned by `e2e/invariant-title-brand.spec.ts`.
+- `npm run lint`, `npx tsc --noEmit`, `npm run test:pure`, `npm run build` must pass before PR.
+- JSON-LD should validate via `seo-sweep-state/tools/validate-jsonld.mjs`.
 
 ---
 
-## P0 — Foundation Sweep
+## Open
 
-- [ ] (schema, S) Create `src/lib/seo.ts` with `breadcrumbJsonLd(items)`, `faqJsonLd(qas)`, and `sportsEventJsonLd(session)` helpers. Mirror sammorrispb's helper API. These will be reused across all P0/P1/P2 tasks.
-- [ ] (schema, S) Add `/yellowball/inquiry` to `src/app/sitemap.ts` (currently missing — sitemap has 5 of 7 routes). Keep `/schedule/success` excluded (post-conversion, intentional).
-- [ ] (schema, S) Update `/schedule` `<title>` via `generateMetadata` to include "Montgomery County" — e.g. `"NGA Drop-in Schedule | Montgomery County Youth Pickleball"`. Currently omits the county and weakens local SEO.
-- [ ] (schema, S) Add BreadcrumbList JSON-LD to `/`, `/schedule`, `/free-evaluation`, `/schools`, `/yellowball/inquiry`. (Already on `/montgomery-county-youth-pickleball`.)
-- [ ] (schema, M) Add `SportsEvent` JSON-LD per session on `/schedule`. For each `NgaSession`: `name` (session title), `startDate`/`endDate` (ISO from session date + start/end times), `location` as Place with name + address (resolve via existing location data), `offers` ($20 USD, `availability` based on `s.status`), `maximumAttendeeCapacity` and `remainingAttendeeCapacity`, `sport: "Pickleball"`, `audience.suggestedMinAge`/`suggestedMaxAge` derived from level. Render inside the existing session `.map()` via the existing `<JsonLd>` component.
-- [ ] (schema, S) Add `Service` JSON-LD to `/free-evaluation` (copy the pattern from `/schools/page.tsx`). Free evaluation as a Service offering with `provider`, `areaServed: "Montgomery County, MD"`, `audience: "EducationalAudience"` ages 5-16, `price: 0`.
-- [ ] (schema, M) Add 4 `Course` JSON-LD entities on `/` (one per Red/Orange/Green/Yellow tier). Each with `provider` referencing the org, `educationalLevel`, `audience.suggestedMinAge`/`suggestedMaxAge`, `coursePrerequisites` (the prior tier name), `hasCourseInstance` linking to `/schedule`. Reuse data from the existing `LevelCard` / level rendering.
+### P1
+- [ ] (content, M) Frederick page: replace the draft coach POV in `src/data/frederick.ts` with Sam's voice once a Frederick season has real families in it (still no testimonials until a family agrees to one).
+- [ ] (page, M) When a second out-of-county venue exists, give it an `EXTENDED_SERVICE_AREAS` row with a slug and a hand-rolled page modeled on `/youth-pickleball-frederick`.
 
-## P1 — Content Expansion (`/youth-pickleball-[city]` — 8 routes)
-
-Cities approved for Phase 1: rockville, bethesda, north-bethesda, potomac, gaithersburg, silver-spring, germantown, olney.
-
-- [ ] (page, M) Create `src/lib/cities.ts` if missing. Hand-written youth-pickleball POV per city (where NGA runs sessions, what the local context is). Sam's voice + NGA brand voice. Not generated.
-- [ ] (page, M) Add `/youth-pickleball-rockville`. Mirror `/montgomery-county-youth-pickleball` template (already exists — has FAQPage + BreadcrumbList + Service). Reuse `LevelCard.tsx`/`LevelGrid.tsx`. Per-city 4-Q FAQ (where do you run sessions, what age, does my child need experience, how does Yellow Ball work). Service + LocalBusiness + Course schema. Cross-link to sammorrispb `/lessons/rockville`. Register in sitemap.
-- [ ] (page, M) Add `/youth-pickleball-bethesda`. Same template.
-- [ ] (page, M) Add `/youth-pickleball-north-bethesda`. Same template.
-- [ ] (page, M) Add `/youth-pickleball-potomac`. Same template.
-- [ ] (page, M) Add `/youth-pickleball-gaithersburg`. Same template.
-- [ ] (page, M) Add `/youth-pickleball-silver-spring`. Same template.
-- [ ] (page, M) Add `/youth-pickleball-germantown`. Same template.
-- [ ] (page, M) Add `/youth-pickleball-olney`. Same template.
-
-## P2 — AEO Depth
-
-- [ ] (page, M) Add `/tier-system` — full Red/Orange/Green/Yellow comparison page. `EducationalProgram` (parent) + 4 `Course` (children). HTML `<table>` comparison (skill criteria, age range, prerequisites, what they learn, when they advance). **Canonical source for "how does NGA's tier system work" — Perplexity gold.** Reuse `BallPathway.tsx` + `LevelGrid.tsx`.
-- [ ] (page, M) Add `/how-to-register` — `HowTo` schema, 5-step (find session → click register → checkout → confirmation email → arrive at court). Embed the same HowTo block on `/schedule` for double exposure.
-- [ ] (schema, S) Add `DefinedTerm` schema on home for "what is youth pickleball?". Definition + age range + tier system reference.
-- [ ] (content, M) Expand FAQ coverage on `/`. Add 4-6 more Qs covering long-tail intent: "how is NGA different from rec league pickleball", "what do I bring to my first session", "how does the tier system progression work", "what age can my child start", "do you offer summer camps", "do you run school programs (link to /schools)".
-- [ ] (internal-link, S) Cross-site `sameAs` audit: every `Organization`/`SportsActivityLocation` JSON-LD on this site references sammorrispb.com + linkanddink.com in `sameAs`.
+### P2 — AEO depth
+- [ ] (page, M) `/how-to-register` — `HowTo` schema, 5 steps (find session → register → checkout → confirmation email → arrive). Embed the same block on `/schedule`.
+- [ ] (schema, S) `DefinedTerm` on home for "what is youth pickleball?" — definition + age range + link to `/levels`.
+- [ ] (content, M) Expand home FAQ: "how is NGA different from rec league pickleball", "do you offer summer camps", "do you run school programs" (link `/schools`).
+- [ ] (content, M) More answer-first posts: "is pickleball good exercise for kids", "what paddle should a kid use" (only claims sourced from site content).
+- [ ] (technical, S) Consider per-route `lastModified` for evergreen pages (sammorrispb.com stats the page file's mtime) — only if it can be honest on Vercel builds.
 
 ---
 
-## Done log (auto-pruned at 30 days)
+## Done log
 
-_(Empty — agent appends entries here as it ships PRs.)_
+- 2026-09-13 — AEO audit PR: `/league` became the youth-leagues hub (running-now cards from season data, ItemList schema, planned league kept as an interest list); `/picklpark` retitled with "Frederick, MD"; new `/youth-pickleball-frederick` via slug-bearing `EXTENDED_SERVICE_AREAS`; one `#organization` entity with `orgRef()` everywhere; Facebook + GBP in `sameAs`; cost FAQ names season/camp prices (drop-in figure still forbidden); Frederick FAQ entries; double-brand titles fixed site-wide; sitemap `lastModified` only on blog posts; `/levels` Course schema + comparison table (`/tier-system` 301s there); `/leagues` 301; IndexNow weekly cron (ships dark); three answer-first blog posts.
+- 2026-07/08 (pre-log) — `src/lib/seo.ts` helpers (breadcrumb, LocalBusiness, Course, areaServed); eight `/youth-pickleball-[city]` pages with hand-written POV, FAQPage, BreadcrumbList and LocalBusiness; `SportsEvent` per session on `/schedule` and home; Breadcrumb on the main pages; `sameAs` to sammorrispb.com + linkanddink.com; `/levels` page; `/blog` with four posts; llms.txt at `/llms.txt` and `/.well-known/llms.txt`.

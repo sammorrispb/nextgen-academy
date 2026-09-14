@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import JsonLd from "@/components/JsonLd";
 import { blogPosts, findBlogPost } from "@/data/blog";
-import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+import { blogPostingJsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 import { familySiteUrl } from "@/lib/urls";
 
 export function generateStaticParams() {
@@ -55,27 +55,7 @@ export default async function BlogPostPage({
           { name: post.headline, url: `${SITE_URL}/blog/${post.slug}` },
         ])}
       />
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "BlogPosting",
-          headline: post.headline,
-          description: post.description,
-          datePublished: post.datePublished,
-          url: `${SITE_URL}/blog/${post.slug}`,
-          mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
-          author: {
-            "@type": "Person",
-            name: "Sam Morris",
-            jobTitle: "Head Coach",
-          },
-          publisher: {
-            "@type": "SportsOrganization",
-            name: "Next Gen Pickleball Academy",
-            url: SITE_URL,
-          },
-        }}
-      />
+      <JsonLd data={blogPostingJsonLd(post)} />
 
       <article className="bg-ngpa-deep">
         <header className="relative isolate overflow-hidden">

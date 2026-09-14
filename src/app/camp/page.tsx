@@ -7,6 +7,7 @@ import {
   CAMP_AGE_MIN,
   CAMP_AGE_MAX,
 } from "@/data/camps";
+import { orgRef } from "@/lib/seo";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -16,7 +17,7 @@ const SITE_ORIGIN =
 export const revalidate = 43200; // 12h
 
 export const metadata: Metadata = {
-  title: `Summer Pickleball Camp | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
+  title: { absolute: `Summer Pickleball Camp, Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} — Montgomery County, MD` },
   description:
     "Next Gen Pickleball Academy summer morning camp in Montgomery County, MD, for ages 8 and up — small groups, real coaching. $50 a morning, or $150 for the full week.",
   alternates: { canonical: `${SITE_ORIGIN}/camp` },
@@ -92,11 +93,7 @@ export default function CampIndexPage() {
           addressRegion: "MD",
         },
       },
-      organizer: {
-        "@type": "Organization",
-        name: "Next Gen Pickleball Academy",
-        url: SITE_ORIGIN,
-      },
+      organizer: orgRef(),
       offers: CAMP_OPTIONS.map((o) => ({
         "@type": "Offer",
         name: o.label,

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import YellowBallInquiryForm from "@/components/YellowBallInquiryForm";
 
 export const metadata: Metadata = {
-  title: "Yellow Ball Inquiry — Next Gen Pickleball Academy",
+  title: { absolute: "Yellow Ball Tournament Track Inquiry — Next Gen Academy" },
   description:
     "Request an evaluation for the Yellow Ball tournament track. For players 12+ rated 3.0 or above. A coach will reach out within 24 hours.",
   alternates: { canonical: "/yellowball/inquiry" },

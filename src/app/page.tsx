@@ -23,7 +23,13 @@ import { faq } from "@/data/faq";
 import { seo } from "@/data/seo";
 import { familySiteUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
-import { SITE_URL } from "@/lib/seo";
+import {
+  orgRef,
+  PERSON_IDS,
+  PERSON_SAME_AS,
+  SITE_URL,
+  type CoachName,
+} from "@/lib/seo";
 import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 
 export const metadata = {
@@ -44,25 +50,6 @@ export default async function Home() {
   const upcomingForSchema = sessions.slice(0, 4);
   return (
     <>
-      {/* Organization schema — sameAs lists known canonical profiles. */}
-      {/* TODO: add Facebook page URL to sameAs once the NGA FB page is live. */}
-      <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "SportsOrganization",
-          name: "Next Gen Pickleball Academy",
-          url: SITE_URL,
-          logo: `${SITE_URL}/images/og-image.png`,
-          email: "nextgenacademypb@gmail.com",
-          telephone: "301-325-4731",
-          sameAs: [
-            "https://www.instagram.com/nextgenpickleballacademy",
-            "https://www.sammorrispb.com",
-            "https://www.linkanddink.com",
-          ],
-        }}
-      />
-
       {/* FAQ Schema */}
       <JsonLd
         data={{
@@ -89,12 +76,13 @@ export default async function Home() {
             name: coach.name,
             jobTitle: coach.role,
             description: coach.bio,
-            ...(coach.photo ? { image: `https://nextgenpbacademy.com${coach.photo}` } : {}),
-            worksFor: {
-              "@type": "SportsOrganization",
-              name: "Next Gen Pickleball Academy",
-              url: "https://nextgenpbacademy.com",
-            },
+            "@id": PERSON_IDS[coach.name as CoachName],
+            url: `${SITE_URL}/#about`,
+            ...(coach.photo ? { image: `${SITE_URL}${coach.photo}` } : {}),
+            ...(PERSON_SAME_AS[coach.name as CoachName]?.length
+              ? { sameAs: PERSON_SAME_AS[coach.name as CoachName] }
+              : {}),
+            worksFor: orgRef(),
             ...(coach.knowsAbout ? { knowsAbout: coach.knowsAbout } : {}),
           }}
         />

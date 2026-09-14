@@ -2,6 +2,8 @@
 // Keeps the address + areaServed list in ONE place — change here, every page
 // (homepage, location landers, etc.) picks it up.
 
+import type { BlogPost } from "@/data/blog";
+
 export const SITE_URL = "https://nextgenpbacademy.com" as const;
 
 /**
@@ -27,20 +29,49 @@ export type ServiceCity = (typeof SERVICE_AREAS)[number];
  * venue. Separate from SERVICE_AREAS on purpose (Sam, 2026-09-07).
  *
  * Frederick joined when NGA began coaching the Saturday leagues at The Pickl
- * Park. It belongs in `areaServed` — a family in Frederick genuinely can bring
- * their kid to us. It does NOT belong in SERVICE_AREAS, which is the MoCo city
- * ladder that drives the footer's "Areas we serve" block, the per-city
- * "nearby areas" cross-links and the city landing pages: Frederick has no
- * landing page, and listing it as "nearby" to Bethesda would be a lie that
- * dilutes nine tuned local-SEO pages.
+ * Park, and GRADUATED to its own landing page on 2026-09-13 (AEO audit, Sam's
+ * call): an out-of-county area graduates by gaining a `slug` here. The footer's
+ * "Areas We Serve" block and the sitemap read EXTENDED_AREA_LANDING_PAGES.
  *
- * So: the structured data widens, the local-SEO surface doesn't. Give an
- * out-of-county area its own landing page and it graduates to its own entry
- * here with a slug — not into SERVICE_AREAS.
+ * It still never enters SERVICE_AREAS. That list is the MoCo city ladder that
+ * drives the per-city "nearby areas" cross-links, the cluster map (every entry
+ * must map to a MoCo cluster — e2e/clusters.spec.ts), and CityLanding's
+ * `ServiceCity` prop. Listing Frederick as "nearby" to Bethesda would be a lie
+ * that dilutes nine tuned local-SEO pages.
+ *
+ * `nearbyTowns` are the Frederick County towns the landing page names for
+ * families driving in. They are areaServed claims only — never "families from
+ * Urbana train with us" (zero Frederick families are in the CRM).
  */
-export const EXTENDED_SERVICE_AREAS = [
-  { county: "Frederick County, MD", city: "Frederick" },
-] as const;
+export interface ExtendedServiceArea {
+  county: string;
+  city: string;
+  slug: string;
+  nearbyTowns: readonly string[];
+  /** MoCo city pages that sit between the two venues and cross-link here. */
+  crossLinkCities: readonly ServiceCity[];
+}
+
+export const EXTENDED_SERVICE_AREAS: readonly ExtendedServiceArea[] = [
+  {
+    county: "Frederick County, MD",
+    city: "Frederick",
+    slug: "youth-pickleball-frederick",
+    nearbyTowns: [
+      "Urbana",
+      "New Market",
+      "Mount Airy",
+      "Middletown",
+      "Walkersville",
+      "Brunswick",
+    ],
+    crossLinkCities: ["Germantown"],
+  },
+];
+
+/** Out-of-county landing pages — sitemap + footer, alongside CITY_LANDING_PAGES. */
+export const EXTENDED_AREA_LANDING_PAGES: { city: string; slug: string }[] =
+  EXTENDED_SERVICE_AREAS.map(({ city, slug }) => ({ city, slug }));
 
 /**
  * The live city landing pages (subset of SERVICE_AREAS with a dedicated
@@ -87,6 +118,64 @@ export const NGA_POSTAL_ADDRESS = {
 } as const;
 
 /**
+ * ─── Entity graph (AEO audit, 2026-09-13) ─────────────────────────────────
+ * ONE organization node, emitted in the root layout by organizationJsonLd(),
+ * carrying @id #organization. Every other node (SportsEvent.organizer,
+ * Course.provider, LocalBusiness.parentOrganization, BlogPosting.publisher,
+ * Person.worksFor) points at it through orgRef(). Refs are typed AND named on
+ * purpose: the org and Person nodes do not appear on every page, so a bare
+ * { "@id" } would lose its label for any reader that doesn't stitch pages.
+ *
+ * This file is the only place the literal `"@type": "SportsOrganization"` may
+ * appear — pinned by e2e/entity-graph.spec.ts.
+ */
+export const ORG_ID = `${SITE_URL}/#organization`;
+export const ORG_NAME = "Next Gen Pickleball Academy";
+export const ORG_ALTERNATE_NAMES = ["Next Gen PB Academy", "NGA"];
+
+/**
+ * Canonical public profiles. The Google Business Profile URL is the CID form
+ * derived from the verified NGA listing's `fid` (13747039329786027007) — the
+ * same derivation that produces sammorrispb.com's live GBP link. MERGE GATE:
+ * Sam opens it and confirms it lands on the NGA profile; if it doesn't, delete
+ * that one line.
+ */
+export const ORG_SAME_AS = [
+  "https://www.instagram.com/nextgenpickleballacademy",
+  "https://www.facebook.com/profile.php?id=61579009749341",
+  "https://maps.google.com/?cid=13747039329786027007",
+  "https://www.sammorrispb.com",
+  "https://www.linkanddink.com",
+];
+
+export const PERSON_IDS = {
+  "Sam Morris": `${SITE_URL}/#sam-morris`,
+  "Amine Lahlou": `${SITE_URL}/#amine-lahlou`,
+} as const;
+
+export type CoachName = keyof typeof PERSON_IDS;
+
+export const PERSON_SAME_AS: Record<CoachName, string[]> = {
+  "Sam Morris": ["https://www.sammorrispb.com"],
+  "Amine Lahlou": [],
+};
+
+/** Typed, named reference to the one organization node. */
+export function orgRef() {
+  return {
+    "@type": "SportsOrganization",
+    "@id": ORG_ID,
+    name: ORG_NAME,
+    url: SITE_URL,
+  };
+}
+
+/** Typed, named reference to a coach's Person node (emitted on the home page). */
+export function personRef(name: CoachName) {
+  return { "@type": "Person", "@id": PERSON_IDS[name], name };
+}
+
+/**
  * Wraps the service area into schema.org entities, county first: Montgomery
  * County and its cities, then each out-of-county area NGA actually coaches in.
  */
@@ -99,6 +188,31 @@ export function areaServedJsonLd() {
       { "@type": "City" as const, name: a.city },
     ]),
   ];
+}
+
+/**
+ * The one organization node — root layout only. Typed as both a
+ * SportsOrganization (what NGA is) and a SportsActivityLocation (the repo
+ * convention for the layout node, and what local readers look for).
+ */
+export function organizationJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": ["SportsOrganization", "SportsActivityLocation"],
+    "@id": ORG_ID,
+    name: ORG_NAME,
+    alternateName: ORG_ALTERNATE_NAMES,
+    description:
+      "Structured youth pickleball coaching for kids ages 6\u201316 in Montgomery County, MD, plus Saturday youth leagues at The Pickl Park in Frederick, MD.",
+    url: SITE_URL,
+    logo: `${SITE_URL}/images/og-image.png`,
+    telephone: "301-325-4731",
+    email: "nextgenacademypb@gmail.com",
+    address: NGA_POSTAL_ADDRESS,
+    sameAs: ORG_SAME_AS,
+    areaServed: areaServedJsonLd(),
+    founder: [personRef("Sam Morris"), personRef("Amine Lahlou")],
+  };
 }
 
 export interface BreadcrumbItem {
@@ -151,11 +265,49 @@ export function localBusinessJsonLd({
       })),
       { "@type": "AdministrativeArea", name: "Montgomery County, MD" },
     ],
-    parentOrganization: {
-      "@type": "SportsOrganization",
-      name: "Next Gen Pickleball Academy",
-      url: SITE_URL,
+    parentOrganization: orgRef(),
+  };
+}
+
+/**
+ * LocalBusiness JSON-LD for an OUT-OF-COUNTY landing page. Address stays
+ * county-level (same convention as NGA_POSTAL_ADDRESS — no street, because the
+ * business isn't the venue; the Pickl Park street address lives on its
+ * SportsEvent nodes). areaServed runs county → city → the named nearby towns →
+ * the MoCo towns between the two venues → Montgomery County.
+ */
+export function extendedAreaLocalBusinessJsonLd({
+  area,
+  url,
+  description,
+}: {
+  area: ExtendedServiceArea;
+  url: string;
+  description: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": ["LocalBusiness", "SportsActivityLocation"],
+    name: `${ORG_NAME} — ${area.city}`,
+    description,
+    url,
+    telephone: "301-325-4731",
+    email: "nextgenacademypb@gmail.com",
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: area.county.replace(/, MD$/, ""),
+      addressRegion: "MD",
+      addressCountry: "US",
     },
+    areaServed: [
+      { "@type": "AdministrativeArea", name: area.county },
+      { "@type": "City", name: area.city },
+      ...area.nearbyTowns.map((t) => ({ "@type": "City" as const, name: t })),
+      { "@type": "City", name: "Clarksburg" },
+      ...area.crossLinkCities.map((c) => ({ "@type": "City" as const, name: c })),
+      { "@type": "AdministrativeArea", name: "Montgomery County, MD" },
+    ],
+    parentOrganization: orgRef(),
   };
 }
 
@@ -168,7 +320,13 @@ export interface CourseTier {
   description: string;
   educationalLevel: string;
   minAge: number;
+  /** Every tier runs to the academy ceiling unless a tier says otherwise. */
+  maxAge?: number;
   ballColor: "Red" | "Orange" | "Green" | "Yellow";
+  /** The page that describes this tier (e.g. /levels). */
+  url?: string;
+  /** The tier a player comes from, e.g. "Red Ball" for Orange. */
+  prerequisite?: string;
 }
 
 export function courseJsonLd(tier: CourseTier) {
@@ -182,13 +340,27 @@ export function courseJsonLd(tier: CourseTier) {
       "@type": "PeopleAudience",
       audienceType: "Children",
       suggestedMinAge: tier.minAge,
-      suggestedMaxAge: 16,
+      suggestedMaxAge: tier.maxAge ?? 16,
     },
-    provider: {
-      "@type": "SportsOrganization",
-      name: "Next Gen Pickleball Academy",
-      url: SITE_URL,
-    },
+    provider: orgRef(),
     teaches: `Pickleball — ${tier.ballColor} Ball tier`,
+    ...(tier.url ? { url: tier.url } : {}),
+    ...(tier.prerequisite ? { coursePrerequisites: tier.prerequisite } : {}),
+  };
+}
+
+/** BlogPosting for /blog/[slug] — author and publisher reference the graph. */
+export function blogPostingJsonLd(post: BlogPost) {
+  const url = `${SITE_URL}/blog/${post.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.headline,
+    description: post.description,
+    datePublished: post.datePublished,
+    url,
+    mainEntityOfPage: url,
+    author: { ...personRef("Sam Morris"), jobTitle: "Head Coach" },
+    publisher: orgRef(),
   };
 }

@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       { source: "/programs", destination: "/#levels", permanent: true },
+      // AEO audit (2026-09-13): the plural is the natural query form, and the
+      // tier-system page the old SEO backlog planned is /levels.
+      { source: "/leagues", destination: "/league", permanent: true },
+      { source: "/tier-system", destination: "/levels", permanent: true },
       { source: "/about", destination: "/#about", permanent: true },
       { source: "/contact", destination: "/#contact", permanent: true },
       { source: "/faq", destination: "/#faq", permanent: true },

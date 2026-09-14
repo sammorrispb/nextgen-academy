@@ -114,6 +114,44 @@ const ROUTES: RouteSpec[] = [
     h1Contains: /Olney.*pickleball|pickleball.*Olney/i,
     cityInAreaServed: "Olney",
   },
+  // AEO audit (2026-09-13) — the out-of-county page, the leagues hub, the
+  // retitled Pickl Park page, the levels page and the answer-first posts.
+  {
+    path: "/youth-pickleball-frederick",
+    titleContains: /Frederick, MD/,
+    h1Contains: /Frederick/i,
+    cityInAreaServed: "Frederick",
+  },
+  {
+    path: "/league",
+    titleContains: /Youth Pickleball Leagues/,
+    h1Contains: /Youth pickleball leagues/i,
+  },
+  {
+    path: "/picklpark",
+    titleContains: /Frederick, MD/,
+    h1Contains: /leagues in Frederick/i,
+  },
+  {
+    path: "/levels",
+    titleContains: /Ball Levels/,
+    h1Contains: /level/i,
+  },
+  {
+    path: "/blog/best-age-to-start-pickleball",
+    titleContains: /Best Age/,
+    h1Contains: /best age/i,
+  },
+  {
+    path: "/blog/indoor-youth-pickleball-near-frederick-md",
+    titleContains: /Frederick/,
+    h1Contains: /Frederick/i,
+  },
+  {
+    path: "/blog/pickleball-vs-tennis-for-a-7-year-old",
+    titleContains: /Tennis/,
+    h1Contains: /tennis/i,
+  },
 ];
 
 /**

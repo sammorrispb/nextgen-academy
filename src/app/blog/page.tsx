@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import { blogPosts } from "@/data/blog";
-import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+import { breadcrumbJsonLd, orgRef, SITE_URL } from "@/lib/seo";
 
 const TITLE = "Youth Pickleball Blog — Coach's Notes from MoCo";
 const DESCRIPTION =
@@ -41,11 +41,7 @@ export default function BlogIndexPage() {
           name: "Next Gen Pickleball Academy Blog",
           description: DESCRIPTION,
           url: `${SITE_URL}/blog`,
-          publisher: {
-            "@type": "SportsOrganization",
-            name: "Next Gen Pickleball Academy",
-            url: SITE_URL,
-          },
+          publisher: orgRef(),
           blogPost: blogPosts.map((post) => ({
             "@type": "BlogPosting",
             headline: post.headline,
