@@ -5,6 +5,7 @@ import {
   mondayGirlsRegistrationState,
 } from "../src/lib/monday-girls-registration-window";
 import { MONDAY_GIRLS_MONDAYS } from "../src/data/monday-girls-2026";
+import { MONDAY_GIRLS_MIN_SESSIONS_SOLD } from "../src/lib/monday-girls-proration";
 
 // The three-leg registration gate. Pure and injected, so these pin the
 // boundaries rather than the clock or the environment.
@@ -69,8 +70,8 @@ test.describe("Monday Girls registration window — the closed REASON", () => {
       "closed_by_flag",
     );
     expect(
-      mondayGirlsRegistrationState({ ...OPEN, todayIso: "2026-09-15" }),
-    ).toBe("season_started");
+      mondayGirlsRegistrationState({ ...OPEN, todayIso: "2026-10-13" }),
+    ).toBe("too_few_sessions");
   });
 
   test("not-configured outranks every other reason", () => {
@@ -108,13 +109,21 @@ test.describe("Monday Girls registration window — the kill switch", () => {
 });
 
 test.describe("Monday Girls registration window — the calendar", () => {
-  test("closes after the FIRST session, not the last", () => {
-    // A 6-session prepaid block: selling the full price in week four would
-    // charge for sessions nobody delivered.
-    expect(MONDAY_GIRLS_REGISTRATION_CLOSES).toBe(MONDAY_GIRLS_MONDAYS[0]);
+  // Registration used to close the day after session one, because the block
+  // only ever sold whole. Sam reopened the season on 2026-09-14 with prorated
+  // pricing (monday-girls-proration.ts), so the calendar now closes the block
+  // at its selling floor instead — see
+  // e2e/invariant-monday-girls-proration.spec.ts for the price side.
+  test("closes at the selling floor, not at the first session", () => {
+    expect(MONDAY_GIRLS_REGISTRATION_CLOSES).toBe(
+      MONDAY_GIRLS_MONDAYS[
+        MONDAY_GIRLS_MONDAYS.length - MONDAY_GIRLS_MIN_SESSIONS_SOLD
+      ],
+    );
+    expect(MONDAY_GIRLS_REGISTRATION_CLOSES).not.toBe(MONDAY_GIRLS_MONDAYS[0]);
   });
 
-  test("open up to and including the first session day", () => {
+  test("open before and on the first session day", () => {
     expect(
       mondayGirlsRegistrationOpen({ ...OPEN, todayIso: "2026-09-13" }),
     ).toBe(true);
@@ -123,12 +132,24 @@ test.describe("Monday Girls registration window — the calendar", () => {
     ).toBe(true);
   });
 
-  test("closed the day after the first session", () => {
+  test("STAYS open mid-block — a late family buys the sessions that are left", () => {
     expect(
       mondayGirlsRegistrationOpen({ ...OPEN, todayIso: "2026-09-15" }),
+    ).toBe(true);
+    expect(
+      mondayGirlsRegistrationOpen({ ...OPEN, todayIso: "2026-10-12" }),
+    ).toBe(true);
+  });
+
+  test("closed once fewer than the floor remains", () => {
+    expect(
+      mondayGirlsRegistrationOpen({ ...OPEN, todayIso: "2026-10-13" }),
     ).toBe(false);
     expect(
       mondayGirlsRegistrationOpen({ ...OPEN, todayIso: "2026-10-26" }),
+    ).toBe(false);
+    expect(
+      mondayGirlsRegistrationOpen({ ...OPEN, todayIso: "2026-11-30" }),
     ).toBe(false);
   });
 

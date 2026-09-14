@@ -1275,6 +1275,21 @@ async function emailMondayGirlsAdmin(
     console.error("[stripe-webhook] monday-girls admin email rejected", error);
 }
 
+/**
+ * The Mondays a checkout actually bought. `first_session` is the date checkout
+ * priced from, so slicing at it reproduces exactly the list the parent saw on
+ * the page. Falls back to the whole block when the metadata is absent — every
+ * row written before 2026-09-14 bought all six.
+ */
+function mondayGirlsPurchasedMondays(
+  m: Stripe.Metadata,
+): readonly string[] {
+  const first = metaString(m, "first_session");
+  if (!first) return MONDAY_GIRLS_MONDAYS;
+  const purchased = MONDAY_GIRLS_MONDAYS.filter((iso) => iso >= first);
+  return purchased.length > 0 ? purchased : MONDAY_GIRLS_MONDAYS;
+}
+
 async function emailMondayGirlsParent(session: Stripe.Checkout.Session) {
   const apiKey = process.env.RESEND_API_KEY;
   const to = payerEmail(session);
@@ -1289,7 +1304,12 @@ async function emailMondayGirlsParent(session: Stripe.Checkout.Session) {
     timeLabel: metaString(m, "group_time"),
     amountUsd: ((session.amount_total ?? 0) / 100).toFixed(2),
     venue: metaString(m, "venue"),
-    mondays: MONDAY_GIRLS_MONDAYS,
+    // A mid-season joiner bought the tail of the block, so the email lists the
+    // dates they will actually attend — never the six the block opened with.
+    // The count is the one checkout priced from (metadata), falling back to the
+    // whole block for rows written before prorated joining existed.
+    mondays: mondayGirlsPurchasedMondays(m),
+    sessionsTotal: MONDAY_GIRLS_MONDAYS.length,
     skippedDate: MONDAY_GIRLS_SKIPPED_DATE,
     rainDates: MONDAY_GIRLS_RAIN_DATES,
   });

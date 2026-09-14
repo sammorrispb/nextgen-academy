@@ -22,7 +22,16 @@ import {
   MONDAY_GIRLS_SEASON_PRICE_USD,
   MONDAY_GIRLS_SEASON_TITLE,
 } from "@/data/monday-girls-season-2026";
-import { mondayGirlsRegistrationStateNow } from "@/lib/monday-girls-registration-window";
+import {
+  mondayGirlsRegistrationStateNow,
+  mondayGirlsTodayET,
+} from "@/lib/monday-girls-registration-window";
+import {
+  MONDAY_GIRLS_MIN_SESSIONS_SOLD,
+  mondayGirlsIsProratedOn,
+  mondayGirlsJoinPriceUsd,
+  mondayGirlsRemainingMondays,
+} from "@/lib/monday-girls-proration";
 import { countMondayGirlsRegistrations } from "@/lib/notion-monday-girls-registrations";
 
 // The Monday Girls Beginner Group registration page.
@@ -68,6 +77,16 @@ function mondayLabel(iso: string): string {
 export default async function MondayGirlsPage() {
   const registrationState = mondayGirlsRegistrationStateNow();
   const registrationOpen = registrationState === "open";
+
+  // Mid-season joining (Sam, 2026-09-14). A family arriving in week three buys
+  // the Mondays that are left, at a price built from that same count — so the
+  // number on this page, the number Stripe charges, and the dates in the
+  // confirmation email are all the same arithmetic. `prorated` is false before
+  // the block starts, where this page behaves exactly as it always did.
+  const today = mondayGirlsTodayET();
+  const prorated = mondayGirlsIsProratedOn(today);
+  const joinMondays = mondayGirlsRemainingMondays(today);
+  const joinPriceUsd = mondayGirlsJoinPriceUsd(today, MONDAY_GIRLS_SEASON_PRICE_USD);
   // Only read the roster when the form will actually render — a Notion call on
   // a closed page buys nothing. null = unknown, and the form hides the count
   // rather than showing a wrong one.
@@ -129,12 +148,21 @@ export default async function MondayGirlsPage() {
             <p
               className="font-heading text-lg font-black text-ngpa-white mt-1"
               itemProp="price"
-              content={String(MONDAY_GIRLS_SEASON_PRICE_USD)}
+              content={String(joinPriceUsd)}
             >
-              ${MONDAY_GIRLS_SEASON_PRICE_USD}
+              ${joinPriceUsd}
             </p>
             <p className="text-ngpa-white/70 text-sm">
-              All {MONDAY_GIRLS_SEASON_SESSIONS} sessions, paid up front
+              {prorated ? (
+                <>
+                  The {joinMondays.length} Mondays still to come &mdash; you only
+                  pay for sessions your daughter will actually be at. The full{" "}
+                  {MONDAY_GIRLS_SEASON_SESSIONS}-session block was $
+                  {MONDAY_GIRLS_SEASON_PRICE_USD}.
+                </>
+              ) : (
+                <>All {MONDAY_GIRLS_SEASON_SESSIONS} sessions, paid up front</>
+              )}
             </p>
           </div>
         </div>
@@ -146,16 +174,48 @@ export default async function MondayGirlsPage() {
           The {MONDAY_GIRLS_SEASON_SESSIONS} Mondays
         </h2>
         <ul className="mt-4 space-y-2">
-          {MONDAY_GIRLS_MONDAYS.map((iso) => (
-            <li
-              key={iso}
-              className="flex items-center gap-3 text-ngpa-white/85 bg-ngpa-panel/60 rounded-xl px-4 py-3 border border-ngpa-slate/40"
-            >
-              <span className="h-2 w-2 rounded-full bg-ngpa-teal shrink-0" />
-              <time dateTime={iso}>{mondayLabel(iso)}</time>
-            </li>
-          ))}
+          {MONDAY_GIRLS_MONDAYS.map((iso) => {
+            const done = iso < today;
+            return (
+              <li
+                key={iso}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 border ${
+                  done
+                    ? "text-ngpa-white/40 bg-ngpa-panel/30 border-ngpa-slate/20"
+                    : "text-ngpa-white/85 bg-ngpa-panel/60 border-ngpa-slate/40"
+                }`}
+              >
+                <span
+                  className={`h-2 w-2 rounded-full shrink-0 ${
+                    done ? "bg-ngpa-white/25" : "bg-ngpa-teal"
+                  }`}
+                />
+                <time dateTime={iso}>{mondayLabel(iso)}</time>
+                {done && (
+                  <span className="text-xs uppercase tracking-widest font-heading ml-auto">
+                    Already played
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
+        {/* Said plainly rather than by quietly shortening the list: a parent
+            should be able to see the whole block AND what they are buying. */}
+        {prorated && joinMondays.length > 0 && (
+          <div className="mt-4 rounded-xl border border-ngpa-teal/40 bg-ngpa-teal/10 px-4 py-3.5">
+            <p className="text-ngpa-white/85 text-sm">
+              <strong className="text-ngpa-white">
+                The block is already under way &mdash; that&rsquo;s fine.
+              </strong>{" "}
+              Your daughter would join for the {joinMondays.length} Mondays from{" "}
+              <time dateTime={joinMondays[0]}>{mondayLabel(joinMondays[0])}</time>{" "}
+              onward, and you only pay for those. She will not be the only one
+              learning something new: this is a beginner block and the girls are
+              still early in it.
+            </p>
+          </div>
+        )}
         {/* Named, not silently dropped: families recruited in August were told
             "Sept 14 – Oct 19", so the change has to be visible on the page they
             pay from. */}
@@ -215,26 +275,27 @@ export default async function MondayGirlsPage() {
                 arriving before launch that they had missed a block that had not
                 started. */}
             <p className="font-heading text-lg font-black text-ngpa-white">
-              {registrationState === "season_started"
-                ? "Online registration is closed for this block"
+              {registrationState === "too_few_sessions"
+                ? "Only a couple of Mondays left in this block"
                 : "Sign-ups aren't open just yet"}
             </p>
             <p className="text-ngpa-white/70 text-sm mt-2">
-              {registrationState === "season_started" ? (
+              {registrationState === "too_few_sessions" ? (
                 <>
-                  The block sells as all {MONDAY_GIRLS_SEASON_SESSIONS} sessions
-                  up front, so we stop selling it online once it&rsquo;s under
-                  way &mdash; charging full price for sessions we didn&rsquo;t
-                  run wouldn&rsquo;t be right. If you&rsquo;d still like your
-                  daughter to join, text Coach Sam at{" "}
+                  We sell this block down to its last{" "}
+                  {MONDAY_GIRLS_MIN_SESSIONS_SOLD} Mondays and then stop &mdash;
+                  fewer than that isn&rsquo;t really a block, and the whole point
+                  is a group that builds together week after week. If
+                  you&rsquo;d still like your daughter on court, text Coach Sam
+                  at{" "}
                   <a
                     href="tel:+13013254731"
                     className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
                   >
                     301-325-4731
                   </a>{" "}
-                  and he&rsquo;ll sort out a fair price for the sessions that
-                  are left.
+                  and he&rsquo;ll find her a session that fits &mdash; and tell
+                  you when the next block starts.
                 </>
               ) : (
                 <>

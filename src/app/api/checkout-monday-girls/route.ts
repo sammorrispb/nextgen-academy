@@ -8,9 +8,16 @@ import {
   mondayGirlsSeasonSlotsFor,
 } from "@/data/monday-girls-season-2026";
 import {
+  MONDAY_GIRLS_MONDAYS,
   MONDAY_GIRLS_SEASON_LABEL,
   MONDAY_GIRLS_VENUE,
 } from "@/data/monday-girls-2026";
+import {
+  mondayGirlsJoinPriceCents,
+  mondayGirlsRemainingMondays,
+  mondayGirlsSellableOn,
+} from "@/lib/monday-girls-proration";
+import { mondayGirlsSessionsRemaining } from "@/lib/monday-girls-refund-policy";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import {
   validateMondayGirlsRegistration,
@@ -18,7 +25,10 @@ import {
   type MondayGirlsRegistrationData,
 } from "@/lib/validate-monday-girls-registration";
 import { fetchMondayGirlsRegistrationKeys } from "@/lib/notion-monday-girls-registrations";
-import { MONDAY_GIRLS_ROSTER_DB_ENV_VAR } from "@/lib/monday-girls-registration-window";
+import {
+  MONDAY_GIRLS_ROSTER_DB_ENV_VAR,
+  mondayGirlsTodayET,
+} from "@/lib/monday-girls-registration-window";
 import {
   hasWaiverOnFile,
   buildWaiverSignUrl,
@@ -74,6 +84,22 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // The selling floor. Pure and cheap, so it runs before any Notion call — a
+  // block that is no longer on sale should not cost a roster query. This is the
+  // direct-POST backstop for the same gate the page renders from; below the
+  // floor the answer is a conversation with Coach Sam, not a checkout.
+  const today = mondayGirlsTodayET();
+  if (!mondayGirlsSellableOn(today)) {
+    return NextResponse.json(
+      {
+        error:
+          "Only a couple of Mondays are left in this block, so we've stopped selling it online — text Coach Sam at 301-325-4731 and he'll sort out a fair price for what's left.",
+        code: "too_few_sessions",
+      },
+      { status: 409 },
+    );
+  }
+
   const keys = await fetchMondayGirlsRegistrationKeys(option.group);
   if (keys.length >= mondayGirlsSeasonSlotsFor(option.group)) {
     return NextResponse.json(
@@ -117,9 +143,61 @@ export async function POST(req: NextRequest) {
     "https://nextgenpbacademy.com";
 
   const stripe = getStripe();
+
+  // Full block vs mid-season join.
+  //
+  // A full-block sale keeps the fixed Stripe Price verbatim — the path the
+  // three families who bought at sticker went through, byte for byte, so
+  // reopening the season cannot have moved the common case by a cent.
+  //
+  // A prorated join cannot use a fixed Price (the amount differs per day), so
+  // it builds price_data against the SAME Stripe Product. The full amount is
+  // read off the Price rather than the code constant, keeping Stripe the single
+  // source of truth for what the block costs; if that amount cannot be read we
+  // refuse rather than guess, because guessing here charges a real card.
+  const sessionsPurchased = mondayGirlsSessionsRemaining(today);
+  const sessionsTotal = MONDAY_GIRLS_MONDAYS.length;
+  const prorated = sessionsPurchased < sessionsTotal;
+
+  let lineItem: { price: string; quantity: number } | {
+    price_data: {
+      currency: string;
+      product: string;
+      unit_amount: number;
+    };
+    quantity: number;
+  } = { price: priceId, quantity: 1 };
+
+  if (prorated) {
+    const price = await stripe.prices.retrieve(priceId);
+    const fullCents = price.unit_amount;
+    const productId =
+      typeof price.product === "string" ? price.product : price.product?.id;
+    if (typeof fullCents !== "number" || !productId) {
+      console.error(
+        `[checkout-monday-girls] cannot prorate — price ${priceId} has unit_amount=${String(fullCents)} product=${String(productId)}`,
+      );
+      return NextResponse.json(
+        {
+          error:
+            "We couldn't work out the prorated price — text Coach Sam at 301-325-4731 and he'll get you signed up.",
+        },
+        { status: 503 },
+      );
+    }
+    lineItem = {
+      price_data: {
+        currency: price.currency,
+        product: productId,
+        unit_amount: mondayGirlsJoinPriceCents(today, fullCents),
+      },
+      quantity: 1,
+    };
+  }
+
   const checkout = await stripe.checkout.sessions.create({
     mode: "payment",
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: [lineItem],
     allow_promotion_codes: true,
     customer_email: data.email,
     payment_intent_data: {
@@ -133,6 +211,14 @@ export async function POST(req: NextRequest) {
       group: option.group,
       group_label: option.label,
       group_time: option.timeLabel,
+      // What this family actually bought. The confirmation email lists exactly
+      // these dates, and the refund path reconstructs the same count from the
+      // roster row's creation date — so a prorated joiner is never quoted, or
+      // refunded against, sessions that were over before they arrived.
+      sessions_purchased: String(sessionsPurchased),
+      sessions_total: String(sessionsTotal),
+      prorated: prorated ? "true" : "false",
+      first_session: mondayGirlsRemainingMondays(today)[0] ?? "",
       // Wood MS is a public MCPS facility and this is a closed, post-payment
       // surface, so the exact venue may travel through metadata (same posture
       // as the fall and Pickl Park seasons).

@@ -56,8 +56,19 @@ export interface MondayGirlsConfirmationInput {
   amountUsd: string;
   /** Exact venue block. */
   venue: string;
-  /** The block's ISO Mondays, in order. */
+  /**
+   * The Mondays THIS family bought, in order — the whole block for a full-price
+   * sale, or the sessions still to come for a mid-season joiner.
+   */
   mondays: readonly string[];
+  /**
+   * The block's full length. When it exceeds `mondays.length` this family
+   * joined mid-season and the email must say so: quoting "the full 4-session
+   * block" to someone who bought 4 of 6 would misdescribe what they paid for,
+   * and quoting all six dates would promise sessions that already happened.
+   * Defaults to `mondays.length` (a whole-block sale).
+   */
+  sessionsTotal?: number;
   /** The Monday the block skips (ISO), or null if none. */
   skippedDate: string | null;
   /** ISO rain dates, in order. */
@@ -77,6 +88,8 @@ export function buildMondayGirlsConfirmationEmail(
     skippedDate,
     rainDates,
   } = input;
+  const sessionsTotal = input.sessionsTotal ?? mondays.length;
+  const joinedMidBlock = sessionsTotal > mondays.length;
 
   const subject = `You're in — ${childFirst} has a spot in the Monday Girls group`;
 
@@ -87,7 +100,13 @@ export function buildMondayGirlsConfirmationEmail(
     "",
     MONDAY_GIRLS_PEER_NOTE,
     "",
-    ...(skippedDate
+    ...(joinedMidBlock
+      ? [
+          `You're joining a block that's already running, so you're paid up for the ${mondays.length} Mondays still to come — not the ${sessionsTotal} the block started with. Nothing is missed: this is a beginner group and the girls are all still learning it together.`,
+          "",
+        ]
+      : []),
+    ...(skippedDate && !joinedMidBlock
       ? [
           `ONE SCHEDULE NOTE, and it may not match what we first told you: we skip ${formatMonday(
             skippedDate,
@@ -109,9 +128,11 @@ export function buildMondayGirlsConfirmationEmail(
           "",
         ]
       : []),
-    `Paid: $${amountUsd} (full ${mondays.length}-session block).`,
+    joinedMidBlock
+      ? `Paid: $${amountUsd} — the ${mondays.length} sessions above, prorated from the full ${sessionsTotal}-session block.`
+      : `Paid: $${amountUsd} (full ${mondays.length}-session block).`,
     "",
-    `That holds ${childFirst}'s spot for the whole block, so it's non-refundable if you withdraw. If we ever have to cancel sessions we can't make up, we refund the ones we didn't run.`,
+    `That holds ${childFirst}'s spot for ${joinedMidBlock ? "the rest of the block" : "the whole block"}, so it's non-refundable if you withdraw. If we ever have to cancel sessions we can't make up, we refund the ones we didn't run.`,
     "",
     `What to bring each week:`,
     `- Refillable water bottle`,

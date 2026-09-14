@@ -475,10 +475,28 @@ Monday *and its reason* rather than shipping different dates silently.
   row, no seat count and **no admin warning**. `/api/checkout-monday-girls` enforces the
   same pair as the direct-POST backstop. `/picklpark` renders its form and lets checkout answer 503; these
   families were recruited by hand over text, so a form that collects a child's birth year
-  and *then* reveals it cannot charge is worse than a closed state. **Registration closes
-  after the block's FIRST session**, not its last — it sells all 6 sessions up front, so
-  full price in week four would charge for sessions nobody ran; the closed state points at
-  Coach Sam for a prorated conversation instead of hiding.
+  and *then* reveals it cannot charge is worse than a closed state. The calendar leg is
+  now the **selling floor**, not the season start — see the next bullet.
+- **Mid-season joining is PRORATED (Sam, 2026-09-14).** Registration used to close the day
+  after session 1: the block sells 6 sessions up front, and full price in week four would
+  charge for sessions nobody ran. That was right while the only lever was a locked door,
+  but it made every late family a manual text-and-invoice and the block sold 3 of 8 seats.
+  The door is now open all season and the **price** carries the fairness —
+  `src/lib/monday-girls-proration.ts` (pure, date-injected). Sam's four terms:
+  **round DOWN** (the parent's favour, matching the refund policy's direction); **no
+  wall-clock cutoff** (a 9pm Monday registration still pays for that evening — refund by
+  hand rather than put a clock in a pure module); **a floor of
+  `MONDAY_GIRLS_MIN_SESSIONS_SOLD` (3)** — below that it is drop-in pricing for a peer
+  block and NGA sells drop-ins; and **"10u" stays copy, not a gate** (checkout still
+  validates the site-wide 6–16). `MONDAY_GIRLS_REGISTRATION_CLOSES` is derived from the
+  floor, never typed. **A full-block sale is byte-identical to before** — it keeps the
+  fixed Stripe Price line item; only a prorated join builds `price_data`, reading the full
+  amount off that same Price (Stripe stays the source of truth) against the same Stripe
+  Product, and refusing with a 503 rather than guessing if it cannot. Checkout stamps
+  `sessions_purchased` / `sessions_total` / `prorated` / `first_session`, and the
+  confirmation email lists the dates that family actually bought. Pinned by
+  `e2e/invariant-monday-girls-proration.spec.ts` (mutation-checked: round-up, the
+  season-denominator refund, and a floor of 1 each turn it red).
 - **`noindex`, and deliberately ABSENT from `/api/events/feed`.** A girls-only group of
   7–10-year-olds at a named middle school on a precise recurring evening is the exact risk
   the Enrichment Collective clubs are kept off every public surface for. The link is meant
@@ -491,11 +509,20 @@ Monday *and its reason* rather than shipping different dates silently.
 - **Refund posture** mirrors Pickl Park: parent withdrawal → none (stated at checkout, in
   the form, and in the confirmation email from the first sale); NGA cancellation →
   prorated over sessions not yet delivered, today inclusive. Two rain dates are the stated
-  remedy for a washout.
+  remedy for a washout. **The proration denominator is what the family BOUGHT, not the
+  block's 6 sessions** — `mondayGirlsProratedRefundCents(today, paidCents,
+  sessionsPurchased)`. It divided by 6 unconditionally, which was correct while the block
+  only sold whole and silently wrong the moment mid-season joining shipped: a parent who
+  bought 3 sessions for $112.50 and lost 2 to an NGA cancellation was owed $75.00 but
+  would have got $37.50. `sessionsPurchased` is reconstructed from the roster row's
+  creation date (`mondayGirlsSessionsPurchasedOn`) rather than a new Notion column,
+  because `createMondayGirlsRegistrationResult` does NOT use the Source-only fail-soft
+  retry — naming a property the DB lacks would 400 the whole create and drop a paid
+  registration.
 - **Ships dark until BOTH envs are set.** `/api/checkout-monday-girls` 503s unless
   `STRIPE_MONDAY_GIRLS_PRICE_ID` **and** `NOTION_MONDAY_GIRLS_REGS_DB_ID` are both
   present, and the page hides the form on the same pair. The gate returns a **reason**
-  (`not_configured` / `closed_by_flag` / `season_started`), not a boolean — a single
+  (`not_configured` / `closed_by_flag` / `too_few_sessions`), not a boolean — a single
   `false` made the page tell a pre-launch visitor the block was already "under way".
   Pinned by `e2e/monday-girls-registration-window.spec.ts` + the ships-dark cases in the
   egress spec.
@@ -730,8 +757,9 @@ See `.env.example`. Categories:
   `NOTION_MONDAY_GIRLS_REGS_DB_ID` at the Fall or Pickl Park Regs DB — capacity is scoped
   by `Group` alone, so the blocks would cross-count seats.
 - `NEXT_PUBLIC_MONDAY_GIRLS_REGISTRATION_OPEN` — kill switch, same posture as the Pickl
-  Park flag. Unset or `true` = the form renders through the block's FIRST session; any
-  other value closes it everywhere.
+  Park flag. Unset or `true` = the form renders (at a prorated price after the block
+  starts) until fewer than `MONDAY_GIRLS_MIN_SESSIONS_SOLD` Mondays remain; any other
+  value closes it everywhere.
 - `NOTION_SEASON_LEAGUE_DB_ID` + `STANDINGS_LINK_SECRET` — the Fall 2026 season-play pair.
   The DB holds the games (relations to the Fall Regs DB, no names) and MUST be shared with
   the Player DB integration by hand; the secret signs the parent standings links and has
