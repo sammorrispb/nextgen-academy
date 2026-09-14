@@ -25,16 +25,16 @@ the calendar event description to claim ownership of it.
 
 ## Editing a schedule → what to re-run
 
-| Change | File / system | After |
-|---|---|---|
-| Weekly venues, times, levels | `src/data/recurring-templates.ts` | `/calendar-sync` |
-| A one-off session, or a cancellation | NGA Sessions Notion DB | `/calendar-sync` |
-| Camp weeks | `src/data/camps.ts` | `/calendar-sync` |
-| MVF classes (venues, times, brackets, registration links) | `src/data/mvf.ts` | `/calendar-sync` |
-| Fall 2026 season dates | `src/data/fall-2026.ts` | `/calendar-sync` |
-| Pickl Park Saturday dates / makeup hold | `src/data/picklpark-2026.ts` | `/calendar-sync` |
+| Change                                                                       | File / system                        | After            |
+| ---------------------------------------------------------------------------- | ------------------------------------ | ---------------- |
+| Weekly venues, times, levels                                                 | `src/data/recurring-templates.ts`    | `/calendar-sync` |
+| A one-off session, or a cancellation                                         | NGA Sessions Notion DB               | `/calendar-sync` |
+| Camp weeks                                                                   | `src/data/camps.ts`                  | `/calendar-sync` |
+| MVF classes (venues, times, brackets, registration links)                    | `src/data/mvf.ts`                    | `/calendar-sync` |
+| Fall 2026 season dates                                                       | `src/data/fall-2026.ts`              | `/calendar-sync` |
+| Pickl Park Saturday dates / makeup hold                                      | `src/data/picklpark-2026.ts`         | `/calendar-sync` |
 | Pickl Park league hours (the block's 2:00–4:30 window is derived from these) | `src/data/picklpark-leagues-2026.ts` | `/calendar-sync` |
-| Enrichment Collective clubs (incl. Stef's confirmed dates) | `src/data/enrichment-collective.ts` | `/calendar-sync` |
+| Enrichment Collective clubs (incl. Stef's confirmed dates)                   | `src/data/enrichment-collective.ts`  | `/calendar-sync` |
 
 ## Rules that bind any change to the feed
 
@@ -70,6 +70,7 @@ the calendar event description to claim ownership of it.
   still reconcile. A blanket halt on an unattended daily job fails closed with
   no alerting, and the only way to unblock it would be to hand-patch the
   calendar — the exact anti-pattern this rule exists to kill.
+
 - **Keys must stay stable.** A key is a promise to the calendar that this item is
   the same real-world event as last run. Changing key derivation orphans every
   event built from the old scheme — the sync's adoption step softens that, but
@@ -99,15 +100,32 @@ Supabase.
 That exception is deliberate. EC clubs meet weekly at named elementary schools,
 so publishing a precise recurring time and place where identified young children
 gather is the risk `camps.ts` already mitigates by hiding `exactLocation` —
-except here the venue *is* the school. So the whole program stays off
-`/api/events/feed`, off `/schedule`, and off the sitemap, and the calendar blocks
-carry the **town only**, never a school name.
+except here the venue _is_ the school. So the whole program stays off
+`/api/events/feed`, off `/schedule`, and off the sitemap.
+
+**Updated 2026-09-13 (Sam).** The calendar blocks used to carry the town only.
+They now carry the **school name and street address**, because the block is
+the thing Sam navigates to on a weekday afternoon and a town is not an
+address. Read them from `ecClubTitle(club)` and `ecClubLocation(club)` —
+never hand-build either string.
+
+This changed the private half of the rule and nothing else:
+
+| Surface                                            | What ships                                                     |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| `/api/events/feed`, `/schedule`, sitemap, any page | **Nothing.** The EC program does not appear at all. Unchanged. |
+| Sam's private Google Calendar                      | School name + street address.                                  |
+
+The child-safety rule was never about the calendar — it is about publishing a
+recurring time and place where identified young children gather. A private
+calendar publishes to nobody. If EC ever gains a second consumer, it gets the
+public row by default; the private row is opt-in and deliberate.
 
 `e2e/invariant-events-feed-egress.spec.ts` enforces the exclusion, so it survives
 someone later "helpfully" adding EC to the feed.
 
 Reading a TypeScript file at sync time is normally the fragility this whole feed
-exists to remove. It's safe *here* because the file is hand-maintained with
+exists to remove. It's safe _here_ because the file is hand-maintained with
 explicit ISO date arrays and one fixed time per club — there is nothing to
 derive, only to read. If EC ever needs computing (recurrence rules, per-school
 variation), promote it to the feed pattern with a private access path rather
@@ -121,8 +139,8 @@ Thu Olney (Belmont) / Fri Sandy Spring (Sherwood ES — at Olney ES from
 2026-08-16 until the 2026-09-09 PDF moved it back). Keys never move with a
 club: `silver-spring-wed` keeps its old town in the key, and
 `sandy-spring-fri` matches its town again after the round trip. Blocks update
-in place rather than churning, so read `town` from the file, never from the
-key. Session dates are real and MCPS-reconciled — the gaps in each club's date
+in place rather than churning, so read the venue from the file via
+`ecClubTitle`/`ecClubLocation`, never from the key. Session dates are real and MCPS-reconciled — the gaps in each club's date
 list are school closures, so a "missing" week is not an error.
 
 Times: **Mon–Thu 3:20–4:30 PM, Fri 3:50–5:00 PM** (70-minute blocks, per the
