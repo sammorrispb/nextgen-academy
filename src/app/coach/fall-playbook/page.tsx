@@ -29,6 +29,7 @@ import {
   focusBlockFor,
   gamesFor,
   ritualFor,
+  type SeasonWeek,
 } from "@/data/fall-season-plan-2026";
 import { findDiagram } from "@/data/court-diagrams";
 import { CURRICULUM_DEFAULTS, mergeCurriculum } from "@/lib/curriculum-merge";
@@ -211,6 +212,65 @@ function Edited({ on, id }: { on: ReadonlySet<string>; id: string }) {
 }
 
 /**
+ * One week of one arc. `idPrefix` is the override-id stem for that arc —
+ * `week.<n>` for Green (the original scheme) and `week.yellow.<n>` for Yellow —
+ * so the "edited" marker lights on the card the Notion row actually changed.
+ */
+function WeekCard({
+  week,
+  edited,
+  idPrefix,
+}: {
+  week: SeasonWeek;
+  edited: ReadonlySet<string>;
+  idPrefix: string;
+}) {
+  const focus = focusBlockFor(week);
+  const games = gamesFor(week);
+  const ritual = ritualFor(week);
+  return (
+    <article className="rounded-lg border border-ngpa-slate/40 print:border-gray-300 p-4 print:break-inside-avoid">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="font-mono text-xs font-bold text-ngpa-teal print:text-black">
+          WEEK {week.week}
+        </span>
+        <span className="font-mono text-xs text-ngpa-muted print:text-gray-600">
+          {formatSunday(week.date)}
+        </span>
+        <h4 className="font-heading text-lg font-black text-ngpa-white print:text-black">
+          {week.title}
+          <Edited on={edited} id={`${idPrefix}.title`} />
+        </h4>
+        <span className="rounded-full bg-ngpa-navy print:bg-transparent border border-ngpa-lime/50 print:border-gray-400 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ngpa-lime print:text-black">
+          {week.word}
+        </span>
+      </div>
+      <p className="mt-2 text-sm text-ngpa-white/90 print:text-black leading-snug">
+        <strong className="text-ngpa-lime print:text-black">Deep on:</strong>{" "}
+        Block {focus.order} · {focus.name} &mdash; &ldquo;{focus.alias}&rdquo;
+      </p>
+      <p className="mt-1 text-sm text-ngpa-white/90 print:text-black leading-snug">
+        <strong className="text-ngpa-lime print:text-black">Games:</strong>{" "}
+        {games.map((g) => g.name).join(" → ")} → {ritual.name}
+      </p>
+      <p className="mt-1 text-sm text-ngpa-white/80 print:text-gray-800 leading-snug">
+        <strong>Looking for:</strong> {week.coachLooksFor}
+        <Edited on={edited} id={`${idPrefix}.coachLooksFor`} />
+      </p>
+      <p className="mt-2 text-xs text-ngpa-muted print:text-gray-600 leading-snug">
+        Word framing: &ldquo;{week.wordFraming}&rdquo;
+        <Edited on={edited} id={`${idPrefix}.wordFraming`} />
+      </p>
+      <p className="mt-1 text-xs text-ngpa-muted print:text-gray-600 leading-snug">
+        Parents hear: &ldquo;{week.parentLine}&rdquo;
+        <Edited on={edited} id={`${idPrefix}.parentLine`} /> · Home rep: {week.homeRep}
+        <Edited on={edited} id={`${idPrefix}.homeRep`} />
+      </p>
+    </article>
+  );
+}
+
+/**
  * The ball-rules panel. Unlike every other diagram this one is NOT generated:
  * it reads BALL_RULES at render time, so the serve dots, the enforced-kitchen
  * band and the lane can never disagree with the rules the rest of the page
@@ -312,6 +372,18 @@ export default async function FallPlaybookPage() {
   const edited = c.editedFieldIds;
   const greenStart = FALL_YOUTH_BLOCKS[0].startTime;
   const yellowStart = FALL_YOUTH_BLOCKS[1].startTime;
+  // One arc per Sunday block. `seasonPlan` is Green (the original plan and the
+  // original override ids); Yellow is the arc that builds on it.
+  const seasonArcs = FALL_YOUTH_BLOCKS.map((block) => ({
+    group: block.level,
+    timeLabel: `${block.startTime}–${block.endTime}`,
+    plan: block.level === "Yellow" ? c.seasonPlanYellow : c.seasonPlan,
+    idStem: block.level === "Yellow" ? "week.yellow." : "week.",
+    blurb:
+      block.level === "Yellow"
+        ? "Builds on Green: spin, shot selection, patterns, reading opponents, a weapon, then winning."
+        : "The fundamentals ladder: kitchen out to the baseline, then back in for the net.",
+  }));
 
   return (
     <main className="min-h-screen bg-ngpa-deep print:bg-white px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
@@ -769,63 +841,35 @@ export default async function FallPlaybookPage() {
           <Section
             num={6}
             title="The six weeks"
-            subtitle="Each week adds one thing to the week before. That progression is what a family bought — six interchangeable sessions would be six drop-ins with a discount. If a Sunday washes out, the weeks slide; they never reorder."
+            subtitle="Two arcs on one calendar. Green walks the fundamentals ladder; Yellow builds on what Green taught — spin, shot selection, patterns, reading opponents, playing to a strength, learning to win. Same Sunday and same Word of the Day in both blocks, so the coach carries one word across the afternoon. Each arc is what its families bought: six interchangeable sessions would be six drop-ins with a discount. If a Sunday washes out, both arcs slide; they never reorder."
             breakBefore
           >
-            <div className="space-y-4">
-              {c.seasonPlan.map((week) => {
-                const focus = focusBlockFor(week);
-                const games = gamesFor(week);
-                const ritual = ritualFor(week);
-                return (
-                  <article
-                    key={week.week}
-                    className="rounded-lg border border-ngpa-slate/40 print:border-gray-300 p-4 print:break-inside-avoid"
-                  >
-                    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                      <span className="font-mono text-xs font-bold text-ngpa-teal print:text-black">
-                        WEEK {week.week}
-                      </span>
-                      <span className="font-mono text-xs text-ngpa-muted print:text-gray-600">
-                        {formatSunday(week.date)}
-                      </span>
-                      <h3 className="font-heading text-lg font-black text-ngpa-white print:text-black">
-                        {week.title}
-                        <Edited on={edited} id={`week.${week.week}.title`} />
-                      </h3>
-                      <span className="rounded-full bg-ngpa-navy print:bg-transparent border border-ngpa-lime/50 print:border-gray-400 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-ngpa-lime print:text-black">
-                        {week.word}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm text-ngpa-white/90 print:text-black leading-snug">
-                      <strong className="text-ngpa-lime print:text-black">
-                        Deep on:
-                      </strong>{" "}
-                      Block {focus.order} · {focus.name} &mdash; &ldquo;
-                      {focus.alias}&rdquo;
-                    </p>
-                    <p className="mt-1 text-sm text-ngpa-white/90 print:text-black leading-snug">
-                      <strong className="text-ngpa-lime print:text-black">
-                        Games:
-                      </strong>{" "}
-                      {games.map((g) => g.name).join(" → ")} → {ritual.name}
-                    </p>
-                    <p className="mt-1 text-sm text-ngpa-white/80 print:text-gray-800 leading-snug">
-                      <strong>Looking for:</strong> {week.coachLooksFor}
-                      <Edited on={edited} id={`week.${week.week}.coachLooksFor`} />
-                    </p>
-                    <p className="mt-2 text-xs text-ngpa-muted print:text-gray-600 leading-snug">
-                      Word framing: &ldquo;{week.wordFraming}&rdquo;
-                      <Edited on={edited} id={`week.${week.week}.wordFraming`} />
-                    </p>
-                    <p className="mt-1 text-xs text-ngpa-muted print:text-gray-600 leading-snug">
-                      Parents hear: &ldquo;{week.parentLine}&rdquo;
-                      <Edited on={edited} id={`week.${week.week}.parentLine`} /> · Home rep: {week.homeRep}
-                      <Edited on={edited} id={`week.${week.week}.homeRep`} />
-                    </p>
-                  </article>
-                );
-              })}
+            <div className="space-y-8">
+              {seasonArcs.map((arc) => (
+                <div key={arc.group}>
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+                    <h3 className="font-heading text-xl font-black text-ngpa-white print:text-black">
+                      {arc.group} Ball
+                    </h3>
+                    <span className="font-mono text-xs text-ngpa-muted print:text-gray-600">
+                      {arc.timeLabel}
+                    </span>
+                    <span className="text-sm text-ngpa-white/80 print:text-gray-800">
+                      {arc.blurb}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {arc.plan.map((week) => (
+                      <WeekCard
+                        key={week.week}
+                        week={week}
+                        edited={edited}
+                        idPrefix={`${arc.idStem}${week.week}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
             <p className="mt-4 text-xs text-ngpa-muted print:text-gray-600">
               Season Sundays: {FALL_SUNDAYS.map(formatSunday).join(" · ")}.

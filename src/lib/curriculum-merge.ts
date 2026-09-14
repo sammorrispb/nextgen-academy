@@ -9,7 +9,11 @@ import {
   type CaptainDuty,
   type SkillBlock,
 } from "@/data/session-curriculum";
-import { FALL_SEASON_PLAN, type SeasonWeek } from "@/data/fall-season-plan-2026";
+import {
+  FALL_SEASON_PLAN,
+  FALL_SEASON_PLAN_YELLOW,
+  type SeasonWeek,
+} from "@/data/fall-season-plan-2026";
 
 /**
  * Curriculum override layer — the PURE half (no I/O, no env, no fetch).
@@ -33,7 +37,7 @@ import { FALL_SEASON_PLAN, type SeasonWeek } from "@/data/fall-season-plan-2026"
  */
 
 export interface CurriculumOverride {
-  /** e.g. "rule.red.serve", "block.1.cue.0", "captain.never.4". */
+  /** e.g. "rule.red.serve", "block.1.cue.0", "captain.never.4", "week.2.title", "week.yellow.2.title". */
   fieldId: string;
   value: string;
   /** Notion page id, carried for health alerts. The merge never reads it. */
@@ -47,7 +51,10 @@ export interface CurriculumDefaults {
   captainNever: readonly string[];
   captainScript: readonly string[];
   captainKit: readonly string[];
+  /** The Green arc — the original plan, so `week.<n>.<prop>` keeps its meaning. */
   seasonPlan: readonly SeasonWeek[];
+  /** The Yellow arc (2026-09-14), addressed as `week.yellow.<n>.<prop>`. */
+  seasonPlanYellow: readonly SeasonWeek[];
 }
 
 export interface MergedCurriculum extends CurriculumDefaults {
@@ -65,6 +72,7 @@ export const CURRICULUM_DEFAULTS: CurriculumDefaults = {
   captainScript: CAPTAIN_SCRIPT,
   captainKit: CAPTAIN_KIT,
   seasonPlan: FALL_SEASON_PLAN,
+  seasonPlanYellow: FALL_SEASON_PLAN_YELLOW,
 };
 
 /**
@@ -126,6 +134,7 @@ interface Working {
   captainScript: string[];
   captainKit: string[];
   seasonPlan: SeasonWeek[];
+  seasonPlanYellow: SeasonWeek[];
 }
 
 function clone(defaults: CurriculumDefaults): Working {
@@ -137,6 +146,7 @@ function clone(defaults: CurriculumDefaults): Working {
     captainScript: [...defaults.captainScript],
     captainKit: [...defaults.captainKit],
     seasonPlan: defaults.seasonPlan.map((w) => ({ ...w })),
+    seasonPlanYellow: defaults.seasonPlanYellow.map((w) => ({ ...w })),
   };
 }
 
@@ -203,13 +213,30 @@ function applyOne(work: Working, fieldId: string, value: string): boolean {
     return true;
   }
 
-  if (namespace === "week" && parts.length === 3) {
-    const n = parseIndex(parts[1]);
-    if (n === null || !WEEK_PROPS.has(parts[2])) return false;
+  if (namespace === "week") {
+    // `week.<n>.<prop>` is the Green arc — the original id scheme, kept as-is
+    // so every override Sam has already written keeps its meaning.
+    // `week.yellow.<n>.<prop>` is the Yellow arc (2026-09-14). There is
+    // deliberately no `week.green.` alias: two spellings for one field would
+    // split the "edited" marker, and the health cron already names a typo.
+    let plan: SeasonWeek[];
+    let rawWeek: string;
+    let prop: string;
+    if (parts.length === 3) {
+      plan = work.seasonPlan;
+      [, rawWeek, prop] = parts;
+    } else if (parts.length === 4 && parts[1] === "yellow") {
+      plan = work.seasonPlanYellow;
+      [, , rawWeek, prop] = parts;
+    } else {
+      return false;
+    }
+    const n = parseIndex(rawWeek);
+    if (n === null || !WEEK_PROPS.has(prop)) return false;
     // `week` is 1-indexed in the data and resolved by value, not position.
-    const weekRow = work.seasonPlan.find((w) => w.week === n);
+    const weekRow = plan.find((w) => w.week === n);
     if (!weekRow) return false;
-    setProp(weekRow, parts[2], value);
+    setProp(weekRow, prop, value);
     return true;
   }
 

@@ -18,7 +18,7 @@ import {
   CAPTAIN_NEVER,
   CAPTAIN_RUN_OF_SHOW,
 } from "../src/data/session-curriculum";
-import { FALL_SEASON_PLAN } from "../src/data/fall-season-plan-2026";
+import { FALL_SEASON_PLAN, FALL_SEASON_PLAN_YELLOW } from "../src/data/fall-season-plan-2026";
 
 /**
  * The curriculum override layer must hold these forever:
@@ -76,6 +76,7 @@ test.describe("§1 the merge never mutates the imported data modules", () => {
       duty: CAPTAIN_RUN_OF_SHOW[3].duty,
       never: CAPTAIN_NEVER[4],
       parentLine: FALL_SEASON_PLAN[1].parentLine,
+      parentLineYellow: FALL_SEASON_PLAN_YELLOW[1].parentLine,
     };
 
     const merged = mergeCurriculum(CURRICULUM_DEFAULTS, [
@@ -86,6 +87,7 @@ test.describe("§1 the merge never mutates the imported data modules", () => {
       { fieldId: "captain.duty.3", value: "OVERRIDDEN duty" },
       { fieldId: "captain.never.4", value: "OVERRIDDEN never" },
       { fieldId: "week.2.parentLine", value: "OVERRIDDEN parent line" },
+      { fieldId: "week.yellow.2.parentLine", value: "OVERRIDDEN yellow parent line" },
     ]);
 
     // The merge did produce the overrides...
@@ -93,6 +95,8 @@ test.describe("§1 the merge never mutates the imported data modules", () => {
     expect(merged.skillStack[0].cues[0]).toBe("OVERRIDDEN cue");
     expect(merged.captainRunOfShow[3].duty).toBe("OVERRIDDEN duty");
     expect(merged.captainNever[4]).toBe("OVERRIDDEN never");
+    expect(merged.seasonPlan[1].parentLine).toBe("OVERRIDDEN parent line");
+    expect(merged.seasonPlanYellow[1].parentLine).toBe("OVERRIDDEN yellow parent line");
 
     // ...and the module singletons are untouched.
     expect(BALL_RULES[0].serve, "BALL_RULES was mutated in place").toBe(before.serve);
@@ -102,6 +106,9 @@ test.describe("§1 the merge never mutates the imported data modules", () => {
     expect(CAPTAIN_RUN_OF_SHOW[3].duty).toBe(before.duty);
     expect(CAPTAIN_NEVER[4], "CAPTAIN_NEVER was mutated in place").toBe(before.never);
     expect(FALL_SEASON_PLAN[1].parentLine).toBe(before.parentLine);
+    expect(FALL_SEASON_PLAN_YELLOW[1].parentLine, "FALL_SEASON_PLAN_YELLOW was mutated in place").toBe(
+      before.parentLineYellow,
+    );
   });
 
   test("a second merge still starts from the code defaults, not the first merge's output", () => {
@@ -119,6 +126,7 @@ test.describe("§1 the merge never mutates the imported data modules", () => {
     expect(CURRICULUM_DEFAULTS.skillStack).toEqual(SKILL_STACK);
     expect(CURRICULUM_DEFAULTS.captainNever).toEqual(CAPTAIN_NEVER);
     expect(CURRICULUM_DEFAULTS.seasonPlan).toEqual(FALL_SEASON_PLAN);
+    expect(CURRICULUM_DEFAULTS.seasonPlanYellow).toEqual(FALL_SEASON_PLAN_YELLOW);
   });
 });
 
@@ -144,6 +152,7 @@ test.describe("§2 ships dark", () => {
     expect(merged.ballRules).toEqual(BALL_RULES);
     expect(merged.skillStack).toEqual(SKILL_STACK);
     expect(merged.seasonPlan).toEqual(FALL_SEASON_PLAN);
+    expect(merged.seasonPlanYellow).toEqual(FALL_SEASON_PLAN_YELLOW);
     expect(merged.editedFieldIds.size).toBe(0);
   });
 

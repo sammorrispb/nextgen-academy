@@ -14,7 +14,8 @@ then decide whether they earn their keep.
 
 Two things the shipped design added to the proposal below:
 
-- **`week.<n>.<prop>` is in scope**, so the override layer spans
+- **`week.<n>.<prop>` is in scope** (and `week.yellow.<n>.<prop>` since 2026-09-14, when the
+  plan split into a Green arc and a Yellow arc that builds on it), so the override layer spans
   `fall-season-plan-2026.ts` as well. The file table further down omits it; that
   file is UNCHANGED too, and its spec (`e2e/fall-season-plan.spec.ts`) still
   pins its defaults.
