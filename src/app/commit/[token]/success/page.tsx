@@ -4,7 +4,7 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "You're locked in — Next Gen Pickleball Academy",
+  title: "You're locked in",
   robots: { index: false, follow: false },
 };
 

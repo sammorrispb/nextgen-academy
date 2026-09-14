@@ -10,7 +10,7 @@ import {
 import { PICKLPARK_SEASON_TITLE } from "@/data/picklpark-season-2026";
 
 export const metadata: Metadata = {
-  title: "Season Confirmed · Next Gen Pickleball Academy",
+  title: "Season Confirmed",
   description:
     "Your player is registered for the Pickl Park Saturday season. See you Saturday.",
   robots: { index: false, follow: false },

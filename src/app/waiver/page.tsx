@@ -9,7 +9,7 @@ import {
 } from "@/data/waiver";
 
 export const metadata: Metadata = {
-  title: "Liability Waiver & Media Release · Next Gen Pickleball Academy",
+  title: "Liability Waiver & Media Release",
   description:
     "Next Gen Pickleball Academy liability waiver, assumption of risk, medical authorization, and photo/media release for youth programs.",
   robots: { index: false, follow: false },

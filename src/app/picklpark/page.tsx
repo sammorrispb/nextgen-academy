@@ -28,6 +28,7 @@ import {
   picklParkLeaguesOpen,
   picklParkTodayET,
 } from "@/lib/picklpark-registration-window";
+import { orgRef } from "@/lib/seo";
 
 // The Pickl Park Saturday — a REFERRAL page since 2026-09-07, not a checkout.
 // The Pickl Park sells both leagues through podplay; NGA coaches them. So this
@@ -43,19 +44,30 @@ import {
 const LEAGUE_SUMMARY = PICKLPARK_LEAGUES.map(
   (l) => `${l.title} ${l.timeLabel} (${l.ageLabel})`,
 ).join(", ");
+/** "Kid's Drill and Play (ages 8–13) and Youth League (ages 10+)" — for the meta description. */
+const LEAGUE_AGES = PICKLPARK_LEAGUES.map(
+  (l) => `${l.title} (${l.ageLabel.toLowerCase()})`,
+).join(" and ");
+
+// Title carries the place and "league" — the audit found this page had neither,
+// so "youth pickleball league Frederick" had nothing to match (2026-09-13).
+const TITLE = "Youth Pickleball Leagues in Frederick, MD — The Pickl Park";
 
 export const metadata: Metadata = {
-  title: "Pickl Park Saturday Leagues — Next Gen Pickleball Academy",
-  description: `${PICKLPARK_SEASON_WEEKS} Saturdays of indoor youth pickleball coached by Next Gen at ${PICKLPARK_VENUE_SHORT} in ${PICKLPARK_PUBLIC_AREA}, ${PICKLPARK_SEASON_LABEL}. ${LEAGUE_SUMMARY}. Register with The Pickl Park.`,
+  title: { absolute: TITLE },
+  // ≤160 chars (e2e/seo.spec.ts). Times and dates live on the page and in the
+  // SportsEvent nodes; the description carries place, format, ages, registrar.
+  description: `Indoor youth pickleball leagues in ${PICKLPARK_PUBLIC_AREA}, coached by Next Gen: ${LEAGUE_AGES}. Sign up at ${PICKLPARK_VENUE_SHORT}.`,
   alternates: { canonical: "https://nextgenpbacademy.com/picklpark" },
   openGraph: {
-    title: "Pickl Park Saturday Leagues — Next Gen Pickleball Academy",
+    title: TITLE,
     description: `${PICKLPARK_SEASON_WEEKS} indoor Saturdays in ${PICKLPARK_PUBLIC_AREA}, ${PICKLPARK_SEASON_LABEL}. ${LEAGUE_SUMMARY}.`,
     url: "https://nextgenpbacademy.com/picklpark",
+    images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pickl Park Saturday Leagues — Next Gen Pickleball Academy",
+    title: TITLE,
     description: `${PICKLPARK_SEASON_WEEKS} indoor Saturdays in ${PICKLPARK_PUBLIC_AREA}. ${LEAGUE_SUMMARY}.`,
   },
 };
@@ -108,11 +120,7 @@ export default async function PicklParkPage() {
     startDate: `${PICKLPARK_SATURDAYS[0]}T${picklParkLeagueStartHour24(league)}:00-04:00`,
     endDate: PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1],
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    organizer: {
-      "@type": "SportsOrganization",
-      name: "Next Gen Pickleball Academy",
-      url: "https://nextgenpbacademy.com",
-    },
+    organizer: orgRef(),
     location: {
       "@type": "Place",
       name: PICKLPARK_VENUE_SHORT,
@@ -153,7 +161,8 @@ export default async function PicklParkPage() {
             Fall 2026 Saturdays &middot; {PICKLPARK_PUBLIC_AREA}
           </p>
           <h1 className="font-heading text-3xl sm:text-5xl font-black text-ngpa-white tracking-tight mb-5">
-            Six Saturdays indoors, whatever the weather.
+            Youth pickleball leagues in Frederick, MD &mdash; six Saturdays
+            indoors, whatever the weather.
           </h1>
           <p className="text-lg text-ngpa-white/80 leading-relaxed mb-6">
             Next Gen coaches two six-week youth leagues at{" "}
@@ -341,6 +350,17 @@ export default async function PicklParkPage() {
               Venue: {PICKLPARK_VENUE}.
             </p>
           </div>
+
+          <p className="mt-6 text-sm text-ngpa-white/65">
+            Live in Frederick County?{" "}
+            <Link
+              href="/youth-pickleball-frederick"
+              className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+            >
+              See everything Next Gen runs in Frederick
+            </Link>
+            .
+          </p>
 
           {fallOpen && (
             <Link

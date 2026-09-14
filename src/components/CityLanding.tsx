@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { site } from "@/data/site";
-import { faq } from "@/data/faq";
+import { localFaq } from "@/data/faq";
 import { levels } from "@/data/levels";
 import { testimonials } from "@/data/testimonials";
 import JsonLd from "@/components/JsonLd";
@@ -31,18 +31,12 @@ interface CityLandingProps {
    * Answers must stay truthful when the season changes — point to /schedule
    * for anything time-sensitive. */
   cityFaq?: { question: string; answer: string }[];
+  /** Extra "nearby" links beyond the MoCo neighbor ladder — e.g. the Frederick
+   * page from Germantown, which sits between the two venues. */
+  extraNearby?: { label: string; href: string }[];
 }
 
-const LOCAL_FAQ_QUESTIONS = new Set([
-  "What ages do you accept?",
-  "How much do youth pickleball lessons cost at Next Gen?",
-  "Is pickleball safe for kids?",
-  "Which Montgomery County towns do you serve?",
-]);
-
-// Reused across all 4 city pages. Same FAQ set as
-// /montgomery-county-youth-pickleball — keeps answers in one place.
-const localFaq = faq.filter((item) => LOCAL_FAQ_QUESTIONS.has(item.question));
+// The shared local FAQ subset lives in src/data/faq.ts (one copy).
 
 /**
  * Shared frame for the per-city landing pages. Each page passes its own
@@ -90,6 +84,7 @@ export default function CityLanding({
   intro,
   whereWePlay,
   cityFaq = [],
+  extraNearby = [],
 }: CityLandingProps) {
   const pageFaq = [...cityFaq, ...localFaq];
   const url = `${SITE_URL}/${slug}`;
@@ -408,6 +403,16 @@ export default function CityLanding({
                   className="hover:text-ngpa-teal transition-colors underline-offset-4 hover:underline"
                 >
                   Youth pickleball in {page.city}
+                </Link>
+              </li>
+            ))}
+            {extraNearby.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="hover:text-ngpa-teal transition-colors underline-offset-4 hover:underline"
+                >
+                  {link.label}
                 </Link>
               </li>
             ))}

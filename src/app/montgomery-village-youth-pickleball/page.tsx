@@ -17,7 +17,7 @@ import {
 import JsonLd from "@/components/JsonLd";
 import NewsletterForm from "@/components/NewsletterForm";
 import TrackedCTA from "@/components/TrackedCTA";
-import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+import { breadcrumbJsonLd, orgRef, SITE_URL } from "@/lib/seo";
 
 const PAGE_URL = `${SITE_URL}/montgomery-village-youth-pickleball`;
 
@@ -79,11 +79,7 @@ function sportsEventJsonLd(program: MvfProgram) {
     location: placeJsonLd(program.venue),
     organizer: [
       { "@type": "Organization", name: "Montgomery Village Foundation" },
-      {
-        "@type": "SportsOrganization",
-        name: "Next Gen Pickleball Academy",
-        url: SITE_URL,
-      },
+      orgRef(),
     ],
     audience: {
       "@type": "PeopleAudience",

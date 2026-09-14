@@ -5,7 +5,7 @@ import LeadForm from "@/components/LeadForm";
 import JsonLd from "@/components/JsonLd";
 import { testimonials } from "@/data/testimonials";
 import { site } from "@/data/site";
-import { areaServedJsonLd, breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
+import { areaServedJsonLd, breadcrumbJsonLd, orgRef, SITE_URL } from "@/lib/seo";
 
 const PAGE_TITLE = "Free Youth Pickleball Evaluation — Montgomery County, MD";
 const PAGE_DESCRIPTION =
@@ -72,11 +72,7 @@ export default function FreeEvaluationPage() {
             price: 0,
             priceCurrency: "USD",
           },
-          provider: {
-            "@type": "SportsOrganization",
-            name: "Next Gen Pickleball Academy",
-            url: SITE_URL,
-          },
+          provider: orgRef(),
         }}
       />
 

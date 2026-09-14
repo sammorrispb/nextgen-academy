@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
 
 export const metadata: Metadata = {
-  title: "Season Confirmed · Next Gen Pickleball Academy",
+  title: "Season Confirmed",
   description: "Your player is enrolled for the season. See you on the court.",
   robots: { index: false, follow: false },
 };

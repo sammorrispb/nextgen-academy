@@ -12,7 +12,7 @@ import {
 import { MONDAY_GIRLS_SEASON_TITLE } from "@/data/monday-girls-season-2026";
 
 export const metadata: Metadata = {
-  title: "You're In · Next Gen Pickleball Academy",
+  title: "You're In",
   description:
     "Your player is registered for the Monday Girls Beginner Group. See you Monday.",
   robots: { index: false, follow: false },

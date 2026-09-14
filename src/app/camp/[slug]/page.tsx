@@ -26,9 +26,10 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const camp = findCampBySlug(slug);
-  if (!camp) return { title: "Camp not found · Next Gen Pickleball Academy" };
+  if (!camp) return { title: "Camp not found" };
   return {
-    title: `${camp.title} (${camp.weekLabel}) | Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} | Next Gen Pickleball Academy`,
+    // Week label stays in the description; with it the title ran past 60 chars.
+    title: { absolute: `${camp.title} | Next Gen Pickleball Camp` },
     description: `Register for Next Gen Pickleball ${camp.title} — ${camp.weekLabel}, Mon–Thu mornings in ${camp.publicArea}. Ages ${CAMP_AGE_MIN}–${CAMP_AGE_MAX} — $50 a morning, or $150 for the full week.`,
     alternates: { canonical: `${SITE_ORIGIN}/camp/${camp.slug}` },
   };

@@ -7,7 +7,7 @@ import PollVoteForm from "@/components/PollVoteForm";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Vote on a session — Next Gen Pickleball Academy",
+  title: "Vote on a session",
   description:
     "Coach Sam is forming a new pickleball crew. Tell us if this slot works for your kid.",
   robots: { index: false, follow: false },

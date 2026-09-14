@@ -189,6 +189,10 @@ ${MVF_ENTRY}
   a first session looks like).
 - https://nextgenpbacademy.com/montgomery-county-youth-pickleball — Service-area
   overview for Montgomery County, MD.
+- https://nextgenpbacademy.com/youth-pickleball-frederick — Frederick County,
+  MD: the Saturday youth leagues NGA coaches at The Pickl Park (registered by
+  The Pickl Park) and private lessons there. Frederick leagues are ages 8–13
+  and 10+, not the full 6–16 ladder.
 - https://nextgenpbacademy.com/schools — For schools, rec centers and camps:
   NGA coaches travel to the site for clinics, weekly residencies or camp weeks.
   An organization enquiry, not a family one.
@@ -197,9 +201,12 @@ ${MVF_ENTRY}
 
 ## Interest lists — NO registration exists for these
 
-- https://nextgenpbacademy.com/league — The planned fixed-roster Next Gen
-  league. Not yet open: the page collects interest so NGA knows which age
-  divisions to run first. Do not describe it as enrollable.
+- https://nextgenpbacademy.com/league — Youth leagues hub. Its top section lists
+  the youth leagues and seasons running now (the same seasons listed above),
+  each with who takes registration. Below that is the planned fixed-roster Next
+  Gen league, which is NOT yet open: NO registration exists for it, and the page
+  collects interest so NGA knows which age divisions to run first. Do not
+  describe it as enrollable.
 - https://nextgenpbacademy.com/clusters — Four planned regional teams
   (Down-County, Up-County, East-County, Mid-County). Interest list only.
 - https://nextgenpbacademy.com/crew — For a family whose schedule fits none of
