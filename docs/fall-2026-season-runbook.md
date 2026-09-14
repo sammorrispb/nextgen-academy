@@ -176,8 +176,10 @@ they do **not** coach.
 | By noon on a washout | *(no template yet — see below)* | |
 
 Every body is a **pure builder** — subject, HTML, and plain text, no send path.
-They render from the season plan, so the six weeks in the email and the six weeks
-on the run sheet cannot drift.
+They render from the season plan — since 2026-09-14 the arc for the child's group
+(`seasonPlanFor(group)`: Green is the fundamentals ladder, Yellow builds on it), so a
+Yellow family must never be sent the Green weeks — and that is what keeps the six weeks
+in the email and the six weeks on the run sheet from drifting.
 
 **There is deliberately no send route yet.** Wiring one means a roster read from
 `NOTION_FALL_REGS_DB_ID`, dedup to one email per parent, `dryRun`/`only`, a

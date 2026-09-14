@@ -530,12 +530,28 @@ modules directly, so an override can never turn them green-when-they-should-be-r
   requests, so writing into `BALL_RULES` in place would make an override permanent,
   un-revertable and visible to every other request until redeploy. Field ids reuse the
   Copy Desk scheme — `rule.<color>.<prop>`, `block.<order>.cue.<i>`, `block.<order>.<prop>`,
-  `captain.{duty,never,script,kit}.<i>`, `week.<n>.<prop>` — entity segments by natural key
+  `captain.{duty,never,script,kit}.<i>`, `week.<n>.<prop>` (the Green arc) and
+  `week.yellow.<n>.<prop>` (the Yellow arc) — entity segments by natural key
   (colour, `order`, `week`), array positions **0-based**. Structural fields (`order`,
   `color`, `week`, `date`, `focusBlock`, the games/ritual slugs, `vocabulary`) are
   deliberately NOT overridable: `rulesForColor`/`focusBlockFor`/`gamesFor`/`ritualFor` all
   throw on a miss, so keeping them out is how "a run sheet never renders blank" is
   guaranteed by construction. An empty `Value` is a REVERT, not a blanking.
+- **Two arcs on one calendar (Sam, 2026-09-14).** `fall-season-plan-2026.ts` holds
+  `FALL_SEASON_PLAN` (= `FALL_SEASON_PLAN_GREEN`, the fundamentals ladder) and
+  `FALL_SEASON_PLAN_YELLOW`, which builds on it — spin, shot selection, shot patterns,
+  reading opponent weaknesses, playing to a strength, learning to win: Sam's six items in
+  their order, one per Sunday. Both arcs share the date and the Word of the Day (one word
+  per Sunday for the coach), each goes deep on a different block every week, and both open
+  with a measured baseline so the finale can show a kid their own week-1 number.
+  **`FALL_SEASON_PLAN` deliberately stays the Green arc** so every `week.<n>.<prop>`
+  override already in Notion keeps its meaning; Yellow is `week.yellow.<n>.<prop>` and
+  there is no `week.green.` alias (two spellings would split the `edited` marker).
+  `seasonPlanFor(group)`, `weekForDate(iso, group)` and `findWeek(n, group)` default to
+  Green. The playbook's "six weeks" section renders both arcs; `e2e/fall-season-plan.spec.ts`
+  runs every structural check over both and pins that Yellow is that list, in that order,
+  and not a copy of Green. A parent-facing surface (the how-it-works email, a WhatsApp
+  description) must carry the arc for the child's group.
 - **`src/lib/notion-curriculum.ts`** — read, ISR 300 (same 5-min convention as
   `notion-sessions`), discriminated `status: "ok" | "config_missing" | "query_failed"`.
   Never throws. **No server-side `Active` filter on purpose** — Notion 400s a filter naming

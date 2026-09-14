@@ -86,6 +86,11 @@ function defaults(): CurriculumDefaults {
     captainScript: ["script 0", "script 1"],
     captainKit: ["kit 0", "kit 1"],
     seasonPlan: [week(1), week(2), week(3)],
+    seasonPlanYellow: [
+      week(1, { title: "Yellow week 1", parentLine: "default yellow parent line 1" }),
+      week(2, { title: "Yellow week 2", parentLine: "default yellow parent line 2" }),
+      week(3, { title: "Yellow week 3", parentLine: "default yellow parent line 3" }),
+    ],
   };
 }
 
@@ -380,5 +385,76 @@ test.describe("mergeCurriculum — duplicates and edited-set bookkeeping", () =>
       o("nonsense.id", "ignored"),
     ]);
     expect([...merged.editedFieldIds]).toEqual(["rule.red.serve"]);
+  });
+});
+
+test.describe("mergeCurriculum — two arcs, two id schemes", () => {
+  // Since 2026-09-14 the season plan is two arcs. `week.<n>.<prop>` is the
+  // ORIGINAL scheme and stays the Green arc, so nothing Sam already wrote into
+  // the overrides DB moves; the Yellow arc is `week.yellow.<n>.<prop>`.
+
+  test("week.yellow.<n>.<prop> edits the Yellow arc only", () => {
+    const d = defaults();
+    const merged = mergeCurriculum(d, [o("week.yellow.2.parentLine", "We worked the patterns.")]);
+    expect(merged.seasonPlanYellow.find((w) => w.week === 2)?.parentLine).toBe(
+      "We worked the patterns.",
+    );
+    expect(merged.seasonPlanYellow.find((w) => w.week === 1)?.parentLine).toBe(
+      "default yellow parent line 1",
+    );
+    expect(merged.seasonPlan.find((w) => w.week === 2)?.parentLine).toBe("default parent line 2");
+    expect([...merged.editedFieldIds]).toEqual(["week.yellow.2.parentLine"]);
+    expect(merged.unknownFieldIds).toEqual([]);
+  });
+
+  test("week.<n>.<prop> still means the Green arc and never touches Yellow", () => {
+    const d = defaults();
+    const merged = mergeCurriculum(d, [o("week.2.title", "Green title")]);
+    expect(merged.seasonPlan[1].title).toBe("Green title");
+    expect(merged.seasonPlanYellow[1].title).toBe("Yellow week 2");
+    expect([...merged.editedFieldIds]).toEqual(["week.2.title"]);
+  });
+
+  test("every SeasonWeek string is overridable on the Yellow arc too", () => {
+    const d = defaults();
+    const merged = mergeCurriculum(d, [
+      o("week.yellow.1.coachLooksFor", "y looks for"),
+      o("week.yellow.1.wordFraming", "y framing"),
+      o("week.yellow.1.homeRep", "y home rep"),
+      o("week.yellow.1.title", "y title"),
+    ]);
+    const w1 = merged.seasonPlanYellow[0];
+    expect(w1.coachLooksFor).toBe("y looks for");
+    expect(w1.wordFraming).toBe("y framing");
+    expect(w1.homeRep).toBe("y home rep");
+    expect(w1.title).toBe("y title");
+    expect(merged.seasonPlan[0].title).toBe("Week 1");
+    expect(merged.unknownFieldIds).toEqual([]);
+  });
+
+  const unknown: Array<[string, string]> = [
+    ["a Yellow week that does not exist", "week.yellow.9.parentLine"],
+    ["a week.green alias — there is none, the Green arc is week.<n>", "week.green.1.title"],
+    ["an arc that does not exist", "week.orange.1.title"],
+    ["a structural field on the Yellow arc", "week.yellow.1.focusBlock"],
+    ["a Yellow id with no week number", "week.yellow.title"],
+    ["a Yellow id with too many segments", "week.yellow.1.title.extra"],
+  ];
+  for (const [label, fieldId] of unknown) {
+    test(`${label} (${JSON.stringify(fieldId)}) changes nothing and is reported`, () => {
+      const d = defaults();
+      const merged = mergeCurriculum(d, [o(fieldId, "nope")]);
+      expect(merged.seasonPlan).toEqual(d.seasonPlan);
+      expect(merged.seasonPlanYellow).toEqual(d.seasonPlanYellow);
+      expect(merged.editedFieldIds.size).toBe(0);
+      expect(merged.unknownFieldIds).toEqual([fieldId]);
+    });
+  }
+
+  test("the Yellow arc is clone-on-write too", () => {
+    const d = defaults();
+    const before = d.seasonPlanYellow[0].title;
+    mergeCurriculum(d, [o("week.yellow.1.title", "changed")]);
+    expect(d.seasonPlanYellow[0].title).toBe(before);
   });
 });
