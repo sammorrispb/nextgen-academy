@@ -14,6 +14,7 @@ import {
 import {
   mondayGirlsRefundPolicyFor,
   mondayGirlsProratedRefundCents,
+  mondayGirlsSessionsPurchasedOn,
   todayET,
   type MondayGirlsRefundPolicy,
   type MondayGirlsCancelReason,
@@ -213,9 +214,18 @@ export async function cancelMondayGirlsRegistration(
 
   // "prorated" only ever comes from an NGA-side cancellation. Before the season
   // starts every session is still owed, so this equals a full refund.
+  //
+  // The denominator is what THIS family bought, not the block's six sessions —
+  // a mid-season joiner paid for the tail only, so dividing by six would refund
+  // them a fraction of a fraction. Reconstructed from the row's creation date,
+  // which is the same date checkout priced from.
   const proratedCents =
     decision === "prorated"
-      ? mondayGirlsProratedRefundCents(today, Math.round(row.amountPaidUsd * 100))
+      ? mondayGirlsProratedRefundCents(
+          today,
+          Math.round(row.amountPaidUsd * 100),
+          mondayGirlsSessionsPurchasedOn(row.registeredOnIso),
+        )
       : 0;
 
   if (decision === "prorated" && proratedCents <= 0) {

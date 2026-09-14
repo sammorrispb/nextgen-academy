@@ -1,5 +1,9 @@
 import { MONDAY_GIRLS_MONDAYS } from "@/data/monday-girls-2026";
 import { MONDAY_GIRLS_SEASON_PRICE_ENV_VAR } from "@/data/monday-girls-season-2026";
+import {
+  MONDAY_GIRLS_MIN_SESSIONS_SOLD,
+  mondayGirlsSellableOn,
+} from "@/lib/monday-girls-proration";
 
 /**
  * Whether /monday-girls offers registration — the block's ONE gate, shared by
@@ -29,10 +33,18 @@ import { MONDAY_GIRLS_SEASON_PRICE_ENV_VAR } from "@/data/monday-girls-season-20
  *     operator setting this env var is trying to STOP sales, so "false", "no",
  *     "0" and a typo all fail closed rather than open.
  *
- *  3. SEASON STARTED — registration closes after the block's FIRST session.
- *     This block is a 6-session prepaid product: selling the full $225 in week
- *     four would charge a family for three sessions nobody delivered. A late
- *     joiner is a prorated conversation with Coach Sam, not a checkout.
+ *  3. TOO FEW SESSIONS — registration closes once fewer than
+ *     MONDAY_GIRLS_MIN_SESSIONS_SOLD sessions remain.
+ *
+ *     This leg used to be SEASON STARTED: the form shut the day after session
+ *     one, because selling a 6-session prepaid block at full price in week four
+ *     would charge a family for three sessions nobody delivered. Sam reopened
+ *     the season on 2026-09-14 with prorated pricing, so the unfairness is now
+ *     answered by the PRICE (monday-girls-proration.ts) rather than by a locked
+ *     door, and the calendar only closes the block at its floor — below three
+ *     sessions this is drop-in pricing for a peer block, and NGA sells drop-ins
+ *     already. A late joiner below the floor is still a conversation with Coach
+ *     Sam; above it, it is a checkout.
  *
  * Pure and injected (no `new Date()`, no `process.env` here) so specs pin the
  * boundaries instead of the clock and the environment. ISO date-only strings
@@ -45,10 +57,16 @@ export const MONDAY_GIRLS_REGISTRATION_FLAG_ENV =
 export const MONDAY_GIRLS_ROSTER_DB_ENV_VAR = "NOTION_MONDAY_GIRLS_REGS_DB_ID";
 
 /**
- * Last day the block is sold at full price — its FIRST session, derived never
- * typed.
+ * Last day the block is sold at all — the session on which exactly
+ * MONDAY_GIRLS_MIN_SESSIONS_SOLD remain. DERIVED, never typed: re-date the
+ * block or move the floor and this follows. (A hand-typed date is how the fall
+ * season's copy drifted from its own config.)
+ *
+ * Note this is the last day the block is SOLD, not the last day it is sold at
+ * FULL price — every day after the first session is prorated.
  */
-export const MONDAY_GIRLS_REGISTRATION_CLOSES: string = MONDAY_GIRLS_MONDAYS[0];
+export const MONDAY_GIRLS_REGISTRATION_CLOSES: string =
+  MONDAY_GIRLS_MONDAYS[MONDAY_GIRLS_MONDAYS.length - MONDAY_GIRLS_MIN_SESSIONS_SOLD];
 
 /**
  * `not_configured` is the ships-dark state and is deliberately indistinguishable
@@ -58,7 +76,7 @@ export type MondayGirlsRegistrationState =
   | "open"
   | "not_configured"
   | "closed_by_flag"
-  | "season_started";
+  | "too_few_sessions";
 
 export interface MondayGirlsRegistrationGate {
   todayIso: string;
@@ -78,7 +96,7 @@ export function mondayGirlsRegistrationState({
   if (!priceConfigured || !rosterConfigured) return "not_configured";
   const value = (flag ?? "").trim().toLowerCase();
   if (value !== "" && value !== "true") return "closed_by_flag";
-  if (todayIso > MONDAY_GIRLS_REGISTRATION_CLOSES) return "season_started";
+  if (!mondayGirlsSellableOn(todayIso)) return "too_few_sessions";
   return "open";
 }
 
