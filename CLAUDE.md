@@ -526,6 +526,33 @@ Monday *and its reason* rather than shipping different dates silently.
   `false` made the page tell a pre-launch visitor the block was already "under way".
   Pinned by `e2e/monday-girls-registration-window.spec.ts` + the ships-dark cases in the
   egress spec.
+- **The roster is visible at `/admin/monday-girls` (2026-09-15).** Every other season had
+  an operator view — `/coach/fall-season` reads the Walter Johnson roster, `/coach/camps/*`
+  the camp rosters — and this block had none, because it was hand-recruited to four
+  families and Sam *was* the roster; Notion was the only place to look. Mid-season joining
+  reopened registration for six weeks, which turned that into a gap. The page shows
+  registered-vs-capacity, collected, sessions remaining, the price a family joining TODAY
+  would pay, and a row per registration (Confirmed and Refunded alike).
+  - **The projection NARROWS, following `admin-camp-roster.ts` exactly**
+    (`src/lib/admin-monday-girls-roster.ts`): it drops allergies and the emergency
+    contact. The admin side manages registrations and money; day-of safety belongs on a
+    coach surface. A day-of view with those fields is a separate change under its own
+    approval — never a widening of this one.
+  - **`fetchMondayGirlsRoster` is a SEPARATE read from
+    `fetchMondayGirlsRegistrationKeys`, with the opposite failure posture.** The keys
+    fetch fails OPEN (`[]`) because it gates checkout and a Notion blip must not block a
+    sale. An admin roster inherits the opposite duty: an empty table that really means
+    "Notion is unreachable" would tell an operator nobody registered. So the roster read
+    returns a discriminated `ok | config_missing | query_failed` and the page renders the
+    failure in red, distinct from a genuinely empty roster. **Never collapse these two
+    into one helper.**
+  - **Read-only**, because there is no cancel route (next bullet): refund in the Stripe
+    Dashboard and `charge.refunded` reconciles the row. `sessionsPurchased` is derived
+    per row from its creation date, so a $150 four-session join reads correctly beside a
+    $225 block. Pinned by `e2e/invariant-admin-monday-girls-roster.spec.ts`
+    (mutation-checked: leaking allergies, failing open, and hardcoding the session count
+    each turn it red). The `(authed)` admin layout gained a nav now that it has more
+    than one page.
 - **There is no `/api/cancel-monday-girls-registration` route** (fall and Pickl Park both
   have one). `cancelMondayGirlsRegistration()` exists and is tested but is currently
   unreachable, so an NGA-side prorated cancellation is computed by hand from
@@ -799,7 +826,7 @@ Tests OBSERVE these files; they never modify them. Any change here goes through 
 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
 - **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 8 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
-- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the admin roster page `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
 

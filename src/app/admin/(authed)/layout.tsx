@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ADMIN_SESSION_COOKIE, verifyAdminSessionEmail } from "@/lib/admin-auth";
@@ -46,6 +47,22 @@ export default async function AdminAuthedLayout({
           </div>
         </div>
       </header>
+      <nav className="border-b border-ngpa-slate/30 bg-ngpa-panel/25">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 flex gap-1 overflow-x-auto">
+          {[
+            { href: "/admin/sessions", label: "Sessions & camps" },
+            { href: "/admin/monday-girls", label: "Monday Girls" },
+          ].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="px-3 py-3 font-heading text-xs font-bold text-ngpa-white/70 hover:text-ngpa-teal whitespace-nowrap min-h-[44px] flex items-center"
+            >
+              {l.label}
+            </Link>
+          ))}
+        </div>
+      </nav>
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-12">{children}</main>
     </div>
   );
