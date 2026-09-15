@@ -9,6 +9,7 @@ import {
   type FallSeasonGroup,
 } from "@/data/fall-season-2026";
 import { fetchFallRoster } from "@/lib/notion-fall-registrations";
+import { requireAdmin } from "@/lib/require-admin";
 import {
   buildFallGroupMailto,
   countConfirmedByGroup,
@@ -44,6 +45,13 @@ function statusPill(status: string): string {
 }
 
 export default async function AdminFallPage() {
+  // Gate FIRST, before any read. The (authed) layout alone is not enough: a
+  // layout and its page render concurrently, so a layout-only redirect still
+  // let /admin/monday-girls fetch its roster and ship it inside the 307's body
+  // (2026-09-15, a live leak). This page server-renders child PII too. See
+  // src/lib/require-admin.ts.
+  await requireAdmin();
+
   const result = await fetchFallRoster();
   const players = result.status === "ok" ? result.rows.map(toAdminFallPlayer) : [];
 

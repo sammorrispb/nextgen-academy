@@ -336,6 +336,27 @@ test.describe("admin fall page is behind the admin gate", () => {
     expect(src).toContain('export const dynamic = "force-dynamic"');
   });
 
+  test("verifies the admin session BEFORE it reads the roster", () => {
+    // Carried over from the live leak PR #338 found on /admin/monday-girls the
+    // same day this page was written: an unauthenticated GET returned
+    // 307 -> /admin/login whose RESPONSE BODY held the whole roster, because a
+    // layout and its page render CONCURRENTLY in the App Router — the layout's
+    // redirect set the status while the page had already hit Notion and
+    // rendered the table. A page that server-renders child PII must gate
+    // itself, ahead of the fetch, so an unauthenticated request has nothing to
+    // serialize. This page renders first names and birth years, so it is in
+    // exactly that class.
+    const src = fs.readFileSync(pagePath, "utf8");
+    const gate = src.indexOf("requireAdmin(");
+    const read = src.indexOf("fetchFallRoster(");
+    expect(gate, "page must call requireAdmin()").toBeGreaterThan(-1);
+    expect(read, "page must read the roster").toBeGreaterThan(-1);
+    expect(
+      gate,
+      "requireAdmin() must be awaited BEFORE the Notion read",
+    ).toBeLessThan(read);
+  });
+
   test("renders the roster through the narrowing projection, not the raw row", () => {
     const src = fs.readFileSync(pagePath, "utf8");
     expect(src).toContain("toAdminFallPlayer");
