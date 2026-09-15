@@ -1,22 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { ADMIN_SESSION_COOKIE, verifyAdminSessionEmail } from "@/lib/admin-auth";
-import { isAllowedAdminEmail } from "@/lib/admin-allowlist";
+import { requireAdmin } from "@/lib/require-admin";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
-
-async function requireAdmin(): Promise<string> {
-  const c = await cookies();
-  const email = verifyAdminSessionEmail(c.get(ADMIN_SESSION_COOKIE)?.value);
-  if (!email || !isAllowedAdminEmail(email)) {
-    redirect("/admin/login");
-  }
-  return email;
-}
 
 export default async function AdminAuthedLayout({
   children,

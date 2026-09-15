@@ -247,4 +247,31 @@ test.describe("admin Monday Girls page is behind the admin gate", () => {
     const src = fs.readFileSync(pagePath, "utf8");
     expect(src).toContain('export const dynamic = "force-dynamic"');
   });
+
+  test("verifies the admin session BEFORE it reads the roster", () => {
+    // THE REGRESSION THIS PINS, found live on 2026-09-15 and reproducible:
+    // an unauthenticated GET of /admin/monday-girls returned 307 -> /admin/login
+    // whose RESPONSE BODY carried the whole roster — three parent emails and two
+    // children's first names.
+    //
+    // The route group's layout is not enough on its own. In the App Router a
+    // layout and its page render CONCURRENTLY, so `redirect()` thrown in the
+    // layout sets the status while the page has already run: it hit Notion,
+    // rendered the table, and Next serialized that output into the redirect's
+    // payload. The gate has to sit in the page, ahead of the fetch, so an
+    // unauthenticated request has no roster to serialize in the first place.
+    //
+    // The sibling gated pages never had this because none of them server-render
+    // PII — /admin/sessions defers campers to an authed API route fetched on
+    // click. A page that renders child PII directly must gate itself.
+    const src = fs.readFileSync(pagePath, "utf8");
+    const gate = src.indexOf("requireAdmin(");
+    const read = src.indexOf("fetchMondayGirlsRoster(");
+    expect(gate, "page must call requireAdmin()").toBeGreaterThan(-1);
+    expect(read, "page must read the roster").toBeGreaterThan(-1);
+    expect(
+      gate,
+      "requireAdmin() must be awaited BEFORE the Notion read",
+    ).toBeLessThan(read);
+  });
 });
