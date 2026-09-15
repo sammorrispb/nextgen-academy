@@ -22,6 +22,7 @@ import {
   mondayGirlsRemainingMondays,
 } from "@/lib/monday-girls-proration";
 import { MONDAY_GIRLS_SEASON_PRICE_USD } from "@/data/monday-girls-season-2026";
+import { requireAdmin } from "@/lib/require-admin";
 
 // The Monday Girls block roster. Every other season had an operator view and
 // this one didn't — it was hand-recruited to four families, so Sam WAS the
@@ -50,6 +51,12 @@ function statusPill(status: string): string {
 }
 
 export default async function AdminMondayGirlsPage() {
+  // Gate FIRST, before any read. The (authed) layout alone is not enough: a
+  // layout and its page render concurrently, so a layout-only redirect still
+  // let this page fetch the roster and ship it inside the 307's body. See
+  // src/lib/require-admin.ts.
+  await requireAdmin();
+
   const result = await fetchMondayGirlsRoster();
   const today = mondayGirlsTodayET();
   const capacity = mondayGirlsSlotsFor(MONDAY_GIRLS_GROUP);
