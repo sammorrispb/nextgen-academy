@@ -39,6 +39,7 @@ export default async function AdminAuthedLayout({
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 flex gap-1 overflow-x-auto">
           {[
             { href: "/admin/sessions", label: "Sessions & camps" },
+            { href: "/admin/fall", label: "Fall season" },
             { href: "/admin/monday-girls", label: "Monday Girls" },
           ].map((l) => (
             <Link

@@ -408,6 +408,30 @@ a family nearly being told the wrong product under that name, so parent-facing c
   lock/unlock teams, score a bracket game); every input is re-validated there (group,
   week, ids ⊂ Confirmed roster, scores to-11-win-by-2 with an "ended on time" override
   that still refuses ties).
+- **The registration roster is at `/admin/fall` (2026-09-15).** The coach season-play pages
+  read the same registrations narrowed to an id and a first name, because they run the
+  Sundays; this is the money-and-registrations view, mirroring `/admin/monday-girls`.
+  Registered-vs-capacity **per group** (Green 8 / Yellow 10 via `fallSeasonSlotsFor` — a
+  single shared "N of M" is the bug `invariant-fall-seat-cap-per-group.spec.ts` exists
+  for), seats left, collected, a bcc-only "Email these families" link per group
+  (Confirmed only — a refunded family is not mailed about a season they left), and a row
+  per registration including Refunded. A row whose `Group` select is blank or typo'd
+  renders in its own "Not in a group" section rather than vanishing from the one place
+  seats are counted.
+  - **`fetchFallRoster` is a THIRD reader of the Fall Regs DB and the postures must stay
+    apart.** `fetchFallRegistrationKeys` fails OPEN (`[]`) because it gates checkout;
+    `fetchFallRosterForLeague` is narrowed to id + first name; this one fails LOUD
+    (`ok | config_missing | query_failed`), because an empty table that really means
+    "Notion is unreachable" would tell an operator nobody registered. **Never collapse
+    any pair of them.**
+  - **The projection narrows** (`src/lib/admin-fall-roster.ts`), dropping allergies, the
+    emergency contact and the stored SMS consent text — day-of safety belongs on a coach
+    surface, under its own approval. **Read-only**: a refund stays a deliberate act
+    through `/api/cancel-fall-registration` or the Stripe Dashboard, and
+    `charge.refunded` reconciles the row. Pinned by
+    `e2e/invariant-admin-fall-roster.spec.ts` (mutation-checked: leaking allergies,
+    counting seats across groups, mailing refunded families, and failing open each turn
+    it red).
 - Pinned by `e2e/season-league-{rotation,standings,finals,notion}.spec.ts`,
   `e2e/standings-link-token.spec.ts`, `e2e/invariant-season-league-egress.spec.ts`
   (Notion-only host, write bodies carry ids + scores and never a name or parent field,
@@ -826,7 +850,8 @@ Tests OBSERVE these files; they never modify them. Any change here goes through 
 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
 - **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 8 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
-- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the admin roster page `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the admin roster pages `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts` and
+  `admin/(authed)/fall` + `src/lib/admin-fall-roster.ts`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
 
