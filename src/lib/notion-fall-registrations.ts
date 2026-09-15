@@ -389,3 +389,125 @@ export async function fetchFallRosterForLeague(group: string): Promise<FallRoste
   }
   return { players: players.filter((p) => p.pageId), status: "ok" };
 }
+
+// ---------------------------------------------------------------------------
+// Admin roster read (2026-09-15)
+// ---------------------------------------------------------------------------
+
+/**
+ * A full roster row for /admin/fall.
+ *
+ * This is the WIDE read — it carries the safety fields the Notion row holds so
+ * the parse stays faithful to the schema; `admin-fall-roster.ts` is what
+ * narrows them away before anything reaches the page.
+ */
+export interface FallRosterRow {
+  pageId: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  childFirstName: string;
+  childBirthYear: number | null;
+  group: string;
+  status: string;
+  amountPaidUsd: number;
+  allergies: string;
+  emergencyName: string;
+  emergencyPhone: string;
+  smsConsent: boolean;
+  smsConsentText: string;
+  stripeCheckoutSessionId: string;
+  /** Notion `created_time` sliced to `YYYY-MM-DD` — the day they registered. */
+  registeredOnIso: string;
+}
+
+export type FallRosterReadResult =
+  | { status: "ok"; rows: FallRosterRow[] }
+  | { status: "config_missing" }
+  | { status: "query_failed"; message: string };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toRosterRow(page: any): FallRosterRow {
+  const p = page.properties ?? {};
+  return {
+    pageId: page.id ?? "",
+    parentName: p["Parent Name"]?.title?.[0]?.plain_text ?? "",
+    parentEmail: p["Parent Email"]?.email ?? "",
+    parentPhone: p["Parent Phone"]?.phone_number ?? "",
+    childFirstName: p["Child First Name"]?.rich_text?.[0]?.plain_text ?? "",
+    childBirthYear: p["Child Birth Year"]?.number ?? null,
+    group: p["Group"]?.select?.name ?? "",
+    status: p["Status"]?.select?.name ?? "",
+    amountPaidUsd: p["Amount Paid"]?.number ?? 0,
+    allergies: p["Allergies"]?.rich_text?.[0]?.plain_text ?? "",
+    emergencyName: p["Emergency Name"]?.rich_text?.[0]?.plain_text ?? "",
+    emergencyPhone: p["Emergency Phone"]?.phone_number ?? "",
+    smsConsent: p["SMS Consent"]?.checkbox === true,
+    smsConsentText: p["SMS Consent Text"]?.rich_text?.[0]?.plain_text ?? "",
+    stripeCheckoutSessionId:
+      p["Stripe Checkout Session ID"]?.rich_text?.[0]?.plain_text ?? "",
+    // Slice, never Date-parse — keeps this timezone-stable on a UTC server.
+    registeredOnIso:
+      typeof page.created_time === "string" ? page.created_time.slice(0, 10) : "",
+  };
+}
+
+/**
+ * The whole season roster, both groups, every status — for /admin/fall.
+ *
+ * THREE readers now touch this DB and they must stay apart:
+ *  - `fetchFallRegistrationKeys` fails OPEN (`[]`) because it gates checkout;
+ *    a Notion blip must never block a sale.
+ *  - `fetchFallRosterForLeague` is narrowed to an id + a first name, because
+ *    the league renders names and nothing else.
+ *  - this one fails LOUD, because an empty table that really means "Notion is
+ *    unreachable" would tell an operator nobody registered.
+ * Collapsing any pair of them re-introduces one of those bugs.
+ *
+ * No server-side filter on purpose: Notion 400s a filter naming a property the
+ * DB lacks, which would turn one missing column into a total read failure.
+ * Grouping happens in the projection instead.
+ */
+export async function fetchFallRoster(): Promise<FallRosterReadResult> {
+  const env = notionEnv();
+  if (!env) return { status: "config_missing" };
+
+  const rows: FallRosterRow[] = [];
+  let cursor: string | undefined;
+  try {
+    for (let page = 0; page < ROSTER_MAX_PAGES; page += 1) {
+      const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
+        method: "POST",
+        headers: headers(env.notionKey),
+        body: JSON.stringify({
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {}),
+        }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const message = `Notion returned ${res.status}`;
+        console.error(`[notion-fall-registrations] admin roster query failed ${res.status}`);
+        return { status: "query_failed", message };
+      }
+      const data = (await res.json()) as {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        results?: any[];
+        has_more?: boolean;
+        next_cursor?: string | null;
+      };
+      for (const pageRow of data.results ?? []) rows.push(toRosterRow(pageRow));
+      if (!data.has_more || !data.next_cursor) break;
+      cursor = data.next_cursor;
+    }
+  } catch (err) {
+    console.error("[notion-fall-registrations] admin roster query threw", err);
+    return {
+      status: "query_failed",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  rows.sort((a, b) => a.registeredOnIso.localeCompare(b.registeredOnIso));
+  return { status: "ok", rows };
+}
