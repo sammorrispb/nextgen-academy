@@ -322,3 +322,97 @@ export async function countMondayGirlsRegistrations(
     return null;
   }
 }
+
+/**
+ * The full roster, for the admin view at /admin/monday-girls.
+ *
+ * DELIBERATELY SEPARATE from fetchMondayGirlsRegistrationKeys, which fails OPEN
+ * (returns []) on any Notion problem because it gates checkout and a blip must
+ * not block a sale. An admin roster inherits the opposite duty: an empty table
+ * that really means "Notion is unreachable" would tell Sam nobody registered.
+ * So this read reports a discriminated status and the page renders the failure.
+ *
+ * Reads every row, Confirmed and Refunded alike — a refunded family is part of
+ * what an operator needs to see. Narrowing for the page happens in
+ * admin-monday-girls-roster.ts, not here.
+ */
+export interface MondayGirlsRosterRow {
+  pageId: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  childFirstName: string;
+  childBirthYear: number | null;
+  group: string;
+  status: string;
+  amountPaidUsd: number;
+  allergies: string;
+  emergencyName: string;
+  emergencyPhone: string;
+  smsConsent: boolean;
+  stripeCheckoutSessionId: string;
+  /** Notion `created_time` sliced to `YYYY-MM-DD` — the day they registered. */
+  registeredOnIso: string;
+}
+
+export type MondayGirlsRosterResult =
+  | { status: "ok"; rows: MondayGirlsRosterRow[] }
+  | { status: "config_missing" }
+  | { status: "query_failed"; message: string };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toRosterRow(page: any): MondayGirlsRosterRow {
+  const p = page.properties ?? {};
+  return {
+    pageId: page.id ?? "",
+    parentName: p["Parent Name"]?.title?.[0]?.plain_text ?? "",
+    parentEmail: p["Parent Email"]?.email ?? "",
+    parentPhone: p["Parent Phone"]?.phone_number ?? "",
+    childFirstName: p["Child First Name"]?.rich_text?.[0]?.plain_text ?? "",
+    childBirthYear: p["Child Birth Year"]?.number ?? null,
+    group: p["Group"]?.select?.name ?? "",
+    status: p["Status"]?.select?.name ?? "",
+    amountPaidUsd: p["Amount Paid"]?.number ?? 0,
+    allergies: p["Allergies"]?.rich_text?.[0]?.plain_text ?? "",
+    emergencyName: p["Emergency Name"]?.rich_text?.[0]?.plain_text ?? "",
+    emergencyPhone: p["Emergency Phone"]?.phone_number ?? "",
+    smsConsent: p["SMS Consent"]?.checkbox === true,
+    stripeCheckoutSessionId:
+      p["Stripe Checkout Session ID"]?.rich_text?.[0]?.plain_text ?? "",
+    // Slice, never Date-parse — keeps this timezone-stable on a UTC server.
+    registeredOnIso:
+      typeof page.created_time === "string" ? page.created_time.slice(0, 10) : "",
+  };
+}
+
+export async function fetchMondayGirlsRoster(): Promise<MondayGirlsRosterResult> {
+  const env = notionEnv();
+  if (!env) return { status: "config_missing" };
+
+  try {
+    const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
+      method: "POST",
+      headers: headers(env.notionKey),
+      // No server-side filter: Notion 400s a filter naming a property the DB
+      // lacks, which would turn a missing column into a total read failure.
+      body: JSON.stringify({ page_size: 100 }),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const message = `Notion returned ${res.status}`;
+      console.error(`[notion-monday-girls-registrations] roster query failed ${res.status}`);
+      return { status: "query_failed", message };
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data = (await res.json()) as { results: any[] };
+    const rows = (data.results ?? []).map(toRosterRow);
+    rows.sort((a, b) => a.registeredOnIso.localeCompare(b.registeredOnIso));
+    return { status: "ok", rows };
+  } catch (err) {
+    console.error("[notion-monday-girls-registrations] roster query threw", err);
+    return {
+      status: "query_failed",
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
