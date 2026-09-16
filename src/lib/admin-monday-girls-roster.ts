@@ -61,3 +61,19 @@ export function toAdminMondayGirlsPlayer(
 export function countConfirmed(players: AdminMondayGirlsPlayer[]): number {
   return players.filter((p) => p.status === "Confirmed").length;
 }
+
+/**
+ * Split the admin roster: registrations (Confirmed / Refunded / Cancelled, the
+ * rows that ever held or paid for a seat) vs maybes (families Sam is still
+ * talking to). Dismissed maybes are dropped from both. Split BEFORE any count,
+ * money total or empty-state check, so a maybe can never read as a $0 seat.
+ */
+export function splitMondayGirlsRoster(players: AdminMondayGirlsPlayer[]): {
+  registrations: AdminMondayGirlsPlayer[];
+  maybes: AdminMondayGirlsPlayer[];
+} {
+  return {
+    registrations: players.filter((p) => p.status !== "Maybe" && p.status !== "Dismissed"),
+    maybes: players.filter((p) => p.status === "Maybe"),
+  };
+}

@@ -10,8 +10,11 @@ import { MONDAY_GIRLS_SEASON_GROUP } from "@/data/monday-girls-season-2026";
 import { fetchMondayGirlsRoster } from "@/lib/notion-monday-girls-registrations";
 import {
   countConfirmed,
+  splitMondayGirlsRoster,
   toAdminMondayGirlsPlayer,
 } from "@/lib/admin-monday-girls-roster";
+import RemovePlayerControl from "./RemovePlayerControl";
+import MaybesPanel from "./MaybesPanel";
 import {
   mondayGirlsRegistrationStateNow,
   mondayGirlsTodayET,
@@ -29,9 +32,11 @@ import { requireAdmin } from "@/lib/require-admin";
 // roster. Mid-season joining (2026-09-14) reopened registration for six weeks,
 // which is what turned that into a gap worth closing.
 //
-// Read-only by design: there is no /api/cancel-monday-girls-registration route
-// (see CLAUDE.md), so an NGA-side cancellation is still a deliberate act in the
-// Stripe Dashboard. This page shows; it does not move money.
+// Records, never refunds (2026-09-16): a row can be marked Refunded (after a
+// Stripe Dashboard refund, verified against Stripe) or Cancelled, and a "maybe"
+// list sits beside the roster. Money still only moves in the Stripe Dashboard.
+// The page stays a SERVER component so requireAdmin runs before the read; the
+// writes live in the client children.
 export const dynamic = "force-dynamic";
 
 function prettyDate(iso: string): string {
@@ -65,8 +70,9 @@ export default async function AdminMondayGirlsPage() {
   const prorated = mondayGirlsIsProratedOn(today);
   const joinPrice = mondayGirlsJoinPriceUsd(today, MONDAY_GIRLS_SEASON_PRICE_USD);
 
-  const players =
-    result.status === "ok" ? result.rows.map(toAdminMondayGirlsPlayer) : [];
+  const { registrations: players, maybes } = splitMondayGirlsRoster(
+    result.status === "ok" ? result.rows.map(toAdminMondayGirlsPlayer) : [],
+  );
   const confirmed = countConfirmed(players);
   const collected = players
     .filter((p) => p.status === "Confirmed")
@@ -165,9 +171,10 @@ export default async function AdminMondayGirlsPage() {
                   "Paid",
                   "Sessions",
                   "Registered",
-                ].map((h) => (
+                  "",
+                ].map((h, i) => (
                   <th
-                    key={h}
+                    key={h || `col-${i}`}
                     className="px-3 py-2.5 font-heading text-[10px] font-bold uppercase tracking-[0.1em] text-ngpa-white/50 whitespace-nowrap"
                   >
                     {h}
@@ -236,6 +243,13 @@ export default async function AdminMondayGirlsPage() {
                   <td className="px-3 py-3 font-mono tabular-nums text-ngpa-white/70 whitespace-nowrap">
                     {prettyDate(p.registeredOnIso)}
                   </td>
+                  <td className="px-3 py-2">
+                    <RemovePlayerControl
+                      pageId={p.pageId}
+                      childFirstName={p.childFirstName}
+                      status={p.status}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -243,13 +257,25 @@ export default async function AdminMondayGirlsPage() {
         </div>
       )}
 
-      <p className="text-ngpa-white/45 text-xs mt-5 leading-relaxed max-w-prose">
+      {result.status === "ok" && (
+        <MaybesPanel
+          maybes={maybes.map((m) => ({
+            pageId: m.pageId,
+            parentName: m.parentName,
+            parentEmail: m.parentEmail,
+            childFirstName: m.childFirstName,
+            addedOnIso: m.registeredOnIso,
+          }))}
+        />
+      )}
+
+      <p className="text-ngpa-white/45 text-xs mt-8 leading-relaxed max-w-prose">
         Allergies and emergency contacts are recorded on each registration but
         are deliberately not shown here — this page manages registrations and
         money, and day-of safety fields belong on a coach view, the same split
-        the camps roster uses. There is no cancel button because Monday Girls has
-        no cancel route yet: refund in the Stripe Dashboard and the webhook
-        reconciles this roster.{" "}
+        the camps roster uses. Remove records what happened and never moves
+        money: refund in the Stripe Dashboard first, then mark the player
+        refunded here.{" "}
         <Link
           href="/admin/sessions"
           className="text-ngpa-teal hover:text-ngpa-teal-bright underline"
