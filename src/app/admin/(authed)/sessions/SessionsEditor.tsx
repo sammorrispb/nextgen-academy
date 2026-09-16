@@ -9,6 +9,7 @@ import {
 } from "@/lib/notion-sessions-admin";
 import type { CancelReason } from "@/lib/email/session-cancelled";
 import { buildRosterMailto } from "@/lib/roster-mailto";
+import { isCancelledDay, partitionDays } from "@/lib/admin-sessions-view";
 
 const CANCEL_REASONS: { value: CancelReason; label: string }[] = [
   { value: "weather", label: "Weather" },
@@ -154,6 +155,8 @@ export default function SessionsEditor({
     const f = focusId ? initial.find((s) => s.id === focusId) : undefined;
     return f ? { [f.date]: true } : {};
   });
+
+  const [showCancelled, setShowCancelled] = useState(false);
 
   function setAct(id: string, patch: Partial<ActionPanel>) {
     setAction((m) => ({ ...m, [id]: { ...m[id], ...patch } }));
@@ -753,10 +756,26 @@ export default function SessionsEditor({
         );
   };
 
-  const groups = groupByDate(rows);
+  // Hide days that were fully cancelled when the page LOADED — not ones the
+  // operator cancels here, which would vanish before the confirmation shows.
+  const allGroups = groupByDate(rows);
+  const cancelledAtLoad = new Set(partitionDays(groupByDate(initial)).cancelled.map((g) => g.date));
+  const active = allGroups.filter((g) => !cancelledAtLoad.has(g.date));
+  const cancelledCount = allGroups.length - active.length;
+  // The focused row's day stays visible even when it's cancelled, so a
+  // ?focus= deep link still lands.
+  const focusedCancelled = focusId
+    ? allGroups.some((g) => cancelledAtLoad.has(g.date) && g.rows.some((r) => r.id === focusId))
+    : false;
+  const groups = showCancelled || focusedCancelled ? allGroups : active;
 
   return (
     <div className="space-y-3">
+      {active.length === 0 && !showCancelled && !focusedCancelled && (
+        <p className="rounded-xl border border-ngpa-slate/60 bg-ngpa-panel/40 p-4 text-sm text-ngpa-white/70">
+          Nothing on offer right now — every upcoming session is cancelled.
+        </p>
+      )}
       {groups.map(({ date, rows: dayRows }) => {
         const open = openDays[date] ?? false;
         const summary = levelSummary(dayRows);
@@ -777,6 +796,11 @@ export default function SessionsEditor({
               <span className="text-[11px] text-ngpa-white/45">
                 {dayRows.length} session{dayRows.length === 1 ? "" : "s"}
               </span>
+              {isCancelledDay(dayRows) && (
+                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${STATUS_COLOR.Cancelled}`}>
+                  Cancelled
+                </span>
+              )}
               <span className="flex flex-wrap items-center gap-2">
                 {summary.map((s) => (
                   <span
@@ -808,6 +832,16 @@ export default function SessionsEditor({
           </div>
         );
       })}
+      {cancelledCount > 0 && !focusedCancelled && (
+        <button
+          onClick={() => setShowCancelled((v) => !v)}
+          className="min-h-12 text-sm font-bold text-ngpa-white/60 hover:text-ngpa-white"
+        >
+          {showCancelled
+            ? "Hide cancelled days"
+            : `Show cancelled days (${cancelledCount})`}
+        </button>
+      )}
     </div>
   );
 }
