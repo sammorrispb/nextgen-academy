@@ -390,22 +390,31 @@ export async function fetchMondayGirlsRoster(): Promise<MondayGirlsRosterResult>
   if (!env) return { status: "config_missing" };
 
   try {
-    const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
-      method: "POST",
-      headers: headers(env.notionKey),
-      // No server-side filter: Notion 400s a filter naming a property the DB
-      // lacks, which would turn a missing column into a total read failure.
-      body: JSON.stringify({ page_size: 100 }),
-      cache: "no-store",
-    });
-    if (!res.ok) {
-      const message = `Notion returned ${res.status}`;
-      console.error(`[notion-monday-girls-registrations] roster query failed ${res.status}`);
-      return { status: "query_failed", message };
-    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (await res.json()) as { results: any[] };
-    const rows = (data.results ?? []).map(toRosterRow);
+    const results: any[] = [];
+    let cursor: string | undefined;
+    // Follow has_more: maybes and dismissed rows share this DB, so a read that
+    // stopped at Notion's 100-row page would drop registrations silently.
+    do {
+      const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
+        method: "POST",
+        headers: headers(env.notionKey),
+        // No server-side filter: Notion 400s a filter naming a property the DB
+        // lacks, which would turn a missing column into a total read failure.
+        body: JSON.stringify({ page_size: 100, ...(cursor ? { start_cursor: cursor } : {}) }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const message = `Notion returned ${res.status}`;
+        console.error(`[notion-monday-girls-registrations] roster query failed ${res.status}`);
+        return { status: "query_failed", message };
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data = (await res.json()) as { results: any[]; has_more?: boolean; next_cursor?: string };
+      results.push(...(data.results ?? []));
+      cursor = data.has_more && data.next_cursor ? data.next_cursor : undefined;
+    } while (cursor);
+    const rows = results.map(toRosterRow);
     rows.sort((a, b) => a.registeredOnIso.localeCompare(b.registeredOnIso));
     return { status: "ok", rows };
   } catch (err) {
@@ -414,5 +423,139 @@ export async function fetchMondayGirlsRoster(): Promise<MondayGirlsRosterResult>
       status: "query_failed",
       message: err instanceof Error ? err.message : String(err),
     };
+  }
+}
+
+/* ---------- admin writes (/admin/monday-girls) ------------------------------ */
+
+/** Notion ids arrive dashed from the API and undashed from env — compare bare. */
+function sameNotionId(a: string, b: string): boolean {
+  const norm = (v: string) => v.replace(/-/g, "").toLowerCase();
+  return norm(a) === norm(b);
+}
+
+export interface MondayGirlsAdminPage {
+  pageId: string;
+  parentName: string;
+  parentEmail: string;
+  childFirstName: string;
+  group: string;
+  status: string;
+  amountPaidUsd: number;
+  stripePaymentIntentId: string;
+  registeredOnIso: string;
+}
+
+export type MondayGirlsPageResult =
+  | { status: "ok"; page: MondayGirlsAdminPage }
+  | { status: "config_missing" | "not_found" | "wrong_database" }
+  | { status: "query_failed"; message: string };
+
+/**
+ * Read one page for an admin write, and PROVE it belongs to this database first.
+ * The "Player DB" integration can see every NGA database, so a raw page id alone
+ * could otherwise re-label a row in the drop-ins or Player CRM DB.
+ *
+ * Discriminated, never null: "not on file", "Notion is down" and "not
+ * configured" are different things to tell an operator.
+ */
+export async function getMondayGirlsPage(pageId: string): Promise<MondayGirlsPageResult> {
+  const env = notionEnv();
+  if (!env) return { status: "config_missing" };
+  try {
+    const res = await fetch(`${NOTION_API}/pages/${encodeURIComponent(pageId)}`, {
+      headers: headers(env.notionKey),
+      cache: "no-store",
+    });
+    if (res.status === 404) return { status: "not_found" };
+    if (!res.ok) return { status: "query_failed", message: `Notion returned ${res.status}` };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const page = (await res.json()) as any;
+    const parentDb: string = page?.parent?.database_id ?? "";
+    if (!parentDb || !sameNotionId(parentDb, env.dbId)) return { status: "wrong_database" };
+    const p = page.properties ?? {};
+    return {
+      status: "ok",
+      page: {
+        pageId: page.id ?? pageId,
+        parentName: p["Parent Name"]?.title?.[0]?.plain_text ?? "",
+        parentEmail: p["Parent Email"]?.email ?? "",
+        childFirstName: p["Child First Name"]?.rich_text?.[0]?.plain_text ?? "",
+        group: p["Group"]?.select?.name ?? "",
+        status: p["Status"]?.select?.name ?? "",
+        amountPaidUsd: p["Amount Paid"]?.number ?? 0,
+        stripePaymentIntentId: p["Stripe Payment Intent ID"]?.rich_text?.[0]?.plain_text ?? "",
+        registeredOnIso:
+          typeof page.created_time === "string" ? page.created_time.slice(0, 10) : "",
+      },
+    };
+  } catch (err) {
+    return { status: "query_failed", message: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/** Write a Status on a page already verified by getMondayGirlsPage. Never throws. */
+export async function setMondayGirlsPageStatus(
+  pageId: string,
+  status: "Refunded" | "Cancelled" | "Dismissed",
+): Promise<boolean> {
+  const env = notionEnv();
+  if (!env) return false;
+  try {
+    const res = await fetch(`${NOTION_API}/pages/${encodeURIComponent(pageId)}`, {
+      method: "PATCH",
+      headers: headers(env.notionKey),
+      body: JSON.stringify({ properties: { Status: { select: { name: status } } } }),
+    });
+    if (!res.ok) {
+      console.error(`[notion-monday-girls-registrations] admin status write failed ${res.status}`);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[notion-monday-girls-registrations] admin status write threw", err);
+    return false;
+  }
+}
+
+export interface MondayGirlsMaybeRow {
+  parentName: string;
+  childFirstName: string;
+  parentEmail: string;
+  group: string;
+}
+
+/**
+ * A "maybe": a family Sam is talking to who hasn't registered. Deliberately the
+ * minimum — parent name, child first name, optional email, group — with no
+ * birth year, safety fields or Stripe ids, and Status "Maybe", which no
+ * capacity, duplicate or webhook reader counts. Property keys are written from
+ * an explicit list, so nothing a caller adds can reach Notion.
+ */
+export async function createMondayGirlsMaybe(
+  row: MondayGirlsMaybeRow,
+): Promise<{ ok: true; pageId: string } | { ok: false; message: string }> {
+  const env = notionEnv();
+  if (!env) return { ok: false, message: "Roster database isn't configured" };
+  try {
+    const res = await fetch(`${NOTION_API}/pages`, {
+      method: "POST",
+      headers: headers(env.notionKey),
+      body: JSON.stringify({
+        parent: { database_id: env.dbId },
+        properties: {
+          "Parent Name": { title: [{ text: { content: row.parentName } }] },
+          "Child First Name": { rich_text: [{ text: { content: row.childFirstName } }] },
+          "Parent Email": { email: row.parentEmail || null },
+          Group: { select: { name: row.group } },
+          Status: { select: { name: "Maybe" } },
+        },
+      }),
+    });
+    if (!res.ok) return { ok: false, message: `Notion returned ${res.status}` };
+    const data = (await res.json()) as { id?: string };
+    return { ok: true, pageId: data.id ?? "" };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
   }
 }

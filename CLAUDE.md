@@ -570,19 +570,50 @@ Monday *and its reason* rather than shipping different dates silently.
     returns a discriminated `ok | config_missing | query_failed` and the page renders the
     failure in red, distinct from a genuinely empty roster. **Never collapse these two
     into one helper.**
-  - **Read-only**, because there is no cancel route (next bullet): refund in the Stripe
-    Dashboard and `charge.refunded` reconciles the row. `sessionsPurchased` is derived
-    per row from its creation date, so a $150 four-session join reads correctly beside a
-    $225 block. Pinned by `e2e/invariant-admin-monday-girls-roster.spec.ts`
-    (mutation-checked: leaking allergies, failing open, and hardcoding the session count
-    each turn it red). The `(authed)` admin layout gained a nav now that it has more
-    than one page.
-- **There is no `/api/cancel-monday-girls-registration` route** (fall and Pickl Park both
-  have one). `cancelMondayGirlsRegistration()` exists and is tested but is currently
-  unreachable, so an NGA-side prorated cancellation is computed by hand from
-  `monday-girls-refund-policy.ts` and refunded in the Stripe Dashboard — `charge.refunded`
-  still reconciles the roster row and emails the parent. Adding the route is a
-  Slop-Free-Zone change and needs its own approval.
+  - `sessionsPurchased` is derived per row from its creation date, so a $150
+    four-session join reads correctly beside a $225 block. Pinned by
+    `e2e/invariant-admin-monday-girls-roster.spec.ts` (mutation-checked: leaking
+    allergies, failing open, and hardcoding the session count each turn it red). The
+    `(authed)` admin layout gained a nav now that it has more than one page. The roster
+    read follows `has_more` (maybe rows share the DB, so a 100-row cap would drop rows
+    silently).
+  - **Remove records; it never refunds (2026-09-16, gauntlet-reviewed).** Each roster row
+    has a "Remove…" control → `POST /api/admin/monday-girls/remove` →
+    `removeMondayGirlsPlayer` (`src/lib/admin-monday-girls-actions.ts`). Two modes only:
+    `already_refunded` reads the Payment Intent's charge from Stripe and records
+    `Refunded` with **Stripe's** `amount_refunded` (a PARTIAL refund counts; nothing
+    refunded → refused, row untouched), and `none` records `Cancelled` with no Stripe
+    call. A Cancelled row can later move to Refunded; a Refunded row never becomes
+    Cancelled. Refunds themselves stay a deliberate act in the Stripe Dashboard —
+    admin-issued refunds were cut because they need idempotency keys, a flip/revert
+    protocol and a double-click story for one or two removals a season. The parent
+    cancellation email is **opt-in per removal** (checkbox, default off — Sam usually
+    told the family himself) and carries Stripe's amount, so a refunded family never gets
+    the "isn't refundable" copy.
+  - **"Maybes" live in the same DB as `Status = Maybe`** — families Sam is talking to
+    who haven't registered. `POST /api/admin/monday-girls/maybe` (`add` / `dismiss`).
+    Deliberately minimal: parent name, child first name, optional parent email, group —
+    no birth year, safety fields or Stripe ids, written from an explicit property list.
+    No capacity, duplicate, count or webhook reader matches a Maybe (they filter
+    `Confirmed` or key on Stripe ids), and the page splits maybes out before any count,
+    total or empty state. Dismiss → `Dismissed`, **never `Cancelled`** (that means a
+    family withdrew). This is a second writer of a child first name into a sanctioned
+    destination — Notion only, no email, no Open Brain — approved by Sam 2026-09-16.
+  - **Both routes are admin COOKIE only** (`isAdminCookieRequest`, no Bearer
+    `SESSION_OPS_SECRET` path — no agent caller exists), take an exact body allowlist (a
+    typo is a 400, never a default — unlike the camps cancel route, which defaults to a
+    full refund), and every write first proves the page belongs to THIS database
+    (`getMondayGirlsPage` compares `parent.database_id`; the Notion integration can see
+    every NGA DB). Lookups are discriminated (`not_found` / `query_failed` /
+    `config_missing` / `wrong_database`). Pinned by
+    `e2e/invariant-admin-monday-girls-actions.spec.ts` (Stripe through an injectable
+    reader — the SDK escapes FetchStub; mutation-checked 7 of 7).
+- **The webhook partial-refund branch is quiet only for a row already `Refunded`**
+  (`cancelMondayGirlsByPaymentIntent`): a partial Dashboard refund recorded through
+  /admin/monday-girls must not page "STILL ENROLLED". A `Cancelled` row still alerts —
+  that is money moving on a withdrawn seat. `cancelMondayGirlsRegistration()` (the
+  refund-issuing engine) is still reachable from no route and has **no spec** — treat
+  any future caller as untested payments code.
 
 ### Enrichment Collective after-school clubs (`src/data/enrichment-collective.ts`)
 Fall 2026 "Coach Sam" clubs that **Enrichment Collective** runs in MCPS schools — Mon Greenwood (Brookeville) / Tue Candlewood (Derwood) / Wed DuFief ES (North Potomac) / Thu Belmont (Olney) / Fri Sherwood ES (Sandy Spring). Partner-run like MVF: EC owns registration and payment, carries the general liability insurance, and collects the waivers and media releases, so **the NGA waiver gate does not apply** and no NGA Stripe path is involved. Sam is a 1099 contractor to EC.
@@ -738,6 +769,8 @@ The cron's ONLY write to the drafts DB is `stampDraftsSentAt` — it stamps `Sen
 
 ### Drop-in cancel — per-row paths + auto-comms
 
+**Live-config caveat (found 2026-09-16):** the production NGA Stripe webhook endpoint (`we_1TU4rHBpXOfTC96149Oi7tHV`) subscribes to `checkout.session.completed` ONLY — `charge.refunded` is not delivered to this site, so every "the `charge.refunded` webhook reconciles the row" claim in this file is currently dormant for Dashboard refunds (in-app cancel paths flip their own rows). Enabling it is a Stripe account setting and Sam's call; after it's on, a full Dashboard refund emails the parent automatically.
+
 All four per-row cancel paths run through `cancelDropIn(checkoutSessionId, status)` in `src/lib/cancel-dropin.ts`:
 1. **Stripe `charge.refunded` webhook** (`/api/stripe/webhook`) — auto-fires when a refund posts in Stripe (whether from the coach-triggered broadcast, admin curl, or a Stripe Dashboard click).
 2. **Coach cancel / refund** (PR #62) — `cancelRegistrationAction` server action on `/coach/[slug]`. Offers no-refund cancel, full refund, or custom partial refund: it calls `stripe.refunds.create({ payment_intent, amount? })` (amount validated by `resolveRefundCents()` in `src/lib/refund-amount.ts`), then `cancelDropIn(id, "Refunded", refundedUsd)`. Flipping the row to Refunded + `Cancellation Notified` first makes the `charge.refunded` webhook this same refund fires a no-op — exactly one email, with the partial amount shown correctly.
@@ -848,9 +881,9 @@ NGA serves children ages 6–16; parents are the account holders and control eve
 ## Slop-Free Zones (no edits without separate explicit approval)
 Tests OBSERVE these files; they never modify them. Any change here goes through the IPAV loop (below) with its own approval:
 
-- **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
+- **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `api/admin/monday-girls/remove`, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cancel-monday-girls,admin-monday-girls-actions,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
 - **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 8 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
-- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the admin roster pages `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts` and
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the admin roster pages `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts` + `api/admin/monday-girls/maybe` and
   `admin/(authed)/fall` + `src/lib/admin-fall-roster.ts`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.

@@ -21,14 +21,23 @@ import { secretEquals } from "@/lib/secret-compare";
  */
 export function authorizeSessionOps(req: NextRequest): boolean {
   // Cookie (admin UI).
-  try {
-    const email = verifyAdminSessionEmail(req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
-    if (email && isAllowedAdminEmail(email)) return true;
-  } catch {
-    // malformed token / unset signing secret → fall through to Bearer
-  }
+  if (isAdminCookieRequest(req)) return true;
 
   // Bearer (agent / cron). secretEquals fails closed on an unset expected value.
   const expected = process.env.SESSION_OPS_SECRET;
   return secretEquals(req.headers.get("authorization"), expected ? `Bearer ${expected}` : undefined);
+}
+
+/**
+ * The admin UI cookie ALONE — no Bearer path. For admin writes that have no
+ * agent caller (the Monday Girls roster), so a leaked ops secret can't reach
+ * them. Fails closed on a malformed token or an unset signing secret.
+ */
+export function isAdminCookieRequest(req: NextRequest): boolean {
+  try {
+    const email = verifyAdminSessionEmail(req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
+    return Boolean(email && isAllowedAdminEmail(email));
+  } catch {
+    return false;
+  }
 }

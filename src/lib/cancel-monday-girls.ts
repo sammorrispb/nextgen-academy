@@ -134,8 +134,20 @@ async function issueRefund(
   }
 }
 
+/**
+ * The parent-facing cancellation email. Exported for the admin removal path,
+ * which passes the amount Stripe actually returned — never the row's price and
+ * never 0 when money moved, or a refunded family reads "isn't refundable".
+ */
+export async function sendMondayGirlsCancellationEmail(
+  row: Pick<MondayGirlsRegistrationLookup, "parentName" | "parentEmail" | "childFirstName" | "group">,
+  refundedUsd: number,
+): Promise<boolean> {
+  return sendCancellationEmail(row, refundedUsd);
+}
+
 async function sendCancellationEmail(
-  row: MondayGirlsRegistrationLookup,
+  row: Pick<MondayGirlsRegistrationLookup, "parentName" | "parentEmail" | "childFirstName" | "group">,
   refundedUsd: number,
 ): Promise<boolean> {
   if (!process.env.RESEND_API_KEY || !row.parentEmail) return false;
@@ -327,9 +339,24 @@ export async function cancelMondayGirlsByPaymentIntent(
     };
   }
 
+  // PARTIAL refund on a row an operator already recorded as Refunded (the
+  // /admin/monday-girls "already refunded" removal) → nothing to do and nobody
+  // to page. ONLY Refunded: a Cancelled row that gets money back later still
+  // alerts below, because that is money moving on a withdrawn seat.
+  if (!refund.fullyRefunded && row.status === "Refunded") {
+    return {
+      ok: true,
+      pageId: row.pageId,
+      status: "Refunded",
+      refundedUsd: 0,
+      idempotent: true,
+      emailSent: false,
+    };
+  }
+
   // PARTIAL refund → the family is still enrolled. Touch nothing, page Sam.
   if (!refund.fullyRefunded) {
-    const message = `Partial refund of $${refund.amountRefundedUsd.toFixed(2)} on Monday Girls registration for ${row.childFirstName} (${row.group}, ${row.parentEmail}). The roster row was left Confirmed — they are STILL ENROLLED and still hold a seat. If this was meant to cancel the registration, refund the rest in the Stripe Dashboard — the charge.refunded webhook then frees the seat and emails the parent. (There is no /api/cancel-monday-girls-registration route yet, unlike fall and Pickl Park, so an NGA-side prorated cancellation is currently computed by hand from monday-girls-refund-policy.ts.)`;
+    const message = `Partial refund of $${refund.amountRefundedUsd.toFixed(2)} on Monday Girls registration for ${row.childFirstName} (${row.group}, ${row.parentEmail}). The roster row was left Confirmed — they are STILL ENROLLED and still hold a seat. If this was meant to cancel the registration, refund the rest in the Stripe Dashboard — the charge.refunded webhook then frees the seat and emails the parent. (If the partial refund was meant as a withdrawal, record it at /admin/monday-girls with 'Already refunded in Stripe' - a prorated amount is still computed by hand from monday-girls-refund-policy.ts.)`;
     await alertAdmin(
       `[NGA] Partial refund on a Monday Girls registration — no action taken`,
       message,
