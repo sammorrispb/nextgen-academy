@@ -6,30 +6,40 @@
 // here touches NGA Stripe, and **the NGA waiver gate does not apply** — those
 // families never pass through an NGA checkout. Sam is a 1099 contractor to EC.
 //
-// NOT A PUBLIC SURFACE. These clubs are deliberately absent from
-// `GET /api/events/feed`, `/schedule`, the sitemap, and every page. Publishing a
-// precise recurring time and place where identified young children gather is the
-// same risk `camps.ts` mitigates by hiding `exactLocation` — applied one step
-// earlier, because here the venue IS an elementary school. The exclusion is
-// enforced by `e2e/invariant-events-feed-egress.spec.ts`, not by memory.
-// The only consumer is the Google Calendar mirror (`skills/calendar-sync.md`),
-// which reads this file directly and writes to Sam's PRIVATE calendar.
+// PUBLIC SCHEDULE, PRIVATE ADDRESS, NO ROSTER (Sam, 2026-09-19).
 //
-// UPDATE 2026-09-13 (Sam): that private calendar now carries the SCHOOL NAME
-// and STREET ADDRESS, not the town. Sam drives to these five buildings every
-// week and a town label is not an address. This splits what used to be one
-// rule into the two it was always doing:
+// This program used to be absent from every public surface. That rule was
+// written when the only thing we could have published was our OWN restatement
+// of a recurring time and place where identified young children gather —
+// the `camps.ts` `exactLocation` risk, one step earlier, because here the
+// venue IS an elementary school.
 //
-//   PUBLIC surfaces -> the EC program does not appear AT ALL. Unchanged, and
-//                      still enforced by the egress spec. This is the rule
-//                      that actually protects the children.
-//   Sam's PRIVATE   -> school name + `exactLocation`. A private calendar is
-//   calendar           not a publishing surface.
+// What changed is not our appetite for risk; it is the factual premise. The
+// partner ALREADY publishes a per-club registration page, openly and
+// unauthenticated, at `enrichmentcollective.com/register/<school>/<term>/
+// pickleball`. Linking it republishes nothing Enrichment Collective has not
+// already published itself, and a parent cannot enrol without reaching that
+// page regardless. So the boundary moves from "the program is invisible" to
+// the three fields it was always really about:
 //
-// So `town` is no longer 'the only field that leaves': `schoolName` and
-// `exactLocation` leave too, to exactly one private destination. Any NEW
-// consumer inherits the PUBLIC rule by default — opt into the private one
-// deliberately, never by copying a line from the calendar path.
+//   PUBLIC  -> weekday, `schoolName`, `town`, session dates, display times,
+//              and `registrationUrl`. Enough for a parent to register; all of
+//              it already public at the destination we link to.
+//   PRIVATE -> `exactLocation` (the street address) stays calendar-only, same
+//              class of data as `camps.ts` `exactLocation`. A school name is a
+//              searchable institution; a street address is a doorstep.
+//   NEVER   -> any roster. There is no child in this file and there must not
+//              be one: EC owns enrolment, so NGA never holds these names.
+//
+// The events feed is a SEPARATE decision and the answer there is still no
+// (Sam, 2026-09-19): `/api/events/feed` is machine-readable, unauthenticated
+// and mirrored onward, and a marketing page a parent reads is not the same
+// surface as a syndication endpoint. `e2e/invariant-events-feed-egress.spec.ts`
+// still enforces that, and now also pins `exactLocation` out of every public
+// render while allowing the school name through.
+//
+// Any NEW consumer inherits the PUBLIC set by default — opt into
+// `exactLocation` deliberately, never by copying a line from the calendar path.
 //
 // SCHEDULE CONFIRMED — Stef's Fall 2026 schedule PDF (updated revision,
 // 2026-08-13), which supersedes the July hold email in three ways: (1) session
@@ -122,6 +132,13 @@ export interface EcClub {
    * it must never reach a public surface. Null falls back to `town`.
    */
   exactLocation: string | null;
+  /**
+   * The partner's own public registration page for THIS club. Public-safe by
+   * construction: Enrichment Collective already publishes it at
+   * `enrichmentcollective.com/register/<school>/<term>/pickleball`, so linking
+   * it republishes nothing the partner has not.
+   */
+  registrationUrl: string;
   /** Display time, or null when the partner hasn't announced it. */
   startTime: string | null;
   endTime: string | null;
@@ -147,6 +164,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Monday",
     town: "Brookeville, MD",
     schoolName: "Greenwood ES",
+    registrationUrl:
+      "https://www.enrichmentcollective.com/register/greenwood/2026-sep/pickleball",
     exactLocation:
       "Greenwood Elementary School, 3336 Gold Mine Rd, Brookeville, MD 20833",
     startTime: "3:20 PM",
@@ -171,6 +190,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Tuesday",
     town: "Derwood, MD",
     schoolName: "Candlewood ES",
+    registrationUrl:
+      "https://www.enrichmentcollective.com/register/candlewood/2026-sep/pickleball",
     exactLocation:
       "Candlewood Elementary School, 7210 Osprey Dr, Rockville, MD 20855",
     startTime: "3:20 PM",
@@ -200,6 +221,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Wednesday",
     town: "North Potomac, MD",
     schoolName: "DuFief ES",
+    registrationUrl:
+      "https://www.enrichmentcollective.com/register/dufief/2026-sep/pickleball",
     exactLocation:
       "DuFief Elementary School, 15001 DuFief Dr, Gaithersburg, MD 20878",
     startTime: "3:20 PM",
@@ -225,6 +248,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Thursday",
     town: "Olney, MD",
     schoolName: "Belmont ES",
+    registrationUrl:
+      "https://www.enrichmentcollective.com/register/belmont/2026-sep/pickleball",
     exactLocation:
       "Belmont Elementary School, 19528 Olney Mill Rd, Olney, MD 20832",
     startTime: "3:20 PM",
@@ -256,6 +281,8 @@ export const EC_CLUBS: readonly EcClub[] = [
     weekdayLabel: "Friday",
     town: "Sandy Spring, MD",
     schoolName: "Sherwood ES",
+    registrationUrl:
+      "https://www.enrichmentcollective.com/register/sherwood/2026-sep/pickleball",
     exactLocation:
       "Sherwood Elementary School, 1401 Olney-Sandy Spring Rd, Sandy Spring, MD 20860",
     startTime: "3:50 PM",
@@ -301,4 +328,40 @@ export function ecClubTitle(club: EcClub): string {
  */
 export function ecClubLocation(club: EcClub): string {
   return club.exactLocation ?? club.town;
+}
+
+/**
+ * PUBLIC venue label for one club — school name plus town, never the street
+ * address. `exactLocation` is the one field that stays calendar-only; see the
+ * header. Falls back to the town alone where Stef has not named a school.
+ */
+export function ecClubPublicVenue(club: EcClub): string {
+  return club.schoolName ? `${club.schoolName}, ${club.town}` : club.town;
+}
+
+/**
+ * The clubs a public surface may render: confirmed only, and only those whose
+ * remaining sessions have not all passed. A `hold` is an internal maybe — it
+ * must never be advertised as something a parent can register for.
+ *
+ * `todayIso` is injected rather than read from the clock so the caller owns the
+ * timezone. Date-only ISO strings compare lexicographically, which sidesteps
+ * the `new Date(y, m, d)` UTC-build-server footgun this repo documents.
+ */
+export function isEcClubPublic(club: EcClub, todayIso: string): boolean {
+  return (
+    club.status === "confirmed" && club.dates.some((date) => date >= todayIso)
+  );
+}
+
+export function ecPublicClubs(todayIso: string): readonly EcClub[] {
+  return EC_CLUBS.filter((club) => isEcClubPublic(club, todayIso));
+}
+
+/** Sessions still to come for one club, ascending. */
+export function ecRemainingDates(
+  club: EcClub,
+  todayIso: string,
+): readonly string[] {
+  return club.dates.filter((date) => date >= todayIso);
 }
