@@ -54,8 +54,11 @@ test("they run in play order, and the earlier one is the beginner one", () => {
 
 test("every league registers on podplay over https, and nowhere else", () => {
   for (const league of PICKLPARK_LEAGUES) {
+    // `series` as well as `events`: podplay hands a multi-week listing a
+    // /community/series/ permalink, which is what Youth League now carries.
+    // The host stays pinned — that is the half of this that matters.
     expect(league.signupUrl).toMatch(
-      /^https:\/\/thepicklpark\.podplay\.app\/community\/events\/[0-9a-f-]+$/,
+      /^https:\/\/thepicklpark\.podplay\.app\/community\/(events|series)\/[0-9a-f-]+$/,
     );
   }
   // Two distinct events, not one URL pasted twice.

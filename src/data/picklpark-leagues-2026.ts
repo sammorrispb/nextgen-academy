@@ -55,7 +55,18 @@ export interface PicklParkLeague {
    * says "first half / second half"; this spells the halves out.
    */
   sessionFormat: string;
-  /** Podplay event permalink. The ONLY place a family registers. */
+  /**
+   * Podplay permalink. The ONLY place a family registers.
+   *
+   * Two path shapes are valid, and which one a league gets is podplay's
+   * choice, not ours: `/community/events/<id>` for a single listing and
+   * `/community/series/<id>` for one that spans weeks. Both were re-issued on
+   * 2026-09-20 when The Pickl Park rebuilt the two listings — the originals
+   * still resolve but answer "Admission is no longer available", which is a
+   * dead end a parent cannot tell apart from a working page. Verify a
+   * replacement by OPENING it and reading the title, never by matching id
+   * prefixes: the old and new Youth League ids share their first 8 characters.
+   */
   signupUrl: string;
   /** ISO date-only when public signup opens. Omitted = open now. Set for the
    * Intro league, which is members-only until 2026-09-09 — linking it without
@@ -82,7 +93,7 @@ export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
     blurb:
       "A fun, high-energy six-week season of drilling and playing pickleball. It's a great entry into the sport for a new or beginner player — no prior experience needed, equipment provided, and lots of chances to hit and move.",
     signupUrl:
-      "https://thepicklpark.podplay.app/community/events/01a07ce8-f855-744f-a7fa-0bc238e31526",
+      "https://thepicklpark.podplay.app/community/events/01a07d03-9f72-744f-a80c-6284f8f60fd5",
     signupOpensOn: "2026-09-09",
   },
   {
@@ -101,7 +112,7 @@ export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
     blurb:
       "Six weeks of weekly meetups: we drill and practice for the first half of each session, then play games for the second half. It's for players who already keep a rally going — serving and returning, dropping, driving, volleying, and moving around the court. Across the season they'll add more advanced technique, court positioning, and shot selection.",
     signupUrl:
-      "https://thepicklpark.podplay.app/community/events/01a07cee-1f17-744f-a7fd-564453229c58",
+      "https://thepicklpark.podplay.app/community/series/01a07cee-1f9a-744f-a7fd-9b12c7c8420a",
   },
 ];
 
