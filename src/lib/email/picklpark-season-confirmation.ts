@@ -84,8 +84,15 @@ export function buildPicklParkSeasonConfirmationEmail(
     "",
     PICKLPARK_INDOOR_NOTE,
     "",
-    `In the rare case a Saturday can't run — a facility closure, say — we make it up on ${makeupDates.map(formatSaturday).join(" or ")} and email you before the weekend.`,
-    "",
+    // Only when a date is genuinely held. An empty list rendered "we make it
+    // up on  and email you before the weekend" — a promise with the date
+    // missing, inside a confirmation someone just paid for.
+    ...(makeupDates.length > 0
+      ? [
+          `In the rare case a Saturday can't run — a facility closure, say — we make it up on ${makeupDates.map(formatSaturday).join(" or ")} and email you before the weekend.`,
+          "",
+        ]
+      : []),
     `Paid: $${amountUsd} (full season).`,
     "",
     `That holds ${childFirst}'s spot for all six Saturdays, so it's non-refundable if you withdraw. If we ever have to cancel sessions we can't make up, we refund the ones we didn't run.`,

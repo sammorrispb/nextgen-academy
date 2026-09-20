@@ -102,16 +102,18 @@ export default async function PicklParkSuccessPage({ searchParams }: PageProps) 
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-ngpa-muted/80 mt-3">
-              Makeup date if a Saturday can&rsquo;t run:{" "}
-              {PICKLPARK_MAKEUP_DATES.map((d, i) => (
-                <span key={d}>
-                  {i > 0 && " or "}
-                  <time dateTime={d}>{saturdayLabel(d)}</time>
-                </span>
-              ))}
-              .
-            </p>
+            {PICKLPARK_MAKEUP_DATES.length > 0 && (
+              <p className="text-xs text-ngpa-muted/80 mt-3">
+                Makeup date if a Saturday can&rsquo;t run:{" "}
+                {PICKLPARK_MAKEUP_DATES.map((d, i) => (
+                  <span key={d}>
+                    {i > 0 && " or "}
+                    <time dateTime={d}>{saturdayLabel(d)}</time>
+                  </span>
+                ))}
+                .
+              </p>
+            )}
           </div>
         </div>
 

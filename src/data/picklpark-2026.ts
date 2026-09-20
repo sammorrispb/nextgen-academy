@@ -19,10 +19,21 @@
 // advertising a block that was cancelled. `picklpark-leagues.spec.ts` and the
 // consumers listed there are the guard.
 //
-// What is unchanged and still true: the six Saturdays (Sep 19 – Oct 24, and
-// yes 9/26 — podplay's listing showed only five, which is a podplay bug), the
-// Oct 31 makeup hold, the venue, and the indoors-so-every-week-runs promise.
-// Both leagues run all six.
+// THE SEASON MOVED A WEEK LATER (Sam, 2026-09-20). It now runs Sep 26 – Oct 31
+// and there is NO makeup hold: the held Oct 31 Saturday became the sixth
+// playing week, and Sep 19 never ran. Both leagues run all six.
+//
+// A previous revision of this file recorded podplay's date list as "a podplay
+// bug" and kept Sep 19 – Oct 24 over it. That was the wrong way round — The
+// Pickl Park sells these leagues, so its listing is the source of truth for
+// which Saturdays exist, and this file follows it. The tell was that both
+// listings were re-created with new permalinks (the old ones now answer
+// "Admission is no longer available"), which is a vendor rebuilding a season,
+// not a display glitch. Read the live listing before overriding it again.
+//
+// Unchanged: the venue and the indoors-so-every-week-runs promise. The lack of
+// a makeup date is now a CONSEQUENCE of that promise rather than a gap —
+// nothing outdoors can take a week away, so nothing needs holding back.
 //
 // Structural sibling of fall-2026.ts (the Walter Johnson HS Sunday season);
 // the two run in parallel and share nothing but the shape, so editing one can
@@ -127,24 +138,34 @@ export const PICKLPARK_VENUE_SHORT = "The Pickl Park";
  * about, and a season is a hand-checked calendar decision anyway.
  */
 export const PICKLPARK_SATURDAYS = [
-  "2026-09-19",
   "2026-09-26",
   "2026-10-03",
   "2026-10-10",
   "2026-10-17",
   "2026-10-24",
+  "2026-10-31",
 ] as const;
 
 /**
- * One held Saturday in case a session can't run — NOT a rain date. The Pickl
- * Park is indoors, so weather never takes a week; this covers a facility
- * closure or a coach out sick. The Walter Johnson season holds two dates
- * because it is outdoors and genuinely might not happen.
+ * EMPTY for Fall 2026 (Sam, 2026-09-20): Oct 31 was the held Saturday until the
+ * season shifted a week later and consumed it as the sixth playing week. There
+ * is no replacement hold — indoors, no week is lost to weather, and the season
+ * now runs to the end of the facility's block.
+ *
+ * Kept as a constant rather than deleted because a later season may hold a date
+ * again, and because the surfaces that describe it are written to render
+ * NOTHING when it is empty rather than a dangling "we make it up on ." — an
+ * empty list here is a supported state, not a broken one. Typed as a plain
+ * readonly array (not `as const`) so adding a date back is a one-line edit
+ * that does not have to fight a narrowed empty-tuple type.
+ *
+ * Contrast the Walter Johnson season, which holds two dates because it is
+ * outdoors and genuinely might not happen.
  */
-export const PICKLPARK_MAKEUP_DATES = ["2026-10-31"] as const;
+export const PICKLPARK_MAKEUP_DATES: readonly string[] = [];
 
 /** Human range for copy, e.g. email subject lines and page headers. */
-export const PICKLPARK_SEASON_LABEL = "September 19 – October 24, 2026";
+export const PICKLPARK_SEASON_LABEL = "September 26 – October 31, 2026";
 
 /**
  * How each one-hour block runs (Sam, 2026-09-05). One string, reused by the

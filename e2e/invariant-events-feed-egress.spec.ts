@@ -11,7 +11,9 @@ import {
 } from "../src/data/enrichment-collective";
 import {
   PICKLPARK_END_TIME,
+  PICKLPARK_MAKEUP_DATES,
   PICKLPARK_OPEN_COURT_START_TIME,
+  PICKLPARK_SATURDAYS,
   PICKLPARK_START_TIME,
 } from "../src/data/picklpark-2026";
 
@@ -193,8 +195,12 @@ test.describe("events feed — egress invariants", () => {
     );
     const items = feed.filter((i) => i.source === "picklpark");
 
-    // 6 confirmed Saturdays + 1 tentative makeup hold.
-    expect(items).toHaveLength(7);
+    // Every playing Saturday, plus one item per held date — derived, so this
+    // tracks a season that moves instead of pinning a count that goes stale.
+    // Fall 2026 holds no date, so today that is 6 + 0.
+    expect(items).toHaveLength(
+      PICKLPARK_SATURDAYS.length + PICKLPARK_MAKEUP_DATES.length,
+    );
     for (const item of items) {
       expect(item.key).toMatch(/^nga-pp:saturday:\d{4}-\d{2}-\d{2}$/);
       expect(item.url).toBe("https://nextgenpbacademy.com/picklpark");
@@ -205,13 +211,17 @@ test.describe("events feed — egress invariants", () => {
       expect(item.location).toContain("The Pickl Park");
     }
 
+    // A held date is the ONLY thing that may ship tentative — a playing
+    // Saturday marked tentative would tell a family it might not happen.
     const holds = items.filter((i) => i.tentative);
-    expect(holds).toHaveLength(1);
-    expect(holds[0].status).toBe("Tentative");
-    expect(holds[0].title).toContain("[TENTATIVE]");
+    expect(holds).toHaveLength(PICKLPARK_MAKEUP_DATES.length);
+    for (const hold of holds) {
+      expect(hold.status).toBe("Tentative");
+      expect(hold.title).toContain("[TENTATIVE]");
+    }
 
     const confirmed = items.filter((i) => !i.tentative);
-    expect(confirmed).toHaveLength(6);
+    expect(confirmed).toHaveLength(PICKLPARK_SATURDAYS.length);
     for (const item of confirmed) {
       // Derived from the season config, not typed — this pair went stale on
       // the 2026-08-31 reshape (1–3 PM → 3–5 PM) and only a hardcoded literal
