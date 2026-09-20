@@ -1,3 +1,4 @@
+import { MONDAY_GIRLS_LEVELS } from "@/data/monday-girls-2026";
 import type { MondayGirlsRosterRow } from "@/lib/notion-monday-girls-registrations";
 import { mondayGirlsSessionsPurchasedOn } from "@/lib/monday-girls-refund-policy";
 
@@ -60,6 +61,35 @@ export function toAdminMondayGirlsPlayer(
 /** Only Confirmed rows hold a seat — the same rule the checkout capacity gate uses. */
 export function countConfirmed(players: AdminMondayGirlsPlayer[]): number {
   return players.filter((p) => p.status === "Confirmed").length;
+}
+
+/**
+ * Confirmed seats broken down by level, in MONDAY_GIRLS_LEVELS order.
+ *
+ * NOT a capacity view — the block has ONE cap for both levels (see
+ * MONDAY_GIRLS_BLOCK_SEATS). This is a MIX view, and it exists because the
+ * mix is the one risk widening the block introduced that code cannot fix: a
+ * roster of seven advanced beginners and one beginner leaves that beginner the
+ * only girl at her level, which is the exact objection this block was built to
+ * answer. Sam can only act on what he can see.
+ *
+ * A row whose Group is blank or typo'd counts under `unknown` rather than
+ * vanishing — same rule as the /admin/fall "Not in a group" section.
+ */
+export function countConfirmedByLevel(players: AdminMondayGirlsPlayer[]): {
+  byLevel: { level: string; count: number }[];
+  unknown: number;
+} {
+  const confirmed = players.filter((p) => p.status === "Confirmed");
+  const byLevel = MONDAY_GIRLS_LEVELS.map((level) => ({
+    level,
+    count: confirmed.filter((p) => p.group === level).length,
+  }));
+  const known = new Set<string>(MONDAY_GIRLS_LEVELS);
+  return {
+    byLevel,
+    unknown: confirmed.filter((p) => !known.has(p.group)).length,
+  };
 }
 
 /**

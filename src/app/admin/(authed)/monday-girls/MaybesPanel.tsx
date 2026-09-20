@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import {
+  MONDAY_GIRLS_DEFAULT_LEVEL,
+  MONDAY_GIRLS_LEVELS,
+} from "@/data/monday-girls-2026";
 import { useRouter } from "next/navigation";
 
 export interface MaybeRow {
@@ -18,7 +22,12 @@ export interface MaybeRow {
  */
 export default function MaybesPanel({ maybes }: { maybes: MaybeRow[] }) {
   const router = useRouter();
-  const [form, setForm] = useState({ parentName: "", childFirstName: "", parentEmail: "" });
+  const [form, setForm] = useState({
+    parentName: "",
+    childFirstName: "",
+    parentEmail: "",
+    group: MONDAY_GIRLS_DEFAULT_LEVEL as string,
+  });
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
 
@@ -90,7 +99,13 @@ export default function MaybesPanel({ maybes }: { maybes: MaybeRow[] }) {
         onSubmit={async (e) => {
           e.preventDefault();
           const saved = await post({ action: "add", ...form }, "add", "Added.");
-          if (saved) setForm({ parentName: "", childFirstName: "", parentEmail: "" });
+          if (saved)
+            setForm({
+              parentName: "",
+              childFirstName: "",
+              parentEmail: "",
+              group: MONDAY_GIRLS_DEFAULT_LEVEL,
+            });
         }}
       >
         <input
@@ -119,6 +134,21 @@ export default function MaybesPanel({ maybes }: { maybes: MaybeRow[] }) {
           value={form.parentEmail}
           onChange={(e) => setForm({ ...form, parentEmail: e.target.value })}
         />
+        {/* A maybe's level is Sam's working guess, refined in conversation —
+            so it defaults rather than being required, unlike a paid
+            registration where the parent states it themselves. */}
+        <select
+          className={inputCls}
+          aria-label="Level"
+          value={form.group}
+          onChange={(e) => setForm({ ...form, group: e.target.value })}
+        >
+          {MONDAY_GIRLS_LEVELS.map((level) => (
+            <option key={level} value={level}>
+              {level.replace("Girls ", "")}
+            </option>
+          ))}
+        </select>
         <button
           type="submit"
           disabled={busy !== null}

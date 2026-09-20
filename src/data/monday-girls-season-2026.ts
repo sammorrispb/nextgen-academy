@@ -20,48 +20,65 @@
 // that cannot charge, and no price is quoted before it exists.
 
 import {
-  MONDAY_GIRLS_END_TIME,
-  MONDAY_GIRLS_GROUP,
-  MONDAY_GIRLS_SLOTS_BY_GROUP,
-  MONDAY_GIRLS_START_TIME,
+  MONDAY_GIRLS_ADVANCED_BEGINNER,
+  MONDAY_GIRLS_BEGINNER,
+  MONDAY_GIRLS_BLOCK_SEATS,
+  MONDAY_GIRLS_LEVELS,
+  MONDAY_GIRLS_TIME_LABEL,
   type MondayGirlsGroup,
 } from "./monday-girls-2026";
 
 export type MondayGirlsSeasonGroup = MondayGirlsGroup;
 
 export const MONDAY_GIRLS_SEASON_SLUG = "monday-girls-fall-2026";
-export const MONDAY_GIRLS_SEASON_TITLE = "Next Gen Monday Girls Beginner Group";
+// Display only (Stripe payment description + email subject); the SLUG is the
+// key. Dropped "Beginner" 2026-09-20 so an advanced-beginner family is not
+// emailed a receipt for a group they did not join.
+export const MONDAY_GIRLS_SEASON_TITLE = "Next Gen Monday Girls Group";
 export const MONDAY_GIRLS_SEASON_PRICE_USD = 225;
 export const MONDAY_GIRLS_SEASON_PRICE_ENV_VAR = "STRIPE_MONDAY_GIRLS_PRICE_ID";
 
 export interface MondayGirlsSeasonGroupOption {
   group: MondayGirlsSeasonGroup;
-  /** Parent-facing name for the one group. */
+  /** Parent-facing name for the level. */
   label: string;
-  /** "6:00–7:00 PM" */
+  /** "6:00–7:00 PM" — the SAME hour for both levels. */
   timeLabel: string;
+  /**
+   * One line a parent can self-place against without a coach. Deliberately
+   * written in terms of what a girl can already DO, never what she is: a
+   * parent knows whether her daughter can keep a rally going; she does not
+   * know what "advanced beginner" means.
+   */
+  blurb: string;
 }
 
-export const MONDAY_GIRLS_SEASON_GROUP: MondayGirlsSeasonGroupOption = {
-  group: MONDAY_GIRLS_GROUP,
-  label: "Girls Beginner",
-  timeLabel: `${MONDAY_GIRLS_START_TIME}–${MONDAY_GIRLS_END_TIME}`.replace(
-    " PM–",
-    "–",
-  ),
-};
-
 export const MONDAY_GIRLS_SEASON_GROUPS: readonly MondayGirlsSeasonGroupOption[] =
-  [MONDAY_GIRLS_SEASON_GROUP];
+  [
+    {
+      group: MONDAY_GIRLS_BEGINNER,
+      label: "Beginner",
+      timeLabel: MONDAY_GIRLS_TIME_LABEL,
+      blurb:
+        "New to pickleball, or still learning to serve and keep score. No experience needed at all.",
+    },
+    {
+      group: MONDAY_GIRLS_ADVANCED_BEGINNER,
+      label: "Advanced beginner",
+      timeLabel: MONDAY_GIRLS_TIME_LABEL,
+      blurb:
+        "Has played before and can keep a rally going, but isn't ready for Green Ball yet.",
+    },
+  ];
 
 /**
- * Seats in the group. Per-group signature even though there is exactly one
- * group, so a second cohort can never be gated on this one's fill.
+ * Seats for the block as a whole. NO level argument — both levels share one
+ * 6:00–7:00 PM booking, so there is one cap, and a signature that took a level
+ * would tell callers otherwise. See MONDAY_GIRLS_BLOCK_SEATS for the full
+ * reasoning and why this is NOT the fall season's per-group bug.
  */
-export function mondayGirlsSeasonSlotsFor(
-  group: MondayGirlsSeasonGroup,
-): number {
-  return MONDAY_GIRLS_SLOTS_BY_GROUP[group];
+export function mondayGirlsSeasonSeats(): number {
+  return MONDAY_GIRLS_BLOCK_SEATS;
 }
 
 export function findMondayGirlsSeasonGroup(
@@ -69,3 +86,6 @@ export function findMondayGirlsSeasonGroup(
 ): MondayGirlsSeasonGroupOption | undefined {
   return MONDAY_GIRLS_SEASON_GROUPS.find((g) => g.group === group);
 }
+
+/** Every level, for callers that only need the select values. */
+export const MONDAY_GIRLS_SEASON_LEVELS = MONDAY_GIRLS_LEVELS;
