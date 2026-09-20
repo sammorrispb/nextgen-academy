@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 import {
   EC_CLUBS,
@@ -115,5 +117,18 @@ test.describe("Enrichment Collective — public surface", () => {
     for (const key of forbidden) {
       expect(json).not.toContain(key);
     }
+  });
+
+  test("the public page re-renders against a live date, not the build date", () => {
+    // The page filters clubs and sessions against TODAY. Rendered fully
+    // static, that date freezes at build time and the page keeps advertising
+    // sessions that already happened — the "a finished club drops off" pin
+    // above would be true of the helper and false of the page a parent sees.
+    // Caught by reading the prerendered HTML after the first build.
+    const source = readFileSync(
+      join(__dirname, "..", "src", "app", "after-school-clubs", "page.tsx"),
+      "utf8",
+    );
+    expect(source).toMatch(/export const revalidate = \d+;/);
   });
 });

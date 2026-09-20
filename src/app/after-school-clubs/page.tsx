@@ -15,6 +15,15 @@ const TITLE = "After-School Pickleball Clubs — Montgomery County, MD";
 const DESCRIPTION =
   "Coach Sam runs weekly after-school pickleball clubs at five Montgomery County elementary schools. See the days, schools and dates, and register through Enrichment Collective.";
 
+/**
+ * This page filters clubs and sessions against TODAY, so a fully static render
+ * freezes that date at build time — the page would go on advertising sessions
+ * that have already happened, and would show a finished season as live until
+ * someone happened to redeploy. 5-minute ISR, matching the convention the
+ * events feed and the Notion readers already use.
+ */
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
