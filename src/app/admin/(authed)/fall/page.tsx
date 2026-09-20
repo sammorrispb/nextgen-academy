@@ -17,6 +17,7 @@ import {
   toAdminFallPlayer,
   type AdminFallPlayer,
 } from "@/lib/admin-fall-roster";
+import LinkProfileForm from "./LinkProfileForm";
 
 // The Walter Johnson Sunday season roster. /coach/fall-season reads the same
 // registrations but narrowed to an id and a first name, because it runs the
@@ -103,6 +104,16 @@ export default async function AdminFallPage() {
         </div>
       ) : (
         <div className="space-y-10">
+          <LinkProfileForm
+            candidates={players.map((p) => ({
+              pageId: p.pageId,
+              childFirstName: p.childFirstName,
+              group: p.group,
+              status: p.status,
+              amountPaidUsd: p.amountPaidUsd,
+            }))}
+          />
+
           {FALL_SEASON_GROUPS.map((option) => (
             <GroupSection
               key={option.group}
