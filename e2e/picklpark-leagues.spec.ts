@@ -1,11 +1,17 @@
 import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
 import {
   PICKLPARK_LEAGUES,
   PICKLPARK_LEAGUE_COACH_EMAIL,
   findPicklParkLeague,
   picklParkLeagueStartHour24,
+  picklParkLeaguePriceLine,
   PICKLPARK_LEAGUES_FORMAT_LINE,
 } from "../src/data/picklpark-leagues-2026";
+import { buildLlmsTxt } from "../src/lib/llms-txt";
+import { buildLeagueHubCards } from "../src/lib/league-hub";
+import { FREDERICK_PAGE, FREDERICK_FAQ } from "../src/data/frederick";
+import { faq } from "../src/data/faq";
 import {
   PICKLPARK_SATURDAYS,
   PICKLPARK_MAKEUP_DATES,
@@ -66,13 +72,122 @@ test("every league registers on podplay over https, and nowhere else", () => {
   expect(new Set(PICKLPARK_LEAGUES.map((l) => l.signupUrl)).size).toBe(2);
 });
 
-test("the site publishes no price — podplay quotes at the point of sale", () => {
-  const blob = JSON.stringify(PICKLPARK_LEAGUES);
-  expect(blob).not.toMatch(/\$\s*\d/);
-  expect(blob).not.toMatch(/\b(30|225|250)\.00\b/);
+// --- price: two tiers, one surface (Sam, 2026-09-20) ------------------------
+// The old rule was "no price anywhere", because a second copy of The Pickl
+// Park's number can only go stale. A non-member then read the listing's "$225
+// per player" and was charged $250. The fix is scope, not volume: the numbers
+// live in the data and render on /picklpark ALONE.
+
+test("each league carries both tiers, and the member price is the lower one", () => {
   for (const league of PICKLPARK_LEAGUES) {
-    expect(league).not.toHaveProperty("priceUsd");
+    expect(typeof league.memberPriceUsd, league.slug).toBe("number");
+    expect(typeof league.nonMemberPriceUsd, league.slug).toBe("number");
+    // If these ever invert, the page tells every non-member the cheaper
+    // number and The Pickl Park collects the dearer one at the box.
+    expect(league.memberPriceUsd, league.slug).toBeLessThan(
+      league.nonMemberPriceUsd,
+    );
+    expect(league.memberPriceUsd, league.slug).toBeGreaterThan(0);
   }
+  expect(findPicklParkLeague("drill-and-play")?.memberPriceUsd).toBe(150);
+  expect(findPicklParkLeague("drill-and-play")?.nonMemberPriceUsd).toBe(175);
+  expect(findPicklParkLeague("youth-league")?.memberPriceUsd).toBe(225);
+  expect(findPicklParkLeague("youth-league")?.nonMemberPriceUsd).toBe(250);
+});
+
+test("the price line shows both tiers and says WHOSE membership it means", () => {
+  for (const league of PICKLPARK_LEAGUES) {
+    const line = picklParkLeaguePriceLine(league);
+    expect(line).toContain(`$${league.memberPriceUsd}`);
+    expect(line).toContain(`$${league.nonMemberPriceUsd}`);
+    // A bare "members" reads as an NGA membership a parent doesn't have, and
+    // this is The Pickl Park's membership, not ours.
+    expect(line, league.slug).toContain("The Pickl Park members");
+    // "per player", not per family — a parent with two kids must not read one
+    // figure as covering both.
+    expect(line, league.slug).toContain("per player");
+    // One tier alone is the bug that started this.
+    expect(line.match(/\$\d+/g), league.slug).toHaveLength(2);
+  }
+});
+
+test("NO shared surface quotes a Pickl Park price — /picklpark is the only one", () => {
+  const DURING = PICKLPARK_SATURDAYS[0];
+  const hasDollar = (s: string) => /\$\s*\d/.test(s);
+
+  // llms.txt — read by AI answerers, the worst place for a stale number.
+  //
+  // Split into ENTRIES, not lines. llms.txt hard-wraps, so a price sitting on
+  // a continuation line belongs to an entry whose own line never says "Pickl
+  // Park" — a per-line filter reads clean while the number ships. Caught by
+  // mutation: injecting "From $150." into the Pickl Park entry passed the
+  // line-based version of this check.
+  const entries = buildLlmsTxt(DURING)
+    .split(/\n(?=- )/)
+    .filter((e) => /Pickl Park|\/picklpark/.test(e));
+  expect(entries.length).toBeGreaterThan(0);
+  for (const entry of entries) {
+    expect(hasDollar(entry), entry.slice(0, 120)).toBe(false);
+  }
+
+  // The empty-state offer card and the /league hub.
+  const offer = buildOpenNowOffers(DURING, {
+    fallRegistrationOpen: false,
+    picklParkRegistrationOpen: false,
+  }).find((o) => o.href === "/picklpark");
+  expect(offer).toBeDefined();
+  expect(hasDollar(`${offer?.title} ${offer?.detail} ${offer?.cta}`)).toBe(false);
+
+  for (const card of buildLeagueHubCards(DURING, {
+    fallRegistrationOpen: false,
+  }).filter((c) => c.key.startsWith("picklpark-"))) {
+    expect(hasDollar(JSON.stringify(card)), card.key).toBe(false);
+  }
+
+  // The Frederick landing page's copy.
+  expect(hasDollar(JSON.stringify(FREDERICK_PAGE))).toBe(false);
+  expect(hasDollar(JSON.stringify(FREDERICK_FAQ))).toBe(false);
+
+  // The cost FAQ is checked DIFFERENTLY on purpose. It legitimately quotes
+  // NGA's own season and camp prices in the same answer that mentions the
+  // Pickl Park leagues, so "this answer contains a $" proves nothing — and
+  // NGA's season happens to be $225, the same number as Youth League's member
+  // tier, so grepping for the figure is worse than useless. Pin the deferral
+  // sentence instead: the regression to catch is someone replacing it with a
+  // number, and this fails when they do.
+  const cost = faq.find((f) => /How much do youth pickleball lessons cost/.test(f.question));
+  expect(cost).toBeDefined();
+  expect(cost!.answer).toContain("The Pickl Park sets and shows the price");
+});
+
+test("only /picklpark's own source reads the price fields", () => {
+  const readers = [
+    "src/app/youth-pickleball-frederick/page.tsx",
+    "src/app/fall/page.tsx",
+    "src/app/schedule/page.tsx",
+    "src/app/api/cron/weekly-newsletter/route.ts",
+    "src/lib/llms-txt.ts",
+    "src/lib/league-hub.ts",
+    "src/lib/open-now-offers.ts",
+    "src/data/frederick.ts",
+    "src/data/faq.ts",
+    "src/data/blog.ts",
+  ];
+  for (const path of readers) {
+    const src = readFileSync(path, "utf8");
+    expect(src, path).not.toContain("picklParkLeaguePriceLine");
+    expect(src, path).not.toContain("memberPriceUsd");
+    expect(src, path).not.toContain("nonMemberPriceUsd");
+  }
+  // And the one page that IS allowed to, still does — otherwise this whole
+  // test passes by the price having quietly disappeared from the site.
+  //
+  // Assert the CALL, not the bare name: an `import { picklParkLeaguePriceLine }`
+  // left behind after the render was deleted satisfies a substring check while
+  // the page shows no price at all. Caught by mutation — this exact test
+  // passed against a /picklpark with the price line ripped out.
+  const page = readFileSync("src/app/picklpark/page.tsx", "utf8");
+  expect(page).toContain("picklParkLeaguePriceLine(league)");
 });
 
 test("the Intro league announces its signup opening; the other is open now", () => {
