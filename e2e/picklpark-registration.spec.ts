@@ -128,18 +128,40 @@ test.describe("picklpark season confirmation email", () => {
     });
   }
 
-  test("carries the group, every Saturday, the venue, and the makeup date", () => {
+  test("carries the group, every Saturday and the venue", () => {
     const { subject, text } = build();
     expect(subject).toContain("Red & Orange Ball");
     expect(text).toContain("Saturdays 3:00–4:00 PM");
-    expect(text).toContain("Saturday, September 19");
-    expect(text).toContain("Saturday, October 24");
+    expect(text).toContain("Saturday, September 26");
+    expect(text).toContain("Saturday, October 31");
     for (const iso of PICKLPARK_SATURDAYS) {
       const day = Number(iso.split("-")[2]);
       expect(text).toContain(` ${day}`);
     }
     expect(text).toContain(PICKLPARK_VENUE);
-    expect(text).toContain("October 31");
+  });
+
+  test("the makeup sentence appears only when a date is actually held", () => {
+    // Fall 2026 holds none, and the empty case used to render "we make it up
+    // on  and email you before the weekend" into a paid confirmation.
+    const { text } = build();
+    expect(PICKLPARK_MAKEUP_DATES).toEqual([]);
+    expect(text).not.toMatch(/make it up on\s*(and|\.|$)/m);
+    expect(text).not.toContain("we make it up on");
+
+    // And it comes back, intact, the moment a date is held again.
+    const held = buildPicklParkSeasonConfirmationEmail({
+      parentFirst: "Jordan",
+      childFirst: "Ava",
+      groupLabel: "Red & Orange Ball",
+      timeLabel: "3:00–4:00 PM",
+      amountUsd: "225.00",
+      venue: PICKLPARK_VENUE,
+      saturdays: PICKLPARK_SATURDAYS,
+      makeupDates: ["2026-11-07"],
+    });
+    expect(held.text).toContain("we make it up on");
+    expect(held.text).toContain("November 7");
   });
 
   test("spells out the hour — 30 minutes of drills, 30 of games (Sam, 2026-09-05)", () => {

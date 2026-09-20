@@ -9,6 +9,7 @@ import {
 import {
   PICKLPARK_SATURDAYS,
   PICKLPARK_MAKEUP_DATES,
+  PICKLPARK_SEASON_WEEKS,
 } from "../src/data/picklpark-2026";
 import {
   picklParkLeaguesOpen,
@@ -81,14 +82,26 @@ test("the Intro league announces its signup opening; the other is open now", () 
   expect(findPicklParkLeague("youth-league")?.signupOpensOn).toBeUndefined();
 });
 
-test("both leagues run the season's six Saturdays, 9/26 included", () => {
-  expect(PICKLPARK_SATURDAYS).toHaveLength(6);
-  expect(PICKLPARK_SATURDAYS).toContain("2026-09-26");
-  expect(PICKLPARK_SATURDAYS[0]).toBe("2026-09-19");
-  expect(PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1]).toBe(
+test("both leagues run the season's six Saturdays, Sep 26 – Oct 31", () => {
+  // Shifted a week later on 2026-09-20 to match the listings The Pickl Park
+  // actually sells; Sep 19 never ran. Pinned as the exact list rather than
+  // first/last plus a length, so a dropped middle Saturday cannot pass.
+  expect(PICKLPARK_SATURDAYS).toEqual([
+    "2026-09-26",
+    "2026-10-03",
+    "2026-10-10",
+    "2026-10-17",
     "2026-10-24",
-  );
-  expect(PICKLPARK_MAKEUP_DATES).toContain("2026-10-31");
+    "2026-10-31",
+  ]);
+  expect(PICKLPARK_SATURDAYS).toHaveLength(PICKLPARK_SEASON_WEEKS);
+  // Oct 31 is now a PLAYING week, so no date is held back. The season is
+  // indoors, so there is nothing a hold would protect against.
+  expect(PICKLPARK_MAKEUP_DATES).toEqual([]);
+  // Whatever the dates are, a held date can never also be a playing one.
+  for (const held of PICKLPARK_MAKEUP_DATES) {
+    expect(PICKLPARK_SATURDAYS).not.toContain(held);
+  }
 });
 
 test("copy carries no podplay typos and names the coach's real address", () => {
@@ -108,8 +121,8 @@ test("NGA's own season checkout is retired — no date reopens it", () => {
 
 test("the leagues stay advertised through the last Saturday, then stop", () => {
   expect(picklParkLeaguesOpen("2026-09-07")).toBe(true);
-  expect(picklParkLeaguesOpen("2026-10-24")).toBe(true);
-  expect(picklParkLeaguesOpen("2026-10-25")).toBe(false);
+  expect(picklParkLeaguesOpen("2026-10-31")).toBe(true);
+  expect(picklParkLeaguesOpen("2026-11-01")).toBe(false);
 });
 
 test("the open-now block advertises the leagues without a price or a season sale", () => {
@@ -124,7 +137,7 @@ test("the open-now block advertises the leagues without a price or a season sale
   expect(card?.detail).not.toMatch(/for the season/i);
 
   // And it retires with the leagues.
-  const after = buildOpenNowOffers("2026-10-25", {
+  const after = buildOpenNowOffers("2026-11-01", {
     fallRegistrationOpen: false,
     picklParkRegistrationOpen: false,
   });

@@ -303,20 +303,25 @@ export default async function PicklParkPage() {
                 ))}
                 .
               </li>
-              <li>
-                <strong className="text-ngpa-white">
-                  A held date, just in case.
-                </strong>{" "}
-                Weather never takes a week indoors, but if a Saturday
-                can&rsquo;t run we make it up on{" "}
-                {PICKLPARK_MAKEUP_DATES.map((d, i) => (
-                  <span key={d}>
-                    {i > 0 && " or "}
-                    <time dateTime={d}>{saturdayLabel(d)}</time>
-                  </span>
-                ))}
-                .
-              </li>
+              {/* Only when a date is actually held. An empty list used to
+                  render "we make it up on ." — a promise with the promise
+                  missing, which reads worse than saying nothing. */}
+              {PICKLPARK_MAKEUP_DATES.length > 0 && (
+                <li>
+                  <strong className="text-ngpa-white">
+                    A held date, just in case.
+                  </strong>{" "}
+                  Weather never takes a week indoors, but if a Saturday
+                  can&rsquo;t run we make it up on{" "}
+                  {PICKLPARK_MAKEUP_DATES.map((d, i) => (
+                    <span key={d}>
+                      {i > 0 && " or "}
+                      <time dateTime={d}>{saturdayLabel(d)}</time>
+                    </span>
+                  ))}
+                  .
+                </li>
+              )}
               <li>
                 <strong className="text-ngpa-white">
                   Real pickleball courts, indoors.

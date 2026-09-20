@@ -43,10 +43,10 @@ test("NGA cancelling is never the family's loss → prorated", () => {
 
 test("sessions remaining counts today INCLUSIVE (a morning-of cancel is owed)", () => {
   expect(picklParkSessionsRemaining("2026-09-01")).toBe(6);
-  expect(picklParkSessionsRemaining("2026-09-19")).toBe(6);
-  expect(picklParkSessionsRemaining("2026-09-20")).toBe(5);
-  expect(picklParkSessionsRemaining("2026-10-17")).toBe(2);
-  expect(picklParkSessionsRemaining("2026-10-25")).toBe(0);
+  expect(picklParkSessionsRemaining("2026-09-26")).toBe(6);
+  expect(picklParkSessionsRemaining("2026-09-27")).toBe(5);
+  expect(picklParkSessionsRemaining("2026-10-24")).toBe(2);
+  expect(picklParkSessionsRemaining("2026-11-01")).toBe(0);
 });
 
 test("proration before the season = the full amount", () => {
@@ -57,11 +57,12 @@ test("proration before the season = the full amount", () => {
 
 test("mid-season proration rounds UP in the parent's favour", () => {
   // 2 of 6 Saturdays undelivered → ceil(17500 × 2 / 6) = 5834, not 5833.
-  expect(picklParkProratedRefundCents("2026-10-17", PAID_CENTS)).toBe(5834);
+  // Oct 24 leaves Oct 24 + Oct 31 owed, today being inclusive.
+  expect(picklParkProratedRefundCents("2026-10-24", PAID_CENTS)).toBe(5834);
 });
 
 test("after the last Saturday there is nothing left to prorate", () => {
-  expect(picklParkProratedRefundCents("2026-10-25", PAID_CENTS)).toBe(0);
+  expect(picklParkProratedRefundCents("2026-11-01", PAID_CENTS)).toBe(0);
 });
 
 test("proration never exceeds what was paid", () => {

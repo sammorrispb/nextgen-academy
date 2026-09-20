@@ -30,7 +30,7 @@ test("closes on the season's own last Saturday, derived never typed", () => {
   expect(PICKLPARK_REGISTRATION_CLOSES).toBe(
     PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1],
   );
-  expect(PICKLPARK_REGISTRATION_CLOSES).toBe("2026-10-24");
+  expect(PICKLPARK_REGISTRATION_CLOSES).toBe("2026-10-31");
 });
 
 test("NGA's checkout is retired: no date and no flag value reopens it", () => {
@@ -57,8 +57,8 @@ test("NGA's checkout is retired: no date and no flag value reopens it", () => {
 test("the leagues stay advertised through the last Saturday, then retire", () => {
   expect(picklParkLeaguesOpen("2026-09-07")).toBe(true);
   expect(picklParkLeaguesOpen(PICKLPARK_SATURDAYS[0])).toBe(true);
-  expect(picklParkLeaguesOpen("2026-10-24")).toBe(true);
-  expect(picklParkLeaguesOpen("2026-10-25")).toBe(false);
+  expect(picklParkLeaguesOpen("2026-10-31")).toBe(true);
+  expect(picklParkLeaguesOpen("2026-11-01")).toBe(false);
 });
 
 test("advertising the leagues does NOT depend on the retired sales flag", () => {

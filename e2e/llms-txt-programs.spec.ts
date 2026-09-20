@@ -21,7 +21,7 @@ import { MVF_PROGRAMS } from "../src/data/mvf";
  * therefore has to keep saying who takes the money, out loud.
  */
 
-const DURING = "2026-09-19"; // first Pickl Park Saturday, mid-fall-season
+const DURING = "2026-09-26"; // first Pickl Park Saturday, mid-fall-season
 const AFTER_ALL = "2026-12-01"; // both seasons finished
 
 /**
@@ -38,7 +38,7 @@ test.describe("llms.txt publishes the active programs", () => {
     expect(txt).toContain("/picklpark");
     expect(txt).toContain("The Pickl Park");
     expect(txt).toContain("Frederick, MD");
-    expect(flat(txt)).toContain("September 19 – October 24, 2026");
+    expect(flat(txt)).toContain("September 26 – October 31, 2026");
 
     expect(txt).toContain("/fall");
     expect(flat(txt)).toContain("Walter Johnson High School");
@@ -105,7 +105,7 @@ test.describe("llms.txt publishes the active programs", () => {
     expect(flat(activeSeasonLines(lastSunday).join("\n"))).toContain("/fall");
 
     // Day after each: gone.
-    expect(activeSeasonLines("2026-10-25").join("\n")).not.toContain("/picklpark");
+    expect(activeSeasonLines("2026-11-01").join("\n")).not.toContain("/picklpark");
     expect(activeSeasonLines("2026-10-26").join("\n")).not.toContain("/fall");
   });
 

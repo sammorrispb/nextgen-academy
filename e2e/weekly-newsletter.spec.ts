@@ -693,7 +693,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
 
   test("the season the email advertises is the season in the data files", () => {
     expect(PICKLPARK_SATURDAYS).toHaveLength(PICKLPARK_SEASON_WEEKS);
-    expect(PICKLPARK_SEASON_LABEL).toContain("September 19");
+    expect(PICKLPARK_SEASON_LABEL).toContain("September 26");
     expect(PICKLPARK_LEAGUES.map((l) => l.title)).toEqual([
       "Kid's Drill and Play",
       "Youth League",
