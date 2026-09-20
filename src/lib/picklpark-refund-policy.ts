@@ -10,9 +10,15 @@ import { PICKLPARK_SATURDAYS } from "@/data/picklpark-2026";
  *   parent_withdrawal → the seat was held all season; no refund.
  *   nga_cancelled     → we did not deliver; prorate the undelivered sessions.
  *
- * A washout is still not a refund event on its own: the makeup date
- * (PICKLPARK_MAKEUP_DATES) is the stated remedy. Proration applies when NGA
- * cancels sessions outright and the makeup date cannot cover them.
+ * A washout is still not a refund event on its own — the season is indoors,
+ * so weather never takes a week. Proration applies when NGA cancels sessions
+ * outright.
+ *
+ * Fall 2026 holds NO makeup date: Oct 31 was the hold until the season moved a
+ * week later and consumed it as the sixth playing week (2026-09-20). When a
+ * season DOES hold one, that date is the stated remedy and proration only
+ * covers what it cannot. This file never reads PICKLPARK_MAKEUP_DATES, so an
+ * empty hold changes no behaviour here — only this rationale.
  *
  * This file DECIDES; cancel-picklpark.ts only asks. If the policy changes,
  * change it here.

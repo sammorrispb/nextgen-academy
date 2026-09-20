@@ -36,8 +36,13 @@ import { orgRef } from "@/lib/seo";
 // page's whole job is to explain the two leagues honestly and hand the parent
 // off to the right podplay event.
 //
-// NO PRICE APPEARS HERE. Podplay quotes at the point of sale, and a second
-// copy on this page is a number that can only go stale.
+// THIS PAGE IS THE ONE SURFACE THAT PRINTS A PICKL PARK PRICE (Sam,
+// 2026-09-20). The rule used to be "no price anywhere", because a second copy
+// of The Pickl Park's number can only go stale — that reasoning still holds,
+// which is why the exception is scoped to this page alone and every other
+// surface stays price-free. Do NOT "tidy up" the price line below on the
+// strength of the old rule; the reasoning and the guard live in
+// picklpark-leagues-2026.ts and picklpark-leagues.spec.ts.
 //
 // The description is COMPOSED, never typed — the rule this page already
 // followed. A hardcoded one is how /fall spent days telling search engines the
@@ -116,8 +121,8 @@ export default async function PicklParkPage() {
     description: league.blurb,
     // Hour PARSED from startTime, never pattern-matched against one literal:
     // a ternary on "2:00 PM" silently publishes the wrong hour the day a
-    // league moves. -04:00 is correct for the whole season and the Oct 31
-    // makeup (US DST ends 2026-11-01).
+    // league moves. -04:00 is correct for every Saturday of the season,
+    // including the Oct 31 finale (US DST ends 2026-11-01).
     startDate: `${PICKLPARK_SATURDAYS[0]}T${picklParkLeagueStartHour24(league)}:00-04:00`,
     endDate: PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1],
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",

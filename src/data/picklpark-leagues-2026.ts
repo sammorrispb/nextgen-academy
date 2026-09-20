@@ -70,14 +70,43 @@ export interface PicklParkLeague {
   /**
    * Podplay permalink. The ONLY place a family registers.
    *
-   * Two path shapes are valid, and which one a league gets is podplay's
-   * choice, not ours: `/community/events/<id>` for a single listing and
-   * `/community/series/<id>` for one that spans weeks. Both were re-issued on
-   * 2026-09-20 when The Pickl Park rebuilt the two listings — the originals
-   * still resolve but answer "Admission is no longer available", which is a
-   * dead end a parent cannot tell apart from a working page. Verify a
-   * replacement by OPENING it and reading the title, never by matching id
-   * prefixes: the old and new Youth League ids share their first 8 characters.
+   * THIS FIELD CAUSED A 12-DAY DEAD LINK (corrected 2026-09-20 — the first
+   * account of it, written the same day, was wrong and is worth knowing about
+   * because the wrong version is the intuitive one).
+   *
+   * The story is NOT "the vendor rebuilt the season and retired our URLs".
+   * These are UUIDv7 ids, so each carries its own creation time, and all four
+   * decode to 2026-09-07 within 29 minutes of each other — corroborated by
+   * `og:updated_time` on both live listings. Nothing was re-issued on 09-20:
+   *
+   *   17:27:17  intro  01a07ce8… (captured here, abandoned ~29 min later)
+   *   17:32:55  youth  01a07cee-1f17… event      ─┐ 131 ms apart: podplay
+   *   17:32:55  youth  01a07cee-1f9a… series     ─┘ makes both together
+   *   17:56:24  intro  01a07d03… (the live one)
+   *
+   * So the ids were already superseded when PR #321 committed them at 21:20
+   * EDT that evening — 7.4 hours after the replacements existed. Every
+   * "Register" click from #321 until #345 on 09-20 landed a parent on a
+   * superseded listing, on the page CLAUDE.md calls the primary conversion
+   * surface, in a market with zero Frederick families in the CRM.
+   *
+   * Two things follow, and neither is "watch for vendor rebuilds":
+   *
+   * 1. A URL copied out of a vendor UI can be stale before it is committed.
+   *    Re-open every `signupUrl` right before merging, and again when a season
+   *    goes on sale. Nothing on this site checks that these are alive.
+   * 2. `/community/events/<id>` vs `/community/series/<id>` is NOT
+   *    single-vs-multi-week — Kid's Drill and Play is six weeks on an `events`
+   *    URL and its page lists all six Saturdays. The series id is the wrapper
+   *    podplay mints beside the event in the same transaction; copying the
+   *    event when a series exists is exactly the mistake made here. Prefer the
+   *    series URL when the listing has one.
+   *
+   * A superseded listing still renders its title, description, price and a
+   * live seat count, and only says "Admission is no longer available" at the
+   * button — so verify a replacement by OPENING it and reading the title.
+   * Never by id prefix: the old and new Youth League ids share eight
+   * characters precisely BECAUSE they were minted 131 ms apart.
    */
   signupUrl: string;
   /**

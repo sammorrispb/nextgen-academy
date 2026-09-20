@@ -195,11 +195,14 @@ test.describe("events feed — egress invariants", () => {
     );
     const items = feed.filter((i) => i.source === "picklpark");
 
-    // Every playing Saturday, plus one item per held date — derived, so this
-    // tracks a season that moves instead of pinning a count that goes stale.
-    // Fall 2026 holds no date, so today that is 6 + 0.
-    expect(items).toHaveLength(
-      PICKLPARK_SATURDAYS.length + PICKLPARK_MAKEUP_DATES.length,
+    // The exact KEY SET, not a count. A length derived from the same two
+    // arrays the builder maps is tautological — it cannot fail for any bug in
+    // the builder. Comparing keys still tracks a season that moves, but also
+    // catches a dropped date, a duplicate, a collapsed key and a wrong prefix.
+    expect([...items.map((i) => i.key)].sort()).toEqual(
+      [...PICKLPARK_SATURDAYS, ...PICKLPARK_MAKEUP_DATES]
+        .map((d) => `nga-pp:saturday:${d}`)
+        .sort(),
     );
     for (const item of items) {
       expect(item.key).toMatch(/^nga-pp:saturday:\d{4}-\d{2}-\d{2}$/);
@@ -212,12 +215,19 @@ test.describe("events feed — egress invariants", () => {
     }
 
     // A held date is the ONLY thing that may ship tentative — a playing
-    // Saturday marked tentative would tell a family it might not happen.
-    const holds = items.filter((i) => i.tentative);
-    expect(holds).toHaveLength(PICKLPARK_MAKEUP_DATES.length);
-    for (const hold of holds) {
-      expect(hold.status).toBe("Tentative");
-      expect(hold.title).toContain("[TENTATIVE]");
+    // Saturday marked tentative tells a family it might not happen.
+    //
+    // Asserted per ITEM against its own date, not by filtering for tentative
+    // ones: `for (const hold of holds)` is vacuous while no date is held, so
+    // it proved nothing about the six Saturdays that DO ship. This form is
+    // strongest exactly when the hold list is empty — it then requires all six
+    // to be confirmed and untitled.
+    for (const item of items) {
+      const date = item.key.split(":").pop() as string;
+      const held = PICKLPARK_MAKEUP_DATES.includes(date);
+      expect(Boolean(item.tentative), date).toBe(held);
+      expect(item.title.includes("[TENTATIVE]"), date).toBe(held);
+      expect(item.status === "Tentative", date).toBe(held);
     }
 
     const confirmed = items.filter((i) => !i.tentative);

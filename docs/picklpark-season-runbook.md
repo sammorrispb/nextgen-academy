@@ -1,5 +1,44 @@
 # Pickl Park Saturday — go-live + ops runbook (Fall 2026)
 
+> ## ⚠️ LARGELY SUPERSEDED — read this box before anything below it
+>
+> **Two changes have overtaken this document, and most of it describes products
+> that no longer exist.** It is kept for the parts that are still real (the
+> court-booking arithmetic, the Amar conversation, the go/no-go discipline,
+> the Frederick cold-market reasoning) — but do NOT operate off any section
+> without checking it against this box.
+>
+> **1. NGA stopped selling this Saturday (2026-09-07, PR #321).** The Pickl Park
+> sells it through podplay as two leagues NGA coaches. Everything below about
+> `/picklpark` checkout, `$225/player` through NGA Stripe, `Red & Orange Ball
+> 3:00–4:00` + `Green & Yellow Ball 4:00–5:00`, the $20 Open Court hour, seat
+> caps, refunds and the go/no-go refund plan describes **retired products**.
+> What actually runs:
+>
+> | Time | League | Ages | Sells through |
+> |---|---|---|---|
+> | 2:00–3:00 | Kid's Drill and Play | 8–13 | podplay (The Pickl Park) |
+> | 3:00–4:30 | Youth League | 10+ | podplay (The Pickl Park) |
+>
+> **2. The season shifted a week later (2026-09-20).** It now runs **six
+> Saturdays, Sep 26 – Oct 31 2026, with NO makeup hold.** Sep 19 never ran and
+> the held Oct 31 became the sixth playing week.
+>
+> **Note what this means for step 2 below**, which is now inverted: it says the
+> court-time proposal sent to Amar lists the Next Gen Saturdays as
+> "Sep 26 – Oct 31" and treats that as *not matching* what the site sells.
+> **That proposal was right all along** — Sep 26 – Oct 31 is exactly what the
+> site now sells and what podplay lists. There is nothing to reconcile on the
+> dates; the booking simply needs to cover Sep 26 → Oct 31.
+>
+> **Pricing is The Pickl Park's, two-tier, and NGA does not set it:**
+> Drill and Play $150 members / $175 everyone else; Youth League $225 / $250.
+> Only `/picklpark` publishes it on this site.
+>
+> Source of truth for dates: `src/data/picklpark-2026.ts`. For what is sold and
+> at what price: `src/data/picklpark-leagues-2026.ts`. Both carry the full
+> reasoning; this runbook does not.
+
 Two products share one Saturday and one court booking in Frederick:
 
 | Time | What | Sells through | State |
@@ -75,11 +114,13 @@ price without it is selling the shorter hour and none of the reason.
    Frederick, that list is the best lead source available.
 2. **Book the courts**: 2 courts, Saturdays **2–5 PM**, Sep 12 → Oct 24, plus a
    hold on Oct 31. Three hours × 2 courts × 6 weeks = 36 court-hours for the
-   season, plus 2 court-hours a week for Open Court. **Reconcile the dates with
-   Amar first:** the court-time proposal sent to him lists the Next Gen Saturdays
-   as Sep 26 – Oct 31, and the plan before 2026-09-05 was Oct 3 – Nov 7 — neither
-   matches the Sep 19 – Oct 24 (+ Oct 31 hold) the site now sells. The booking
-   has to cover Sep 19 and Sep 26 as season Saturdays, not just Open Court.
+   season, plus 2 court-hours a week for Open Court. **CORRECTED 2026-09-20 —
+   this step used to say the opposite.** The court-time proposal sent to Amar
+   lists the Next Gen Saturdays as **Sep 26 – Oct 31, which is now exactly
+   right**; it was this document that was out of step, not the proposal. The
+   booking has to cover **Sep 26 → Oct 31**. There is no Oct 31 hold to add —
+   Oct 31 is a playing Saturday. (The Open Court hour is retired; see the box
+   at the top.)
 3. ~~**Notion — Sessions DB**: add **`All Levels`** to the `Level` select.~~
    **DONE 2026-08-31.** The four colour options were preserved. Still to do:
    add `Frederick` to the Player CRM `Location` select and `The Pickl Park` to
@@ -181,11 +222,14 @@ price without it is selling the shorter hour and none of the reason.
   coaching wage and the Frederick drive it is nearer 10. Below the minimum,
   cancel and refund in full with a personal call — the same discipline the L&D
   block runs on. It does not limp.
-- **Halloween (Oct 31)** is the held MAKEUP date since the 2026-09-05 move, not a
-  season Saturday (a makeup there would end at 5, before trick-or-treat). To hold
-  Nov 7 instead: in `picklpark-2026.ts` swap `PICKLPARK_MAKEUP_DATES` — decide
-  BEFORE the first confirmation email ships, since every email names the makeup
-  date.
+- **Halloween (Oct 31) is now a PLAYING Saturday, not a hold** (2026-09-20) — it
+  is the sixth and final week. A session there ends at 4:30, before
+  trick-or-treat. `PICKLPARK_MAKEUP_DATES` is EMPTY and that is a supported
+  state: the page, the success page and the confirmation email all render
+  nothing rather than a dangling "we make it up on .". The old advice to decide
+  a hold "before the first confirmation email ships, since every email names the
+  makeup date" no longer applies in either half — no email names one, and NGA
+  does not send the confirmation for these leagues at all any more.
 - **Seat counts are per band and DERIVED** (`PICKLPARK_SLOTS_BY_GROUP`). Both
   bands hold 2 courts × 4 = 8 today. To change one, edit
   `PICKLPARK_PLAYERS_PER_COURT` or book another court — never
