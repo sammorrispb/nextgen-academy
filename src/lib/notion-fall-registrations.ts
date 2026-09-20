@@ -211,6 +211,66 @@ export async function findFallRegByCheckoutSessionId(
   return findFallRegBy("Stripe Checkout Session ID", checkoutSessionId);
 }
 
+function sameNotionId(a: string, b: string): boolean {
+  const norm = (v: string) => v.replace(/-/g, "").toLowerCase();
+  return norm(a) === norm(b);
+}
+
+/** The narrow view of one registration row the trial-profile link needs. */
+export interface FallRegistrationPage {
+  pageId: string;
+  childFirstName: string;
+  group: string;
+  status: string;
+}
+
+export type FallRegistrationPageResult =
+  | { status: "ok"; page: FallRegistrationPage }
+  | { status: "config_missing" }
+  | { status: "not_found" }
+  | { status: "wrong_database" }
+  | { status: "query_failed"; message: string };
+
+/**
+ * Read ONE registration row, proving first that it belongs to THIS database.
+ * The "Player DB" integration can see every NGA database, so a page id alone
+ * proves nothing — the same guard `getMondayGirlsPage` applies before any write.
+ *
+ * Narrowed on purpose: the link action needs a name to compare, a group to
+ * match and a status to check. It has no business reading allergies or an
+ * emergency contact, so it cannot.
+ */
+export async function getFallRegistrationPage(
+  pageId: string,
+): Promise<FallRegistrationPageResult> {
+  const env = notionEnv();
+  if (!env) return { status: "config_missing" };
+  try {
+    const res = await fetch(`${NOTION_API}/pages/${encodeURIComponent(pageId)}`, {
+      headers: headers(env.notionKey),
+      cache: "no-store",
+    });
+    if (res.status === 404) return { status: "not_found" };
+    if (!res.ok) return { status: "query_failed", message: `Notion returned ${res.status}` };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const page = (await res.json()) as any;
+    const parentDb: string = page?.parent?.database_id ?? "";
+    if (!parentDb || !sameNotionId(parentDb, env.dbId)) return { status: "wrong_database" };
+    const p = page.properties ?? {};
+    return {
+      status: "ok",
+      page: {
+        pageId: page.id ?? pageId,
+        childFirstName: p["Child First Name"]?.rich_text?.[0]?.plain_text ?? "",
+        group: p["Group"]?.select?.name ?? "",
+        status: p["Status"]?.select?.name ?? "",
+      },
+    };
+  } catch (err) {
+    return { status: "query_failed", message: err instanceof Error ? err.message : String(err) };
+  }
+}
+
 /**
  * Flip a roster row's Status. Only "Confirmed" rows occupy a seat (the capacity
  * guard filters on it), so moving a row to Refunded/Cancelled frees the seat

@@ -432,6 +432,39 @@ a family nearly being told the wrong product under that name, so parent-facing c
     `e2e/invariant-admin-fall-roster.spec.ts` (mutation-checked: leaking allergies,
     counting seats across groups, mailing refunded families, and failing open each turn
     it red).
+  - **Linking a trial profile to the paid registration that follows it (2026-09-20).**
+    `PlayerId` IS a Fall Registrations page id, so a kid who plays a Sunday before their
+    family pays earns results against the row that existed that day; registering through
+    `/api/checkout-fall` then mints a SECOND row carrying the waiver, emergency contact
+    and birth year but none of the games. The duplicate guard cannot catch it — it
+    matches an exact `Child First Name`, and a kid who shares a first name with a
+    teammate carries a last initial. So the join is deliberate:
+    `POST /api/admin/fall/link-profile` → `linkFallProfile()`
+    (`src/lib/admin-fall-actions.ts`), surfaced as "Link a trial profile" on `/admin/fall`.
+    **Admin COOKIE only** (no Bearer path — no agent caller exists) with an exact body
+    allowlist, and both pages must prove they live in the Fall Regs DB (`parent.database_id`
+    — the Player DB integration can see every NGA database).
+    - **It moves RELATIONS ONLY.** `patchSeasonLeagueRelations` writes `Side A` / `Side B`
+      / `Present` and nothing else, built from the patch rather than spread from a row, so
+      a link can never rescore, re-open or re-plan a Played game.
+    - **One guard does most of the work: the target must hold ZERO games.** That makes
+      self-play, a doubled id on one side, and merging two kids who BOTH really played
+      impossible by construction instead of by branch.
+    - **The trial row is Cancelled, never deleted** — a deleted page strands every
+      relation pointing at it and `buildNameMap` renders "Player" on games already played.
+      The cancel happens only AFTER every game has moved.
+    - Idempotent (a second run rewrites nothing, pinned), and it reports `renameHint` when
+      the results were earned under a different display name than the paid row carries.
+    - The engine lives OUTSIDE `season-league-view.ts` on purpose: that module's invariant
+      is that it writes ids and scores and never a name, and this one reads names to
+      compare them.
+    - Pinned by `e2e/invariant-admin-fall-link-profile.spec.ts` (mutation-checked 6/6:
+      dropping the Void skip, the dedupe, the target-has-games guard, the group check, the
+      relation-only property list, and the admin cookie gate each turn it red).
+  - **Two kids who share a first name each get a last-name initial** (`Aiden W.` /
+    `Aiden L.`), entered by hand. `buildNameMap` otherwise appends `(2)` in ROSTER ORDER,
+    and the roster query carries no `sorts` — so which kid is plain and which is `(2)` can
+    swap between page loads, on the coach schedule and on the parent standings link alike.
 - Pinned by `e2e/season-league-{rotation,standings,finals,notion}.spec.ts`,
   `e2e/standings-link-token.spec.ts`, `e2e/invariant-season-league-egress.spec.ts`
   (Notion-only host, write bodies carry ids + scores and never a name or parent field,
@@ -884,7 +917,7 @@ Tests OBSERVE these files; they never modify them. Any change here goes through 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `api/admin/monday-girls/remove`, `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cancel-monday-girls,admin-monday-girls-actions,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
 - **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 8 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
 - **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the admin roster pages `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts` + `api/admin/monday-girls/maybe` and
-  `admin/(authed)/fall` + `src/lib/admin-fall-roster.ts`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
+  `admin/(authed)/fall` + `src/lib/{admin-fall-roster,admin-fall-actions}.ts` + `api/admin/fall/link-profile`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
 

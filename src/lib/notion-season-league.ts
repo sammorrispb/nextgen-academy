@@ -493,6 +493,45 @@ export async function upsertSeasonLeagueRows(
   return out;
 }
 
+/**
+ * Move a player's relations on rows that already exist (the trial-profile link).
+ *
+ * Deliberately narrow: it writes ONLY `Side A` / `Side B` / `Present`, and only
+ * the ones the caller names. A link is not a rescore and not a replan, so a
+ * Played row's score, status and key are unreachable from here — the property
+ * list is built from the patch, never spread from a row.
+ */
+export async function patchSeasonLeagueRelations(
+  patches: ReadonlyArray<{
+    pageId: string;
+    sideA?: readonly PlayerId[];
+    sideB?: readonly PlayerId[];
+    present?: readonly PlayerId[];
+  }>,
+): Promise<{ patched: number; failed: number }> {
+  const env = notionEnv();
+  if (!env) return { patched: 0, failed: patches.length };
+
+  let patched = 0;
+  let failed = 0;
+  for (let i = 0; i < patches.length; i += 1) {
+    if (i > 0) await sleep(WRITE_THROTTLE_MS);
+    const patch = patches[i];
+    const props: Props = {};
+    if (patch.sideA) props[SEASON_LEAGUE_PROPS.sideA] = relation(patch.sideA);
+    if (patch.sideB) props[SEASON_LEAGUE_PROPS.sideB] = relation(patch.sideB);
+    if (patch.present) props[SEASON_LEAGUE_PROPS.present] = relation(patch.present);
+    if (Object.keys(props).length === 0) continue;
+
+    const r = await notionWrite(env.notionKey, "PATCH", `${NOTION_API}/pages/${patch.pageId}`, {
+      properties: props,
+    });
+    if (r.ok) patched += 1;
+    else failed += 1;
+  }
+  return { patched, failed };
+}
+
 export async function recordSeasonLeagueScore(
   pageId: string,
   scoreA: number,
