@@ -59,45 +59,38 @@ function session(overrides: Partial<NgaSession> = {}): NgaSession {
 }
 
 test.describe("events feed — egress invariants", () => {
-  test("camp exactLocation never appears in the feed payload", () => {
+  test("camps and MVF are out of the feed entirely, address and all", () => {
+    // NARROWED 2026-09-19 (Sam): the feed is the NGA league plus the drop-in
+    // sessions at Walter Johnson and The Pickl Park. Camps and MVF classes no
+    // longer ship at all.
+    //
+    // This used to assert the WEAKER invariant that a camp item may ship so
+    // long as it carries `publicArea` rather than `exactLocation`. That check
+    // is now unreachable through this feed, so asserting absence is both
+    // honest and stronger — but `buildCampEvents` keeps its own redaction
+    // coverage in e2e/events-feed.spec.ts, because it is still exported and a
+    // future caller could reach it.
     const feed = buildEventsFeed(
       { sessions: [] },
       "https://nextgenpbacademy.com",
     );
     const json = JSON.stringify(feed);
 
-    // No camp's hidden venue string ships anywhere in the payload —
-    // neither the full address nor the venueLine display header (it names
-    // the school just as precisely).
+    expect(feed.some((i) => i.source === "camp")).toBe(false);
+    expect(feed.some((i) => i.source === "mvf")).toBe(false);
+    expect(json).not.toContain("nga-camp:");
+    expect(json).not.toContain("mvf:");
+
+    // The hidden venue strings stay absent for the original reason too.
     for (const camp of CAMPS) {
       if (camp.exactLocation) expect(json).not.toContain(camp.exactLocation);
       if (camp.venueLine) expect(json).not.toContain(camp.venueLine);
     }
 
-    // Every camp item carries the broad public area and nothing address-like.
-    // NOTE: the street-level check is scoped to CAMP items on purpose. The
-    // Aug 17 camp is hidden at the same building the Fall 2026 season names
-    // publicly (FALL_VENUE, rendered on /fall), so a payload-wide street search
-    // would flag legitimate public copy. The invariant is that a *camp* never
-    // carries its venue — not that the street never appears.
-    const campItems = feed.filter((i) => i.source === "camp");
-    expect(campItems.length).toBeGreaterThan(0);
-    for (const item of campItems) {
-      const camp = CAMPS.find((c) => item.key.includes(`:${c.slug}:`));
-      expect(camp).toBeTruthy();
-      expect(item.location).toBe(camp!.publicArea);
-
-      const campJson = JSON.stringify(item);
-      for (const other of CAMPS) {
-        if (!other.exactLocation) continue;
-        const street = other.exactLocation.split(",")[1]?.trim();
-        if (street) expect(campJson).not.toContain(street);
-      }
-      // No street number anywhere on a camp item.
-      expect(campJson).not.toMatch(
-        /\d{3,5}\s+[A-Z][a-z]+\s+(Dr|Rd|Ave|St|Blvd|Way)/,
-      );
-    }
+    // And no street address reaches the payload from any remaining source.
+    expect(json).not.toMatch(
+      /\d{3,5}\s+[A-Z][a-z]+\s+(Dr|Rd|Ave|St|Blvd|Way)/,
+    );
   });
 
   test("session roster names and age stats never appear in the feed payload", () => {
@@ -117,11 +110,20 @@ test.describe("events feed — egress invariants", () => {
   });
 
   test("Enrichment Collective clubs never reach the public feed", () => {
-    // EC runs after-school clubs at named ELEMENTARY SCHOOLS. Publishing a
-    // precise recurring time and place where identified young children gather
-    // is the risk camps.ts already mitigates by hiding `exactLocation` — here
-    // the venue IS the school, so the whole program stays off public surfaces
-    // and lives only on Sam's private calendar (src/data/enrichment-collective.ts).
+    // EC runs after-school clubs at named ELEMENTARY SCHOOLS.
+    //
+    // UPDATED 2026-09-19 (Sam): the program is no longer invisible — the
+    // weekday, school name, dates and the partner's own registration link now
+    // render on /after-school-clubs, because Enrichment Collective already
+    // publishes that page itself. See the header of
+    // src/data/enrichment-collective.ts for the full reasoning, and
+    // e2e/invariant-enrichment-collective-public.spec.ts for what that surface
+    // may carry.
+    //
+    // THE FEED IS A SEPARATE DECISION AND THE ANSWER IS STILL NO. A marketing
+    // page a parent reads is not a machine-readable, unauthenticated endpoint
+    // that gets mirrored onward. Nothing below relaxed; the street address in
+    // particular stays calendar-only.
     //
     // 2026-09-13: that private calendar now carries school NAMES and STREET
     // ADDRESSES. Nothing about this public rule relaxed — the opposite. The
