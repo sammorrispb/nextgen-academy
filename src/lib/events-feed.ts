@@ -33,7 +33,7 @@
 import type { NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { CAMP_OPTIONS, campDays, type Camp } from "@/data/camps";
-import { mvfClassDates, type MvfProgram } from "@/data/mvf";
+import { MVF_PROGRAMS, mvfClassDates, type MvfProgram } from "@/data/mvf";
 import {
   FALL_RAIN_DATES,
   FALL_SUNDAYS,
@@ -361,23 +361,25 @@ export function buildEventsFeed(
 ): EventFeedItem[] {
   const origin = originFrom(siteOrigin);
 
-  // NARROWED 2026-09-19 (Sam): the feed carries the NGA league and the drop-in
-  // sessions at Walter Johnson and The Pickl Park — nothing else.
+  // SCOPE, as it stands 2026-09-20 (Sam): the NGA league, the drop-in sessions
+  // at Walter Johnson and The Pickl Park, and the MVF classes.
   //
-  // Camps and the MVF classes are deliberately NOT here. Both are things NGA
-  // does, but neither is something this feed's readers should be sold: camps
-  // are seasonal and sell through their own pages, and MVF owns the
-  // registration and payment for its classes the way Enrichment Collective
-  // owns its clubs. `buildCampEvents` and `buildMvfEvents` stay exported and
-  // tested so a caller that genuinely wants them can ask for them directly.
+  // MVF was briefly out (2026-09-19) and is back. The reason it came back is
+  // worth keeping, because it is not a marketing argument: this feed has TWO
+  // consumers with opposite semantics. It is a public discovery surface, where
+  // narrowing is good — and it is the source set for /calendar-sync, which
+  // DELETES what leaves it. Dropping MVF took ~18 of Sam's own Thursday
+  // teaching commitments (through Nov 19) out of that set, which would have
+  // deleted them from his calendar or tripped the sync's 20% deletion cap.
   //
-  // CONSEQUENCE FOR THE CALENDAR MIRROR: /calendar-sync reconciles Sam's
-  // Google Calendar toward this feed and deletes what leaves it. Anything
-  // dropped here must be picked up by the skill reading its data file
-  // directly — the way it already reads enrichment-collective.ts — or those
-  // blocks disappear from the calendar on the next run.
+  // So: anything removed from this feed that Sam personally attends needs a
+  // direct-read path in the calendar-sync skill FIRST, the way the Enrichment
+  // Collective clubs have always had one. Camps stay out and need no such
+  // path only because every camp in camps.ts has already ended; a future camp
+  // gets the direct read, or comes back here.
   return [
     ...buildSessionEvents(input.sessions, origin),
+    ...buildMvfEvents(MVF_PROGRAMS, origin),
     ...buildFallEvents(origin),
     ...buildPicklParkEvents(origin),
   ].sort((a, b) => a.date.localeCompare(b.date) || a.key.localeCompare(b.key));
