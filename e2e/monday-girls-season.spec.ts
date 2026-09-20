@@ -2,19 +2,20 @@ import { test, expect } from "@playwright/test";
 import {
   MONDAY_GIRLS_AGE_MAX,
   MONDAY_GIRLS_AGE_MIN,
-  MONDAY_GIRLS_GROUP,
+  MONDAY_GIRLS_ADVANCED_BEGINNER,
+  MONDAY_GIRLS_BEGINNER,
+  MONDAY_GIRLS_BLOCK_SEATS,
   MONDAY_GIRLS_MONDAYS,
   MONDAY_GIRLS_RAIN_DATES,
   MONDAY_GIRLS_SEASON_SESSIONS,
   MONDAY_GIRLS_SKIPPED_DATE,
-  MONDAY_GIRLS_SLOTS_BY_GROUP,
-  mondayGirlsSlotsFor,
+  mondayGirlsBlockSeats,
 } from "../src/data/monday-girls-2026";
 import {
   MONDAY_GIRLS_SEASON_GROUPS,
   MONDAY_GIRLS_SEASON_PRICE_USD,
   findMondayGirlsSeasonGroup,
-  mondayGirlsSeasonSlotsFor,
+  mondayGirlsSeasonSeats,
 } from "../src/data/monday-girls-season-2026";
 import { PLAYERS_PER_PICKLEBALL_COURT } from "../src/data/venue-parking";
 import {
@@ -77,26 +78,16 @@ test.describe("Monday Girls — the calendar", () => {
 test.describe("Monday Girls — seats", () => {
   test("seats are DERIVED from the court booking, not typed", () => {
     // 1 tennis court → 2 pickleball courts → 4 players each.
-    expect(mondayGirlsSlotsFor(MONDAY_GIRLS_GROUP)).toBe(
-      1 * 2 * PLAYERS_PER_PICKLEBALL_COURT,
-    );
+    expect(mondayGirlsBlockSeats()).toBe(1 * 2 * PLAYERS_PER_PICKLEBALL_COURT);
+    expect(mondayGirlsSeasonSeats()).toBe(MONDAY_GIRLS_BLOCK_SEATS);
   });
 
-  test("the seat cap is keyed per group, not a shared scalar", () => {
-    // The shape that prevents the invariant-fall-seat-cap-per-group bug from
-    // reappearing when a second cohort is added.
-    expect(typeof MONDAY_GIRLS_SLOTS_BY_GROUP).toBe("object");
-    expect(Object.keys(MONDAY_GIRLS_SLOTS_BY_GROUP)).toContain(
-      MONDAY_GIRLS_GROUP,
-    );
-    expect(mondayGirlsSeasonSlotsFor(MONDAY_GIRLS_GROUP)).toBe(
-      MONDAY_GIRLS_SLOTS_BY_GROUP[MONDAY_GIRLS_GROUP],
-    );
-  });
+  // The block-wide cap and its "why this is not the fall bug" reasoning live in
+  // invariant-monday-girls-block-capacity.spec.ts.
 
-  test("the one group resolves, and an unknown group does not", () => {
-    expect(MONDAY_GIRLS_SEASON_GROUPS).toHaveLength(1);
-    expect(findMondayGirlsSeasonGroup(MONDAY_GIRLS_GROUP)).toBeDefined();
+  test("both levels resolve, and an unknown group does not", () => {
+    expect(MONDAY_GIRLS_SEASON_GROUPS).toHaveLength(2);
+    expect(findMondayGirlsSeasonGroup(MONDAY_GIRLS_BEGINNER)).toBeDefined();
     expect(findMondayGirlsSeasonGroup("Green/Yellow")).toBeUndefined();
     expect(findMondayGirlsSeasonGroup(undefined)).toBeUndefined();
   });
@@ -104,7 +95,7 @@ test.describe("Monday Girls — seats", () => {
 
 test.describe("Monday Girls — validation", () => {
   const base = {
-    group: MONDAY_GIRLS_GROUP,
+    group: MONDAY_GIRLS_BEGINNER,
     parentName: "Test Parent",
     email: "parent@example.com",
     phone: "3015550142",
@@ -121,7 +112,7 @@ test.describe("Monday Girls — validation", () => {
   });
 
   test("a 7-year-old is NOT blocked — the confirmed player in this block is 7", () => {
-    // The group is ADVERTISED 7–10 but VALIDATED against NGA's site-wide 6–16.
+    // The group is ADVERTISED 7–12 but VALIDATED against NGA's site-wide 6–16.
     // A validator pinned to the advertised band would have rejected the one
     // family who had already said yes. This is the regression that matters.
     const sevenYearOld = {
@@ -130,7 +121,19 @@ test.describe("Monday Girls — validation", () => {
     };
     expect(validateMondayGirlsRegistration(sevenYearOld)).toEqual({});
     expect(MONDAY_GIRLS_AGE_MIN).toBeLessThanOrEqual(7);
-    expect(MONDAY_GIRLS_AGE_MAX).toBeGreaterThanOrEqual(10);
+    // Widened to 12 when the block opened to advanced beginners (2026-09-20):
+    // an advanced beginner is often an older girl who started late.
+    expect(MONDAY_GIRLS_AGE_MAX).toBeGreaterThanOrEqual(12);
+  });
+
+  test("a 12-year-old advanced beginner is accepted", () => {
+    expect(
+      validateMondayGirlsRegistration({
+        ...base,
+        group: MONDAY_GIRLS_ADVANCED_BEGINNER,
+        childBirthYear: String(new Date().getFullYear() - 12),
+      }),
+    ).toEqual({});
   });
 
   test("a wrong group is refused", () => {
@@ -142,7 +145,7 @@ test.describe("Monday Girls — validation", () => {
   });
 
   test("missing required fields are each reported", () => {
-    const errors = validateMondayGirlsRegistration({ group: MONDAY_GIRLS_GROUP });
+    const errors = validateMondayGirlsRegistration({ group: MONDAY_GIRLS_BEGINNER });
     for (const field of [
       "parentName",
       "email",

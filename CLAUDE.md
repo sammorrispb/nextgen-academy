@@ -493,7 +493,7 @@ a family nearly being told the wrong product under that name, so parent-facing c
 - **Saturday afternoon is not a named cell on the Pickl Park rate card** — the court-time proposal covers Mon–Wed mornings and Tue–Thu evenings only, and its own rule is that an unnamed cell defaults to the higher neighbour. Settle it with Amar in the same conversation as the others.
 - **SEO posture (updated 2026-09-13, AEO audit — Sam's call reverses the 2026-09-07 "no Frederick city page" note).** Frederick has its own landing page, `/youth-pickleball-frederick`, reached by giving its `EXTENDED_SERVICE_AREAS` row a `slug` (`src/lib/seo.ts`); the footer and sitemap read `EXTENDED_AREA_LANDING_PAGES`. It is hand-rolled, not `CityLanding` (typed to MoCo cities, renders the 6–16 ladder and a free-evaluation promise), and every claim lives in `src/data/frederick.ts` under honesty rules pinned by `e2e/frederick-page.spec.ts`. `SERVICE_AREAS`/`NGA_POSTAL_ADDRESS` still stay Montgomery County. `LEAD_AREAS` (`src/data/lead-areas.ts`, now shared by `/api/waitlist` and `EmptyStateWaitlist` instead of duplicated) does carry `Frederick`.
 
-### Monday Girls Beginner Group — Wood MS (`/monday-girls`)
+### Monday Girls Group — Wood MS (`/monday-girls`)
 **A hand-recruited girls-only peer block, not a public season.** It exists because
 Amanda Stone told Sam (2026-08-03) that her daughter had trained elsewhere and enjoyed it
 but *the group was all boys* — she would not book an evaluation without "additional girl
@@ -501,7 +501,43 @@ energy". Sam proposed a girls-only group around that objection and recruited it 
 family over text. **The peer group IS the product**; the ball-colour ladder is not what
 these families bought.
 
-**Terms (Sam, 2026-08-23; RE-DATED 2026-09-04):** Mondays 6:00–7:00 PM at Earle B. Wood
+**WIDENED TO TWO LEVELS 2026-09-20 (Sam).** The block now takes **beginner AND advanced
+beginner**, ages **7–12**, in the same 6:00–7:00 PM hour. Sam's stated purpose is the
+on-ramp, not the level: "somewhere we can guide any girls who want girls-only play, and
+then eventually they'll be good enough to join Green Ball." Consequences worth knowing
+before touching this block:
+
+- **Capacity is PER BLOCK, not per level** — `MONDAY_GIRLS_BLOCK_SEATS` (a scalar: 1
+  tennis court × 2 pickleball courts × 4 = 8). Both levels share one booking and one
+  hour, so the roster count and the checkout gate cover the whole block and the Notion
+  capacity queries carry **no `Group` filter**. This is deliberately the OPPOSITE of the
+  Walter Johnson season, whose Green (1:00) and Yellow (2:30) own different hours and so
+  must have per-group caps. A per-level cap here would seat 16 girls on 2 courts; a
+  per-level cap of 4 would refuse an all-beginner fill the court can hold. Pinned,
+  mutation-checked 4/4, by `e2e/invariant-monday-girls-block-capacity.spec.ts` — read its
+  header before "fixing" this into a per-group map.
+- **`MONDAY_GIRLS_BEGINNER` is the exact string `"Girls Beginner"` and must not be
+  renamed** — live Confirmed rows carry it, and renaming strands them from the count, the
+  duplicate guard and the admin roster in one edit.
+- **The duplicate guard is block-wide too**, so a kid can't be registered twice by
+  switching level.
+- **The peer promise moved from STAGE to SETTING.** `MONDAY_GIRLS_PEER_NOTE` used to
+  promise "every player is a girl at the same beginner stage" — untrue across two levels
+  and ages 7–12. It now promises girls-only play grouped by where each girl actually is
+  that week. That sentence answers Amanda Stone's original objection; don't let it drift
+  back into a claim we can't keep.
+- **`MONDAY_GIRLS_PATHWAY_NOTE` names a LEVEL, never a league.** "Green Ball League" is
+  ambiguous between the `/league` product (14U/16U), the Walter Johnson Sunday Green
+  season, and the ladder rung — Open Brain records a family nearly being sold the wrong
+  product under exactly that name. The copy points at `/#levels`.
+- **The admin roster shows the level MIX under the seat count** (`countConfirmedByLevel`).
+  Not a second capacity — it exists because the one risk widening introduced is a
+  lopsided roster (one lone beginner among seven advanced beginners is the original
+  objection, one layer down), and code can't fix a mix, only surface it.
+- The **form now asks the parent to place their daughter** (two options, no default) and
+  the admin "maybe" row takes an optional level defaulting to Beginner.
+
+**Terms (Sam, 2026-08-23; RE-DATED 2026-09-04; WIDENED 2026-09-20):** Mondays 6:00–7:00 PM at Earle B. Wood
 Middle School, Rockville. **$225 for the 6-session block, paid up front.** Sold as
 Sept 14 – Oct 19 originally; **Mon Sep 21 is Yom Kippur + an MCPS closure**, so the block
 skips it and runs **Sep 14 – Oct 26**. `MONDAY_GIRLS_MONDAYS` is written out, never
@@ -513,16 +549,16 @@ Monday *and its reason* rather than shipping different dates silently.
 - **Config is `src/data/monday-girls-2026.ts`** (dates, venue, times, the skipped date +
   reason, rain dates, the derived seat map) + `monday-girls-season-2026.ts` (slug, title,
   $225, price env var). Editing the block is a one-file change.
-- **Seats are DERIVED** — 1 tennis court × 2 pickleball courts × 4 players = 8. Keyed by
-  group in a `Record` even though there is exactly ONE group, so adding a second cohort
-  can't reintroduce the shared-scalar bug `invariant-fall-seat-cap-per-group.spec.ts`
-  exists for. **To change capacity, change the booking or `MONDAY_GIRLS_PLAYERS_PER_COURT`
-  — never `PLAYERS_PER_PICKLEBALL_COURT`.**
-- **The advertised age band is 7–10; the validator is the site-wide 6–16.** Sam recruited
+- **Seats are DERIVED and BLOCK-WIDE** — 1 tennis court × 2 pickleball courts × 4 players
+  = 8, shared by both levels (see the widening note above for why this is a scalar rather
+  than the fall season's per-group map). **To change capacity, change the booking or
+  `MONDAY_GIRLS_PLAYERS_PER_COURT` — never `PLAYERS_PER_PICKLEBALL_COURT`.**
+- **The advertised age band is 7–12; the validator is the site-wide 6–16.** Sam recruited
   it as "ages 8–10", but the one CONFIRMED player is 7 — a form pinned to the advertised
   band would have rejected the only family who had already said yes. The band was widened
-  DOWN to the roster that exists, not up to one we hope for. Whether a girl fits a beginner
-  peer group is a coach's call at placement, not a birth-year comparison at checkout.
+  DOWN to the roster that exists, and then UP to 12 on 2026-09-20 when advanced beginners
+  joined (often an older girl who started late). Whether a girl fits this block is a
+  coach's call at placement, not a birth-year comparison at checkout.
 - **The registration gate has THREE legs** (`src/lib/monday-girls-registration-window.ts`),
   one more than `/picklpark`: the kill-switch flag, the calendar, **and BOTH envs being
   set** — the Stripe price *and* the Notion roster DB. The roster leg is the one that is
@@ -555,7 +591,7 @@ Monday *and its reason* rather than shipping different dates silently.
   `e2e/invariant-monday-girls-proration.spec.ts` (mutation-checked: round-up, the
   season-denominator refund, and a floor of 1 each turn it red).
 - **`noindex`, and deliberately ABSENT from `/api/events/feed`.** A girls-only group of
-  7–10-year-olds at a named middle school on a precise recurring evening is the exact risk
+  7–12-year-olds at a named middle school on a precise recurring evening is the exact risk
   the Enrichment Collective clubs are kept off every public surface for. The link is meant
   to be texted, not found. The Wood Monday hold is already on the Fall 2026 master schedule
   for calendar purposes.

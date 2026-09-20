@@ -250,9 +250,17 @@ export async function updateMondayGirlsRegStatus(
 // (empty list) on any Notion problem — same posture as the fall roster: an
 // oversold seat or duplicate registration is a refundable mistake, but a
 // Notion blip blocking every checkout is a launch-day outage.
-export async function fetchMondayGirlsRegistrationKeys(
-  group: string,
-): Promise<MondayGirlsRegistrationKey[]> {
+//
+// BLOCK-WIDE, NOT PER LEVEL — no `Group` filter, deliberately. Beginner and
+// Advanced Beginner share one 6:00–7:00 PM booking and therefore one seat cap
+// (see MONDAY_GIRLS_BLOCK_SEATS), so a query narrowed to one level would let
+// each level fill "its" half of a court that holds eight in total. It also
+// makes the duplicate guard block-wide, which is what we want: a kid should
+// not be registerable twice by switching level. Pinned by
+// invariant-monday-girls-block-capacity.
+export async function fetchMondayGirlsRegistrationKeys(): Promise<
+  MondayGirlsRegistrationKey[]
+> {
   const env = notionEnv();
   if (!env) return [];
 
@@ -261,12 +269,7 @@ export async function fetchMondayGirlsRegistrationKeys(
       method: "POST",
       headers: headers(env.notionKey),
       body: JSON.stringify({
-        filter: {
-          and: [
-            { property: "Group", select: { equals: group } },
-            { property: "Status", select: { equals: "Confirmed" } },
-          ],
-        },
+        filter: { property: "Status", select: { equals: "Confirmed" } },
         page_size: 100,
       }),
       cache: "no-store",
@@ -291,13 +294,13 @@ export async function fetchMondayGirlsRegistrationKeys(
 }
 
 /**
- * Confirmed-seat count per group for the /monday-girls page's spots-left display.
- * null = unknown (env unset or Notion unavailable) — the page hides the count
- * rather than showing a wrong number.
+ * Confirmed-seat count for the /monday-girls page's spots-left display.
+ *
+ * BLOCK-WIDE, matching the cap it is displayed against: one hour, one court,
+ * one number. null = unknown (env unset or Notion unavailable) — the page hides
+ * the count rather than showing a wrong one.
  */
-export async function countMondayGirlsRegistrations(
-  group: string,
-): Promise<number | null> {
+export async function countMondayGirlsRegistrations(): Promise<number | null> {
   const env = notionEnv();
   if (!env) return null;
   try {
@@ -305,12 +308,7 @@ export async function countMondayGirlsRegistrations(
       method: "POST",
       headers: headers(env.notionKey),
       body: JSON.stringify({
-        filter: {
-          and: [
-            { property: "Group", select: { equals: group } },
-            { property: "Status", select: { equals: "Confirmed" } },
-          ],
-        },
+        filter: { property: "Status", select: { equals: "Confirmed" } },
         page_size: 100,
       }),
       cache: "no-store",

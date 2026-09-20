@@ -9,7 +9,21 @@
 // hoping for "additional girl energy" — she would not book an evaluation
 // without it. Sam proposed a girls-only group around that objection on
 // 2026-08-13 and recruited it family by family. The format is the product: a
-// small peer group of girls at the same level, not a ladder and not a lesson.
+// girls-only place to play, not a ladder and not a lesson.
+//
+// WIDENED 2026-09-20 (Sam): the block now takes BEGINNER and ADVANCED BEGINNER
+// together, ages 7–12. The purpose he stated is the on-ramp, not the level —
+// "somewhere we can guide any girls who want girls-only play, and then
+// eventually they'll be good enough to join Green Ball". So the block is a
+// holding pattern with a destination: a girl arrives wherever she is, plays
+// only with girls, and leaves for Green Ball when she is ready.
+//
+// Note what that does to the ORIGINAL promise. This block used to tell parents
+// every player was "a girl at the same beginner stage". Across two levels and
+// ages 7–12 that is no longer true, and a parent of a 12-year-old advanced
+// beginner would notice. The sameness claim therefore moves from STAGE to
+// SETTING — see MONDAY_GIRLS_PEER_NOTE, which is the sentence that answers
+// Amanda's objection and must never quietly become a claim we can't keep.
 //
 // SHAPE (Sam, 2026-08-23; RESCHEDULED 2026-09-04): Mondays 6:00–7:00 PM at
 // Earle B. Wood Middle School in Rockville, $225 for the 6-session block paid
@@ -42,45 +56,79 @@ export const MONDAY_GIRLS_START_TIME = "6:00 PM";
 export const MONDAY_GIRLS_END_TIME = "7:00 PM";
 
 /**
- * The one group this block sells. A single-member union rather than a bare
- * string so a second group (a Thursday cohort, say) is a compile-time change
- * everywhere it matters, and so the Notion `Group` select has one exact value
- * the capacity filter can match.
+ * The hour, as copy. BOTH levels play it — that shared hour on a single court
+ * booking is the physical fact the block-wide seat cap rests on. If a level
+ * ever gets its own hour, capacity stops being a block property and
+ * MONDAY_GIRLS_BLOCK_SEATS has to change with it.
  */
-export const MONDAY_GIRLS_GROUP = "Girls Beginner" as const;
-export type MondayGirlsGroup = typeof MONDAY_GIRLS_GROUP;
+export const MONDAY_GIRLS_TIME_LABEL =
+  `${MONDAY_GIRLS_START_TIME}–${MONDAY_GIRLS_END_TIME}`.replace(" PM–", "–");
 
 /**
- * Players per pickleball court for this group. Held at NGA's site-wide 4 —
- * this is a beginner group where court time per kid IS the product.
+ * The two levels this block sells, as the exact strings the Notion `Group`
+ * select stores.
  *
- * A Record keyed by group, not a bare number, on purpose: the Walter Johnson
- * season learned the hard way that one shared "spots per group" scalar
- * silently gates one group on another's fill (the bug
- * invariant-fall-seat-cap-per-group.spec.ts exists to prevent). There is one
- * group today; keeping the map shape means adding a second can't reintroduce
- * that bug.
+ * MONDAY_GIRLS_BEGINNER IS LOAD-BEARING AND MUST NOT BE RENAMED. Real
+ * Confirmed rows in the roster DB carry "Girls Beginner" verbatim; changing the
+ * string strands them from the seat count, the duplicate guard and the admin
+ * roster in one edit. Pinned by invariant-monday-girls-block-capacity.
  */
-export const MONDAY_GIRLS_PLAYERS_PER_COURT: Record<MondayGirlsGroup, number> =
-  {
-    [MONDAY_GIRLS_GROUP]: PLAYERS_PER_PICKLEBALL_COURT,
-  };
+export const MONDAY_GIRLS_BEGINNER = "Girls Beginner" as const;
+export const MONDAY_GIRLS_ADVANCED_BEGINNER = "Girls Advanced Beginner" as const;
+
+export const MONDAY_GIRLS_LEVELS = [
+  MONDAY_GIRLS_BEGINNER,
+  MONDAY_GIRLS_ADVANCED_BEGINNER,
+] as const;
+
+export type MondayGirlsGroup = (typeof MONDAY_GIRLS_LEVELS)[number];
 
 /**
- * Seats. DERIVED from the court booking, never typed: book a second tennis
- * court and the seats follow. To change capacity, change the booking or
+ * The level a row gets when nothing else says otherwise — an admin "maybe"
+ * jotted down mid-conversation, for instance. Beginner, because that is the
+ * door this block was built to open.
+ */
+export const MONDAY_GIRLS_DEFAULT_LEVEL: MondayGirlsGroup = MONDAY_GIRLS_BEGINNER;
+
+/** Pickleball courts the Monday hold actually yields. */
+export const MONDAY_GIRLS_PICKLEBALL_COURTS =
+  MONDAY_GIRLS_TENNIS_COURTS * PICKLEBALL_COURTS_PER_TENNIS_COURT;
+
+/**
+ * Seats — ONE cap for the WHOLE BLOCK, shared by both levels. Derived from the
+ * court booking, never typed: book a second tennis court and the seats follow.
+ *
+ * WHY THIS IS A SCALAR AND NOT A PER-LEVEL MAP, which is the opposite of what
+ * the Walter Johnson season does and looks at a glance like the bug
+ * invariant-fall-seat-cap-per-group.spec.ts exists to prevent:
+ *
+ *   Walter Johnson's Green (1:00–2:30) and Yellow (2:30–4:00) own DIFFERENT
+ *   HOURS. Each group has its own court-time, so a shared scalar there gates
+ *   one group on the other's fill — a real bug, correctly pinned.
+ *
+ *   Both Monday levels play the SAME 6:00–7:00 PM hour on the SAME single
+ *   tennis court (Sam, 2026-09-20: "it's that same session, expanding the
+ *   group"). One booking, one hour, one cap. A per-level cap of 8 would seat 16
+ *   girls on 2 pickleball courts; a per-level cap of 4 would turn away an
+ *   all-beginner fill the court can hold, which is exactly the flexibility
+ *   widening the block was meant to buy.
+ *
+ * So capacity here is a property of the BOOKING, and the level is a placement
+ * label on a registration. To change capacity, change the booking or
  * MONDAY_GIRLS_PLAYERS_PER_COURT — never PLAYERS_PER_PICKLEBALL_COURT, which
  * sizes drop-ins and every venue's playerCapacity site-wide.
  */
-export const MONDAY_GIRLS_SLOTS_BY_GROUP: Record<MondayGirlsGroup, number> = {
-  [MONDAY_GIRLS_GROUP]:
-    MONDAY_GIRLS_TENNIS_COURTS *
-    PICKLEBALL_COURTS_PER_TENNIS_COURT *
-    MONDAY_GIRLS_PLAYERS_PER_COURT[MONDAY_GIRLS_GROUP],
-};
+export const MONDAY_GIRLS_PLAYERS_PER_COURT = PLAYERS_PER_PICKLEBALL_COURT;
 
-export function mondayGirlsSlotsFor(group: MondayGirlsGroup): number {
-  return MONDAY_GIRLS_SLOTS_BY_GROUP[group];
+export const MONDAY_GIRLS_BLOCK_SEATS =
+  MONDAY_GIRLS_PICKLEBALL_COURTS * MONDAY_GIRLS_PLAYERS_PER_COURT;
+
+/**
+ * The block's seat cap. Takes NO level argument on purpose — a signature that
+ * accepted one would tell every caller that levels have separate caps.
+ */
+export function mondayGirlsBlockSeats(): number {
+  return MONDAY_GIRLS_BLOCK_SEATS;
 }
 
 export const MONDAY_GIRLS_VENUE =
@@ -131,8 +179,14 @@ export const MONDAY_GIRLS_SEASON_LABEL = "September 14 – October 26, 2026";
  *
  * Sam recruited this group as "ages 8–10". The families who actually said yes
  * span 7–10 (the one CONFIRMED player is 7), so advertising 8–10 would tell a
- * girl already in the group that she does not qualify. The band is widened
- * down to the roster that exists rather than up to a roster we hope for.
+ * girl already in the group that she does not qualify. The band was widened
+ * DOWN to the roster that existed rather than up to one we hoped for.
+ *
+ * WIDENED UP to 12 on 2026-09-20 when the block opened to advanced beginners
+ * (Sam): an advanced beginner is frequently an older girl who simply started
+ * late, and the block's job is to hold any girl who wants girls-only play until
+ * she is ready for Green Ball. 12 is the ceiling because above it a player who
+ * is genuinely beyond advanced-beginner belongs on the ladder, not here.
  *
  * This is COPY only. Checkout validates against NGA's site-wide 6–16 window
  * (see validate-monday-girls-registration.ts), so the band can never hard-block
@@ -140,7 +194,7 @@ export const MONDAY_GIRLS_SEASON_LABEL = "September 14 – October 26, 2026";
  * right check, not a form field.
  */
 export const MONDAY_GIRLS_AGE_MIN = 7;
-export const MONDAY_GIRLS_AGE_MAX = 10;
+export const MONDAY_GIRLS_AGE_MAX = 12;
 
 /**
  * How each session runs. One string, reused by the page and the confirmation
@@ -150,9 +204,33 @@ export const MONDAY_GIRLS_SESSION_FORMAT =
   "30 minutes of coached skill work, then 30 minutes of games with the group";
 
 /**
- * The sentence that says what a parent is actually buying. This group was
- * built around a retention objection, not a skill gap — the peer group IS the
- * offer, so every surface that quotes the price carries this with it.
+ * The sentence that says what a parent is actually buying, and the one that
+ * answers Amanda Stone's original objection. Every surface that quotes the
+ * price carries it.
+ *
+ * REWRITTEN 2026-09-20 with the two-level widening. It used to read "every
+ * player in this block is a girl at the same beginner stage" — a promise about
+ * STAGE, which stopped being true the moment the block spanned beginner and
+ * advanced beginner across ages 7–12. The promise is now about the SETTING,
+ * which is what these families actually said yes to and what stays true however
+ * the roster fills.
  */
 export const MONDAY_GIRLS_PEER_NOTE =
-  "Every player in this block is a girl at the same beginner stage, so nobody is the only one learning — they build the habit together, week after week.";
+  "Every player on court is a girl, and we group them by where they actually are that week — so nobody is the only girl out there, and nobody is stuck in a group that is too easy or too fast for her.";
+
+/**
+ * Where this block LEADS. Sam's framing on 2026-09-20: the block is an on-ramp,
+ * not a destination — a girl plays here until she is ready for Green Ball.
+ *
+ * DELIBERATELY NOT the words "Green Ball League". Three different things could
+ * mean that — the Fall 2026 League product at /league (14U/16U divisions), the
+ * Walter Johnson Sunday Green season, and Green Ball as a rung on the ladder —
+ * and Open Brain records a family nearly being sold the wrong product under
+ * exactly that ambiguity. So this names a LEVEL and points at the ladder, which
+ * is true all year and implies no product. Do not turn it into a league link
+ * without picking one deliberately.
+ */
+export const MONDAY_GIRLS_PATHWAY_NOTE =
+  "This block is a starting point, not a ceiling. When a girl is rallying, serving and keeping score on her own, Coach Sam will tell you she's ready to step up to Green Ball and play the wider Next Gen ladder.";
+
+export const MONDAY_GIRLS_PATHWAY_HREF = "/#levels";

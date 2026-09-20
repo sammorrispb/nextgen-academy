@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
       parentName: str(body.parentName),
       childFirstName: str(body.childFirstName),
       parentEmail: str(body.parentEmail),
+      group: str(body.group),
     });
     if (result.ok) return NextResponse.json(result);
     return NextResponse.json(

@@ -5,7 +5,7 @@ import {
   MONDAY_GIRLS_SEASON_SLUG,
   MONDAY_GIRLS_SEASON_TITLE,
   findMondayGirlsSeasonGroup,
-  mondayGirlsSeasonSlotsFor,
+  mondayGirlsSeasonSeats,
 } from "@/data/monday-girls-season-2026";
 import {
   MONDAY_GIRLS_MONDAYS,
@@ -36,7 +36,7 @@ import {
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
 
-// Monday Girls Beginner Group checkout — full-pay only, ENV-GATED like
+// Monday Girls block checkout — ENV-GATED like
 // checkout-fall and checkout-picklpark: until STRIPE_MONDAY_GIRLS_PRICE_ID is
 // set this returns 503 so the block ships dark. The Notion roster count gates
 // the checkout at the group's seat cap (fail-open on a Notion blip — an
@@ -100,12 +100,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const keys = await fetchMondayGirlsRegistrationKeys(option.group);
-  if (keys.length >= mondayGirlsSeasonSlotsFor(option.group)) {
+  // Block-wide, not per level: both levels share the one 6:00–7:00 PM court
+  // booking, so they share the cap. A per-level count here would seat sixteen
+  // girls on two pickleball courts. See MONDAY_GIRLS_BLOCK_SEATS.
+  const keys = await fetchMondayGirlsRegistrationKeys();
+  if (keys.length >= mondayGirlsSeasonSeats()) {
     return NextResponse.json(
       {
         error:
-          "The Monday group is full — text Coach Sam at 301-325-4731 and we'll add you to the sub list.",
+          "The Monday block is full — text Coach Sam at 301-325-4731 and we'll add you to the sub list.",
         code: "sold_out",
       },
       { status: 409 },

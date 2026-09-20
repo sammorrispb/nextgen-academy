@@ -3,9 +3,13 @@
 import { useState } from "react";
 import InlineWaiverStep from "@/components/InlineWaiverStep";
 import {
-  MONDAY_GIRLS_SEASON_GROUP,
-  mondayGirlsSeasonSlotsFor,
+  MONDAY_GIRLS_SEASON_GROUPS,
+  mondayGirlsSeasonSeats,
 } from "@/data/monday-girls-season-2026";
+import {
+  MONDAY_GIRLS_PATHWAY_HREF,
+  MONDAY_GIRLS_TIME_LABEL,
+} from "@/data/monday-girls-2026";
 import {
   validateMondayGirlsRegistration,
   type MondayGirlsRegistrationData,
@@ -14,11 +18,16 @@ import {
 import { isWaiverRequired } from "@/lib/waiver-required";
 import { seatStatusLabel } from "@/lib/seat-status";
 
-// Monday Girls Beginner Group registration form — structural mirror of
+// Monday Girls block registration form — structural mirror of
 // PicklParkRegistrationForm (same field set + a11y patterns + Stripe-redirect
-// handleSubmit), minus the group picker: this block sells exactly ONE group, so
-// the group is preset and its seat status renders as a summary line instead of
-// a radio nobody can meaningfully choose from.
+// handleSubmit), including its level picker as of 2026-09-20.
+//
+// The level picker is a PLACEMENT question, not a capacity one: both levels
+// play the same 6:00–7:00 PM hour on the same court, so the seat status is one
+// number for the whole block and is shown ONCE above the choice rather than per
+// option (which is how the Pickl Park form, whose bands really do have separate
+// caps, renders it). Copying that form's per-option seat status here would tell
+// a parent two different things about the same eight seats.
 //
 // Posts to /api/checkout-monday-girls, which is ENV-GATED. The page won't even
 // render this form until the Stripe price env exists (see
@@ -28,15 +37,16 @@ import { seatStatusLabel } from "@/lib/seat-status";
 type FormStatus = "idle" | "submitting" | "redirecting" | "error" | "closed";
 
 interface MondayGirlsRegistrationFormProps {
-  /** Confirmed-seat count for the group; null = unknown (count hidden). */
+  /** Confirmed-seat count for the WHOLE block; null = unknown (count hidden). */
   spotsTaken: number | null;
 }
 
 function emptyForm(): MondayGirlsRegistrationData {
   return {
-    // Preset: one group, so the parent never has to pick it and the checkout
-    // still receives the exact value its capacity filter matches on.
-    group: MONDAY_GIRLS_SEASON_GROUP.group,
+    // Empty, so the parent makes a deliberate placement choice. Defaulting to
+    // Beginner would quietly mis-place every advanced-beginner registration
+    // from a parent who skimmed past the picker.
+    group: "",
     parentName: "",
     email: "",
     phone: "",
@@ -60,7 +70,7 @@ export default function MondayGirlsRegistrationForm({
 
   const spotsLeft =
     typeof spotsTaken === "number"
-      ? mondayGirlsSeasonSlotsFor(MONDAY_GIRLS_SEASON_GROUP.group) - spotsTaken
+      ? mondayGirlsSeasonSeats() - spotsTaken
       : null;
   const soldOut = spotsLeft !== null && spotsLeft <= 0;
   const seatStatus = seatStatusLabel(spotsLeft);
@@ -213,16 +223,59 @@ export default function MondayGirlsRegistrationForm({
           </div>
         )}
 
-        {/* One group — shown as a summary, not a choice. */}
-        <div className="rounded-xl border border-ngpa-teal/50 bg-ngpa-teal/10 px-4 py-3.5 mb-6">
-          <p className="font-heading font-bold text-ngpa-white">
-            {MONDAY_GIRLS_SEASON_GROUP.label}
+        {/* Level pick. Both levels are the same hour on the same court, so the
+            seat status is stated ONCE for the block rather than per option. */}
+        <fieldset className="mb-6">
+          <legend className={labelClass}>Where is your daughter today?</legend>
+          <p className="text-sm text-ngpa-white/70 mb-3">
+            Mondays {MONDAY_GIRLS_TIME_LABEL}
+            {seatStatus ? ` · ${seatStatus}` : ""} &mdash; both levels are on
+            court together, grouped by where they actually are that week.
           </p>
-          <p className="text-sm text-ngpa-white/70">
-            Mondays {MONDAY_GIRLS_SEASON_GROUP.timeLabel}
-            {seatStatus ? ` · ${seatStatus}` : ""}
+          <div className="grid grid-cols-1 gap-3" id="group">
+            {MONDAY_GIRLS_SEASON_GROUPS.map((option) => {
+              const selected = form.group === option.group;
+              return (
+                <label
+                  key={option.group}
+                  className={`flex flex-col gap-1 rounded-xl border px-4 py-3.5 cursor-pointer transition-all min-h-[48px] ${
+                    selected
+                      ? "border-ngpa-teal bg-ngpa-teal/10"
+                      : "border-ngpa-slate/60 bg-ngpa-deep/60 hover:border-ngpa-teal/60"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      name="group"
+                      className="h-5 w-5 shrink-0 accent-ngpa-teal"
+                      checked={selected}
+                      onChange={() => update("group", option.group)}
+                    />
+                    <span className="font-heading font-bold text-ngpa-white">
+                      {option.label}
+                    </span>
+                  </span>
+                  <span className="text-sm text-ngpa-white/70 pl-8">
+                    {option.blurb}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {errors.group && <p className={errorClass}>{errors.group}</p>}
+          <p className="text-xs text-ngpa-white/55 mt-2">
+            Not sure? Pick whichever is closer &mdash; Coach Sam sorts the groups
+            out on court, and no girl is ever held back by the box you ticked.{" "}
+            <a
+              href={MONDAY_GIRLS_PATHWAY_HREF}
+              className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+            >
+              See the levels
+            </a>
+            .
           </p>
-        </div>
+        </fieldset>
 
         <div className="space-y-4">
           {/* Parent */}

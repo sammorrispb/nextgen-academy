@@ -16,7 +16,10 @@ process.env.OPEN_BRAIN_INGEST_URL = "https://open-brain.example.com/ingest";
 process.env.LEAD_INGEST_TOKEN = "ob-token-egress";
 
 import { POST } from "../src/app/api/checkout-monday-girls/route";
-import { MONDAY_GIRLS_GROUP } from "../src/data/monday-girls-2026";
+import {
+  MONDAY_GIRLS_ADVANCED_BEGINNER,
+  MONDAY_GIRLS_BEGINNER,
+} from "../src/data/monday-girls-2026";
 
 // The NGA Monday Girls Registrations DB is a NEW egress destination for child
 // fields — child first name, birth year, allergies and emergency contact — and
@@ -42,7 +45,7 @@ const PARENT_EMAIL = "egress-monday-girls@example.com";
 
 function body(over: Record<string, unknown> = {}): string {
   return JSON.stringify({
-    group: MONDAY_GIRLS_GROUP,
+    group: MONDAY_GIRLS_BEGINNER,
     parentName: "Egress Parent",
     email: PARENT_EMAIL,
     phone: "3015550142",
@@ -70,9 +73,12 @@ const stub = new FetchStub();
 function installHappyPath() {
   stub
     .on(/api\.notion\.com\/v1\/databases\/.*\/query/, (call: RecordedFetch) => {
-      // Only the roster query filters on Group; anything else is the waiver
-      // lookup, which must return a row so the gate opens.
-      const isRoster = /"property":"Group"/.test(call.body);
+      // Discriminate on the DB id in the URL. It used to key off the roster
+      // query's `Group` filter, which broke the moment that filter was removed
+      // (2026-09-20 — the block's two levels share one seat cap, so the
+      // capacity query counts the whole block). A body-shape discriminator for
+      // a body the route is free to change is a stub that lies silently.
+      const isRoster = call.url.includes("monday-girls-regs-db-egress");
       return isRoster
         ? { results: [] }
         : { results: [{ id: "waiver-row", properties: {} }] };
@@ -122,6 +128,23 @@ test.describe("Monday Girls registration — child-PII egress", () => {
         (c) => /\/v1\/pages/.test(c.url) && c.method === "POST",
       ),
     ).toHaveLength(0);
+  });
+
+  test("the advanced-beginner level egresses identically", async () => {
+    // The level widening (2026-09-20) added a second value a parent can post.
+    // It must travel the SAME single path — a new level is not a new
+    // destination, and this is the assertion that keeps it that way.
+    installHappyPath();
+    await runToStripe(body({ group: MONDAY_GIRLS_ADVANCED_BEGINNER }));
+
+    expect(stub.calls.length).toBeGreaterThan(0);
+    for (const call of stub.calls) {
+      expect(ALLOWED_HOSTS).toContain(new URL(call.url).host);
+      expect(call.body).not.toContain(CHILD_NAME);
+      expect(call.body).not.toContain(EMERGENCY_NAME);
+      expect(call.body).not.toContain(ALLERGY_TEXT);
+    }
+    expect(stub.callsTo(/open-brain/)).toHaveLength(0);
   });
 
   test("the sold-out refusal carries no child PII", async () => {

@@ -1,15 +1,15 @@
 import Link from "next/link";
 import {
-  MONDAY_GIRLS_GROUP,
   MONDAY_GIRLS_MONDAYS,
   MONDAY_GIRLS_SEASON_LABEL,
+  MONDAY_GIRLS_TIME_LABEL,
   MONDAY_GIRLS_VENUE_SHORT,
-  mondayGirlsSlotsFor,
+  mondayGirlsBlockSeats,
 } from "@/data/monday-girls-2026";
-import { MONDAY_GIRLS_SEASON_GROUP } from "@/data/monday-girls-season-2026";
 import { fetchMondayGirlsRoster } from "@/lib/notion-monday-girls-registrations";
 import {
   countConfirmed,
+  countConfirmedByLevel,
   splitMondayGirlsRoster,
   toAdminMondayGirlsPlayer,
 } from "@/lib/admin-monday-girls-roster";
@@ -64,7 +64,8 @@ export default async function AdminMondayGirlsPage() {
 
   const result = await fetchMondayGirlsRoster();
   const today = mondayGirlsTodayET();
-  const capacity = mondayGirlsSlotsFor(MONDAY_GIRLS_GROUP);
+  // ONE cap for both levels — they share the 6:00–7:00 PM court booking.
+  const capacity = mondayGirlsBlockSeats();
   const gate = mondayGirlsRegistrationStateNow();
   const remaining = mondayGirlsRemainingMondays(today);
   const prorated = mondayGirlsIsProratedOn(today);
@@ -74,6 +75,7 @@ export default async function AdminMondayGirlsPage() {
     result.status === "ok" ? result.rows.map(toAdminMondayGirlsPlayer) : [],
   );
   const confirmed = countConfirmed(players);
+  const mix = countConfirmedByLevel(players);
   const collected = players
     .filter((p) => p.status === "Confirmed")
     .reduce((sum, p) => sum + p.amountPaidUsd, 0);
@@ -85,9 +87,8 @@ export default async function AdminMondayGirlsPage() {
           Monday Girls
         </h1>
         <p className="text-ngpa-white/65 text-sm mt-1">
-          {MONDAY_GIRLS_SEASON_GROUP.label} · Mondays{" "}
-          {MONDAY_GIRLS_SEASON_GROUP.timeLabel} at {MONDAY_GIRLS_VENUE_SHORT} ·{" "}
-          {MONDAY_GIRLS_SEASON_LABEL}
+          Beginner &amp; advanced beginner · Mondays {MONDAY_GIRLS_TIME_LABEL}{" "}
+          at {MONDAY_GIRLS_VENUE_SHORT} · {MONDAY_GIRLS_SEASON_LABEL}
         </p>
       </div>
 
@@ -100,6 +101,18 @@ export default async function AdminMondayGirlsPage() {
           <p className="font-mono text-2xl font-bold mt-1 tabular-nums">
             {result.status === "ok" ? `${confirmed} / ${capacity}` : "—"}
           </p>
+          {/* The MIX, not a second capacity. Both levels share the cap above;
+              this is here so a lopsided roster — one lone beginner among seven
+              advanced beginners — is visible while there is still time to
+              recruit against it. */}
+          {result.status === "ok" && (
+            <p className="text-[11px] text-ngpa-white/50 mt-1">
+              {mix.byLevel
+                .map((m) => `${m.level.replace("Girls ", "")} ${m.count}`)
+                .join(" · ")}
+              {mix.unknown > 0 ? ` · no level ${mix.unknown}` : ""}
+            </p>
+          )}
         </div>
         <div className="rounded-xl border border-ngpa-slate/50 bg-ngpa-panel/50 p-4">
           <p className="text-[10px] font-heading font-bold uppercase tracking-[0.14em] text-ngpa-white/45">

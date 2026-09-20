@@ -1,5 +1,6 @@
 import { getStripe } from "@/lib/stripe";
-import { MONDAY_GIRLS_GROUP } from "@/data/monday-girls-2026";
+import { MONDAY_GIRLS_DEFAULT_LEVEL } from "@/data/monday-girls-2026";
+import { findMondayGirlsSeasonGroup } from "@/data/monday-girls-season-2026";
 import {
   createMondayGirlsMaybe,
   getMondayGirlsPage,
@@ -191,6 +192,8 @@ export interface MaybeInput {
   childFirstName: string;
   parentEmail?: string;
   parentPhone?: string;
+  /** Level, if Sam already knows it. Unrecognised or absent → Beginner. */
+  group?: string;
 }
 
 export type MaybeResult =
@@ -226,11 +229,19 @@ export async function addMondayGirlsMaybe(input: MaybeInput): Promise<MaybeResul
     return { ok: false, reason: "invalid", message: "That email doesn't look right." };
   }
 
+  // A maybe's level is a guess Sam is refining in conversation, so an absent
+  // or unrecognised value falls back to Beginner rather than 400ing — unlike a
+  // paid registration, where the level is the parent's own stated answer and a
+  // typo must never be silently defaulted.
+  const group =
+    findMondayGirlsSeasonGroup(String(input.group ?? "").trim())?.group ??
+    MONDAY_GIRLS_DEFAULT_LEVEL;
+
   const res = await createMondayGirlsMaybe({
     parentName,
     childFirstName,
     parentEmail,
-    group: MONDAY_GIRLS_GROUP,
+    group,
   });
   return res.ok
     ? { ok: true, pageId: res.pageId }

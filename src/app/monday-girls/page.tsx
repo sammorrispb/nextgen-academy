@@ -4,8 +4,9 @@ import MondayGirlsRegistrationForm from "@/components/MondayGirlsRegistrationFor
 import {
   MONDAY_GIRLS_AGE_MAX,
   MONDAY_GIRLS_AGE_MIN,
-  MONDAY_GIRLS_GROUP,
   MONDAY_GIRLS_MONDAYS,
+  MONDAY_GIRLS_PATHWAY_HREF,
+  MONDAY_GIRLS_PATHWAY_NOTE,
   MONDAY_GIRLS_PEER_NOTE,
   MONDAY_GIRLS_PUBLIC_AREA,
   MONDAY_GIRLS_RAIN_DATES,
@@ -14,11 +15,11 @@ import {
   MONDAY_GIRLS_SESSION_FORMAT,
   MONDAY_GIRLS_SKIPPED_DATE,
   MONDAY_GIRLS_SKIPPED_REASON,
+  MONDAY_GIRLS_TIME_LABEL,
   MONDAY_GIRLS_VENUE,
   MONDAY_GIRLS_VENUE_SHORT,
 } from "@/data/monday-girls-2026";
 import {
-  MONDAY_GIRLS_SEASON_GROUP,
   MONDAY_GIRLS_SEASON_PRICE_USD,
   MONDAY_GIRLS_SEASON_TITLE,
 } from "@/data/monday-girls-season-2026";
@@ -55,8 +56,8 @@ import { countMondayGirlsRegistrations } from "@/lib/notion-monday-girls-registr
 // that price exists (see monday-girls-registration-window.ts).
 
 export const metadata: Metadata = {
-  title: "Monday Girls Beginner Group — Register",
-  description: `${MONDAY_GIRLS_SEASON_SESSIONS} Monday evenings of girls-only beginner youth pickleball at ${MONDAY_GIRLS_VENUE_SHORT} in ${MONDAY_GIRLS_PUBLIC_AREA}, ${MONDAY_GIRLS_SEASON_LABEL}. Small group, $${MONDAY_GIRLS_SEASON_PRICE_USD} per player for the full block.`,
+  title: "Monday Girls Group — Register",
+  description: `${MONDAY_GIRLS_SEASON_SESSIONS} Monday evenings of girls-only youth pickleball — beginner and advanced beginner, ages ${MONDAY_GIRLS_AGE_MIN}–${MONDAY_GIRLS_AGE_MAX} — at ${MONDAY_GIRLS_VENUE_SHORT} in ${MONDAY_GIRLS_PUBLIC_AREA}, ${MONDAY_GIRLS_SEASON_LABEL}. Small group, $${MONDAY_GIRLS_SEASON_PRICE_USD} per player for the full block.`,
   robots: { index: false, follow: false },
   alternates: { canonical: "https://nextgenpbacademy.com/monday-girls" },
 };
@@ -91,7 +92,7 @@ export default async function MondayGirlsPage() {
   // a closed page buys nothing. null = unknown, and the form hides the count
   // rather than showing a wrong one.
   const spotsTaken = registrationOpen
-    ? await countMondayGirlsRegistrations(MONDAY_GIRLS_GROUP)
+    ? await countMondayGirlsRegistrations()
     : null;
 
   return (
@@ -100,7 +101,7 @@ export default async function MondayGirlsPage() {
       <section className="px-5 sm:px-8 pt-16 pb-10 max-w-3xl mx-auto">
         <p className="font-heading text-sm font-bold uppercase tracking-widest text-ngpa-teal-bright">
           Girls only · Ages {MONDAY_GIRLS_AGE_MIN}&ndash;{MONDAY_GIRLS_AGE_MAX}{" "}
-          · Beginner
+          · Beginner &amp; advanced beginner
         </p>
         <h1 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white mt-3 leading-tight">
           {MONDAY_GIRLS_SEASON_TITLE}
@@ -111,10 +112,20 @@ export default async function MondayGirlsPage() {
           <time dateTime={MONDAY_GIRLS_MONDAYS[0]}>
             {MONDAY_GIRLS_SEASON_LABEL}
           </time>
-          , {MONDAY_GIRLS_SEASON_GROUP.timeLabel}.
+          , {MONDAY_GIRLS_TIME_LABEL}.
         </p>
         <p className="text-ngpa-white/80 text-lg mt-4">
           {MONDAY_GIRLS_PEER_NOTE}
+        </p>
+        <p className="text-ngpa-white/70 mt-3">
+          {MONDAY_GIRLS_PATHWAY_NOTE}{" "}
+          <Link
+            href={MONDAY_GIRLS_PATHWAY_HREF}
+            className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+          >
+            See how the levels work
+          </Link>
+          .
         </p>
       </section>
 
@@ -129,7 +140,7 @@ export default async function MondayGirlsPage() {
               Mondays
             </p>
             <p className="text-ngpa-white/70 text-sm">
-              {MONDAY_GIRLS_SEASON_GROUP.timeLabel}
+              {MONDAY_GIRLS_TIME_LABEL}
             </p>
           </div>
           <div className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate/60">
@@ -211,8 +222,8 @@ export default async function MondayGirlsPage() {
               Your daughter would join for the {joinMondays.length} Mondays from{" "}
               <time dateTime={joinMondays[0]}>{mondayLabel(joinMondays[0])}</time>{" "}
               onward, and you only pay for those. She will not be the only one
-              learning something new: this is a beginner block and the girls are
-              still early in it.
+              learning something new: the girls here are still early in the
+              game, and we group them by where they actually are each week.
             </p>
           </div>
         )}
@@ -247,8 +258,15 @@ export default async function MondayGirlsPage() {
         </h2>
         <p className="text-ngpa-white/80 mt-3">
           Each Monday is a full hour &mdash; {MONDAY_GIRLS_SESSION_FORMAT}.
-          It&rsquo;s a small group on one court, so every girl gets real
+          It&rsquo;s a small group on two courts, so every girl gets real
           coaching time each week instead of a place in a line.
+        </p>
+        <p className="text-ngpa-white/80 mt-3">
+          Beginners and advanced beginners warm up together and then split by
+          where they actually are that week, so a girl still learning to serve
+          isn&rsquo;t chasing anyone and a girl who can already rally
+          isn&rsquo;t waiting around. Coach Sam makes that call on court, not
+          from the box you ticked when you signed up.
         </p>
         <p className="text-ngpa-white/80 mt-3">
           Brand new to pickleball is exactly right for this block. Nobody is
