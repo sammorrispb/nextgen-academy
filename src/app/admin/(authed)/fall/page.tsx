@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   FALL_SEASON_LABEL,
   FALL_SUNDAYS,
@@ -66,12 +67,26 @@ export default async function AdminFallPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="font-heading text-2xl sm:text-3xl font-black">Fall season</h1>
-        <p className="text-ngpa-white/65 text-sm mt-1">
-          Sundays at {FALL_VENUE_SHORT} · {FALL_SEASON_LABEL} ·{" "}
-          {registrationOpen ? "Registration open" : "Registration closed"}
-        </p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl sm:text-3xl font-black">Fall season</h1>
+          <p className="text-ngpa-white/65 text-sm mt-1">
+            Sundays at {FALL_VENUE_SHORT} · {FALL_SEASON_LABEL} ·{" "}
+            {registrationOpen ? "Registration open" : "Registration closed"}
+          </p>
+        </div>
+        {/* The day-of jump: this page manages seats and money, /coach/fall-season
+            runs the Sunday (check in, preview the rotation, save, score). Linking
+            the hub — not [group]/[week] — deliberately: the hub lists every Sunday
+            per group, so nothing here has to do date math to guess the week.
+            Coach auth is a SEPARATE gate from admin (COACH_ALLOWED_EMAILS vs
+            ADMIN_ALLOWLIST), so this can bounce to /coach/login once. */}
+        <Link
+          href="/coach/fall-season"
+          className="inline-flex items-center px-4 py-2.5 min-h-[44px] rounded-full bg-ngpa-teal text-ngpa-deep font-heading text-xs font-bold hover:bg-ngpa-teal-bright transition-colors"
+        >
+          Run the round robin →
+        </Link>
       </div>
 
       {result.status === "config_missing" ? (
