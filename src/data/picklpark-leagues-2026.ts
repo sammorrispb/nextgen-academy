@@ -16,11 +16,23 @@
 // and the Open Court recurring template is inactive. Nothing on this site
 // takes a payment for a Pickl Park Saturday any more.
 //
-// NO PRICE LIVES HERE, deliberately. Podplay quotes at the point of sale, and
-// a second copy on this site is a number that can only go stale — the exact
-// drift the composed-description rule on /picklpark already exists to stop.
-// There is no `priceUsd` field to fill in; `picklpark-leagues.spec.ts` fails
-// if a dollar figure appears in this file at all.
+// PRICE IS TWO-TIER, AND LIVES ON EXACTLY ONE SURFACE (Sam, 2026-09-20).
+// The Pickl Park charges members less than everyone else, and until now this
+// site published no price at all — so a non-member read podplay's "$225 per
+// player" in the listing description and was then charged $250 at the box.
+// Both numbers were right; neither said which was which.
+//
+// The old rule here was "no price anywhere", on the sound reasoning that a
+// second copy of someone else's number can only go stale. That reasoning is
+// unchanged, so the fix is scope, not volume: the prices live in this file and
+// render on **/picklpark ONLY** — the page where a parent is actually choosing
+// — and NOT on the aggregator surfaces (the weekly newsletter block, llms.txt,
+// /league, /youth-pickleball-frederick, the /fall and /schedule cross-links,
+// the FAQ or the blog). One copy to keep true instead of eight.
+//
+// `picklpark-leagues.spec.ts` enforces both halves: the prices must be present
+// and coherent here, every shared composed line must stay free of a dollar
+// figure, and /picklpark must be the only page source that reads them.
 //
 // The dates, venue, makeup Saturday and indoor note still live in
 // picklpark-2026.ts — they describe the Saturday, not who sells it, and both
@@ -68,6 +80,21 @@ export interface PicklParkLeague {
    * prefixes: the old and new Youth League ids share their first 8 characters.
    */
   signupUrl: string;
+  /**
+   * Season price in whole dollars, for the full six weeks.
+   *
+   * TWO TIERS because The Pickl Park sells it that way: `memberPriceUsd` is
+   * for its own members, `nonMemberPriceUsd` for everyone else. The number
+   * podplay shows in its price box is the NON-member one — that is the trap
+   * this pair exists to close, since the listing description quotes the member
+   * price without the word "member" anywhere near it.
+   *
+   * These are The Pickl Park's numbers, not NGA's, so they can change without
+   * anyone telling us. Anything rendering them must say whose membership it
+   * means — never a bare "members" — and must stay on /picklpark.
+   */
+  memberPriceUsd: number;
+  nonMemberPriceUsd: number;
   /** ISO date-only when public signup opens. Omitted = open now. Set for the
    * Intro league, which is members-only until 2026-09-09 — linking it without
    * saying so drops a parent onto a "Become a member" gate. */
@@ -92,6 +119,8 @@ export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
       "30 minutes of coached drills, then 30 minutes of game play",
     blurb:
       "A fun, high-energy six-week season of drilling and playing pickleball. It's a great entry into the sport for a new or beginner player — no prior experience needed, equipment provided, and lots of chances to hit and move.",
+    memberPriceUsd: 150,
+    nonMemberPriceUsd: 175,
     signupUrl:
       "https://thepicklpark.podplay.app/community/events/01a07d03-9f72-744f-a80c-6284f8f60fd5",
     signupOpensOn: "2026-09-09",
@@ -111,6 +140,8 @@ export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
       "45 minutes of coached drills, then 45 minutes of game play",
     blurb:
       "Six weeks of weekly meetups: we drill and practice for the first half of each session, then play games for the second half. It's for players who already keep a rally going — serving and returning, dropping, driving, volleying, and moving around the court. Across the season they'll add more advanced technique, court positioning, and shot selection.",
+    memberPriceUsd: 225,
+    nonMemberPriceUsd: 250,
     signupUrl:
       "https://thepicklpark.podplay.app/community/series/01a07cee-1f9a-744f-a7fd-9b12c7c8420a",
   },
@@ -155,6 +186,20 @@ export function picklParkLeagueStartHour24(league: PicklParkLeague): string {
   let hour = Number(m[1]) % 12;
   if (m[3].toUpperCase() === "PM") hour += 12;
   return `${String(hour).padStart(2, "0")}:${m[2]}`;
+}
+
+/**
+ * "$150 per player for The Pickl Park members, $175 for everyone else" —
+ * composed once so
+ * the two tiers can never be shown without each other, and so "members" is
+ * never a bare word a parent could read as an NGA membership they don't have.
+ *
+ * Intended for /picklpark and nothing else; see the header note. It returns a
+ * fragment, not a sentence, so the page can label it the way it labels the
+ * session format right above it.
+ */
+export function picklParkLeaguePriceLine(league: PicklParkLeague): string {
+  return `$${league.memberPriceUsd} per player for The Pickl Park members, $${league.nonMemberPriceUsd} for everyone else`;
 }
 
 /** The one-line "which one is my kid?" pointer, shared by page and emails. */

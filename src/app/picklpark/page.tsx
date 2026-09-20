@@ -13,6 +13,7 @@ import {
 } from "@/data/picklpark-2026";
 import {
   PICKLPARK_LEAGUES,
+  picklParkLeaguePriceLine,
   PICKLPARK_LEAGUE_COACH_EMAIL,
   PICKLPARK_LEAGUE_PLACEMENT_NOTE,
   picklParkLeagueSignupOpen,
@@ -218,8 +219,17 @@ export default async function PicklParkPage() {
                   <p className="text-ngpa-white/80 leading-relaxed mb-2">
                     {league.blurb}
                   </p>
-                  <p className="text-sm text-ngpa-muted mb-5">
+                  <p className="text-sm text-ngpa-muted mb-1">
                     Each session: {league.sessionFormat}.
+                  </p>
+                  {/* The only surface on this site that prints a Pickl Park
+                      price. It sits here, beside the format, because this is
+                      the page a parent decides on — and because podplay shows
+                      the non-member figure in its price box while quoting the
+                      member one in its description, which is how a family got
+                      to checkout expecting $225 and met $250. */}
+                  <p className="text-sm text-ngpa-muted mb-5">
+                    Season: {picklParkLeaguePriceLine(league)}.
                   </p>
 
                   {leaguesOpen ? (
