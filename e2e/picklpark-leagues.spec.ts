@@ -5,6 +5,7 @@ import {
   findPicklParkLeague,
   picklParkLeagueStartHour24,
   PICKLPARK_LEAGUES_FORMAT_LINE,
+  PICKLPARK_LEAGUE_MIDSEASON_NOTE,
 } from "../src/data/picklpark-leagues-2026";
 import {
   PICKLPARK_SATURDAYS,
@@ -202,3 +203,40 @@ function minutesBetween(start: string, end: string): number {
   };
   return toMin(end) - toMin(start);
 }
+
+// ── Mid-season join note (2026-09-20) ────────────────────────────────────────
+// Both podplay listings started reporting "Admission is no longer available"
+// once the season began, while still showing spots left. The note that covers
+// that must survive The Pickl Park REOPENING the door tomorrow — we cannot see
+// podplay's state from here (it is a client-rendered SPA with no API), so the
+// copy has to read true in both states. That makes the conditional phrasing
+// load-bearing, not a stylistic choice: "may show" is the contract, and
+// editing it down to a flat "registration is closed" is the regression.
+test("the mid-season note is conditional, never a flat claim that signups are closed", () => {
+  expect(PICKLPARK_LEAGUE_MIDSEASON_NOTE).toMatch(/may show/i);
+  // A declarative closure would be wrong the moment The Pickl Park reopens.
+  expect(PICKLPARK_LEAGUE_MIDSEASON_NOTE).not.toMatch(
+    /registration is closed|signups are closed|sign-ups are closed|is full|sold out/i,
+  );
+});
+
+test("the mid-season note routes the parent to Coach Sam, not to a dead end", () => {
+  expect(PICKLPARK_LEAGUE_MIDSEASON_NOTE).toContain(
+    PICKLPARK_LEAGUE_COACH_EMAIL,
+  );
+});
+
+test("the mid-season note promises a check, never a guaranteed spot", () => {
+  // NGA does not control The Pickl Park's roster. Promising entry is a
+  // promise we cannot keep, and this page is the one a cold Frederick parent
+  // reads first.
+  expect(PICKLPARK_LEAGUE_MIDSEASON_NOTE).not.toMatch(
+    /we'll get you in|guarantee|reserved for you|hold your spot/i,
+  );
+});
+
+test("the mid-season note publishes no price", () => {
+  // Same rule as the rest of this file: The Pickl Park quotes at the point of
+  // sale, and a second copy here can only go stale.
+  expect(PICKLPARK_LEAGUE_MIDSEASON_NOTE).not.toMatch(/\$\s*\d/);
+});

@@ -14,6 +14,7 @@ import {
 import {
   PICKLPARK_LEAGUES,
   PICKLPARK_LEAGUE_COACH_EMAIL,
+  PICKLPARK_LEAGUE_MIDSEASON_NOTE,
   PICKLPARK_LEAGUE_PLACEMENT_NOTE,
   picklParkLeagueSignupOpen,
   picklParkLeagueStartHour24,
@@ -27,6 +28,7 @@ import {
 import {
   picklParkLeaguesOpen,
   picklParkTodayET,
+  picklParkSeasonUnderWay,
 } from "@/lib/picklpark-registration-window";
 import { orgRef } from "@/lib/seo";
 
@@ -97,6 +99,8 @@ function shortDate(iso: string): string {
 export default async function PicklParkPage() {
   const todayIso = picklParkTodayET();
   const leaguesOpen = picklParkLeaguesOpen(todayIso);
+  // Warn a parent BEFORE they click out to a listing podplay may have closed.
+  const seasonUnderWay = picklParkSeasonUnderWay(todayIso);
   // The other fall option. The Sunday season is still on its ships-dark flag,
   // so the cross-link reads the same gate /fall does plus that season's own
   // last Sunday — it retires with the season instead of pointing at a closed
@@ -224,14 +228,21 @@ export default async function PicklParkPage() {
 
                   {leaguesOpen ? (
                     signupOpen ? (
-                      <a
-                        href={league.signupUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center px-6 py-3 bg-ngpa-lime text-ngpa-deep font-heading font-bold rounded-full hover:bg-ngpa-lime/90 transition-colors min-h-[48px]"
-                      >
-                        Register at The Pickl Park →
-                      </a>
+                      <>
+                        <a
+                          href={league.signupUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center px-6 py-3 bg-ngpa-lime text-ngpa-deep font-heading font-bold rounded-full hover:bg-ngpa-lime/90 transition-colors min-h-[48px]"
+                        >
+                          Register at The Pickl Park →
+                        </a>
+                        {seasonUnderWay && (
+                          <p className="mt-3 text-sm text-ngpa-white/70">
+                            {PICKLPARK_LEAGUE_MIDSEASON_NOTE}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <>
                         <a

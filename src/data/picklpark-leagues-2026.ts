@@ -146,6 +146,25 @@ export function picklParkLeagueStartHour24(league: PicklParkLeague): string {
   return `${String(hour).padStart(2, "0")}:${m[2]}`;
 }
 
+/**
+ * Shown beside the register button once the season is under way.
+ *
+ * The listing closes on podplay's side when a series starts — both leagues
+ * read "Admission is no longer available" on 2026-09-20 while still reporting
+ * 6 and 10 open spots — and this site cannot see that state to react to it.
+ * So the note is CONDITIONAL on purpose ("may show"): it has to read true
+ * whether the door is shut or The Pickl Park reopens it tomorrow. It promises
+ * a check, never a spot — NGA does not control The Pickl Park's roster.
+ *
+ * The placement note below the cards does not cover this: it is framed as
+ * "which level fits?", which a parent staring at a closed listing does not
+ * read as theirs.
+ */
+export const PICKLPARK_LEAGUE_MIDSEASON_NOTE =
+  `The season is already under way, so The Pickl Park's listing may show ` +
+  `sign-ups as closed even when there's still room. Email Coach Sam at ` +
+  `${PICKLPARK_LEAGUE_COACH_EMAIL} and he'll check what's open.`;
+
 /** The one-line "which one is my kid?" pointer, shared by page and emails. */
 export const PICKLPARK_LEAGUE_PLACEMENT_NOTE =
   `Not sure which one fits? Start in Kid's Drill and Play, or email Coach Sam at ${PICKLPARK_LEAGUE_COACH_EMAIL} and he'll tell you where your player belongs.`;

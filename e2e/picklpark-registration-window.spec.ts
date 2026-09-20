@@ -3,6 +3,7 @@ import {
   PICKLPARK_REGISTRATION_CLOSES,
   picklParkLeaguesOpen,
   picklParkRegistrationOpen,
+  picklParkSeasonUnderWay,
 } from "../src/lib/picklpark-registration-window";
 import { openNowFlags } from "../src/lib/open-now-offers";
 import { PICKLPARK_SATURDAYS } from "../src/data/picklpark-2026";
@@ -87,4 +88,35 @@ test("the fall flag keeps its ships-dark posture — unset means closed", () => 
     if (prev === undefined) delete process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN;
     else process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN = prev;
   }
+});
+
+// ── Mid-season join note (2026-09-20) ────────────────────────────────────────
+// A parent emailed that he "wasn't able to register online" for the Saturday.
+// He was right: once the season started, BOTH podplay listings began showing
+// "Admission is no longer available" while still reporting open spots (6 and
+// 10). This site sent him there with a confident lime "Register at The Pickl
+// Park →" and nothing else, so a family that hit the wall simply left — the
+// existing coach-email fallback below the cards is framed as "which level
+// fits?", which a parent staring at a closed door does not read as theirs.
+//
+// The gate is the season's own FIRST Saturday, derived never typed, and pure
+// so the boundary is pinned instead of the clock.
+test("season is not under way before its first Saturday", () => {
+  expect(picklParkSeasonUnderWay("2026-09-18")).toBe(false);
+  expect(picklParkSeasonUnderWay("2026-08-01")).toBe(false);
+});
+
+test("season is under way from the first Saturday onward", () => {
+  expect(picklParkSeasonUnderWay(PICKLPARK_SATURDAYS[0])).toBe(true);
+  expect(picklParkSeasonUnderWay("2026-09-20")).toBe(true);
+  expect(picklParkSeasonUnderWay("2026-10-24")).toBe(true);
+});
+
+test("the under-way gate is derived from the season data, not a typed date", () => {
+  // Boundary must move with the season. If someone re-dates PICKLPARK_SATURDAYS,
+  // the note must follow rather than stay pinned to a stale September.
+  const dayBefore = "2026-09-18";
+  expect(PICKLPARK_SATURDAYS[0]).toBe("2026-09-19");
+  expect(picklParkSeasonUnderWay(dayBefore)).toBe(false);
+  expect(picklParkSeasonUnderWay(PICKLPARK_SATURDAYS[0])).toBe(true);
 });

@@ -58,6 +58,25 @@ export function picklParkLeaguesOpen(todayIso: string): boolean {
   return todayIso <= PICKLPARK_REGISTRATION_CLOSES;
 }
 
+/**
+ * Whether the Saturday season has already started. NOT a sales gate — it only
+ * decides whether a parent is warned about what podplay will show them.
+ *
+ * Once the season began, BOTH podplay listings started reporting "Admission is
+ * no longer available" while still showing open spots, so the confident
+ * "Register at The Pickl Park →" button became a dead end (found 2026-09-20,
+ * after a parent emailed that he could not register online). We cannot read
+ * podplay's state from here — it is a client-rendered SPA with no API — so the
+ * page warns from the calendar instead, and the copy stays conditional so it
+ * reads true whether or not The Pickl Park reopens the door.
+ *
+ * Derived from the season's own first Saturday, never typed, and date-injected
+ * so the spec pins the boundary instead of the clock.
+ */
+export function picklParkSeasonUnderWay(todayIso: string): boolean {
+  return todayIso >= PICKLPARK_SATURDAYS[0];
+}
+
 /** Today (America/New_York) as YYYY-MM-DD — the repo's todayET() pattern. */
 export function picklParkTodayET(): string {
   return new Date().toLocaleDateString("en-CA", {
