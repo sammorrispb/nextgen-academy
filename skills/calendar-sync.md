@@ -159,8 +159,24 @@ shape — leave that prose alone (same rule as MVF venue notes above).
 Since nextgen-academy #321 (2026-09-07) The Pickl Park sells the Saturday on
 podplay as two leagues NGA coaches: Kid's Drill and Play 2:00–3:00 and Youth
 League 3:00–4:30. The feed emits ONE `nga-pp:saturday:<date>` block per
-Saturday, 2:00–4:30 PM, Sep 19 – Oct 24, plus a `[TENTATIVE]` Oct 31 makeup
-hold. The retired NGA season blocks and the Open Court hour
+Saturday, 2:00–4:30 PM.
+
+**The season moved on 2026-09-20 — six confirmed Saturdays, Sep 26 – Oct 31,
+and NO tentative hold.** It previously ran Sep 19 – Oct 24 with a `[TENTATIVE]`
+Oct 31 makeup hold, so a calendar built before that date needs exactly two
+changes, both of which the ordinary reconcile handles:
+
+- `nga-pp:saturday:2026-09-19` — a legitimate single DELETION (that Saturday
+  never ran). One block, far under the 20 % deletion cap.
+- `nga-pp:saturday:2026-10-31` — keeps its key and flips tentative →
+  confirmed **in place**. It is now a playing week. Do NOT "restore" the hold
+  or create a second Oct 31 block.
+
+Nothing else moves; the four middle Saturdays are unchanged. Same lesson as
+the MVF venue note above — the data file is the fix and the calendar follows,
+never the other way round.
+
+The retired NGA season blocks and the Open Court hour
 (`nga-sess:pickl-park-saturday-open-court:*`) no longer exist in any source —
 the 2026-09-12 run deleted the seven that were still on the calendar.
 
