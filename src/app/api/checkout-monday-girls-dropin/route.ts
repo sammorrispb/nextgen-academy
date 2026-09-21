@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { createAndSendSignupInvoice } from "@/lib/stripe-invoices";
 import {
   MONDAY_GIRLS_DROPIN_KIND,
-  MONDAY_GIRLS_DROPIN_PRICE_ENV_VAR,
+  MONDAY_GIRLS_DROPIN_PRICE_USD,
   MONDAY_GIRLS_DROPIN_TITLE,
   mondayGirlsDropinSellableMondays,
 } from "@/data/monday-girls-dropin-2026";
@@ -29,33 +30,38 @@ import {
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
 
-// Monday Girls drop-in checkout — ENV-GATED like the season block: until
-// STRIPE_MONDAY_GIRLS_DROPIN_PRICE_ID is set this returns 503 so the drop-in
-// ships dark. A drop-in seat is a season seat for that Monday — the checkout
-// counts the same block-wide roster rows the season checkout counts, so a
-// sold-out block cannot be oversold one $35 seat at a time.
+// Monday Girls drop-in sign-up — INVOICE-BASED. The $35 drop-in becomes a
+// Stripe invoice line item built from the form (player + which Monday) instead
+// of a fixed Price ID. Flow: validate -> sellable-Monday check -> block seat
+// cap -> waiver gate -> find-or-create customer -> invoice -> finalize ->
+// Stripe emails the invoice -> parent pays on the hosted invoice page.
+//
+// A drop-in seat is a season seat for that Monday — this still counts the same
+// block-wide roster rows the season checkout counts, so a sold-out block
+// cannot be oversold one $35 seat at a time.
+//
+// Fail-closed on STRIPE_SECRET_KEY: without it there is no invoice to create.
+// STRIPE_MONDAY_GIRLS_DROPIN_PRICE_ID is no longer read.
+
+const NOT_OPEN_MESSAGE =
+  "Online drop-in booking isn't open yet — text Coach Sam at 301-325-4731 and he'll get you in.";
 
 export async function POST(req: NextRequest) {
-  let body: Partial<MondayGirlsDropinData>;
+  let body: Partial<MondayGirlsDropinData> & { submissionId?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Fail closed on configuration BEFORE validating the form: without a live
-  // Stripe price there is no checkout to offer, whatever the payload says.
-  if (!process.env[MONDAY_GIRLS_DROPIN_PRICE_ENV_VAR]) {
+  // Fail closed on configuration BEFORE validating the form.
+  try {
+    getStripe();
+  } catch {
     console.error(
-      `[checkout-monday-girls-dropin] not configured — ${MONDAY_GIRLS_DROPIN_PRICE_ENV_VAR} is MISSING`,
+      "[checkout-monday-girls-dropin] not configured — STRIPE_SECRET_KEY is MISSING",
     );
-    return NextResponse.json(
-      {
-        error:
-          "Online drop-in booking isn't open yet — text Coach Sam at 301-325-4731 and he'll get you in.",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: NOT_OPEN_MESSAGE }, { status: 503 });
   }
 
   const errors = validateMondayGirlsDropin(body);
@@ -67,20 +73,6 @@ export async function POST(req: NextRequest) {
   const option = findMondayGirlsSeasonGroup(data.group);
   if (!option) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
-  }
-
-  const priceId = process.env[MONDAY_GIRLS_DROPIN_PRICE_ENV_VAR];
-  if (!priceId) {
-    console.error(
-      `[checkout-monday-girls-dropin] not configured — ${MONDAY_GIRLS_DROPIN_PRICE_ENV_VAR} is MISSING`,
-    );
-    return NextResponse.json(
-      {
-        error:
-          "Online drop-in booking isn't open yet — text Coach Sam at 301-325-4731 and he'll get you in.",
-      },
-      { status: 503 },
-    );
   }
 
   // The Monday must still be ahead of us.
@@ -124,49 +116,70 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com";
+  const submissionId =
+    typeof body.submissionId === "string" && body.submissionId.length > 0
+      ? body.submissionId
+      : undefined;
 
-  const stripe = getStripe();
+  let invoice;
+  try {
+    invoice = await createAndSendSignupInvoice({
+      customerEmail: data.email,
+      customerName: data.parentName,
+      items: [
+        {
+          description: `${MONDAY_GIRLS_DROPIN_TITLE} — ${data.childFirstName} (${data.monday})`,
+          amountCents: MONDAY_GIRLS_DROPIN_PRICE_USD * 100,
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        kind: MONDAY_GIRLS_DROPIN_KIND,
+        season_label: MONDAY_GIRLS_SEASON_LABEL,
+        group: option.group,
+        group_label: option.label,
+        group_time: MONDAY_GIRLS_TIME_LABEL,
+        monday: data.monday,
+        // Wood MS is a public MCPS facility and this is a closed, post-payment
+        // surface, so the exact venue may travel through metadata (same posture
+        // as the season block).
+        venue: MONDAY_GIRLS_VENUE,
+        parent_name: data.parentName,
+        parent_email: data.email,
+        parent_phone: data.phone,
+        child_first_name: data.childFirstName,
+        child_birth_year: data.childBirthYear,
+        emergency_name: data.emergencyName,
+        emergency_phone: data.emergencyPhone,
+        // Stripe metadata values cap at 500 chars; trim defensively.
+        allergies: (data.allergies ?? "").slice(0, 480),
+        // Gate above guarantees a signed one-time waiver is on file for this parent.
+        waiver_accepted: "true",
+        sms_consent: data.smsConsent ? "true" : "false",
+        sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
+      },
+      memo: `${MONDAY_GIRLS_DROPIN_TITLE} — ${data.monday}`,
+      footer:
+        "Bring a refillable water bottle and court shoes — we have loaner paddles.",
+      // Drop-ins are for an imminent Monday; a short fuse keeps the seat real.
+      daysUntilDue: 3,
+      idempotencyKey: submissionId
+        ? `monday-girls-dropin-${submissionId}`
+        : undefined,
+    });
+  } catch (err) {
+    console.error("[checkout-monday-girls-dropin] invoice creation failed", err);
+    return NextResponse.json(
+      {
+        error:
+          "We couldn't create your invoice — text Coach Sam at 301-325-4731 and he'll get you in.",
+      },
+      { status: 502 },
+    );
+  }
 
-  const checkout = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [{ price: priceId, quantity: 1 }],
-    allow_promotion_codes: true,
-    customer_email: data.email,
-    payment_intent_data: {
-      description: `${MONDAY_GIRLS_DROPIN_TITLE} — ${data.childFirstName} (${data.monday})`,
-    },
-    metadata: {
-      kind: MONDAY_GIRLS_DROPIN_KIND,
-      season_label: MONDAY_GIRLS_SEASON_LABEL,
-      group: option.group,
-      group_label: option.label,
-      group_time: MONDAY_GIRLS_TIME_LABEL,
-      monday: data.monday,
-      // Wood MS is a public MCPS facility and this is a closed, post-payment
-      // surface, so the exact venue may travel through metadata (same posture
-      // as the season block).
-      venue: MONDAY_GIRLS_VENUE,
-      parent_name: data.parentName,
-      parent_email: data.email,
-      parent_phone: data.phone,
-      child_first_name: data.childFirstName,
-      child_birth_year: data.childBirthYear,
-      emergency_name: data.emergencyName,
-      emergency_phone: data.emergencyPhone,
-      // Stripe metadata values cap at 500 chars; trim defensively.
-      allergies: (data.allergies ?? "").slice(0, 480),
-      // Gate above guarantees a signed one-time waiver is on file for this parent.
-      waiver_accepted: "true",
-      sms_consent: data.smsConsent ? "true" : "false",
-      sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
-    },
-    success_url: `${origin}/monday-girls/success?cs={CHECKOUT_SESSION_ID}&dropin=${data.monday}`,
-    cancel_url: `${origin}/monday-girls`,
+  return NextResponse.json({
+    invoiceId: invoice.id,
+    url: invoice.hosted_invoice_url,
   });
-
-  return NextResponse.json({ url: checkout.url });
 }

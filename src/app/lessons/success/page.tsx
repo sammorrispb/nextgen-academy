@@ -4,35 +4,40 @@ import { getStripe } from "@/lib/stripe";
 
 export const metadata: Metadata = {
   title: "Lesson Booked",
-  description: "Your Next Gen lesson is booked — a coach will reach out to schedule the hour.",
+  description: "Your Next Gen lesson invoice is on its way — a coach will reach out to schedule the hour.",
   robots: { index: false, follow: false },
 };
 
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ cs?: string }>;
+  searchParams: Promise<{ inv?: string }>;
 }
 
 export default async function LessonSuccessPage({ searchParams }: PageProps) {
-  const { cs } = await searchParams;
+  const { inv } = await searchParams;
 
   let lessonTitle = "your lesson";
   let childName = "";
-  let ok = false;
+  let parentEmail = "";
+  let payUrl: string | null = null;
+  let paid = false;
 
-  if (cs) {
+  // The Stripe lookup only personalises the page. Everything a parent actually
+  // needs — pay the invoice, expect a coach text — renders from the static
+  // copy below, so a missing `inv` or a slow Stripe call downgrades the
+  // greeting rather than leaving a confirmation screen with nothing on it.
+  if (inv && process.env.STRIPE_SECRET_KEY) {
     try {
       const stripe = getStripe();
-      const session = await stripe.checkout.sessions.retrieve(cs);
-      if (session.payment_status === "paid") {
-        ok = true;
-        lessonTitle =
-          session.metadata?.lesson_title === "Group Lesson"
-            ? "group lesson"
-            : "private lesson";
-        childName = session.metadata?.child_first_name ?? "";
-      }
+      const invoice = await stripe.invoices.retrieve(inv);
+      const m = invoice.metadata ?? {};
+      childName = String(m.child_first_name ?? "");
+      lessonTitle =
+        m.lesson_title === "Group Lesson" ? "group lesson" : "private lesson";
+      parentEmail = invoice.customer_email ?? "";
+      payUrl = invoice.hosted_invoice_url ?? null;
+      paid = invoice.status === "paid";
     } catch {
       // fall through to the generic confirmation
     }
@@ -63,7 +68,7 @@ export default async function LessonSuccessPage({ searchParams }: PageProps) {
           You&rsquo;re booked{childName ? `, ${childName}` : ""}.
         </h1>
         <p className="mt-4 text-lg text-ngpa-white/75 leading-relaxed">
-          {ok ? (
+          {paid ? (
             <>
               Payment for {lessonTitle} went through. A Next Gen coach will
               text you within one business day to lock in the hour — keep an
@@ -71,9 +76,18 @@ export default async function LessonSuccessPage({ searchParams }: PageProps) {
             </>
           ) : (
             <>
-              If your payment just went through, a Next Gen coach will text you
-              within one business day to lock in the hour. Didn&rsquo;t get a
-              confirmation email? Text Coach Sam at{" "}
+              Your {lessonTitle} invoice
+              {parentEmail ? (
+                <>
+                  {" "}is on its way to{" "}
+                  <span className="text-ngpa-white font-bold">{parentEmail}</span>
+                </>
+              ) : (
+                " is ready"
+              )}
+              . Pay it online and a Next Gen coach will text you within one
+              business day to lock in the hour. Didn&rsquo;t get the invoice
+              email? Text Coach Sam at{" "}
               <a
                 href="tel:+13013254731"
                 className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright"
@@ -84,6 +98,16 @@ export default async function LessonSuccessPage({ searchParams }: PageProps) {
             </>
           )}
         </p>
+        {!paid && payUrl && (
+          <div className="mt-8">
+            <a
+              href={payUrl}
+              className="inline-flex items-center justify-center px-8 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+            >
+              Pay the invoice now
+            </a>
+          </div>
+        )}
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/schedule"
