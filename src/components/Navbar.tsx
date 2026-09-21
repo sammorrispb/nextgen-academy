@@ -6,19 +6,17 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { trackEvent } from "@/lib/funnelClient";
 
+// Six doors, no more. The three intents Sam named map to the first three;
+// everything else (Fall Season, Camp, Pickl Park, Clusters, Monday Girls,
+// Newsletter, Crew) stays live and reachable from the schedule page, footer,
+// and homepage cards — it just stops competing for attention up here.
 const links = [
-  { href: "#levels", label: "Programs" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/fall", label: "Fall Season" },
-  { href: "/picklpark", label: "Pickl Park" },
-  { href: "/camp", label: "Camp" },
+  { href: "#start", label: "Start Here" },
+  { href: "/lessons", label: "Lessons" },
+  { href: "/league", label: "Leagues" },
   { href: "/montgomery-village-youth-pickleball", label: "MVF Classes" },
-  { href: "/league", label: "League" },
-  { href: "/clusters", label: "Clusters" },
-  { href: "/newsletter", label: "Newsletter" },
-  { href: "/crew", label: "Crew" },
+  { href: "/schedule", label: "Schedule" },
   { href: "#about", label: "About" },
-  { href: "#faq", label: "FAQ" },
 ];
 
 export default function Navbar() {

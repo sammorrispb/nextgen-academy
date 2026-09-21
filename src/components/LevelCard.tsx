@@ -94,7 +94,7 @@ export default function LevelCard({ level }: LevelCardProps) {
             </div>
           ) : (
             <a
-              href="#contact-form"
+              href="/free-evaluation/book"
               className="inline-flex items-center gap-1.5 text-sm font-bold text-ngpa-teal hover:text-ngpa-teal-bright transition-colors"
             >
               Get Started

@@ -27,13 +27,13 @@ export default function PotomacPage() {
     <CityLanding
       city="Potomac"
       slug="youth-pickleball-potomac"
-      intro="Most Potomac families join our Sunday-evening group sessions at Walter Johnson High School — on Rock Spring Drive near the Montgomery Mall area — where every level from Red to Yellow gets its own court. Kids 6–16 start with a free 30-minute evaluation, then drop in session by session with no subscription or commitment."
-      whereWePlay="Walter Johnson HS is the closest regular venue from Potomac; Saturday evenings run at Earle B. Wood Middle School in Rockville. Summer camp weeks run in Gaithersburg, and if your child wants 1:1 work before joining a group, ask about private lessons at your evaluation — we'll figure out what works for your family."
+      intro="Most Potomac families join our Sunday-afternoon group sessions at Walter Johnson High School — on Rock Spring Drive near the Montgomery Mall area — where every level from Red to Yellow gets its own court. Kids 6–16 start with a free 30-minute evaluation, then drop in session by session with no subscription or commitment."
+      whereWePlay="Walter Johnson HS is the closest regular venue from Potomac; We’ve run Saturday sessions at Earle B. Wood Middle School in Rockville in past seasons. Summer camp weeks run in Gaithersburg, and if your child wants 1:1 work before joining a group, ask about private lessons at your evaluation — we'll figure out what works for your family."
       cityFaq={[
         {
           question: "What's the closest venue to Potomac?",
           answer:
-            "Walter Johnson High School (6400 Rock Spring Dr, Bethesda), near the Montgomery Mall area, hosts this season's Sunday-evening sessions and is the closest regular venue for most Potomac families. Saturdays run at Earle B. Wood MS in Rockville — check the schedule page for current slots.",
+            "Walter Johnson High School (6400 Rock Spring Dr, Bethesda), near the Montgomery Mall area, hosts this season’s Sunday-afternoon sessions and is the closest regular venue for most Potomac families. We’ve run Saturdays at Earle B. Wood MS in Rockville in past seasons — check the schedule page for current slots.",
         },
       ]}
     />

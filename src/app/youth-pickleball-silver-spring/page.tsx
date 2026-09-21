@@ -27,13 +27,13 @@ export default function SilverSpringPage() {
     <CityLanding
       city="Silver Spring"
       slug="youth-pickleball-silver-spring"
-      intro="Silver Spring families have trained with us at Odessa Shannon Middle School in past seasons. This season's group sessions for kids 6–16 run on weekend evenings at Earle B. Wood Middle School in Rockville — an easy ride up Layhill or Norbeck from north Silver Spring — and Walter Johnson High School in Bethesda. Start with a free 30-minute evaluation."
+      intro="Silver Spring families have trained with us at Odessa Shannon Middle School in past seasons. This season’s group sessions for kids 6–16 run Sunday afternoons at Walter Johnson High School in Bethesda; Earle B. Wood Middle School in Rockville — an easy ride up Layhill or Norbeck from north Silver Spring — has hosted Saturday sessions in past seasons. Start with a free 30-minute evaluation."
       whereWePlay="From most of Silver Spring, Wood MS on Bauer Drive is the closer weekend venue; down-county families may find the Bethesda Sundays easier. We've run Silver Spring evenings before — if your family wants sessions back on this side of the county, the crew-interest form is how that happens."
       cityFaq={[
         {
           question: "Have you run sessions in Silver Spring?",
           answer:
-            "Yes — past seasons included weekly evenings at Odessa Shannon Middle School in Silver Spring. This season's group sessions run at Earle B. Wood MS in Rockville and Walter Johnson HS in Bethesda; check the schedule page for current slots, and use the crew-interest form if you'd like Silver Spring sessions back.",
+            "Yes — past seasons included weekly evenings at Odessa Shannon Middle School in Silver Spring. This season’s group sessions run at Walter Johnson HS in Bethesda (Earle B. Wood MS in Rockville has hosted Saturday sessions in past seasons); check the schedule page for current slots, and use the crew-interest form if you'd like Silver Spring sessions back.",
         },
       ]}
     />

@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import MondayGirlsRegistrationForm from "@/components/MondayGirlsRegistrationForm";
+import MondayGirlsDropinForm from "@/components/MondayGirlsDropinForm";
+import {
+  MONDAY_GIRLS_DROPIN_PRICE_ENV_VAR,
+  MONDAY_GIRLS_DROPIN_PRICE_USD,
+} from "@/data/monday-girls-dropin-2026";
 import {
   MONDAY_GIRLS_AGE_MAX,
   MONDAY_GIRLS_AGE_MIN,
@@ -78,6 +83,9 @@ function mondayLabel(iso: string): string {
 export default async function MondayGirlsPage() {
   const registrationState = mondayGirlsRegistrationStateNow();
   const registrationOpen = registrationState === "open";
+
+  // The $35 drop-in ships dark until its Stripe price exists.
+  const dropinLive = !!process.env[MONDAY_GIRLS_DROPIN_PRICE_ENV_VAR];
 
   // Mid-season joining (Sam, 2026-09-14). A family arriving in week three buys
   // the Mondays that are left, at a price built from that same count — so the
@@ -339,6 +347,29 @@ export default async function MondayGirlsPage() {
           </div>
         )}
       </section>
+
+      {/* Drop in for a single Monday — $35/session. Same block, same seat cap,
+          no commitment. Gated on the drop-in Stripe price: the section only
+          renders when the product exists, so no family is ever offered a
+          drop-in that cannot charge. */}
+      {dropinLive && (
+        <section
+          id="drop-in"
+          className="px-5 sm:px-8 pb-20 max-w-2xl mx-auto scroll-mt-24"
+        >
+          <h2 className="font-heading text-2xl font-black text-ngpa-white mb-3">
+            Or drop in for a single Monday — $
+            {MONDAY_GIRLS_DROPIN_PRICE_USD}
+          </h2>
+          <p className="text-ngpa-white/75 mb-6">
+            Not ready for the whole block? Grab one Monday evening for $
+            {MONDAY_GIRLS_DROPIN_PRICE_USD}. Same girls-only hour, same courts
+            — a drop-in seat is one of the block&rsquo;s seats for that night,
+            so when the block is full, drop-ins are too.
+          </p>
+          <MondayGirlsDropinForm spotsTaken={spotsTaken} />
+        </section>
+      )}
     </main>
   );
 }

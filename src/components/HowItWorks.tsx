@@ -84,9 +84,10 @@ export default function HowItWorks() {
 
         <div className="mt-10 text-center">
           <TrackedCTA
-            href="#contact-form"
+            href="/free-evaluation/book"
             label="how_it_works_book_eval"
             section="how_it_works"
+            asNextLink
             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors text-base shadow-lg shadow-ngpa-teal/20 min-h-[48px]"
           >
             Book a Free Evaluation

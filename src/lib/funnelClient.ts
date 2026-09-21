@@ -271,7 +271,53 @@ export function trackEvent<K extends keyof AnalyticsEventMap>(
     }).catch(() => {
       /* swallow — analytics must never break the page */
     });
+
+    mirrorToThirdParty(name, { ...props, page });
   } catch {
     /* swallow — analytics must never break the page */
+  }
+}
+
+/**
+ * Mirror conversion events to GA4 + Meta Pixel when those tags are loaded.
+ * The tags themselves are ENV-GATED in <Analytics />; this is a no-op until
+ * they exist. Mapping is deliberately coarse:
+ *  - page_view        → gtag page_view / fbq PageView
+ *  - *_submitted      → gtag generate_lead / fbq Lead
+ *  - everything else  → gtag custom event / fbq trackCustom
+ */
+function mirrorToThirdParty(
+  name: string,
+  props: Record<string, unknown>,
+): void {
+  try {
+    if (typeof window === "undefined") return;
+    const w = window as unknown as {
+      gtag?: (...args: unknown[]) => void;
+      fbq?: (...args: unknown[]) => void;
+    };
+
+    if (name === "page_view") {
+      // PageView is handled by <Analytics /> on route change; skip the double.
+      return;
+    }
+
+    const isLead = /_submitted$/.test(name);
+    if (typeof w.gtag === "function") {
+      w.gtag("event", isLead ? "generate_lead" : name, {
+        ...props,
+        // Strip PII-ish free text before it leaves for Google.
+        parent_name: undefined,
+      });
+    }
+    if (typeof w.fbq === "function") {
+      if (isLead) {
+        w.fbq("track", "Lead", { content_name: name });
+      } else {
+        w.fbq("trackCustom", name, props);
+      }
+    }
+  } catch {
+    /* analytics must never break the page */
   }
 }

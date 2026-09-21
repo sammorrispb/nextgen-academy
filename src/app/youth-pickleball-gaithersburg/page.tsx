@@ -27,7 +27,7 @@ export default function GaithersburgPage() {
     <CityLanding
       city="Gaithersburg"
       slug="youth-pickleball-gaithersburg"
-      intro="Gaithersburg is home turf for our summer camps — this year's June and July camp weeks ran at Gaithersburg High School — and our fall MVF classes run next door in Montgomery Village. This season's weekly group sessions for kids 6–16 run on weekend evenings at Earle B. Wood MS in Rockville and Walter Johnson HS in Bethesda. Start with a free 30-minute evaluation."
+      intro="Gaithersburg is home turf for our summer camps — this year's June and July camp weeks ran at Gaithersburg High School — and our fall MVF classes run next door in Montgomery Village. This season’s weekly group sessions for kids 6–16 run Sunday afternoons at Walter Johnson HS in Bethesda; we’ve also run Saturday sessions at Earle B. Wood MS in Rockville in past seasons. Start with a free 30-minute evaluation."
       whereWePlay="We've coached Gaithersburg kids at Ridgeview Middle School in past seasons, run summer camp weeks at Gaithersburg High School, and teach fall MVF classes next door in Montgomery Village — the Aug 27 intro at Apple Ridge, then both fall sessions at North Creek. The current weekend sessions run at Wood MS (Saturdays) and Walter Johnson HS (Sundays) — one court per level, four players per court."
       cityFaq={[
         {

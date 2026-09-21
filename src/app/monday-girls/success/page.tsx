@@ -32,13 +32,13 @@ function mondayLabel(iso: string): string {
 }
 
 interface PageProps {
-  searchParams: Promise<{ cs?: string }>;
+  searchParams: Promise<{ cs?: string; dropin?: string }>;
 }
 
 export default async function MondayGirlsSuccessPage({
   searchParams,
 }: PageProps) {
-  const { cs } = await searchParams;
+  const { cs, dropin } = await searchParams;
 
   let childName = "";
   let groupTime = "";
@@ -48,6 +48,10 @@ export default async function MondayGirlsSuccessPage({
   // needs — the six Mondays, the skipped week, the venue — renders from the
   // season config below, so a missing `cs` or a slow Stripe call downgrades the
   // greeting rather than leaving a confirmation screen with nothing on it.
+  //
+  // A drop-in purchase arrives with ?dropin=<ISO Monday>: the confirmation
+  // names that single Monday instead of the whole block.
+  const isDropin = typeof dropin === "string" && dropin.length > 0;
   if (cs && process.env.STRIPE_SECRET_KEY) {
     try {
       const stripe = getStripe();
@@ -71,8 +75,20 @@ export default async function MondayGirlsSuccessPage({
           {childName ? `${childName} has a spot` : "Registration confirmed"}
         </h1>
         <p className="text-ngpa-white/80 text-lg mt-4">
-          {MONDAY_GIRLS_SEASON_TITLE} &mdash; Mondays{" "}
-          {groupTime || "6:00–7:00 PM"}, {MONDAY_GIRLS_SEASON_LABEL}.
+          {isDropin ? (
+            <>
+              Monday Girls drop-in &mdash;{" "}
+              <time dateTime={dropin}>
+                {mondayLabel(dropin as string)}
+              </time>
+              , {groupTime || "6:00–7:00 PM"}.
+            </>
+          ) : (
+            <>
+              {MONDAY_GIRLS_SEASON_TITLE} &mdash; Mondays{" "}
+              {groupTime || "6:00–7:00 PM"}, {MONDAY_GIRLS_SEASON_LABEL}.
+            </>
+          )}
           {amountPaid ? ` Paid $${amountPaid}.` : ""}
         </p>
         <p className="text-ngpa-white/70 mt-3">
@@ -92,10 +108,11 @@ export default async function MondayGirlsSuccessPage({
       <section className="px-5 sm:px-8 pb-10 max-w-2xl mx-auto">
         <div className="bg-ngpa-panel rounded-2xl p-6 border border-ngpa-slate/60">
           <h2 className="font-heading text-xl font-black text-ngpa-white">
-            Your Mondays
+            {isDropin ? "Your Monday" : "Your Mondays"}
           </h2>
           <ul className="mt-3 space-y-2">
-            {MONDAY_GIRLS_MONDAYS.map((iso) => (
+            {(isDropin ? [dropin as string] : MONDAY_GIRLS_MONDAYS).map(
+              (iso) => (
               <li
                 key={iso}
                 className="flex items-center gap-3 text-ngpa-white/85"
