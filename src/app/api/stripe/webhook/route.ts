@@ -328,6 +328,21 @@ export async function POST(req: NextRequest) {
     return handleChargeRefunded(event.data.object as Stripe.Charge);
   }
 
+  // Sign-up invoices (lessons + Monday Girls drop-ins) are finalized and
+  // emailed by the checkout routes; this is where the paid confirmation
+  // emails + CRM sync happen for them.
+  if (event.type === "invoice.payment_succeeded") {
+    const invoice = event.data.object as Stripe.Invoice;
+    const kind = metaString(invoice.metadata ?? {}, "kind");
+    if (kind === "monday-girls-dropin") {
+      return handleMondayGirlsDropinPaid(receiptFromInvoice(invoice));
+    }
+    if (kind === "lesson") {
+      return handleLessonPaid(receiptFromInvoice(invoice));
+    }
+    return NextResponse.json({ received: true, skipped: "not_a_signup_invoice" });
+  }
+
   if (event.type !== "checkout.session.completed") {
     return NextResponse.json({ received: true });
   }
@@ -388,14 +403,14 @@ export async function POST(req: NextRequest) {
   // the season DB (the block roster is the season commitment), just admin +
   // parent emails so the family knows which Monday they're on.
   if (metaString(session.metadata ?? {}, "kind") === "monday-girls-dropin") {
-    return handleMondayGirlsDropinCheckout(session);
+    return handleMondayGirlsDropinPaid(receiptFromCheckoutSession(session));
   }
 
   // Lesson purchases carry kind=lesson. A lesson is a scheduling conversation:
   // the webhook notifies Sam (who reaches out to lock the hour) and confirms
   // to the parent. No roster DB — lessons are 1:1 scheduled, not inventoried.
   if (metaString(session.metadata ?? {}, "kind") === "lesson") {
-    return handleLessonCheckout(session);
+    return handleLessonPaid(receiptFromCheckoutSession(session));
   }
 
   const m = session.metadata ?? {};
@@ -1425,14 +1440,46 @@ async function handleMondayGirlsCheckout(session: Stripe.Checkout.Session) {
 // delivery of checkout.session.completed per session plus Resend's tolerance
 // for the rare redelivery (a duplicate "see you Monday" email is a paper cut,
 // not a double charge — the charge itself is idempotent in Stripe).
-async function handleMondayGirlsDropinCheckout(
+//
+// Lessons and drop-ins are now paid via sign-up invoices (Stripe.Invoice)
+// instead of fixed-price checkout sessions. Both arrive here normalized as a
+// PaidReceipt — same emails, same CRM sync, whichever object Stripe paid.
+interface PaidReceipt {
+  metadata: Stripe.Metadata;
+  parentEmail: string;
+  amountCents: number;
+  /** Stripe object id for logging / CRM (session id or invoice id). */
+  stripeRef: string;
+}
+
+function receiptFromCheckoutSession(
   session: Stripe.Checkout.Session,
-) {
+): PaidReceipt {
   const m = session.metadata ?? {};
+  return {
+    metadata: m,
+    parentEmail: payerEmail(session) || metaString(m, "parent_email"),
+    amountCents: session.amount_total ?? 0,
+    stripeRef: session.id,
+  };
+}
+
+function receiptFromInvoice(invoice: Stripe.Invoice): PaidReceipt {
+  const m = invoice.metadata ?? {};
+  return {
+    metadata: m,
+    parentEmail: invoice.customer_email || metaString(m, "parent_email"),
+    amountCents: invoice.amount_paid,
+    stripeRef: invoice.id,
+  };
+}
+
+async function handleMondayGirlsDropinPaid(r: PaidReceipt) {
+  const m = r.metadata;
   const mondayIso = metaString(m, "monday");
   const mondayLabel = mondayIso ? formatLongDate(mondayIso) : "their Monday";
-  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
-  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const parentEmail = r.parentEmail;
+  const amount = (r.amountCents / 100).toFixed(2);
 
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
@@ -1454,7 +1501,7 @@ async function handleMondayGirlsDropinCheckout(
         `Allergies: ${metaString(m, "allergies") || "none noted"}`,
         ``,
         `Paid: $${amount}`,
-        `Stripe: ${session.id}`,
+        `Stripe: ${r.stripeRef}`,
       ].join("\n"),
     });
     if (adminError)
@@ -1504,7 +1551,7 @@ async function handleMondayGirlsDropinCheckout(
           group: metaString(m, "group"),
           child_first_name: metaString(m, "child_first_name"),
           amount_paid_usd: amount,
-          stripe_session: session.id,
+          stripe_reference: r.stripeRef,
         },
       }),
     ]);
@@ -1516,11 +1563,11 @@ async function handleMondayGirlsDropinCheckout(
 // Lesson purchases (kind=lesson). The product is a scheduling conversation:
 // Sam gets everything he needs to reach out and lock the hour, and the parent
 // gets confirmation that the hour is paid for and a coach will be in touch.
-async function handleLessonCheckout(session: Stripe.Checkout.Session) {
-  const m = session.metadata ?? {};
+async function handleLessonPaid(r: PaidReceipt) {
+  const m = r.metadata;
   const lessonTitle = metaString(m, "lesson_title") || "Lesson";
-  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
-  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+  const parentEmail = r.parentEmail;
+  const amount = (r.amountCents / 100).toFixed(2);
 
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
@@ -1541,7 +1588,7 @@ async function handleLessonCheckout(session: Stripe.Checkout.Session) {
         `Emergency: ${metaString(m, "emergency_name")} ${metaString(m, "emergency_phone")}`,
         ``,
         `Paid: $${amount}`,
-        `Stripe: ${session.id}`,
+        `Stripe: ${r.stripeRef}`,
         ``,
         `Next step: text the parent to lock in the hour.`,
       ].join("\n"),
@@ -1591,7 +1638,7 @@ async function handleLessonCheckout(session: Stripe.Checkout.Session) {
           child_first_name: metaString(m, "child_first_name"),
           preferred_times: metaString(m, "preferred_times"),
           amount_paid_usd: amount,
-          stripe_session: session.id,
+          stripe_reference: r.stripeRef,
         },
       }),
     ]);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
+import { createAndSendSignupInvoice } from "@/lib/stripe-invoices";
 import {
   LESSON_CHECKOUT_KIND,
   LESSON_PRICE_USD,
@@ -17,47 +18,40 @@ import {
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
 
-// Lesson checkout — ENV-GATED like the season checkouts: until the matching
-// STRIPE_*_LESSON_PRICE_ID is set this returns 503 so the page ships dark.
-// A lesson is a scheduling conversation as much as a purchase: the form
-// collects preferred times, and the webhook confirmation tells the family a
-// coach will reach out to lock the hour.
+// Lesson sign-up — INVOICE-BASED. There are no fixed Stripe products/prices:
+// the invoice line items are built from the sign-up form (lesson type, player
+// count). Flow: validate -> waiver gate -> find-or-create customer -> create
+// draft invoice -> add line items -> finalize -> Stripe emails the invoice ->
+// parent pays on the hosted invoice page. The form redirects to our success
+// page, which shows the invoice status and a Pay-now button; the invoice email
+// is the fallback if the parent closes the tab.
 //
-// GROUP PRICING (confirmed by Sam 2026-09-21): the group Stripe price
-// STRIPE_GROUP_LESSON_PRICE_ID is the $60 TOTAL for the hour — quantity 1,
-// never per player. The player count is collected on the form and written
-// into session metadata + the payment-intent description so staff see the
-// per-player split without it being a separate charge.
+// GROUP PRICING (confirmed by Sam 2026-09-21): $60 TOTAL for the hour — a
+// single $60 line item, quantity 1, never per player. The player count is
+// written into the line description + metadata so staff see the per-player
+// split without it being a separate charge.
+//
+// Fail-closed on STRIPE_SECRET_KEY: without it there is no invoice to create,
+// whatever the payload says. STRIPE_*_LESSON_PRICE_ID env vars are no longer
+// read.
+
+const NOT_OPEN_MESSAGE =
+  "Online lesson booking isn't open yet — text Coach Sam at 301-325-4731 and he'll get you scheduled.";
 
 export async function POST(req: NextRequest) {
-  let body: Partial<LessonPurchaseData>;
+  let body: Partial<LessonPurchaseData> & { submissionId?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Fail closed on configuration BEFORE validating the form: without a live
-  // Stripe price there is no checkout to offer, whatever the payload says.
-  const provisionalType =
-    typeof body?.lessonType === "string" ? body.lessonType : "private";
-  const provisionalProduct = findLessonProduct(provisionalType);
-  const provisionalPriceId = provisionalProduct
-    ? process.env[provisionalProduct.priceEnvVar]
-    : undefined;
-  if (!provisionalPriceId) {
-    console.error(
-      `[checkout-lesson] not configured — ${
-        provisionalProduct?.priceEnvVar ?? "STRIPE_PRIVATE_LESSON_PRICE_ID"
-      } is MISSING`,
-    );
-    return NextResponse.json(
-      {
-        error:
-          "Online lesson booking isn't open yet — text Coach Sam at 301-325-4731 and he'll get you scheduled.",
-      },
-      { status: 503 },
-    );
+  // Fail closed on configuration BEFORE validating the form.
+  try {
+    getStripe();
+  } catch {
+    console.error("[checkout-lesson] not configured — STRIPE_SECRET_KEY is MISSING");
+    return NextResponse.json({ error: NOT_OPEN_MESSAGE }, { status: 503 });
   }
 
   const errors = validateLessonPurchase(body);
@@ -69,20 +63,6 @@ export async function POST(req: NextRequest) {
   const product = findLessonProduct(data.lessonType);
   if (!product) {
     return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
-  }
-
-  const priceId = process.env[product.priceEnvVar];
-  if (!priceId) {
-    console.error(
-      `[checkout-lesson] not configured — ${product.priceEnvVar} is MISSING`,
-    );
-    return NextResponse.json(
-      {
-        error:
-          "Online lesson booking isn't open yet — text Coach Sam at 301-325-4731 and he'll get you scheduled.",
-      },
-      { status: 503 },
-    );
   }
 
   // One-time waiver gate — must be on file before the player's first session.
@@ -101,61 +81,77 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com";
-
-  const stripe = getStripe();
-
-  // Group: the $60 total is charged once (quantity 1) and split between the
-  // players — the count goes in metadata + description for staff visibility.
+  // Group: the $60 total is one line item (quantity 1); the player count goes
+  // in the description + metadata for staff visibility.
   const groupPlayers =
     data.lessonType === "group" ? Number(data.groupPlayers) || null : null;
-  const splitLine =
-    groupPlayers != null
-      ? ` — ${groupPlayers} players ($${LESSON_PRICE_USD} total, split between the players)`
-      : "";
-  const paymentDescription =
+  const lineDescription =
     data.lessonType === "group"
-      ? `${product.title} — ${data.childFirstName}${splitLine}`
-      : `${product.title} — ${data.childFirstName} ($${LESSON_PRICE_USD}/hr)`;
+      ? `Group lesson — ${data.childFirstName} (${groupPlayers} players, $${LESSON_PRICE_USD} total split between the players)`
+      : `Private lesson — ${data.childFirstName} ($${LESSON_PRICE_USD}/hr)`;
 
-  const checkout = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items: [{ price: priceId, quantity: 1 }],
-    allow_promotion_codes: true,
-    customer_email: data.email,
-    payment_intent_data: {
-      description: paymentDescription,
-    },
-    metadata: {
-      kind: LESSON_CHECKOUT_KIND,
-      lesson_type: product.type,
-      lesson_title: product.title,
-      lesson_slug: product.slug,
-      // Group-lesson player count: the $60/hour total is split this many
-      // ways. Private lessons omit it (single player).
-      group_players: groupPlayers != null ? String(groupPlayers) : "",
-      parent_name: data.parentName,
-      parent_email: data.email,
-      parent_phone: data.phone,
-      child_first_name: data.childFirstName,
-      child_birth_year: data.childBirthYear,
-      preferred_times: (data.preferredTimes ?? "").slice(0, 480),
-      emergency_name: data.emergencyName,
-      emergency_phone: data.emergencyPhone,
-      // Stripe metadata values cap at 500 chars; trim defensively.
-      allergies: (data.allergies ?? "").slice(0, 480),
-      notes: (data.notes ?? "").slice(0, 480),
-      // Gate above guarantees a signed one-time waiver is on file for this parent.
-      waiver_accepted: "true",
-      sms_consent: data.smsConsent ? "true" : "false",
-      sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
-    },
-    success_url: `${origin}/lessons/success?cs={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/lessons`,
+  const submissionId =
+    typeof body.submissionId === "string" && body.submissionId.length > 0
+      ? body.submissionId
+      : undefined;
+
+  let invoice;
+  try {
+    invoice = await createAndSendSignupInvoice({
+      customerEmail: data.email,
+      customerName: data.parentName,
+      items: [
+        {
+          description: lineDescription,
+          amountCents: LESSON_PRICE_USD * 100,
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        kind: LESSON_CHECKOUT_KIND,
+        lesson_type: product.type,
+        lesson_title: product.title,
+        lesson_slug: product.slug,
+        // Group-lesson player count: the $60/hour total is split this many
+        // ways. Private lessons omit it (single player).
+        group_players: groupPlayers != null ? String(groupPlayers) : "",
+        parent_name: data.parentName,
+        parent_email: data.email,
+        parent_phone: data.phone,
+        child_first_name: data.childFirstName,
+        child_birth_year: data.childBirthYear,
+        preferred_times: (data.preferredTimes ?? "").slice(0, 480),
+        emergency_name: data.emergencyName,
+        emergency_phone: data.emergencyPhone,
+        // Stripe metadata values cap at 500 chars; trim defensively.
+        allergies: (data.allergies ?? "").slice(0, 480),
+        notes: (data.notes ?? "").slice(0, 480),
+        // Gate above guarantees a signed one-time waiver is on file for this parent.
+        waiver_accepted: "true",
+        sms_consent: data.smsConsent ? "true" : "false",
+        sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
+      },
+      memo: `${product.title} — sign-up invoice`,
+      footer:
+        "A Next Gen coach will text you within one business day to lock in the hour.",
+      daysUntilDue: 7,
+      idempotencyKey: submissionId
+        ? `lesson-${submissionId}`
+        : undefined,
+    });
+  } catch (err) {
+    console.error("[checkout-lesson] invoice creation failed", err);
+    return NextResponse.json(
+      {
+        error:
+          "We couldn't create your invoice — text Coach Sam at 301-325-4731 and he'll get you scheduled.",
+      },
+      { status: 502 },
+    );
+  }
+
+  return NextResponse.json({
+    invoiceId: invoice.id,
+    url: invoice.hosted_invoice_url,
   });
-
-  return NextResponse.json({ url: checkout.url });
 }

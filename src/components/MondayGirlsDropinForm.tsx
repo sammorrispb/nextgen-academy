@@ -111,7 +111,9 @@ export default function MondayGirlsDropinForm({ spotsTaken }: Props) {
       const res = await fetch("/api/checkout-monday-girls-dropin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        // submissionId becomes the Stripe idempotency key — a double-tap or a
+        // retried request can't create two invoices.
+        body: JSON.stringify({ ...form, submissionId: crypto.randomUUID() }),
       });
       if (res.status === 503) {
         setStatus("closed");
@@ -131,9 +133,12 @@ export default function MondayGirlsDropinForm({ spotsTaken }: Props) {
         }
         throw new Error(data.error || "Something went wrong");
       }
-      if (!data.url) throw new Error("Could not start checkout");
+      if (!data.url || !data.invoiceId)
+        throw new Error("Could not create your invoice");
       setStatus("redirecting");
-      window.location.href = data.url as string;
+      // The invoice is emailed too; the success page shows its status and a
+      // Pay-now button that points at the hosted invoice.
+      window.location.href = `/monday-girls/success?inv=${data.invoiceId as string}&dropin=${form.monday as string}`;
     } catch (err) {
       setServerError(
         err instanceof Error ? err.message : "Something went wrong",

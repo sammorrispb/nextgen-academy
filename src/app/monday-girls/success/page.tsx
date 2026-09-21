@@ -32,36 +32,56 @@ function mondayLabel(iso: string): string {
 }
 
 interface PageProps {
-  searchParams: Promise<{ cs?: string; dropin?: string }>;
+  searchParams: Promise<{ cs?: string; inv?: string; dropin?: string }>;
 }
 
 export default async function MondayGirlsSuccessPage({
   searchParams,
 }: PageProps) {
-  const { cs, dropin } = await searchParams;
+  const { cs, inv, dropin } = await searchParams;
 
   let childName = "";
   let groupTime = "";
   let amountPaid = "";
+  let parentEmail = "";
+  let payUrl: string | null = null;
+  let paid = false;
 
   // The Stripe lookup only personalises the page. Everything a parent actually
   // needs — the six Mondays, the skipped week, the venue — renders from the
-  // season config below, so a missing `cs` or a slow Stripe call downgrades the
-  // greeting rather than leaving a confirmation screen with nothing on it.
+  // season config below, so a missing lookup or a slow Stripe call downgrades
+  // the greeting rather than leaving a confirmation screen with nothing on it.
+  //
+  // Two payment paths land here: season-block checkout sessions (?cs=) and
+  // invoice-based drop-ins (?inv=).
   //
   // A drop-in purchase arrives with ?dropin=<ISO Monday>: the confirmation
   // names that single Monday instead of the whole block.
   const isDropin = typeof dropin === "string" && dropin.length > 0;
-  if (cs && process.env.STRIPE_SECRET_KEY) {
+  if (process.env.STRIPE_SECRET_KEY) {
     try {
       const stripe = getStripe();
-      const checkout = await stripe.checkout.sessions.retrieve(cs);
-      const m = checkout.metadata ?? {};
-      childName = String(m.child_first_name ?? "");
-      groupTime = String(m.group_time ?? "");
-      amountPaid = ((checkout.amount_total ?? 0) / 100).toFixed(2);
+      if (inv) {
+        const invoice = await stripe.invoices.retrieve(inv);
+        const m = invoice.metadata ?? {};
+        childName = String(m.child_first_name ?? "");
+        groupTime = String(m.group_time ?? "");
+        paid = invoice.status === "paid";
+        amountPaid = (
+          (paid ? invoice.amount_paid : invoice.amount_due) / 100
+        ).toFixed(2);
+        parentEmail = invoice.customer_email ?? "";
+        payUrl = invoice.hosted_invoice_url ?? null;
+      } else if (cs) {
+        const checkout = await stripe.checkout.sessions.retrieve(cs);
+        const m = checkout.metadata ?? {};
+        childName = String(m.child_first_name ?? "");
+        groupTime = String(m.group_time ?? "");
+        paid = checkout.payment_status === "paid";
+        amountPaid = ((checkout.amount_total ?? 0) / 100).toFixed(2);
+      }
     } catch (err) {
-      console.error("[monday-girls/success] failed to load checkout", err);
+      console.error("[monday-girls/success] failed to load payment", err);
     }
   }
 
@@ -89,8 +109,34 @@ export default async function MondayGirlsSuccessPage({
               {groupTime || "6:00–7:00 PM"}, {MONDAY_GIRLS_SEASON_LABEL}.
             </>
           )}
-          {amountPaid ? ` Paid $${amountPaid}.` : ""}
+          {paid && amountPaid ? ` Paid $${amountPaid}.` : ""}
         </p>
+        {!paid && inv && (
+          <p className="text-ngpa-white/70 mt-3">
+            Your invoice
+            {parentEmail ? (
+              <>
+                {" "}is on its way to{" "}
+                <span className="text-ngpa-white font-bold">{parentEmail}</span>
+              </>
+            ) : (
+              " is ready"
+            )}
+            {amountPaid ? ` ($${amountPaid})` : ""} — pay it online to lock the
+            spot.
+            {payUrl && (
+              <>
+                {" "}
+                <a
+                  href={payUrl}
+                  className="text-ngpa-teal-bright underline hover:text-ngpa-teal font-bold"
+                >
+                  Pay now
+                </a>
+              </>
+            )}
+          </p>
+        )}
         <p className="text-ngpa-white/70 mt-3">
           A confirmation email with every date and what to bring is on its way.
           If it hasn&rsquo;t landed in a few minutes, check spam &mdash; then
