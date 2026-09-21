@@ -14,7 +14,7 @@ const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 
 export interface InvoiceSentNotice {
-  kind: "lesson" | "monday-girls-dropin";
+  kind: "lesson" | "monday-girls-dropin" | "pickl-park-winter-league";
   headline: string;
   /** Parent name. */
   parentName: string;
@@ -37,7 +37,11 @@ export async function notifyInvoiceSent(notice: InvoiceSentNotice): Promise<void
   }
   const resend = new Resend(apiKey);
   const kindLabel =
-    notice.kind === "lesson" ? "Lesson" : "Monday Girls drop-in";
+    notice.kind === "lesson"
+      ? "Lesson"
+      : notice.kind === "pickl-park-winter-league"
+        ? "Winter League"
+        : "Monday Girls drop-in";
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: ADMIN_NOTIFY,
