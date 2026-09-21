@@ -1590,25 +1590,26 @@ async function handleLessonPaid(r: PaidReceipt) {
         `Paid: $${amount}`,
         `Stripe: ${r.stripeRef}`,
         ``,
-        `Next step: text the parent to lock in the hour.`,
+        `Next step: the parent picks times at ${SITE_ORIGIN}/lessons/book?inv=${encodeURIComponent(r.stripeRef)} — the booking request lands in this inbox for confirm/counter.`,
       ].join("\n"),
     });
     if (adminError)
       console.error("[stripe-webhook] lesson admin email rejected", adminError);
 
     if (parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+      const bookUrl = `${SITE_ORIGIN}/lessons/book?inv=${encodeURIComponent(r.stripeRef)}`;
       const { error: parentError } = await resend.emails.send({
         from: FROM_EMAIL,
         to: parentEmail,
         bcc: ADMIN_EMAIL,
         replyTo: REPLY_TO,
-        subject: `Your ${lessonTitle.toLowerCase()} is booked — we'll text you to schedule`,
+        subject: `Your ${lessonTitle.toLowerCase()} is paid — pick your time`,
         text: [
           `Hi ${metaString(m, "parent_name")},`,
           ``,
-          `Your hour is paid for. A Next Gen coach will text you at ${metaString(m, "parent_phone")} within one business day to lock in a time for ${metaString(m, "child_first_name")}'s ${lessonTitle.toLowerCase()}.`,
+          `Your hour is paid for. Pick up to three times that work for ${metaString(m, "child_first_name")}'s ${lessonTitle.toLowerCase()} and a coach will confirm one of them — usually within a day:`,
           ``,
-          `You told us you're generally free: ${metaString(m, "preferred_times")}. If that changes, just reply to the text.`,
+          bookUrl,
           ``,
           `Paid: $${amount}.`,
           ``,

@@ -178,6 +178,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Both admin inboxes get an "invoice sent" heads-up. notifyInvoiceSent
+  // never throws, so this can't fail a signup whose invoice already went out.
+  await import("@/lib/signup-admin-notify").then(({ notifyInvoiceSent }) =>
+    notifyInvoiceSent({
+      kind: "monday-girls-dropin",
+      headline: `Monday Girls drop-in invoice sent`,
+      parentName: data.parentName,
+      parentEmail: data.email,
+      parentPhone: data.phone,
+      childFirstName: data.childFirstName,
+      amountUsd: (MONDAY_GIRLS_DROPIN_PRICE_USD).toFixed(2),
+      invoiceId: invoice.id,
+      hostedUrl: invoice.hosted_invoice_url ?? null,
+      dueDate: "3 days",
+      details: [
+        `Monday: ${data.monday} — ${option.label} (${MONDAY_GIRLS_TIME_LABEL})`,
+      ],
+    }),
+  );
+
   return NextResponse.json({
     invoiceId: invoice.id,
     url: invoice.hosted_invoice_url,
