@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
       },
       memo: `${product.title} — sign-up invoice`,
       footer:
-        "A Next Gen coach will text you within one business day to lock in the hour.",
+        "After payment, pick your lesson time at nextgenpbacademy.com/lessons/book — a coach confirms within a day.",
       daysUntilDue: 7,
       idempotencyKey: submissionId
         ? `lesson-${submissionId}`
@@ -150,8 +150,48 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Both admin inboxes get an "invoice sent" heads-up. notifyInvoiceSent
+  // never throws, so this can't fail a signup whose invoice already went out.
+  await notifyAdminInvoiceSent(
+    invoice,
+    product,
+    data,
+    product.type === "group" ? groupPlayers : null,
+  );
+
   return NextResponse.json({
     invoiceId: invoice.id,
     url: invoice.hosted_invoice_url,
+  });
+}
+
+async function notifyAdminInvoiceSent(
+  invoice: { id: string; hosted_invoice_url?: string | null },
+  product: { type: string; title: string },
+  data: {
+    parentName: string;
+    email: string;
+    phone: string;
+    childFirstName: string;
+  },
+  groupPlayers: number | null,
+): Promise<void> {
+  // Fire-and-forget: notifyInvoiceSent never throws, so a Resend hiccup
+  // can't fail a signup whose invoice is already emailed.
+  const { notifyInvoiceSent } = await import("@/lib/signup-admin-notify");
+  await notifyInvoiceSent({
+    kind: "lesson",
+    headline: `${product.title} invoice sent`,
+    parentName: data.parentName,
+    parentEmail: data.email,
+    parentPhone: data.phone,
+    childFirstName: data.childFirstName,
+    amountUsd: (LESSON_PRICE_USD).toFixed(2),
+    invoiceId: invoice.id,
+    hostedUrl: invoice.hosted_invoice_url ?? null,
+    dueDate: "7 days",
+    details: [
+      `${product.title}${groupPlayers != null ? ` — ${groupPlayers} players (split $${(LESSON_PRICE_USD / groupPlayers).toFixed(2)} each)` : ""}`,
+    ],
   });
 }

@@ -70,9 +70,9 @@ export default async function LessonSuccessPage({ searchParams }: PageProps) {
         <p className="mt-4 text-lg text-ngpa-white/75 leading-relaxed">
           {paid ? (
             <>
-              Payment for {lessonTitle} went through. A Next Gen coach will
-              text you within one business day to lock in the hour — keep an
-              eye on your phone.
+              Payment for {lessonTitle} went through. Pick your lesson time
+              below — a coach confirms one of your proposed times, usually
+              within a day.
             </>
           ) : (
             <>
@@ -98,6 +98,19 @@ export default async function LessonSuccessPage({ searchParams }: PageProps) {
             </>
           )}
         </p>
+        {paid && inv && (
+          <div className="mt-8">
+            <Link
+              href={`/lessons/book?inv=${encodeURIComponent(inv)}`}
+              className="inline-flex items-center justify-center px-8 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+            >
+              Pick your lesson time
+            </Link>
+            <p className="mt-3 text-sm text-ngpa-white/60">
+              Propose up to three times — a coach confirms within a day.
+            </p>
+          </div>
+        )}
         {!paid && payUrl && (
           <div className="mt-8">
             <a
