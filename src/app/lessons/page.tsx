@@ -113,8 +113,9 @@ export default function LessonsPage() {
                 >
                   301-325-4731
                 </a>{" "}
-                — private and group hours are ${LESSON_PRICE_USD} for the full
-                hour.
+                — private and group hours are ${LESSON_PRICE_USD} for the
+                full hour, and group lessons split the ${LESSON_PRICE_USD}{" "}
+                between the players.
               </p>
               <Link
                 href="/free-evaluation/book"

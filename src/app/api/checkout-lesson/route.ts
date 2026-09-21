@@ -22,6 +22,12 @@ import {
 // A lesson is a scheduling conversation as much as a purchase: the form
 // collects preferred times, and the webhook confirmation tells the family a
 // coach will reach out to lock the hour.
+//
+// GROUP PRICING (confirmed by Sam 2026-09-21): the group Stripe price
+// STRIPE_GROUP_LESSON_PRICE_ID is the $60 TOTAL for the hour — quantity 1,
+// never per player. The player count is collected on the form and written
+// into session metadata + the payment-intent description so staff see the
+// per-player split without it being a separate charge.
 
 export async function POST(req: NextRequest) {
   let body: Partial<LessonPurchaseData>;
@@ -102,19 +108,35 @@ export async function POST(req: NextRequest) {
 
   const stripe = getStripe();
 
+  // Group: the $60 total is charged once (quantity 1) and split between the
+  // players — the count goes in metadata + description for staff visibility.
+  const groupPlayers =
+    data.lessonType === "group" ? Number(data.groupPlayers) || null : null;
+  const splitLine =
+    groupPlayers != null
+      ? ` — ${groupPlayers} players ($${LESSON_PRICE_USD} total, split between the players)`
+      : "";
+  const paymentDescription =
+    data.lessonType === "group"
+      ? `${product.title} — ${data.childFirstName}${splitLine}`
+      : `${product.title} — ${data.childFirstName} ($${LESSON_PRICE_USD}/hr)`;
+
   const checkout = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items: [{ price: priceId, quantity: 1 }],
     allow_promotion_codes: true,
     customer_email: data.email,
     payment_intent_data: {
-      description: `${product.title} — ${data.childFirstName} ($${LESSON_PRICE_USD}/hr)`,
+      description: paymentDescription,
     },
     metadata: {
       kind: LESSON_CHECKOUT_KIND,
       lesson_type: product.type,
       lesson_title: product.title,
       lesson_slug: product.slug,
+      // Group-lesson player count: the $60/hour total is split this many
+      // ways. Private lessons omit it (single player).
+      group_players: groupPlayers != null ? String(groupPlayers) : "",
       parent_name: data.parentName,
       parent_email: data.email,
       parent_phone: data.phone,
