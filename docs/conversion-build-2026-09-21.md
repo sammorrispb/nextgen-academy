@@ -6,12 +6,12 @@ What shipped in this change set (all uncommitted until this doc was written; not
 
 ### One-hour lessons — `/lessons`
 
-- Two products at **$60/hr** (one-time): private 1:1 (`STRIPE_PRIVATE_LESSON_PRICE_ID`) and small-group (`STRIPE_GROUP_LESSON_PRICE_ID`).
+- Two products at **$60/hr** (one-time): private 1:1 (`STRIPE_PRIVATE_LESSON_PRICE_ID`) and small-group (`STRIPE_GROUP_LESSON_PRICE_ID`) — the group $60 is the **total for the group**, split between the players.
 - Checkout API: `POST /api/checkout-lesson` → creates a Stripe Checkout Session with `kind=lesson` metadata (product key, parent/player details, availability, allergies, coaching notes, SMS consent, waiver).
 - Validation: `src/lib/validate-lesson.ts`. Form: `src/components/LessonPurchaseForm.tsx`.
 - Fail-closed: if neither Stripe price ID is set, `/lessons` shows a text-Coach-Sam fallback instead of the purchase form, and the API returns 503.
 - Success page: `/lessons/success`.
-- **Open question for Sam: is the $60/hr group lesson $60 per player or $60 total for the group?** The data currently models **$60 per player**. Do not activate group checkout in production until confirmed.
+- **Group pricing basis — CONFIRMED by Sam 2026-09-21: $60 TOTAL per group per hour, split between the players** (not $60 per player). `STRIPE_GROUP_LESSON_PRICE_ID` must be a one-time $60.00 price charged quantity 1 regardless of group size; do not activate group checkout until that price exists. The purchase form collects the player count (2–8) and shows the live per-player split; the API writes `group_players` into the checkout-session metadata and the payment-intent description so staff see the split.
 
 ### Monday Girls 11U drop-in — `/monday-girls`
 

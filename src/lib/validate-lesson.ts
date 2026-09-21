@@ -1,7 +1,13 @@
 // Validator for the lesson checkout (/api/checkout-lesson). Same
 // parent/child/emergency field set as the other program checkouts.
+// Group lessons additionally collect the player count so the $60 group
+// total can be split — the checkout puts it in session metadata for staff.
 
-import { findLessonProduct } from "@/data/lessons";
+import {
+  findLessonProduct,
+  GROUP_LESSON_MIN_PLAYERS,
+  GROUP_LESSON_MAX_PLAYERS,
+} from "@/data/lessons";
 import {
   FALL_CHILD_AGE_MIN,
   FALL_CHILD_AGE_MAX,
@@ -18,6 +24,8 @@ export interface LessonPurchaseData {
   preferredTimes: string;
   emergencyName: string;
   emergencyPhone: string;
+  /** Number of players for a group lesson (required only for groups). */
+  groupPlayers: string;
   /** Optional allergies / medical notes. */
   allergies: string;
   /** Optional notes for the coach (goals, experience, etc.). */
@@ -47,6 +55,22 @@ export function validateLessonPurchase(
 
   if (!data.lessonType?.trim() || !findLessonProduct(data.lessonType)) {
     errors.lessonType = "Pick private or group";
+  }
+  if (data.lessonType === "group") {
+    // The $60 group hour is split between the players — the count has to be
+    // a real number so the per-player split is visible to staff in the
+    // checkout metadata.
+    const n = Number(data.groupPlayers);
+    if (!data.groupPlayers?.trim()) {
+      errors.groupPlayers = "How many players will be in the group?";
+    } else if (
+      Number.isNaN(n) ||
+      !Number.isInteger(n) ||
+      n < GROUP_LESSON_MIN_PLAYERS ||
+      n > GROUP_LESSON_MAX_PLAYERS
+    ) {
+      errors.groupPlayers = `Enter ${GROUP_LESSON_MIN_PLAYERS}–${GROUP_LESSON_MAX_PLAYERS} players`;
+    }
   }
   if (!data.parentName?.trim()) errors.parentName = "Parent name is required";
   if (!data.email?.trim()) {

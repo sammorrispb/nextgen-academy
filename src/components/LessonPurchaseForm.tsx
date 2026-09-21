@@ -5,6 +5,8 @@ import InlineWaiverStep from "@/components/InlineWaiverStep";
 import {
   LESSON_PRICE_USD,
   LESSON_PRODUCTS,
+  GROUP_LESSON_MIN_PLAYERS,
+  GROUP_LESSON_MAX_PLAYERS,
   type LessonType,
 } from "@/data/lessons";
 import {
@@ -33,6 +35,7 @@ function emptyForm(): LessonPurchaseData {
     preferredTimes: "",
     emergencyName: "",
     emergencyPhone: "",
+    groupPlayers: "",
     allergies: "",
     notes: "",
     smsConsent: false,
@@ -212,6 +215,50 @@ export default function LessonPurchaseForm() {
             <p className={errorClass}>{errors.lessonType}</p>
           )}
         </fieldset>
+
+        {form.lessonType === "group" && (
+          <div className="mb-4">
+            <label className={labelClass} htmlFor="groupPlayers">
+              How many players in the group?
+            </label>
+            <input
+              id="groupPlayers"
+              inputMode="numeric"
+              className={inputClass}
+              value={form.groupPlayers}
+              onChange={(e) => update("groupPlayers", e.target.value)}
+              placeholder={`e.g. ${GROUP_LESSON_MIN_PLAYERS + 2}`}
+            />
+            {errors.groupPlayers && (
+              <p className={errorClass}>{errors.groupPlayers}</p>
+            )}
+            <p className="text-xs text-ngpa-white/55 mt-1.5">
+              The $60 hour is split between the players —{" "}
+              {(() => {
+                const n = Number(form.groupPlayers);
+                if (
+                  Number.isInteger(n) &&
+                  n >= GROUP_LESSON_MIN_PLAYERS &&
+                  n <= GROUP_LESSON_MAX_PLAYERS
+                ) {
+                  const each = LESSON_PRICE_USD / n;
+                  const eachText = Number.isInteger(each)
+                    ? `$${each}`
+                    : `$${each.toFixed(2)}`;
+                  return (
+                    <>
+                      <strong className="text-ngpa-teal">
+                        {eachText} per player
+                      </strong>{" "}
+                      for {n} players.
+                    </>
+                  );
+                }
+                return `${GROUP_LESSON_MIN_PLAYERS}–${GROUP_LESSON_MAX_PLAYERS} players per group.`;
+              })()}
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div>
