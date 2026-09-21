@@ -54,15 +54,15 @@ export default function Footer() {
             <p className="text-base text-ngpa-white/65 leading-relaxed max-w-md">
               {site.boilerplate25}
             </p>
-            <a
-              href="#contact-form"
+            <Link
+              href="/free-evaluation/book"
               className="mt-6 inline-flex items-center gap-2 text-ngpa-teal hover:text-ngpa-teal-bright font-bold text-sm transition-colors"
             >
               Book a Free Evaluation
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
-            </a>
+            </Link>
           </div>
 
           {/* Quick links */}
@@ -78,7 +78,7 @@ export default function Footer() {
               <li><Link href="/crew" className="hover:text-ngpa-teal transition-colors">Find Your Kid&rsquo;s Crew</Link></li>
               <li><Link href="/league" className="hover:text-ngpa-teal transition-colors">Youth League</Link></li>
               <li><Link href="/montgomery-village-youth-pickleball" className="hover:text-ngpa-teal transition-colors">MVF Classes</Link></li>
-              <li><a href="#contact-form" className="hover:text-ngpa-teal transition-colors">Get Started</a></li>
+              <li><Link href="/free-evaluation/book" className="hover:text-ngpa-teal transition-colors">Get Started</Link></li>
               <li><a href="#about" className="hover:text-ngpa-teal transition-colors">About Us</a></li>
               <li><a href="#faq" className="hover:text-ngpa-teal transition-colors">FAQ</a></li>
             </ul>
@@ -237,10 +237,21 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-ngpa-slate/30 text-center text-xs text-ngpa-white/55">
-          &copy; {new Date().getFullYear()} Next Gen Pickleball Academy. All rights reserved.
-          <span className="mx-1.5">&middot;</span>
-          <a
-            href={familySiteUrl("sammorrispb")}
+          <p>
+            &copy; {new Date().getFullYear()} Next Gen Pickleball Academy. All
+            rights reserved.
+            <span className="mx-1.5">&middot;</span>
+            <Link href="/privacy" className="hover:text-ngpa-teal transition-colors">
+              Privacy Policy
+            </Link>
+            <span className="mx-1.5">&middot;</span>
+            <Link href="/terms" className="hover:text-ngpa-teal transition-colors">
+              Terms of Service
+            </Link>
+          </p>
+          <p className="mt-2">
+            <a
+              href={familySiteUrl("sammorrispb")}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => {
@@ -255,6 +266,7 @@ export default function Footer() {
           >
             Built by Sam Morris
           </a>
+          </p>
         </div>
       </div>
     </footer>

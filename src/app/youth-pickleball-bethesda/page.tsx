@@ -29,13 +29,13 @@ export default function BethesdaPage() {
     <CityLanding
       city="Bethesda"
       slug="youth-pickleball-bethesda"
-      intro="Bethesda is one of our home bases: this season's Sunday-evening group sessions run at Walter Johnson High School on Rock Spring Drive, with a court for every level — Red, Orange, Green, and Yellow. Kids 6–16 from Bethesda and Chevy Chase start with a free 30-minute evaluation, then drop in at the level that fits — no subscription, no long-term commitment."
-      whereWePlay="Walter Johnson HS is the closest regular venue for most Bethesda families, and we've also coached Bethesda kids at Westland Middle School in past seasons. Saturday evenings run at Earle B. Wood Middle School in Rockville if that end of the weekend works better for your crew — same format at both: one court per level, four players per court."
+      intro="Bethesda is one of our home bases: this season’s Sunday-afternoon group sessions run at Walter Johnson High School on Rock Spring Drive, with a court for every level — Red, Orange, Green, and Yellow. Kids 6–16 from Bethesda and Chevy Chase start with a free 30-minute evaluation, then drop in at the level that fits — no subscription, no long-term commitment."
+      whereWePlay="Walter Johnson HS is the closest regular venue for most Bethesda families, and we've also coached Bethesda kids at Westland Middle School in past seasons. We’ve also run Saturday sessions at Earle B. Wood Middle School in Rockville in past seasons — check the schedule page to see what’s on this week. Same format everywhere: one court per level, four players per court."
       cityFaq={[
         {
           question: "Where do Bethesda kids play with Next Gen?",
           answer:
-            "This season's Sunday group sessions run at Walter Johnson High School (6400 Rock Spring Dr) right in Bethesda, with Saturday sessions at Earle B. Wood Middle School in Rockville. Venues can shift season to season, so check the schedule page for this week's exact slots.",
+            "This season's Sunday group sessions run at Walter Johnson High School (6400 Rock Spring Dr) right in Bethesda, and we’ve run Saturday sessions at Earle B. Wood Middle School in Rockville in past seasons. Venues can shift season to season, so check the schedule page for this week’s exact slots.",
         },
       ]}
     />

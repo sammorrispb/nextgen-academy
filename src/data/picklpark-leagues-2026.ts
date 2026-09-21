@@ -130,7 +130,7 @@ export interface PicklParkLeague {
   signupOpensOn?: string;
 }
 
-export const PICKLPARK_LEAGUE_COACH_EMAIL = "sam.morris2131@gmail.com";
+export const PICKLPARK_LEAGUE_COACH_EMAIL = "nextgenacademypb@gmail.com";
 
 export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
   {

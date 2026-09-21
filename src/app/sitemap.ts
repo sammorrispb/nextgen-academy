@@ -44,6 +44,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })),
     { url: `${base}/crew`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${base}/league`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${base}/lessons`, changeFrequency: "weekly", priority: 0.85 },
+    { url: `${base}/privacy`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${base}/terms`, changeFrequency: "yearly", priority: 0.3 },
     ...clusterEntries,
     // City landing pages — local SEO.
     ...[...CITY_LANDING_PAGES, ...EXTENDED_AREA_LANDING_PAGES].map(({ slug }) => ({

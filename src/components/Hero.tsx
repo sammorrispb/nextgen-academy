@@ -62,9 +62,10 @@ export default function Hero() {
 
             <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
               <TrackedCTA
-                href="#contact-form"
+                href="/free-evaluation/book"
                 label="hero_book_eval"
                 section="hero"
+                asNextLink
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors text-base shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
               >
                 Book a Free 30-Minute Evaluation

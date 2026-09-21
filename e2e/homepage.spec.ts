@@ -3,11 +3,11 @@ import { test, expect } from "@playwright/test";
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {
-  test("has primary Book a Free 30-Minute Evaluation CTA linking to #contact-form", async ({ page }) => {
+  test("has primary Book a Free 30-Minute Evaluation CTA linking to the booking flow", async ({ page }) => {
     await page.goto("/");
     const btn = page.locator("section").first().getByRole("link", { name: /Book a Free 30-Minute Evaluation/ });
     await expect(btn).toBeVisible();
-    await expect(btn).toHaveAttribute("href", "#contact-form");
+    await expect(btn).toHaveAttribute("href", "/free-evaluation/book");
   });
 
   test("has secondary schedule link", async ({ page }) => {
@@ -179,7 +179,7 @@ test.describe("Level Cards", () => {
 
   test("non-yellow cards have Get Started links", async ({ page }) => {
     await page.goto("/");
-    const getStartedLinks = page.locator('#levels article a[href="#contact-form"]');
+    const getStartedLinks = page.locator('#levels article a[href="/free-evaluation/book"]');
     // Red, Orange, Green = 3 cards with Get Started
     await expect(getStartedLinks).toHaveCount(3);
   });

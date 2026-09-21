@@ -383,6 +383,21 @@ export async function POST(req: NextRequest) {
     return handleMondayGirlsCheckout(session);
   }
 
+  // Monday Girls drop-ins carry kind=monday-girls-dropin. They share the
+  // season block's seat cap but are single-session purchases: no roster row in
+  // the season DB (the block roster is the season commitment), just admin +
+  // parent emails so the family knows which Monday they're on.
+  if (metaString(session.metadata ?? {}, "kind") === "monday-girls-dropin") {
+    return handleMondayGirlsDropinCheckout(session);
+  }
+
+  // Lesson purchases carry kind=lesson. A lesson is a scheduling conversation:
+  // the webhook notifies Sam (who reaches out to lock the hour) and confirms
+  // to the parent. No roster DB — lessons are 1:1 scheduled, not inventoried.
+  if (metaString(session.metadata ?? {}, "kind") === "lesson") {
+    return handleLessonCheckout(session);
+  }
+
   const m = session.metadata ?? {};
   const sessionId = metaString(m, "session_id");
 
@@ -1400,6 +1415,189 @@ async function handleMondayGirlsCheckout(session: Stripe.Checkout.Session) {
   });
 
   return NextResponse.json({ received: true, mondayGirls: true, rosterFailed });
+}
+
+// Monday Girls drop-in purchases (kind=monday-girls-dropin). No roster row —
+// the season block roster is the season commitment — but the family and Sam
+// both get an email naming the exact Monday, and the lead is ingested to
+// Open Brain. Idempotency: keyed on the Stripe session via a module-level set
+// is NOT durable; instead we check nothing and rely on Stripe's at-most-once
+// delivery of checkout.session.completed per session plus Resend's tolerance
+// for the rare redelivery (a duplicate "see you Monday" email is a paper cut,
+// not a double charge — the charge itself is idempotent in Stripe).
+async function handleMondayGirlsDropinCheckout(
+  session: Stripe.Checkout.Session,
+) {
+  const m = session.metadata ?? {};
+  const mondayIso = metaString(m, "monday");
+  const mondayLabel = mondayIso ? formatLongDate(mondayIso) : "their Monday";
+  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    const resend = new Resend(apiKey);
+
+    // Admin first — Sam needs to know who's on court Monday.
+    const { error: adminError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_NOTIFY,
+      subject: `Monday Girls drop-in: ${metaString(m, "child_first_name")} — ${mondayLabel}`,
+      text: [
+        `Parent: ${metaString(m, "parent_name")}`,
+        `Email: ${parentEmail}`,
+        `Phone: ${metaString(m, "parent_phone")}`,
+        `Child: ${metaString(m, "child_first_name")} (born ${metaString(m, "child_birth_year")})`,
+        `Group: ${metaString(m, "group_label")} — ${metaString(m, "group_time")}`,
+        `Monday: ${mondayLabel}`,
+        `Venue: ${metaString(m, "venue")}`,
+        `Allergies: ${metaString(m, "allergies") || "none noted"}`,
+        ``,
+        `Paid: $${amount}`,
+        `Stripe: ${session.id}`,
+      ].join("\n"),
+    });
+    if (adminError)
+      console.error("[stripe-webhook] dropin admin email rejected", adminError);
+
+    // Parent confirmation.
+    if (parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+      const { error: parentError } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: parentEmail,
+        bcc: ADMIN_EMAIL,
+        replyTo: REPLY_TO,
+        subject: `You're in for ${mondayLabel} — Monday Girls drop-in`,
+        text: [
+          `Hi ${metaString(m, "parent_name")},`,
+          ``,
+          `${metaString(m, "child_first_name")} has a spot for the Monday Girls drop-in on ${mondayLabel}, ${metaString(m, "group_time")}.`,
+          ``,
+          `Where: ${metaString(m, "venue")}`,
+          `What to bring: a refillable water bottle and court shoes — we have loaner paddles.`,
+          ``,
+          `Paid: $${amount}. If it's rained out we'll text you before you leave the house and make it up.`,
+          ``,
+          `See you Monday,`,
+          `Coach Sam`,
+          `Next Gen Pickleball Academy`,
+        ].join("\n"),
+      });
+      if (parentError)
+        console.error("[stripe-webhook] dropin parent email rejected", parentError);
+    }
+  } else {
+    console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping dropin emails");
+  }
+
+  after(async () => {
+    await Promise.allSettled([
+      ingestToOpenBrain({
+        business: "nga",
+        source: "nga_monday_girls_dropin",
+        name: metaString(m, "parent_name"),
+        email: parentEmail || undefined,
+        phone: metaString(m, "parent_phone") || undefined,
+        interest: `Monday Girls drop-in (${mondayLabel})`,
+        metadata: {
+          monday: mondayIso,
+          group: metaString(m, "group"),
+          child_first_name: metaString(m, "child_first_name"),
+          amount_paid_usd: amount,
+          stripe_session: session.id,
+        },
+      }),
+    ]);
+  });
+
+  return NextResponse.json({ received: true, mondayGirlsDropin: true });
+}
+
+// Lesson purchases (kind=lesson). The product is a scheduling conversation:
+// Sam gets everything he needs to reach out and lock the hour, and the parent
+// gets confirmation that the hour is paid for and a coach will be in touch.
+async function handleLessonCheckout(session: Stripe.Checkout.Session) {
+  const m = session.metadata ?? {};
+  const lessonTitle = metaString(m, "lesson_title") || "Lesson";
+  const parentEmail = payerEmail(session) || metaString(m, "parent_email");
+  const amount = ((session.amount_total ?? 0) / 100).toFixed(2);
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    const resend = new Resend(apiKey);
+
+    const { error: adminError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_NOTIFY,
+      subject: `Lesson sold: ${lessonTitle} — ${metaString(m, "child_first_name")} (${metaString(m, "parent_name")})`,
+      text: [
+        `Parent: ${metaString(m, "parent_name")}`,
+        `Email: ${parentEmail}`,
+        `Phone: ${metaString(m, "parent_phone")}`,
+        `Child: ${metaString(m, "child_first_name")} (born ${metaString(m, "child_birth_year")})`,
+        `Preferred times: ${metaString(m, "preferred_times")}`,
+        `Notes for coach: ${metaString(m, "notes") || "—"}`,
+        `Allergies: ${metaString(m, "allergies") || "none noted"}`,
+        `Emergency: ${metaString(m, "emergency_name")} ${metaString(m, "emergency_phone")}`,
+        ``,
+        `Paid: $${amount}`,
+        `Stripe: ${session.id}`,
+        ``,
+        `Next step: text the parent to lock in the hour.`,
+      ].join("\n"),
+    });
+    if (adminError)
+      console.error("[stripe-webhook] lesson admin email rejected", adminError);
+
+    if (parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+      const { error: parentError } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: parentEmail,
+        bcc: ADMIN_EMAIL,
+        replyTo: REPLY_TO,
+        subject: `Your ${lessonTitle.toLowerCase()} is booked — we'll text you to schedule`,
+        text: [
+          `Hi ${metaString(m, "parent_name")},`,
+          ``,
+          `Your hour is paid for. A Next Gen coach will text you at ${metaString(m, "parent_phone")} within one business day to lock in a time for ${metaString(m, "child_first_name")}'s ${lessonTitle.toLowerCase()}.`,
+          ``,
+          `You told us you're generally free: ${metaString(m, "preferred_times")}. If that changes, just reply to the text.`,
+          ``,
+          `Paid: $${amount}.`,
+          ``,
+          `See you on court,`,
+          `Coach Sam`,
+          `Next Gen Pickleball Academy`,
+        ].join("\n"),
+      });
+      if (parentError)
+        console.error("[stripe-webhook] lesson parent email rejected", parentError);
+    }
+  } else {
+    console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping lesson emails");
+  }
+
+  after(async () => {
+    await Promise.allSettled([
+      ingestToOpenBrain({
+        business: "nga",
+        source: "nga_lesson_purchase",
+        name: metaString(m, "parent_name"),
+        email: parentEmail || undefined,
+        phone: metaString(m, "parent_phone") || undefined,
+        interest: lessonTitle,
+        metadata: {
+          lesson_type: metaString(m, "lesson_type"),
+          child_first_name: metaString(m, "child_first_name"),
+          preferred_times: metaString(m, "preferred_times"),
+          amount_paid_usd: amount,
+          stripe_session: session.id,
+        },
+      }),
+    ]);
+  });
+
+  return NextResponse.json({ received: true, lesson: true });
 }
 
 async function handleChargeRefunded(charge: Stripe.Charge) {

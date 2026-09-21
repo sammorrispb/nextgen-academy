@@ -224,7 +224,7 @@ test("copy carries no podplay typos and names the coach's real address", () => {
   expect(blob).not.toMatch(/Fredrick/);
   expect(blob).not.toMatch(/All ready/);
   expect(blob).not.toMatch(/\bcheckout\b/);
-  expect(PICKLPARK_LEAGUE_COACH_EMAIL).toBe("sam.morris2131@gmail.com");
+  expect(PICKLPARK_LEAGUE_COACH_EMAIL).toBe("nextgenacademypb@gmail.com");
 });
 
 test("NGA's own season checkout is retired — no date reopens it", () => {

@@ -3,6 +3,8 @@ import Link from "next/link";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
 import CoachStrip from "@/components/CoachStrip";
+import IntentChooser from "@/components/IntentChooser";
+import MvfSessionTwoFeature from "@/components/MvfSessionTwoFeature";
 import UpcomingSessions from "@/components/UpcomingSessions";
 import BallPathway from "@/components/BallPathway";
 import LevelGrid from "@/components/LevelGrid";
@@ -96,6 +98,9 @@ export default async function Home() {
 
       <Hero />
 
+      {/* ─── Start Here: the three intents ───────── */}
+      <IntentChooser />
+
       {/* ─── How It Works ────────────────────────── */}
       <HowItWorks />
 
@@ -104,6 +109,13 @@ export default async function Home() {
 
       {/* ─── This Week's Sessions (live from Notion) ── */}
       <UpcomingSessions sessions={sessions} />
+
+      {/* ─── Featured: MVF Fall Session II ───────── */}
+      <section className="bg-ngpa-navy py-14 sm:py-20 px-4 sm:px-6 lg:px-10">
+        <div className="max-w-6xl mx-auto">
+          <MvfSessionTwoFeature section="homepage" />
+        </div>
+      </section>
 
       {/* ─── Programs / Ball Pathway ─────────────── */}
       <section

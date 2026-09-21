@@ -7,6 +7,7 @@ import JsonLd from "@/components/JsonLd";
 import { organizationJsonLd } from "@/lib/seo";
 import PageViewTracker from "@/components/PageViewTracker";
 import UtmCapture from "@/components/UtmCapture";
+import Analytics from "@/components/Analytics";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -96,6 +97,7 @@ export default function RootLayout({
         <StickyMobileCTA />
         <UtmCapture />
         <PageViewTracker />
+        <Analytics />
       </body>
     </html>
   );

@@ -27,13 +27,13 @@ export default function RockvillePage() {
     <CityLanding
       city="Rockville"
       slug="youth-pickleball-rockville"
-      intro="Rockville is where our Saturday evenings live: Earle B. Wood Middle School on Bauer Drive hosts this season's Saturday group sessions, with a court each for Red, Orange, Green, and Yellow Ball. Kids 6–16 start with a free 30-minute evaluation — we place by skill, every level is welcome, and you pay per session with no subscription."
-      whereWePlay="Beyond the Wood MS Saturdays, Rockville families have trained with us at Redland Middle School near Derwood in past seasons, and our August back-to-school camp runs at Wood MS too. Sunday evenings run at Walter Johnson HS in Bethesda if that end of the weekend fits your family better."
+      intro="Rockville has been Saturday home base in past seasons: Earle B. Wood Middle School on Bauer Drive has hosted Saturday group sessions, with a court each for Red, Orange, Green, and Yellow Ball. Kids 6–16 start with a free 30-minute evaluation — we place by skill, every level is welcome, and you pay per session with no subscription."
+      whereWePlay="Beyond the Wood MS Saturdays, Rockville families have trained with us at Redland Middle School near Derwood in past seasons, and our August back-to-school camp runs at Wood MS too. Sunday afternoons run at Walter Johnson HS in Bethesda if that end of the weekend fits your family better."
       cityFaq={[
         {
           question: "Where in Rockville do sessions run?",
           answer:
-            "This season's Saturday-evening group sessions run at Earle B. Wood Middle School (14615 Bauer Dr, Rockville), and the August back-to-school camp runs there as well. Sundays run at Walter Johnson HS in Bethesda. Venues can change seasonally — the schedule page always has the current lineup.",
+            "Saturday group sessions have run at Earle B. Wood Middle School (14615 Bauer Dr, Rockville) in past seasons, and the August back-to-school camp ran there as well. This season, Sundays run at Walter Johnson HS in Bethesda. Venues can change seasonally — the schedule page always has the current lineup.",
         },
       ]}
     />

@@ -16,6 +16,7 @@ import {
 } from "@/data/mvf";
 import JsonLd from "@/components/JsonLd";
 import NewsletterForm from "@/components/NewsletterForm";
+import MvfSessionTwoFeature from "@/components/MvfSessionTwoFeature";
 import TrackedCTA from "@/components/TrackedCTA";
 import { breadcrumbJsonLd, orgRef, SITE_URL } from "@/lib/seo";
 
@@ -414,6 +415,14 @@ export default function MontgomeryVillagePage() {
             &mdash; pick the one that fits your child, or ask us and
             we&rsquo;ll place them.
           </p>
+
+          {/* Session II is the enrollment product right now — it gets the
+              featured card above the fold of the program list. */}
+          {fallTwo.length > 0 && (
+            <div className="mb-14">
+              <MvfSessionTwoFeature section="mvf_programs" />
+            </div>
+          )}
 
           {/* Registration note */}
           <div
