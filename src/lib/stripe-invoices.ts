@@ -101,12 +101,12 @@ export async function createAndSendSignupInvoice(
   for (const item of items) {
     // Legacy-style amount + description: no Product catalog entries needed,
     // the per-signup description (child name, Monday, split) goes straight on
-    // the line item.
+    // the line item. `amount` is the line TOTAL — the API rejects amount +
+    // quantity together, so quantity is folded into the amount (always 1x).
     await stripe.invoiceItems.create({
       customer: customer.id,
       invoice: invoice.id,
-      quantity: item.quantity ?? 1,
-      amount: item.amountCents,
+      amount: item.amountCents * (item.quantity ?? 1),
       currency: "usd",
       description: item.description,
     });
