@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+import { NGA_LOGO_DATA_URI, NGA_LOGO_SIZE } from "./og-logo";
+
 // NGA brand palette tokens (mirror of `src/app/globals.css` post-2026-05-07
 // teal-primary refresh; BRAND_GUIDELINES.md §"COLOR SYSTEM").
 const NAVY = "#1A2744"; // ngpa-navy — page ground
@@ -14,6 +16,13 @@ export const contentType = "image/png";
 
 export const runtime = "edge";
 
+// Rendered width of the wordmark on the card. Height is derived from the
+// asset's intrinsic ratio so the logo can never stretch if the source changes.
+const LOGO_WIDTH = 560;
+const LOGO_HEIGHT = Math.round(
+  (LOGO_WIDTH * NGA_LOGO_SIZE.height) / NGA_LOGO_SIZE.width,
+);
+
 export default function OpengraphImage() {
   return new ImageResponse(
     (
@@ -25,68 +34,58 @@ export default function OpengraphImage() {
           color: WHITE,
           display: "flex",
           flexDirection: "column",
-          alignItems: "flex-start",
+          alignItems: "center",
           justifyContent: "center",
-          padding: "80px 96px",
+          padding: "72px 96px",
           fontFamily: "system-ui, sans-serif",
         }}
       >
+        {/*
+          The logo is a data URI (see ./og-logo) rather than a /public path:
+          this route is edge, so there is no filesystem, and a build-time fetch
+          of our own origin would fail on a fresh deploy.
+
+          Satori requires an explicit `display` on any element with more than
+          one child. Every multi-child node below is therefore a flex container
+          — without it the route throws and Vercel serves a 0-byte PNG, which
+          renders as a BLANK share card with a 200 status.
+        */}
+        <img
+          src={NGA_LOGO_DATA_URI}
+          width={LOGO_WIDTH}
+          height={LOGO_HEIGHT}
+          alt=""
+        />
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 16,
-            fontSize: 28,
+            marginTop: 48,
+            fontSize: 46,
             fontWeight: 800,
-            color: TEAL,
-            marginBottom: 36,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
+            lineHeight: 1.15,
+            letterSpacing: "-0.02em",
+            color: WHITE,
+            textAlign: "center",
           }}
         >
-          <span
-            style={{
-              width: 18,
-              height: 18,
-              borderRadius: 999,
-              background: TEAL,
-              display: "block",
-            }}
-          />
-          Next Gen Pickleball Academy
+          Real pickleball coaching for kids 6–16.
         </div>
         <div
           style={{
             display: "flex",
-            flexWrap: "wrap",
-            fontSize: 88,
-            fontWeight: 900,
-            lineHeight: 1.04,
-            letterSpacing: "-0.03em",
-            color: WHITE,
-            maxWidth: 1000,
-          }}
-        >
-          <span style={{ display: "flex" }}>Real pickleball coaching for&nbsp;</span>
-          <span style={{ display: "flex", color: TEAL }}>kids 6&#8211;16.</span>
-        </div>
-        <div
-          style={{
-            marginTop: 36,
-            fontSize: 32,
-            color: WHITE,
-            opacity: 0.85,
-            maxWidth: 960,
-            lineHeight: 1.35,
+            marginTop: 20,
+            fontSize: 28,
+            color: TEAL,
+            fontWeight: 600,
           }}
         >
           Free evaluation. Montgomery County, MD.
         </div>
         <div
           style={{
+            display: "flex",
             position: "absolute",
-            bottom: 56,
-            right: 96,
+            bottom: 48,
             fontSize: 22,
             color: MUTED,
           }}
@@ -95,6 +94,6 @@ export default function OpengraphImage() {
         </div>
       </div>
     ),
-    { ...size }
+    { ...size },
   );
 }
