@@ -51,7 +51,7 @@ export const MEDALS_TEXT = "Medals for the winners of each division.";
  * decided yet (2026-09-22) — this constant is the single place the final
  * policy lands; nothing renders a fallback in its place.
  */
-export const LOW_ENROLLMENT_POLICY_TEXT = "TBD";
+export const LOW_ENROLLMENT_POLICY_TEXT = "If either division doesn't reach the 6-player minimum, both divisions will be merged into a single division.";
 
 export interface MvfTournamentDivision {
   division: "10u" | "14u";

@@ -173,8 +173,10 @@ test.describe("tournament pricing and revenue split", () => {
   });
 });
 
-test.describe("pending policy", () => {
-  test("low-enrollment policy is still TBD — update this when Sam decides", () => {
-    expect(LOW_ENROLLMENT_POLICY_TEXT).toBe("TBD");
+test.describe("low-enrollment policy", () => {
+  test("merge policy is the decided text — change only if Sam revises it", () => {
+    expect(LOW_ENROLLMENT_POLICY_TEXT).toBe(
+      "If either division doesn't reach the 6-player minimum, both divisions will be merged into a single division."
+    );
   });
 });
