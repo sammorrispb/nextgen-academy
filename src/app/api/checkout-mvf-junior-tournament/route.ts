@@ -229,6 +229,20 @@ export async function POST(req: NextRequest) {
     }),
   );
 
+  // MVF tournament: push the registrant onto the Link & Dink popup roster so
+  // registration numbers show in real time and day-of tooling has the player.
+  // Never throws — a sync miss is logged for hand retry; Notion stays source
+  // of truth and the L&D endpoint is idempotent.
+  await import("@/lib/linkdink-roster-sync").then(({ syncMvfRegistrationToLinkDink }) =>
+    syncMvfRegistrationToLinkDink({
+      division: division.division,
+      childFirstName: data.childFirstName,
+      childLastName: data.childLastName,
+      parentEmail: data.email,
+      parentPhone: data.phone,
+    }),
+  );
+
   // Branded NGA signup confirmation to the parent — sent at registration
   // (BEFORE payment), distinct from the webhook's post-payment "You're in".
   // Single primary CTA: the hosted pay link. Failures are logged, never
