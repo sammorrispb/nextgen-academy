@@ -229,6 +229,57 @@ export async function POST(req: NextRequest) {
     }),
   );
 
+  // Branded NGA signup confirmation to the parent — sent at registration
+  // (BEFORE payment), distinct from the webhook's post-payment "You're in".
+  // Single primary CTA: the hosted pay link. Failures are logged, never
+  // thrown — the invoice already went out and the success page works.
+  try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (
+      apiKey &&
+      invoice.hosted_invoice_url &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
+    ) {
+      const { Resend } = await import("resend");
+      const {
+        mvfTournamentSignupConfirmationSubject,
+        mvfTournamentSignupConfirmationText,
+        mvfTournamentSignupConfirmationHtml,
+      } = await import("@/lib/email/mvf-tournament-signup-confirmation");
+      const parentFirst = data.parentName.split(/\s+/)[0] || "there";
+      const emailInput = {
+        parentFirst,
+        childFirst: data.childFirstName || "your player",
+        divisionLabel: division.label,
+        amountUsd: priceUsd.toFixed(2),
+        residencyLabel: data.resident ? "MV resident" : "non-resident",
+        payUrl: invoice.hosted_invoice_url,
+      };
+      const { error } = await new Resend(apiKey).emails.send({
+        from: "Next Gen PB Academy <noreply@nextgenpbacademy.com>",
+        to: data.email,
+        bcc: "nextgenacademypb@gmail.com",
+        replyTo: "nextgenacademypb@gmail.com",
+        subject: mvfTournamentSignupConfirmationSubject({
+          childFirst: emailInput.childFirst,
+        }),
+        html: mvfTournamentSignupConfirmationHtml(emailInput),
+        text: mvfTournamentSignupConfirmationText(emailInput),
+      });
+      if (error) {
+        console.error(
+          "[checkout-mvf-junior-tournament] signup confirmation email rejected",
+          error,
+        );
+      }
+    }
+  } catch (err) {
+    console.error(
+      "[checkout-mvf-junior-tournament] signup confirmation email failed",
+      err,
+    );
+  }
+
   return NextResponse.json({
     invoiceId: invoice.id,
     url: invoice.hosted_invoice_url,
