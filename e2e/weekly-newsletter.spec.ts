@@ -619,7 +619,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
   // cron builds from picklpark-2026.ts + picklpark-leagues-2026.ts.
   //
   // REBUILT 2026-09-07: no `priceUsd` and every `spotsLeft` is null, because
-  // The Pickl Park sells both leagues and owns both numbers. The fixture keeps
+  // The Pickl Park sells the league and owns both numbers. The fixture keeps
   // them absent on purpose — if the template ever starts rendering a price or
   // a seat count for Frederick again, the assertions below go red.
   const picklParkSeason = {
@@ -660,7 +660,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     }
   });
 
-  test("renders dates, venue, both leagues, the drills/games split, the indoor promise and CTA — and NO price", () => {
+  test("renders dates, venue, the league, the drills/games split, the indoor promise and CTA — and NO price", () => {
     const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason };
     for (const rendered of [
       weeklyNewsletterHtml(input),
@@ -675,11 +675,11 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
           rendered.includes("Kid&#39;s Drill and Play") ||
           rendered.includes("Kid's Drill and Play"),
       ).toBe(true);
-      expect(rendered).toContain("Youth League");
+      expect(rendered).not.toContain("Youth League");
       expect(rendered).toContain("Saturdays 2:00–3:00 PM");
-      expect(rendered).toContain("Saturdays 3:00–4:30 PM");
+      expect(rendered).not.toContain("Saturdays 3:00–4:30 PM");
       expect(rendered).toContain("Ages 8–13");
-      expect(rendered).toContain("Ages 10+");
+      expect(rendered).not.toContain("Ages 10+");
       expect(rendered).toContain(PICKLPARK_LEAGUES_FORMAT_LINE);
       expect(rendered).toContain(PICKLPARK_INDOOR_NOTE);
       expect(rendered).toContain(`${ORIGIN}/picklpark`);
@@ -696,7 +696,6 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     expect(PICKLPARK_SEASON_LABEL).toContain("September 26");
     expect(PICKLPARK_LEAGUES.map((l) => l.title)).toEqual([
       "Kid's Drill and Play",
-      "Youth League",
     ]);
     expect(PICKLPARK_SESSION_FORMAT).toContain("30 minutes of coached drills");
   });
@@ -724,13 +723,9 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
       ...baseInput,
       picklParkSeason: {
         ...picklParkSeason,
-        groups: [
-          { ...picklParkSeason.groups[0], spotsLeft: 2 },
-          { ...picklParkSeason.groups[1], spotsLeft: 0 },
-        ],
+        groups: [{ ...picklParkSeason.groups[0], spotsLeft: 0 }],
       },
     });
-    expect(html).toContain("Filling up");
     expect(html).toContain("Full — ask about the sub list");
     expect(html).not.toMatch(/\d+ of \d+ spots left/);
     expect(html).not.toMatch(/\d+ spots open/);
@@ -744,13 +739,13 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     const html = weeklyNewsletterHtml(input);
     const text = weeklyNewsletterText(input);
     expect(html).not.toContain("Pickl Park Saturday season");
-    expect(html).toContain("two leagues, registering now");
-    expect(text).toContain("two leagues, registering now");
+    expect(html).toContain("the league is registering now");
+    expect(text).toContain("the league is registering now");
   });
 
-  test("the block quotes no minute count — the two leagues split differently", () => {
-    // Drill and Play is 30/30, Youth League 45/45. One shared number is wrong
-    // for one of them, so the shared sentence says "half".
+  test("the block quotes no minute count — the split is described as a half", () => {
+    // The shared sentence says "half" rather than a minute count so it can't
+    // go stale if the split changes.
     const rendered = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
     expect(rendered).not.toMatch(/\d+ minutes of coached drills/);
     expect(rendered).toContain("first half");
@@ -764,7 +759,7 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     const html = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
     expect(picklParkSeason.groups.every((g) => g.spotsLeft === null)).toBe(true);
     expect(html).toContain("Saturdays 2:00–3:00 PM");
-    expect(html).toContain("Saturdays 3:00–4:30 PM");
+    expect(html).not.toContain("Saturdays 3:00–4:30 PM");
     expect(html).not.toContain("Spots open");
     expect(html).not.toContain("Full — ask about the sub list");
   });

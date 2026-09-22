@@ -253,6 +253,10 @@ test.describe("events feed — egress invariants", () => {
     // Pickl Park now sells that hour as the Kid's Drill and Play league. It is
     // no longer a Sessions row, so there is nothing to double-create — and a
     // feed that still began at 3:00 would hide a league from the calendar.
+    //
+    // Since 2026-09-22 the Youth League (3:00–4:30) is off every surface, so
+    // the Saturday window is 2:00–3:00 — drill-and-play only. If the Youth
+    // League returns with confirmed dates, this end time moves back out.
     const feed = buildEventsFeed(
       { sessions: [] },
       "https://nextgenpbacademy.com",
@@ -262,7 +266,8 @@ test.describe("events feed — egress invariants", () => {
     for (const item of picklpark) {
       expect(item.startTime).toBe(PICKLPARK_OPEN_COURT_START_TIME);
       expect(item.startTime).toBe("2:00 PM");
-      expect(item.endTime).toBe("4:30 PM");
+      expect(item.endTime).toBe(PICKLPARK_END_TIME);
+      expect(item.endTime).toBe("3:00 PM");
     }
   });
 

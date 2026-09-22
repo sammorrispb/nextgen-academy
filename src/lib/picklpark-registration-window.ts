@@ -11,8 +11,8 @@ import { PICKLPARK_SATURDAYS } from "@/data/picklpark-2026";
  * They used to be the same boolean, and that was a bug waiting to happen: the
  * moment NGA stopped selling, every surface that ADVERTISED Frederick — the
  * /fall cross-link, the /schedule callout, the open-now block, the weekly
- * newsletter — would have vanished with the checkout, hiding two leagues that
- * are very much running. Advertising a season and selling it are not the same
+ * newsletter — would have vanished with the checkout, hiding a league that
+ * is very much running. Advertising a season and selling it are not the same
  * fact, so they are not the same function.
  */
 

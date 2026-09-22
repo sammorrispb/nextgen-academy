@@ -338,7 +338,7 @@ export function buildPicklParkEvents(origin: string): EventFeedItem[] {
   return [
     ...PICKLPARK_SATURDAYS.map((date) => ({
       ...shared(date),
-      title: "NGA Pickl Park Saturday — Drill and Play + Youth League",
+      title: "NGA Pickl Park Saturday — Kid's Drill and Play",
       tentative: false,
       status: "Open" as const,
     })),

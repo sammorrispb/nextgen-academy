@@ -1,5 +1,5 @@
-// The two Fall 2026 Saturday leagues at The Pickl Park — the BOOKABLE
-// products, and the single source of truth for /picklpark, the /fall and
+// The Fall 2026 Saturday league at The Pickl Park — the BOOKABLE product,
+// and the single source of truth for /picklpark, the /fall and
 // /schedule cross-links, the events feed and the weekly newsletter.
 //
 // WHO TAKES THE MONEY CHANGED (Sam, 2026-09-07). Until now NGA sold its own
@@ -9,7 +9,13 @@
 // podplay, so:
 //
 //   2:00–3:00  Kid's Drill and Play  — replaces the $20 Open Court hour
-//   3:00–4:30  Youth League          — replaces BOTH season blocks
+//
+// (There was a second league, Youth League 3:00–4:30, replacing BOTH old
+// season blocks. Sam, 2026-09-22: REMOVED — The Pickl Park changed its dates
+// (a possible October 24 start was mentioned but never confirmed) and the
+// old Sep 26 – Oct 31 dates are wrong. No Youth League dates are confirmed,
+// so it is off every public surface until real dates exist. Re-add with a
+// fresh entry — never edit the removed one back in — when dates confirm.)
 //
 // Red & Orange has no successor: beginners go to Drill and Play instead. The
 // NGA season is retired (picklParkRegistrationOpen is now permanently false)
@@ -39,7 +45,6 @@
 // leagues run the same six.
 
 /** Ages 6–16 is the whole academy; a league never widens it. */
-import { LEAGUE_AGE_MAX } from "./leagues";
 
 export interface PicklParkLeague {
   slug: string;
@@ -61,10 +66,9 @@ export interface PicklParkLeague {
   blurb: string;
   /**
    * How the hour splits, PER LEAGUE — "30 minutes of coached drills, then 30
-   * minutes of game play". Not one shared constant: the old blocks were both
-   * 60 minutes so a single string worked, but Youth League is 90, and a
-   * blanket "30 and 30" leaves a third of that session undescribed. Podplay
-   * says "first half / second half"; this spells the halves out.
+   * minutes of game play". Per-league (not one shared constant) so the line
+   * can never go stale if a league's split changes. Podplay says
+   * "first half / second half"; this spells the halves out.
    */
   sessionFormat: string;
   /**
@@ -154,27 +158,10 @@ export const PICKLPARK_LEAGUES: readonly PicklParkLeague[] = [
       "https://thepicklpark.podplay.app/community/events/01a07d03-9f72-744f-a80c-6284f8f60fd5",
     signupOpensOn: "2026-09-09",
   },
-  {
-    slug: "youth-league",
-    title: "Youth League",
-    podplayTitle: "Youth League with Next Gen Academy",
-    levelLabel: "Green & Yellow Ball",
-    startTime: "3:00 PM",
-    endTime: "4:30 PM",
-    timeLabel: "3:00–4:30 PM",
-    minAge: 10,
-    maxAge: LEAGUE_AGE_MAX,
-    ageLabel: "Ages 10+",
-    sessionFormat:
-      "45 minutes of coached drills, then 45 minutes of game play",
-    blurb:
-      "Six weeks of weekly meetups: we drill and practice for the first half of each session, then play games for the second half. It's for players who already keep a rally going — serving and returning, dropping, driving, volleying, and moving around the court. Across the season they'll add more advanced technique, court positioning, and shot selection.",
-    memberPriceUsd: 225,
-    nonMemberPriceUsd: 250,
-    signupUrl:
-      "https://thepicklpark.podplay.app/community/series/01a07cee-1f9a-744f-a7fd-9b12c7c8420a",
-  },
 ];
+
+// (Youth League entry removed 2026-09-22 — see the header note. The array's
+// only remaining league is drill-and-play.)
 
 export function findPicklParkLeague(
   slug: string,
@@ -199,11 +186,10 @@ export function picklParkLeagueSummary(league: PicklParkLeague): string {
 }
 
 /**
- * "each hour is drills then games" phrased for BOTH leagues at once, for the
- * surfaces that describe the Saturday in one sentence (the /fall and
- * /schedule cross-links, the newsletter). Says "half" rather than a minute
- * count precisely because the two leagues split differently — 30/30 and
- * 45/45 — so one number would be wrong for one of them.
+ * "each hour is drills then games" phrased once, for the surfaces that
+ * describe the Saturday in one sentence (the /fall and /schedule
+ * cross-links, the newsletter). Says "half" rather than a minute count so
+ * the line never needs re-deriving if the split changes.
  */
 export const PICKLPARK_LEAGUES_FORMAT_LINE =
   "each session is coached drills for the first half, then game play for the second";

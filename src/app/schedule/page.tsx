@@ -39,6 +39,14 @@ import {
   PICKLPARK_LEAGUES,
   PICKLPARK_LEAGUES_FORMAT_LINE,
 } from "@/data/picklpark-leagues-2026";
+import {
+  PICKL_PARK_WINTER_LEAGUE_PRICE_USD,
+  PICKL_PARK_WINTER_LEAGUE_PUBLIC_AREA,
+  PICKL_PARK_WINTER_LEAGUE_SEASON_LABEL,
+  PICKL_PARK_WINTER_LEAGUE_SESSIONS,
+  PICKL_PARK_WINTER_LEAGUE_TRACKS,
+  PICKL_PARK_WINTER_LEAGUE_VENUE_SHORT,
+} from "@/data/pickl-park-winter-league-2026";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -249,7 +257,42 @@ export default async function SchedulePage() {
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              See both leagues &rarr;
+              See the league &rarr;
+            </span>
+          </Link>
+        </div>
+      </section>
+
+      {/* ─── Pickl Park Winter League callout ──── */}
+      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-6">
+        <div className="max-w-3xl mx-auto">
+          <Link
+            href="/pickl-park-winter-league"
+            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/10 p-5 sm:p-6 hover:border-ngpa-lime transition-colors"
+          >
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
+                Registration open &middot; {PICKL_PARK_WINTER_LEAGUE_PUBLIC_AREA}
+              </p>
+              <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
+                {PICKL_PARK_WINTER_LEAGUE_SESSIONS === 6 ? "Six" : PICKL_PARK_WINTER_LEAGUE_SESSIONS}{" "}
+                Saturdays indoors at {PICKL_PARK_WINTER_LEAGUE_VENUE_SHORT}
+              </p>
+              <p className="text-sm text-ngpa-muted mt-0.5">
+                Winter Youth League &middot; {PICKL_PARK_WINTER_LEAGUE_SEASON_LABEL} &middot;{" "}
+                {PICKL_PARK_WINTER_LEAGUE_TRACKS.map((t, i) => (
+                  <span key={t.track}>
+                    {i > 0 && ", "}
+                    {t.label} {t.timeLabel.replace("Saturdays ", "")} ({t.ageLabel})
+                  </span>
+                ))}{" "}
+                &middot; ${PICKL_PARK_WINTER_LEAGUE_PRICE_USD} for{" "}
+                {PICKL_PARK_WINTER_LEAGUE_SESSIONS} weeks. Sign up and pay
+                here — NGA runs registration.
+              </p>
+            </div>
+            <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
+              See the Winter League &rarr;
             </span>
           </Link>
         </div>

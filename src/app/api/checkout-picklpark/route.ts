@@ -17,7 +17,7 @@ import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
 // stay on disk for the historical rows and come out in a separate cleanup.
 
 const RETIRED_MESSAGE =
-  "The Pickl Park Saturday season is no longer sold by Next Gen Pickleball Academy — The Pickl Park registers both leagues directly.";
+  "The Pickl Park Saturday season is no longer sold by Next Gen Pickleball Academy — The Pickl Park registers the league directly.";
 
 export async function POST() {
   return NextResponse.json(

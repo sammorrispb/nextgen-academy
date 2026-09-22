@@ -255,8 +255,8 @@ export default async function FallPage() {
                   Also this fall &middot; Saturdays in {PICKLPARK_PUBLIC_AREA}
                 </p>
                 <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                  Prefer Saturdays, or closer to Frederick? There are two
-                  indoor leagues too.
+                  Prefer Saturdays, or closer to Frederick? There&rsquo;s an
+                  indoor league too.
                 </p>
                 <p className="text-sm text-ngpa-muted mt-0.5">
                   Six Saturdays at {PICKLPARK_VENUE_SHORT},{" "}
@@ -272,7 +272,7 @@ export default async function FallPage() {
                 </p>
               </div>
               <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-                See both leagues &rarr;
+                See the league &rarr;
               </span>
             </Link>
           )}

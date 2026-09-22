@@ -103,7 +103,7 @@ export interface WeeklyNewsletterInput {
     /** "The Pickl Park, Frederick, MD" */
     venueLine: string;
     /**
-     * OMITTED since 2026-09-07 — The Pickl Park sells both leagues itself and
+     * OMITTED since 2026-09-07 — The Pickl Park sells the league itself and
      * quotes at the point of sale, so this email publishes no Frederick price.
      * Kept optional rather than deleted so the MoCo season block, which does
      * quote, can keep sharing this shape.
@@ -268,9 +268,9 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const picklParkBlock = picklParkSeason
     ? `
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturdays in Frederick &mdash; two leagues, registering now</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturdays in Frederick &mdash; the league is registering now</p>
       <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(picklParkSeason.title)} &mdash; ${escape(picklParkSeason.seasonLabel)}</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${picklParkSeason.weeks} Saturdays indoors at ${escape(picklParkSeason.venueLine)} &mdash; two leagues, back to back, and ${escape(picklParkSeason.sessionFormat)}. Coached by Next Gen; The Pickl Park handles registration.</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${picklParkSeason.weeks} Saturdays indoors at ${escape(picklParkSeason.venueLine)} &mdash; ${escape(picklParkSeason.sessionFormat)}. Coached by Next Gen; The Pickl Park handles registration.</p>
       ${picklParkSeason.groups
         .map(
           (g) =>
@@ -279,7 +279,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
         .join("")}
       <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(picklParkSeason.indoorNote)}</p>
       ${picklParkSeason.priceUsd ? `<p style="margin:8px 0 0 0;color:${c.muted};font-size:13px;">$${picklParkSeason.priceUsd} per player for the full season.</p>` : ""}
-      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">See both leagues &rarr;</a></p>
+      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">See the league &rarr;</a></p>
     </div>`
     : "";
 
@@ -529,9 +529,9 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
 
   if (picklParkSeason) {
     lines.push(
-      "Pickl Park Saturdays in Frederick — two leagues, registering now:",
+      "Pickl Park Saturdays in Frederick — the league is registering now:",
       `${picklParkSeason.title} — ${picklParkSeason.seasonLabel}`,
-      `${picklParkSeason.weeks} Saturdays indoors at ${picklParkSeason.venueLine} — two leagues, back to back, and ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.`,
+      `${picklParkSeason.weeks} Saturdays indoors at ${picklParkSeason.venueLine} — ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.`,
       "",
     );
     for (const g of picklParkSeason.groups) {
@@ -543,7 +543,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
         `$${picklParkSeason.priceUsd} per player for the full season.`,
       );
     }
-    lines.push(`See both leagues: ${picklParkSeason.url}`, "");
+    lines.push(`See the league: ${picklParkSeason.url}`, "");
   }
 
   if (sessions.length > 0) {

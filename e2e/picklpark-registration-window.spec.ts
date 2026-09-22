@@ -13,7 +13,7 @@ import { PICKLPARK_SATURDAYS } from "../src/data/picklpark-2026";
 // REPOSTURED 2026-09-07. This file used to pin the opposite contract: the Pickl
 // Park season was OPEN by default and NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN
 // was a kill switch. NGA no longer sells that season — The Pickl Park registers
-// both leagues through podplay — so the gate split in two, and the split is the
+// the league through podplay — so the gate split in two, and the split is the
 // thing worth pinning:
 //
 //   picklParkRegistrationOpen  → is NGA taking money?     always false

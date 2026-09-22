@@ -38,7 +38,7 @@ const FALL_BLOCKS_LINE = FALL_YOUTH_BLOCKS.map(
   (b) => `${b.level} ${b.startTime}–${b.endTime}`,
 ).join(", ");
 
-/** "Kid's Drill and Play (Ages 8–13, 2:00–3:00 PM); Youth League (…)" */
+/** "Kid's Drill and Play (Ages 8–13, 2:00–3:00 PM)" */
 const PICKLPARK_LEAGUES_LINE = PICKLPARK_LEAGUES.map(
   (l) => `${l.title} (${l.ageLabel}, ${l.timeLabel})`,
 ).join("; ");
