@@ -90,8 +90,9 @@ test.describe("Frederick landing page copy", () => {
       expect(item!.answer, league.slug).toContain(league.title);
     }
     expect(item!.answer).toMatch(/The Pickl Park/);
-    // The bands are The Pickl Park's, not NGA's 6–16 policy — say so.
-    expect(item!.answer).toMatch(/sets their age bands/);
+    // The band is The Pickl Park's, not NGA's 6–16 policy — say so.
+    // (Singular since 2026-09-22: only the Drill and Play league remains.)
+    expect(item!.answer).toMatch(/sets the age band/);
     expect(item!.answer).not.toContain("$");
   });
 
