@@ -13,6 +13,10 @@ const ADMIN_NOTIFY = ["nextgenacademypb@gmail.com", "sam.morris2131@gmail.com"];
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 
+/** MVF's tournament partner contact — gets registration + payment alerts for
+ *  the MVF Junior Tournament only (Sam, 2026-09-22). */
+const MVF_PARTNER_EMAIL = "malvero@mvf.org";
+
 export interface InvoiceSentNotice {
   kind:
     | "lesson"
@@ -39,6 +43,12 @@ export async function notifyInvoiceSent(notice: InvoiceSentNotice): Promise<void
     return;
   }
   const resend = new Resend(apiKey);
+  // MVF's partner contact sees MVF Junior Tournament registrations in real
+  // time; every other product stays academy-only.
+  const recipients =
+    notice.kind === "mvf-junior-tournament"
+      ? [...ADMIN_NOTIFY, MVF_PARTNER_EMAIL]
+      : ADMIN_NOTIFY;
   const kindLabel =
     notice.kind === "lesson"
       ? "Lesson"
@@ -47,7 +57,7 @@ export async function notifyInvoiceSent(notice: InvoiceSentNotice): Promise<void
         : "Monday Girls drop-in";
   const { error } = await resend.emails.send({
     from: FROM_EMAIL,
-    to: ADMIN_NOTIFY,
+    to: recipients,
     replyTo: REPLY_TO,
     subject: `Invoice sent — ${kindLabel}: ${notice.childFirstName} (${notice.parentName}) $${notice.amountUsd}`,
     text: [
