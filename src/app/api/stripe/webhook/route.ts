@@ -47,6 +47,19 @@ import {
   createMondayGirlsRegistrationResult,
   findMondayGirlsRegByCheckoutId,
 } from "@/lib/notion-monday-girls-registrations";
+import {
+  createMvfTournamentRegistration,
+  markMvfTournamentRegPaid,
+} from "@/lib/notion-mvf-tournament-registrations";
+import {
+  GUARANTEED_GAMES_TEXT,
+  MEDALS_TEXT,
+  MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
+  MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
+  MVF_JUNIOR_TOURNAMENT_VENUE,
+  NO_REFUNDS_TEXT,
+  RAIN_OR_SHINE_TEXT,
+} from "@/data/mvf-junior-tournament-2026";
 import { buildMondayGirlsConfirmationEmail } from "@/lib/email/monday-girls-confirmation";
 import {
   MONDAY_GIRLS_MONDAYS,
@@ -339,6 +352,13 @@ export async function POST(req: NextRequest) {
     }
     if (kind === "lesson") {
       return handleLessonPaid(receiptFromInvoice(invoice));
+    }
+    // MVF Junior Tournament entries (kind=mvf-junior-tournament). Invoice-based
+    // like the drop-in and lesson products: the paid event flips the Notion
+    // roster row to Paid so the per-division cap and the 80/20 NGA/MVF split
+    // both run off paid rows.
+    if (kind === "mvf-junior-tournament") {
+      return handleMvfTournamentPaid(receiptFromInvoice(invoice));
     }
     return NextResponse.json({ received: true, skipped: "not_a_signup_invoice" });
   }
@@ -1646,6 +1666,163 @@ async function handleLessonPaid(r: PaidReceipt) {
   });
 
   return NextResponse.json({ received: true, lesson: true });
+}
+
+// MVF Junior Tournament entries (kind=mvf-junior-tournament). The checkout
+// route writes the roster row at invoice time with Paid=false; this flips it
+// on invoice.payment_succeeded, so the per-division cap and the 80/20 NGA/MVF
+// split both run off paid rows. Idempotent: a redelivered event finds Paid
+// already true and no-ops. If the route's row write failed (Notion blip at
+// checkout), the row is backfilled here from the invoice metadata so a paid
+// family is never missing from the roster.
+async function handleMvfTournamentPaid(r: PaidReceipt) {
+  const m = r.metadata;
+  const division = metaString(m, "division") === "14u" ? "14u" : "10u";
+  const resident = metaString(m, "resident") === "true";
+  const parentEmail = r.parentEmail;
+  const amount = (r.amountCents / 100).toFixed(2);
+  const childName =
+    `${metaString(m, "child_first_name")} ${metaString(m, "child_last_name")}`.trim() ||
+    "your player";
+
+  // The checkout route writes the Stripe invoice id on the roster row; the
+  // webhook keys off it. (No payment-intent lookup: the tournament is
+  // no-refunds, so there is no refund-mapping path to feed.)
+  const marked = await markMvfTournamentRegPaid(
+    r.stripeRef,
+    r.amountCents / 100,
+    null,
+  );
+  if (marked === "not_found") {
+    // The route's row write failed — backfill from the invoice metadata, then
+    // mark paid. A create failure here is logged; the admin email below still
+    // names the family so Sam can hand-add the row.
+    console.error(
+      "[stripe-webhook] mvf tournament row missing for paid invoice — backfilling",
+      r.stripeRef,
+    );
+    const created = await createMvfTournamentRegistration({
+      parentName: metaString(m, "parent_name"),
+      parentEmail,
+      parentPhone: metaString(m, "parent_phone"),
+      childFirstName: metaString(m, "child_first_name"),
+      childLastName: metaString(m, "child_last_name"),
+      childDob: metaString(m, "child_dob"),
+      division,
+      resident,
+      amountUsd: r.amountCents / 100,
+      stripeInvoiceId: r.stripeRef,
+      smsConsent: metaString(m, "sms_consent") === "true",
+      smsConsentText: metaString(m, "sms_consent_text"),
+      emergencyName: metaString(m, "emergency_name"),
+      emergencyPhone: metaString(m, "emergency_phone"),
+      allergies: metaString(m, "allergies"),
+    });
+    if (created === "ok") {
+      await markMvfTournamentRegPaid(r.stripeRef, r.amountCents / 100, null);
+    }
+  } else if (marked === "transient") {
+    // 500 → Stripe redelivers; the already_paid guard makes the retry safe.
+    return NextResponse.json(
+      { error: "mvf tournament roster mark-paid failed (transient)" },
+      { status: 500 },
+    );
+  }
+  // "permanent": same posture as fall/picklpark — the family keeps their seat;
+  // a mis-schema'd Notion DB must not claw back a real registration. The admin
+  // email flags the missing row for a hand backfill.
+
+  const apiKey = process.env.RESEND_API_KEY;
+  if (apiKey) {
+    const resend = new Resend(apiKey);
+
+    const { error: adminError } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: ADMIN_NOTIFY,
+      subject: `MVF Tournament: ${childName} — ${metaString(m, "division_label") || division}`,
+      text: [
+        `Tournament: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} — ${MVF_JUNIOR_TOURNAMENT_VENUE}`,
+        `Division: ${metaString(m, "division_label") || division}`,
+        ``,
+        `Parent: ${metaString(m, "parent_name")}`,
+        `Email: ${parentEmail}`,
+        `Phone: ${metaString(m, "parent_phone")}`,
+        `Player: ${childName} (DOB ${metaString(m, "child_dob") || "—"})`,
+        `Residency: ${resident ? "Montgomery Village resident" : "non-resident"}`,
+        `Emergency: ${metaString(m, "emergency_name")} · ${metaString(m, "emergency_phone")}`,
+        `Allergies: ${metaString(m, "allergies") || "none noted"}`,
+        ``,
+        `Paid: $${amount} — NGA $${metaString(m, "nga_share_usd")} / MVF $${metaString(m, "mvf_share_usd")}`,
+        `Stripe: ${r.stripeRef}`,
+        ...(marked === "permanent" || marked === "not_found"
+          ? [
+              "",
+              "⚠️ ROSTER WRITE FAILED — this registration is NOT (fully) in the MVF Tournament Registrations DB. Backfill the row by hand or the seat count undersells the cap.",
+            ]
+          : []),
+      ].join("\n"),
+    });
+    if (adminError)
+      console.error("[stripe-webhook] mvf tournament admin email rejected", adminError);
+
+    if (parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+      const { error: parentError } = await resend.emails.send({
+        from: FROM_EMAIL,
+        to: parentEmail,
+        bcc: ADMIN_EMAIL,
+        replyTo: REPLY_TO,
+        subject: `You're in — MVF Junior Tournament, ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}`,
+        text: [
+          `Hi ${metaString(m, "parent_name")},`,
+          ``,
+          `${childName} is registered for the MVF Junior Tournament (${metaString(m, "division_label") || division} division).`,
+          ``,
+          `When: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}`,
+          `Where: ${MVF_JUNIOR_TOURNAMENT_VENUE}`,
+          `Format: rotating partner round robin — ${GUARANTEED_GAMES_TEXT} ${MEDALS_TEXT}`,
+          ``,
+          `Paid: $${amount}. ${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT}`,
+          ``,
+          `What to bring: a refillable water bottle and court shoes — we have loaner paddles.`,
+          ``,
+          `See you Saturday,`,
+          `Coach Sam`,
+          `Next Gen Pickleball Academy`,
+        ].join("\n"),
+      });
+      if (parentError)
+        console.error("[stripe-webhook] mvf tournament parent email rejected", parentError);
+    }
+  } else {
+    console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping mvf tournament emails");
+  }
+
+  after(async () => {
+    await Promise.allSettled([
+      ingestToOpenBrain({
+        business: "nga",
+        source: "nga_mvf_junior_tournament",
+        name: metaString(m, "parent_name"),
+        email: parentEmail || undefined,
+        phone: metaString(m, "parent_phone") || undefined,
+        interest: `MVF Junior Tournament (${metaString(m, "division_label") || division})`,
+        metadata: {
+          event_date: metaString(m, "event_date"),
+          division,
+          resident: resident ? "true" : "false",
+          child_first_name: metaString(m, "child_first_name"),
+          child_last_name: metaString(m, "child_last_name"),
+          child_dob: metaString(m, "child_dob"),
+          amount_paid_usd: amount,
+          nga_share_usd: metaString(m, "nga_share_usd"),
+          mvf_share_usd: metaString(m, "mvf_share_usd"),
+          stripe_reference: r.stripeRef,
+        },
+      }),
+    ]);
+  });
+
+  return NextResponse.json({ received: true, mvfTournament: true });
 }
 
 async function handleChargeRefunded(charge: Stripe.Charge) {
