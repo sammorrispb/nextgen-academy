@@ -91,6 +91,9 @@ const ADMIN_EMAIL = "nextgenacademypb@gmail.com";
 // registrations surface where he actually reads. The parent-confirmation BCC
 // stays academy-only (below) so he isn't double-emailed a copy of every receipt.
 const ADMIN_NOTIFY = [ADMIN_EMAIL, "sam.morris2131@gmail.com"];
+/** MVF's tournament partner contact — gets MVF Junior Tournament registration
+ *  + payment alerts (Sam, 2026-09-22). Other products stay academy-only. */
+const MVF_PARTNER_EMAIL = "malvero@mvf.org";
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 const REPLY_TO = "nextgenacademypb@gmail.com";
 const SITE_ORIGIN =
@@ -1738,7 +1741,7 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
 
     const { error: adminError } = await resend.emails.send({
       from: FROM_EMAIL,
-      to: ADMIN_NOTIFY,
+      to: [...ADMIN_NOTIFY, MVF_PARTNER_EMAIL],
       subject: `MVF Tournament: ${childName} — ${metaString(m, "division_label") || division}`,
       text: [
         `Tournament: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} — ${MVF_JUNIOR_TOURNAMENT_VENUE}`,
