@@ -1,8 +1,8 @@
 // NGA MVF Junior Tournament at Apple Ridge Courts, Montgomery Village MD.
 //
 // A NEW product (Sam, 2026-09-22): NGA sells this one on the NGA site —
-// invoice-based signup, same pattern as lessons, the Monday Girls drop-in,
-// and the Winter Youth League. NGA collects payment and splits revenue 80/20
+// invoice-based signup, same pattern as lessons and the Monday Girls drop-in.
+// NGA collects payment and splits revenue 80/20
 // with Montgomery Village Foundation (MVF) — the split is stamped on the
 // Stripe invoice metadata (nga_share_usd / mvf_share_usd); remittance is
 // manual, there is no automatic transfer.
