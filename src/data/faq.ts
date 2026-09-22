@@ -16,18 +16,18 @@ function campPrice(key: string): number {
 const CAMP_DAY_PRICE = campPrice("day");
 const CAMP_WEEK_PRICE = campPrice("week");
 
-/** "Kid's Drill and Play (ages 8–13) and Youth League (ages 10+)" — from the league data. */
+/** "Kid's Drill and Play (ages 8–13)" — from the league data. */
 const FREDERICK_LEAGUES_LINE = PICKLPARK_LEAGUES.map(
   (l) => `${l.title} (${l.ageLabel.toLowerCase()})`,
 ).join(" and ");
 
 /**
- * Composed from the Pickl Park league data so the age bands can't drift. Only
- * what NGA actually runs in Frederick: the two Saturday leagues (registered and
+ * Composed from the Pickl Park league data so the age band can't drift. Only
+ * what NGA actually runs in Frederick: the Saturday league (registered and
  * priced by The Pickl Park) and private lessons there. No free evaluation is
  * offered at a Frederick venue — e2e/frederick-page.spec.ts.
  */
-const FREDERICK_FAQ_ANSWER = `Yes. Next Gen coaches two six-week Saturday youth leagues at The Pickl Park, an indoor pickleball club in Frederick, MD, which sets their age bands: ${FREDERICK_LEAGUES_LINE}. Registration and payment go through The Pickl Park, not this site. Private lessons in Frederick run at The Pickl Park too — email or text Coach Sam and we'll set up a time.`;
+const FREDERICK_FAQ_ANSWER = `Yes. Next Gen coaches a six-week Saturday youth league at The Pickl Park, an indoor pickleball club in Frederick, MD, which sets the age band: ${FREDERICK_LEAGUES_LINE}. Registration and payment go through The Pickl Park, not this site. Private lessons in Frederick run at The Pickl Park too — email or text Coach Sam and we'll set up a time.`;
 
 export const faq: FaqItem[] = [
   {

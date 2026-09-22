@@ -32,9 +32,9 @@ import {
 import { orgRef } from "@/lib/seo";
 
 // The Pickl Park Saturday — a REFERRAL page since 2026-09-07, not a checkout.
-// The Pickl Park sells both leagues through podplay; NGA coaches them. So this
-// page's whole job is to explain the two leagues honestly and hand the parent
-// off to the right podplay event.
+// The Pickl Park sells the league through podplay; NGA coaches it. So this
+// page's whole job is to explain the league honestly and hand the parent off
+// to the podplay event.
 //
 // THIS PAGE IS THE ONE SURFACE THAT PRINTS A PICKL PARK PRICE (Sam,
 // 2026-09-20). The rule used to be "no price anywhere", because a second copy
@@ -50,14 +50,14 @@ import { orgRef } from "@/lib/seo";
 const LEAGUE_SUMMARY = PICKLPARK_LEAGUES.map(
   (l) => `${l.title} ${l.timeLabel} (${l.ageLabel})`,
 ).join(", ");
-/** "Kid's Drill and Play (ages 8–13) and Youth League (ages 10+)" — for the meta description. */
+/** "Kid's Drill and Play (ages 8–13)" — for the meta description. */
 const LEAGUE_AGES = PICKLPARK_LEAGUES.map(
   (l) => `${l.title} (${l.ageLabel.toLowerCase()})`,
 ).join(" and ");
 
 // Title carries the place and "league" — the audit found this page had neither,
 // so "youth pickleball league Frederick" had nothing to match (2026-09-13).
-const TITLE = "Youth Pickleball Leagues in Frederick, MD — The Pickl Park";
+const TITLE = "Youth Pickleball League in Frederick, MD — The Pickl Park";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -167,22 +167,21 @@ export default async function PicklParkPage() {
             Fall 2026 Saturdays &middot; {PICKLPARK_PUBLIC_AREA}
           </p>
           <h1 className="font-heading text-3xl sm:text-5xl font-black text-ngpa-white tracking-tight mb-5">
-            Youth pickleball leagues in Frederick, MD &mdash; six Saturdays
+            Youth pickleball in Frederick, MD &mdash; six Saturdays
             indoors, whatever the weather.
           </h1>
           <p className="text-lg text-ngpa-white/80 leading-relaxed mb-6">
-            Next Gen coaches two six-week youth leagues at{" "}
+            Next Gen coaches a six-week youth league at{" "}
             {PICKLPARK_VENUE_SHORT} in {PICKLPARK_PUBLIC_AREA} — our first
             Frederick location, on dedicated indoor pickleball courts —{" "}
             <time dateTime={PICKLPARK_SATURDAYS[0]}>
               {PICKLPARK_SEASON_LABEL}
             </time>
-            . One is for players brand new to the sport, the other for players
-            who already keep a rally going.
+            . It&rsquo;s for players brand new to the sport.
           </p>
           <p className="text-ngpa-white/80 leading-relaxed">
             <strong className="text-ngpa-white">
-              Both leagues are run and registered by The Pickl Park.
+              The league is run and registered by The Pickl Park.
             </strong>{" "}
             Coach Sam and the Next Gen staff run every session on court; you
             sign up and pay on The Pickl Park&rsquo;s site.
@@ -196,7 +195,7 @@ export default async function PicklParkPage() {
       <section className="bg-ngpa-navy" id="leagues">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
           <h2 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white tracking-tight mb-6">
-            Two leagues, back to back
+            The fall league
           </h2>
 
           <div className="grid grid-cols-1 gap-5 mb-4">
@@ -304,7 +303,7 @@ export default async function PicklParkPage() {
                 <strong className="text-ngpa-white">
                   You register with The Pickl Park.
                 </strong>{" "}
-                Both leagues are sold on The Pickl Park&rsquo;s site, and
+                The league is sold on The Pickl Park&rsquo;s site, and
                 they&rsquo;re the ones to ask about payment, spots and
                 cancellations. Next Gen coaches the sessions.
               </li>

@@ -89,9 +89,9 @@ export function buildOpenNowOffers(
     offers.push({
       href: "/picklpark",
       eyebrow: "Registering now",
-      title: "Pickl Park Saturday leagues",
+      title: "Pickl Park Saturday league",
       detail: `Six Saturdays indoors, ${PICKLPARK_SEASON_LABEL}, at ${PICKLPARK_VENUE_SHORT} in ${PICKLPARK_PUBLIC_AREA}. ${leagueLine}. Coached by Next Gen, registered with The Pickl Park.`,
-      cta: "See both leagues",
+      cta: "See the league",
     });
   }
 

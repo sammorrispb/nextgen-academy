@@ -5,10 +5,13 @@
 // WHO SELLS IT CHANGED (Sam, 2026-09-07). NGA used to sell a $225 season here
 // — Red & Orange 3:00–4:00 and Green & Yellow 4:00–5:00, with a $20 all-levels
 // Open Court at 2:00 as the on-ramp. The Pickl Park now sells the Saturday
-// itself through podplay, as two six-week leagues:
+// itself through podplay, as a six-week league:
 //
 //   2:00–3:00  Kid's Drill and Play (ages 8–13)  — replaces the Open Court hour
-//   3:00–4:30  Youth League (ages 10+)           — replaces BOTH season blocks
+//
+// (A second league, Youth League 3:00–4:30, was listed here until 2026-09-22.
+// The Pickl Park changed its dates and no confirmed replacement dates exist,
+// so it is off every public surface until real dates are confirmed.)
 //
 // So: `PICKLPARK_YOUTH_BLOCKS`, `PICKLPARK_OPEN_COURT_*`, the seat maps and
 // everything in picklpark-season-2026.ts describe products that NO LONGER RUN.
@@ -21,7 +24,7 @@
 //
 // THE SEASON MOVED A WEEK LATER (Sam, 2026-09-20). It now runs Sep 26 – Oct 31
 // and there is NO makeup hold: the held Oct 31 Saturday became the sixth
-// playing week, and Sep 19 never ran. Both leagues run all six.
+// playing week, and Sep 19 never ran. The league runs all six.
 //
 // A previous revision of this file recorded podplay's date list as "a podplay
 // bug" and kept Sep 19 – Oct 24 over it. That was the wrong way round — The

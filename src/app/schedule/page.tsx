@@ -249,7 +249,7 @@ export default async function SchedulePage() {
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              See both leagues &rarr;
+              See the league &rarr;
             </span>
           </Link>
         </div>

@@ -27,49 +27,32 @@ import { RECURRING_TEMPLATES } from "../src/data/recurring-templates";
 // Pure spec — no dev server.
 //   npx playwright test e2e/picklpark-leagues.spec.ts --project=desktop
 //
-// The Pickl Park Fall 2026 Saturday moved from NGA's own Stripe season to two
-// leagues The Pickl Park sells through podplay (Sam, 2026-09-07). These pin
-// the three things that change: NGA no longer takes the money, the site
-// publishes no price, and the two leagues carry their real times and ages.
+// The Pickl Park Fall 2026 Saturday moved from NGA's own Stripe season to a
+// league The Pickl Park sells through podplay (Sam, 2026-09-07). A second
+// league, Youth League, was removed on 2026-09-22 after The Pickl Park changed
+// its dates with no confirmed replacement. These pin the three things that
+// change: NGA no longer takes the money, the site publishes no price, and
+// the league carries its real time and ages.
 
-test("both leagues exist, at their real times and ages", () => {
-  expect(PICKLPARK_LEAGUES).toHaveLength(2);
+test("the league exists, at its real time and ages", () => {
+  expect(PICKLPARK_LEAGUES).toHaveLength(1);
 
   const intro = findPicklParkLeague("drill-and-play");
   expect(intro).toBeDefined();
   expect(intro?.timeLabel).toBe("2:00–3:00 PM");
   expect(intro?.minAge).toBe(8);
   expect(intro?.maxAge).toBe(13);
-
-  const league = findPicklParkLeague("youth-league");
-  expect(league).toBeDefined();
-  expect(league?.timeLabel).toBe("3:00–4:30 PM");
-  expect(league?.minAge).toBe(10);
-  // Ages 10 and UP — no ceiling beyond the academy's own 16.
-  expect(league?.maxAge).toBe(16);
 });
 
-test("they run in play order, and the earlier one is the beginner one", () => {
-  expect(PICKLPARK_LEAGUES.map((l) => l.slug)).toEqual([
-    "drill-and-play",
-    "youth-league",
-  ]);
-  expect(PICKLPARK_LEAGUES[0].minAge).toBeLessThan(
-    PICKLPARK_LEAGUES[1].minAge,
-  );
-});
-
-test("every league registers on podplay over https, and nowhere else", () => {
+test("the league registers on podplay over https, and nowhere else", () => {
   for (const league of PICKLPARK_LEAGUES) {
     // `series` as well as `events`: podplay hands a multi-week listing a
-    // /community/series/ permalink, which is what Youth League now carries.
-    // The host stays pinned — that is the half of this that matters.
+    // /community/series/ permalink. The host stays pinned — that is the half
+    // of this that matters.
     expect(league.signupUrl).toMatch(
       /^https:\/\/thepicklpark\.podplay\.app\/community\/(events|series)\/[0-9a-f-]+$/,
     );
   }
-  // Two distinct events, not one URL pasted twice.
-  expect(new Set(PICKLPARK_LEAGUES.map((l) => l.signupUrl)).size).toBe(2);
 });
 
 // --- price: two tiers, one surface (Sam, 2026-09-20) ------------------------
@@ -91,8 +74,6 @@ test("each league carries both tiers, and the member price is the lower one", ()
   }
   expect(findPicklParkLeague("drill-and-play")?.memberPriceUsd).toBe(150);
   expect(findPicklParkLeague("drill-and-play")?.nonMemberPriceUsd).toBe(175);
-  expect(findPicklParkLeague("youth-league")?.memberPriceUsd).toBe(225);
-  expect(findPicklParkLeague("youth-league")?.nonMemberPriceUsd).toBe(250);
 });
 
 test("the price line shows both tiers and says WHOSE membership it means", () => {
@@ -150,11 +131,9 @@ test("NO shared surface quotes a Pickl Park price — /picklpark is the only one
 
   // The cost FAQ is checked DIFFERENTLY on purpose. It legitimately quotes
   // NGA's own season and camp prices in the same answer that mentions the
-  // Pickl Park leagues, so "this answer contains a $" proves nothing — and
-  // NGA's season happens to be $225, the same number as Youth League's member
-  // tier, so grepping for the figure is worse than useless. Pin the deferral
-  // sentence instead: the regression to catch is someone replacing it with a
-  // number, and this fails when they do.
+  // Pickl Park league, so "this answer contains a $" proves nothing. Pin the
+  // deferral sentence instead: the regression to catch is someone replacing
+  // it with a number, and this fails when they do.
   const cost = faq.find((f) => /How much do youth pickleball lessons cost/.test(f.question));
   expect(cost).toBeDefined();
   expect(cost!.answer).toContain("The Pickl Park sets and shows the price");
@@ -190,14 +169,13 @@ test("only /picklpark's own source reads the price fields", () => {
   expect(page).toContain("picklParkLeaguePriceLine(league)");
 });
 
-test("the Intro league announces its signup opening; the other is open now", () => {
+test("the league announces its signup opening", () => {
   expect(findPicklParkLeague("drill-and-play")?.signupOpensOn).toBe(
     "2026-09-09",
   );
-  expect(findPicklParkLeague("youth-league")?.signupOpensOn).toBeUndefined();
 });
 
-test("both leagues run the season's six Saturdays, Sep 26 – Oct 31", () => {
+test("the league runs the season's six Saturdays, Sep 26 – Oct 31", () => {
   // Shifted a week later on 2026-09-20 to match the listings The Pickl Park
   // actually sells; Sep 19 never ran. Pinned as the exact list rather than
   // first/last plus a length, so a dropped middle Saturday cannot pass.
@@ -234,13 +212,13 @@ test("NGA's own season checkout is retired — no date reopens it", () => {
   }
 });
 
-test("the leagues stay advertised through the last Saturday, then stop", () => {
+test("the league stays advertised through the last Saturday, then stops", () => {
   expect(picklParkLeaguesOpen("2026-09-07")).toBe(true);
   expect(picklParkLeaguesOpen("2026-10-31")).toBe(true);
   expect(picklParkLeaguesOpen("2026-11-01")).toBe(false);
 });
 
-test("the open-now block advertises the leagues without a price or a season sale", () => {
+test("the open-now block advertises the league without a price or a season sale", () => {
   const offers = buildOpenNowOffers("2026-09-07", {
     fallRegistrationOpen: false,
     picklParkRegistrationOpen: false,
@@ -269,18 +247,13 @@ test("the $20 Saturday Open Court no longer seeds", () => {
 
 // ── Review findings, 2026-09-07 (PR #321) ───────────────────────────────────
 
-test("each league states its OWN split — 90 minutes is not 30 plus 30", () => {
+test("the league states its own split — the halves add up to the slot", () => {
   // The retired blocks were both 60 minutes, so one shared
-  // PICKLPARK_SESSION_FORMAT worked. Youth League is 90; describing it as
-  // "30 minutes of drills, then 30 of game play" leaves a third of the
-  // session unaccounted for to a parent reading the page.
+  // PICKLPARK_SESSION_FORMAT worked. Each league must still spell out its
+  // own halves, and those halves must actually add up to the slot length.
   const intro = findPicklParkLeague("drill-and-play")!;
-  const league = findPicklParkLeague("youth-league")!;
   expect(intro.sessionFormat).toContain("30 minutes");
-  expect(league.sessionFormat).toContain("45 minutes");
-  expect(league.sessionFormat).not.toContain("30 minutes");
 
-  // Each league's halves must actually add up to its own slot length.
   for (const l of PICKLPARK_LEAGUES) {
     const halves = [...l.sessionFormat.matchAll(/(\d+) minutes/g)].map((m) =>
       Number(m[1]),
@@ -290,8 +263,8 @@ test("each league states its OWN split — 90 minutes is not 30 plus 30", () => 
   }
 });
 
-test("the one-sentence line for BOTH leagues quotes no minute count", () => {
-  // The two split differently, so any single number is wrong for one of them.
+test("the one-sentence line quotes no minute count", () => {
+  // The line describes the split without numbers so it can't go stale.
   expect(PICKLPARK_LEAGUES_FORMAT_LINE).not.toMatch(/\d+ minutes/);
   expect(PICKLPARK_LEAGUES_FORMAT_LINE).toContain("half");
 });
@@ -299,9 +272,6 @@ test("the one-sentence line for BOTH leagues quotes no minute count", () => {
 test("JSON-LD start hours are parsed from startTime, not pattern-matched", () => {
   expect(picklParkLeagueStartHour24(findPicklParkLeague("drill-and-play")!)).toBe(
     "14:00",
-  );
-  expect(picklParkLeagueStartHour24(findPicklParkLeague("youth-league")!)).toBe(
-    "15:00",
   );
   // A moved league must follow, not silently fall through to 15:00.
   expect(

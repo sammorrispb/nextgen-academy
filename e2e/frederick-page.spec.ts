@@ -14,8 +14,8 @@ import {
 /**
  * The Frederick landing page may only claim what NGA actually runs there
  * (AEO audit, 2026-09-13). Zero Frederick families are in the CRM, the only
- * Frederick programs are the two Pickl Park Saturday leagues (ages 8–13 and
- * 10+, registered by The Pickl Park) plus private lessons at The Pickl Park,
+ * Frederick programs are the Pickl Park Saturday league (ages 8–13,
+ * registered by The Pickl Park) plus private lessons at The Pickl Park,
  * and no free evaluation is offered at a Frederick venue.
  *
  * So: no "6–16" promise, no free evaluation in Frederick, no price (The Pickl

@@ -30,11 +30,11 @@ const LEAGUES_SENTENCE = PICKLPARK_LEAGUES.map(
 export const FREDERICK_PAGE = {
   title: "Youth Pickleball in Frederick, MD — Next Gen Academy",
   // ≤160 chars (e2e/seo.spec.ts) — composed, so a league rename can't drift it.
-  description: `Indoor Saturday youth pickleball leagues in ${PICKLPARK_PUBLIC_AREA}, coached by Next Gen at ${PICKLPARK_VENUE_SHORT}: ${PICKLPARK_LEAGUES.map((l) => `${l.title} (${l.ageLabel.toLowerCase()})`).join(" and ")}.`,
+  description: `Indoor Saturday youth pickleball league in ${PICKLPARK_PUBLIC_AREA}, coached by Next Gen at ${PICKLPARK_VENUE_SHORT}: ${PICKLPARK_LEAGUES.map((l) => `${l.title} (${l.ageLabel.toLowerCase()})`).join(" and ")}.`,
   eyebrow: `Frederick County, MD · Saturdays at ${PICKLPARK_VENUE_SHORT}`,
   h1: "Youth pickleball in Frederick, MD.",
-  intro: `Next Gen Pickleball Academy coaches youth leagues on Saturdays at ${PICKLPARK_VENUE_SHORT}, an indoor pickleball club in Frederick. Two groups run back to back, with age bands set by The Pickl Park: ${LEAGUES_SENTENCE}. Your kid gets the same coaching we run in Montgomery County — small skill-based groups and plenty of reps every session — on cushioned indoor courts, so the weather never cancels a Saturday.`,
-  whereWePlay: `Every Frederick session runs at ${PICKLPARK_VENUE_SHORT}. The Pickl Park runs registration and payment for both leagues, so you sign up on their site and Coach Sam and the Next Gen staff run the court. ${PICKLPARK_LEAGUE_PLACEMENT_NOTE}`,
+  intro: `Next Gen Pickleball Academy coaches youth leagues on Saturdays at ${PICKLPARK_VENUE_SHORT}, an indoor pickleball club in Frederick. One group runs on Saturdays, with age bands set by The Pickl Park: ${LEAGUES_SENTENCE}. Your kid gets the same coaching we run in Montgomery County — small skill-based groups and plenty of reps every session — on cushioned indoor courts, so the weather never cancels a Saturday.`,
+  whereWePlay: `Every Frederick session runs at ${PICKLPARK_VENUE_SHORT}. The Pickl Park runs registration and payment for the league, so you sign up on their site and Coach Sam and the Next Gen staff run the court. ${PICKLPARK_LEAGUE_PLACEMENT_NOTE}`,
   privateLessonsNote:
     "Private lessons run at The Pickl Park in Frederick too. Email or text Coach Sam and we'll set up a time.",
   nearbyIntro:
@@ -44,7 +44,7 @@ export const FREDERICK_PAGE = {
 export const FREDERICK_FAQ: { question: string; answer: string }[] = [
   {
     question: "Where exactly are the Frederick sessions?",
-    answer: `At ${PICKLPARK_VENUE_SHORT}, an indoor pickleball club in Frederick, MD. Both Saturday leagues run there, and so do private lessons. Sessions are indoors, so rain and heat don't cancel them.`,
+    answer: `At ${PICKLPARK_VENUE_SHORT}, an indoor pickleball club in Frederick, MD. The Saturday league runs there, and so do private lessons. Sessions are indoors, so rain and heat don't cancel them.`,
   },
   {
     question: "Which Frederick league fits my kid?",
@@ -58,7 +58,7 @@ export const FREDERICK_FAQ: { question: string; answer: string }[] = [
   {
     question: "Do I register with Next Gen or The Pickl Park?",
     answer:
-      "The Pickl Park. They list both leagues, take registration, and set the price. Next Gen coaches every session. The league cards on this page link straight to each listing.",
+      "The Pickl Park. They list the league, take registration, and set the price. Next Gen coaches every session. The league cards on this page link straight to each listing.",
   },
 ];
 

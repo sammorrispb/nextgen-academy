@@ -113,14 +113,14 @@ test.describe("buildOpenNowOffers", () => {
     ).not.toContain("/picklpark");
   });
 
-  test("the Pickl Park card names both leagues and quotes no price", () => {
+  test("the Pickl Park card names the league and quotes no price", () => {
     const card = buildOpenNowOffers("2026-08-31", picklParkOnly(false)).find(
       (o) => o.href === "/picklpark",
     );
     expect(card).toBeDefined();
     expect(card!.detail).toContain("Frederick");
     expect(card!.detail).toContain("Kid's Drill and Play");
-    expect(card!.detail).toContain("Youth League");
+    expect(card!.detail).not.toContain("Youth League");
     // The Pickl Park quotes at the point of sale; a second copy here can only
     // go stale.
     expect(card!.detail).not.toMatch(/\$\s*\d/);

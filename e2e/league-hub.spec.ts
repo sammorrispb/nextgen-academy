@@ -15,7 +15,7 @@ const DURING = "2026-09-19";
 const AFTER_ALL = "2026-12-01";
 
 test.describe("league hub cards", () => {
-  test("mid-fall: the Sunday season, both Pickl Park leagues, and MVF are listed", () => {
+  test("mid-fall: the Sunday season, the Pickl Park league, and MVF are listed", () => {
     const cards = buildLeagueHubCards(DURING, { fallRegistrationOpen: true });
     const keys = cards.map((c) => c.key);
     expect(keys).toContain("fall");
