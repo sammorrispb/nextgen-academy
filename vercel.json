@@ -56,6 +56,14 @@
     {
       "path": "/api/cron/indexnow",
       "schedule": "0 12 * * 1"
+    },
+    {
+      "path": "/api/cron/mvf-tournament-payment-reminder",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/cron/mvf-tournament-pre-event-reminder",
+      "schedule": "0 13 * * *"
     }
   ]
 }

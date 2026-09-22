@@ -200,6 +200,93 @@ export async function markMvfTournamentRegPaid(
 }
 
 /**
+ * Fetch tournament registrations, optionally filtered by paid status.
+ * Returns each row's page id, created time, and the fields the reminder
+ * crons need (parent contact, child name, division, invoice id).
+ */
+export interface MvfTournamentCronRow {
+  pageId: string;
+  createdAt: string;
+  parentName: string;
+  parentEmail: string;
+  parentPhone: string;
+  childFirstName: string;
+  childLastName: string;
+  division: MvfTournamentDivisionSlug;
+  resident: boolean;
+  amountUsd: number;
+  stripeInvoiceId: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function cronRowFromPage(page: any): MvfTournamentCronRow | null {
+  const props = page.properties ?? {};
+  const text = (p: string): string =>
+    props[p]?.title?.[0]?.plain_text ??
+    props[p]?.rich_text?.[0]?.plain_text ??
+    "";
+  const divisionLabel = props["Division"]?.select?.name ?? "10U";
+  return {
+    pageId: page.id,
+    createdAt: page.created_time ?? "",
+    parentName: text("Parent Name"),
+    parentEmail: props["Parent Email"]?.email ?? "",
+    parentPhone: props["Parent Phone"]?.phone_number ?? "",
+    childFirstName: text("Child First Name"),
+    childLastName: text("Child Last Name"),
+    division: divisionLabel === "14U" ? "14u" : "10u",
+    resident: props["Resident"]?.checkbox === true,
+    amountUsd: props["Amount Paid"]?.number ?? 0,
+    stripeInvoiceId: text("Stripe Invoice ID"),
+  };
+}
+
+export async function fetchMvfTournamentRegistrations(
+  paid: boolean,
+): Promise<MvfTournamentCronRow[] | null> {
+  const env = notionEnv();
+  if (!env) return null;
+  try {
+    const rows: MvfTournamentCronRow[] = [];
+    let cursor: string | undefined;
+    for (;;) {
+      const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
+        method: "POST",
+        headers: headers(env.notionKey),
+        body: JSON.stringify({
+          filter: { property: "Paid", checkbox: { equals: paid } },
+          page_size: 100,
+          ...(cursor ? { start_cursor: cursor } : {}),
+        }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        console.error(
+          `[notion-mvf-tournament-registrations] fetch query failed ${res.status}`,
+        );
+        return null;
+      }
+      const data = (await res.json()) as {
+        results: unknown[];
+        has_more: boolean;
+        next_cursor: string | null;
+      };
+      for (const page of data.results) {
+        const row = cronRowFromPage(page);
+        if (row) rows.push(row);
+      }
+      if (!data.has_more) break;
+      cursor = data.next_cursor ?? undefined;
+      if (!cursor) break;
+    }
+    return rows;
+  } catch (err) {
+    console.error("[notion-mvf-tournament-registrations] fetch query threw", err);
+    return null;
+  }
+}
+
+/**
  * Paid-seat count for one division — the number the /mvf-junior-tournament
  * cap is enforced against.
  *
