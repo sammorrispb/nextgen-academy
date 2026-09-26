@@ -201,10 +201,24 @@ digit in any of the three templates fails the build.
 
 ## If a Sunday washes out
 
-Call it **by noon** and email either way; the primer promises that, so silence
-reads as "it's on." A washed-out Sunday moves to Nov 1, then Nov 8. **The weeks
-slide, they never reorder** — week 4 stays week 4 on a later date, because each
-week is built on the one before it.
+**Superseded 2026-09-26** — the call is no longer "by noon, email either way". It is
+made **two hours before each group starts** (Green by 11:00 AM, Yellow by 12:30 PM)
+on `/admin/weather`, per group:
+
+1. Pick the date and group(s), add a one-line reason, **Preview** — it lists every
+   family that will be emailed. Add anyone missing (invoice-paid families have no
+   roster row) in "Also email".
+2. **Cancel & notify families** — marks it on `/fall`, emails each family once.
+3. Tap **Post to Green/Yellow WhatsApp** and send it in that group.
+4. If the card says a rain date needs booking, book the whole 1:00–4:00 PM block on
+   ActiveMONTGOMERY (or `/am-book` on the Mac) the same day, then **Mark requested** →
+   **Mark booked** once CUPF confirms.
+
+Going ahead? **We're on** gives you the WhatsApp go post (no email). Tapping cancel
+twice never re-emails. A washed-out session moves to the next open rain date for
+that group (Nov 1, then Nov 8). **The weeks slide, they never reorder** — week 4
+stays week 4 on a later date, because each week is built on the one before it. See
+"Fall 2026 weather calls" in `CLAUDE.md` for the mechanics.
 
 The refund path is unchanged: parent withdrawal → none (stated at point of sale);
 NGA-cancelled beyond the rain dates → prorated. See

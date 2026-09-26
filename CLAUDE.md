@@ -472,6 +472,65 @@ a family nearly being told the wrong product under that name, so parent-facing c
   `e2e/invariant-season-league-authz.spec.ts` (source pins: every action gated, pages
   under `(authed)`, verify-before-read, no admin-secret fallback, noindex/robots/sitemap).
 
+### Fall 2026 weather calls (`/admin/weather` + `POST /api/admin/fall-calls`, 2026-09-26)
+The go/no-go for a Walter Johnson Sunday, and the record of what was held versus
+cancelled. Sam's rules: **the call is made two hours before each group starts, per
+GROUP** (Green 1:00 → call by 11:00 AM; Yellow 2:30 → by 12:30 PM —
+`FALL_WEATHER_CALL_LEAD_HOURS`, times derived in `fall-calls.ts`), so one Sunday can
+hold Green and cancel Yellow. A cancelled session moves to the **next open rain date
+for that group**; the rain dates are **not booked with CUPF up front** — the first
+cancellation that claims one is Sam's cue to book it.
+
+- **Tracker = Notion `NOTION_FALL_CALLS_DB_ID`** ("NGA Fall Season Calls"): one row per
+  date titled with the ISO date — `Date` (title), `Green` / `Yellow` (select
+  Scheduled | Held | Cancelled), `CUPF` (select Not booked | Requested | Booked),
+  `Note` (public reason), `Green Notified` / `Yellow Notified` (date). It can start
+  EMPTY — rows are find-or-created on the first write, and a missing row reads as
+  "Scheduled, not booked". Dates and statuses only: **not a PII destination**. Must be
+  shared with the Player DB integration by hand; the admin page probes the schema.
+- **The make-up mapping is DERIVED, never stored** (`buildFallCalendar`): replay every
+  cancellation in date order, give each the earliest later rain date that group hasn't
+  claimed. Two groups rained out the same Sunday share one rain date (the court is
+  booked 1–4 PM), a rained-out rain date rolls to the next, and a cancellation with
+  none left is reported `unresolved` — per `fall-refund-policy.ts` that session is
+  refunded, which is a deliberate act, never automatic. League weeks follow for free:
+  season-league rows key on Week, so the washed-out week is just played next Sunday
+  and the playoff lands on the rain date. A past Sunday nobody marked counts as held.
+- **Hand-typed statuses parse leniently on purpose** — "Canceled", "Rained out",
+  "Called off" all read as Cancelled. A misspelling must never read as "on" and send
+  families to a closed court.
+- **One engine, two gates** (`runFallCall`): the admin cookie (the page) or Bearer
+  `SESSION_OPS_SECRET` (an agent making the call for Sam), same as session ops. A
+  cancel reads the tracker FRESH, checks the group plays that date, projects the
+  make-up, reads the roster **before any write** (an unreadable roster must not leave a
+  session marked cancelled with nobody told), writes the status, emails each Confirmed
+  family of the cancelled group(s) once (BCC admin, parent fields only, "your player"),
+  and stamps `<Group> Notified` only when every send landed — so a double tap never
+  re-emails and a partial send can be retried (`resend`, `only`). `dryRun` does the
+  reads and returns recipients, the email, the WhatsApp text and the make-up with zero
+  writes and zero sends; the page forces a preview before the Cancel button enables.
+  A past date is recorded but never emailed. `extraEmails` covers families who paid off
+  the website (invoice links) and have no roster row. The route revalidates `/fall`.
+- **WhatsApp can't be posted to by a server** — the engine returns the text and a
+  `wa.me/?text=` share link per group; Sam taps it and picks the group. The per-season
+  group invite links are deliberately NOT in code (the repo is the wrong home for a
+  link into a group of minors' parents).
+- **CUPF can't be booked by a server either** — ActiveMONTGOMERY is Cloudflare-blocked
+  from agents and checkout is card + reCAPTCHA. The page shows the booking line (always
+  the whole 1:00–4:00 PM block), links ActiveMONTGOMERY, and records Requested/Booked.
+  CUPF reviews requests (not instant) and keeps $25 of a cancellation made 10+ business
+  days out — book the same day a rain date is claimed.
+- **`/fall` shows it:** a strip above the hero on a session day or while the next
+  session has a cancellation, and a status card + season record above "The season at a
+  glance". A tracker that can't be read renders "check your WhatsApp or email" — never
+  an implied "on". Page `revalidate` is 60 (was 300).
+- Pinned by `e2e/fall-calls.spec.ts` (calendar derivation, call times, parsing,
+  WhatsApp/CUPF helpers, email copy) and `e2e/invariant-fall-weather-call.spec.ts`
+  (Notion + Resend only; dry run writes/sends nothing; only Confirmed families of the
+  cancelled group, once each; no child field reaches Resend; double tap doesn't
+  re-email; roster/tracker failure writes and sends nothing; route fails closed and
+  400s an unknown field).
+
 ### Pickl Park Saturdays — Frederick (`/picklpark` + the Open Court drop-in)
 **NGA's first venue outside Montgomery County** (The Pickl Park, an 8-court indoor club at 355 Ballenger Center Dr, Frederick MD). Two products, one Saturday, one court booking of 2 courts, 2–5 PM. **Season: six Saturdays Sep 26 – Oct 31 2026, NO makeup hold** (shifted a week later 2026-09-20 — Sep 19 never ran and the held Oct 31 became the sixth playing week; before that it was Sep 19 – Oct 24 + an Oct 31 hold, and before that Oct 3 – Nov 7 until 2026-09-05, Sam) so it sells as the *second fall option* beside the Walter Johnson Sunday season; `/fall` and `/picklpark` cross-link while both are open. Each season hour is `PICKLPARK_SESSION_FORMAT` — 30 minutes of coached drills, then 30 minutes of game play — one constant reused by the page, the group cards, the `/schedule` callout and the confirmation email so the split can't drift.
 
@@ -925,6 +984,10 @@ See `.env.example`. Categories:
   reported as dark by the health cron, never as a misconfiguration (deliberately unlike
   `NOTION_NEWSLETTER_DRAFTS_DB_ID`, whose lead block is meant to ship). See the
   "Curriculum override layer" section above.
+- `NOTION_FALL_CALLS_DB_ID` — NGA Fall Season Calls DB (the weather-call tracker; see
+  "Fall 2026 weather calls"). Optional. UNSET = `/fall` shows the weather policy line
+  only and `/admin/weather` says how to switch it on; nothing can be saved. Share the DB
+  with the Player DB integration by hand.
 - `REFERRAL_TOKEN_SECRET` — HMAC signing key for `/newsletter?ref=<token>` links. Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` so a leaked unsub token can't be replayed as a referral and vice versa.
 - `LEAD_CONSENT_SECRET` — HMAC signing key for the permission-pass links (`GET /api/lead-consent`). Optional — falls back to `NGA_ADMIN_SECRET`. Distinct from `NEWSLETTER_UNSUB_SECRET` / `REFERRAL_TOKEN_SECRET` so tokens can't be replayed across families. UNSET = camp-outreach degrades to the reply-"skip" opt-out instead of one-click links.
 - `OPEN_BRAIN_INGEST_URL` + `LEAD_INGEST_TOKEN` — Open Brain ingest.

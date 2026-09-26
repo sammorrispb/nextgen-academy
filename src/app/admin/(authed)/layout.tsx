@@ -40,6 +40,7 @@ export default async function AdminAuthedLayout({
           {[
             { href: "/admin/sessions", label: "Sessions & camps" },
             { href: "/admin/fall", label: "Fall season" },
+            { href: "/admin/weather", label: "Weather call" },
             { href: "/admin/monday-girls", label: "Monday Girls" },
           ].map((l) => (
             <Link
