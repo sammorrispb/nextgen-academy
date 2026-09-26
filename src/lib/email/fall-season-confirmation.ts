@@ -80,7 +80,7 @@ export function buildFallSeasonConfirmationEmail(
     "",
     `Each Sunday is ninety minutes — coached practice first, then a rotating-partner round robin, so ${childFirst} partners with everyone in the group across the season.`,
     "",
-    `If a Sunday washes out we make it up on ${rainDates.map(formatSunday).join(" or ")} — we'll email you before the weekend either way.`,
+    `If a Sunday washes out we make it up on ${rainDates.map(formatSunday).join(" or ")}, whichever is next open. We make the weather call two hours before your group starts and post it in your group's WhatsApp and at nextgenpbacademy.com/fall — and if we cancel, we email you too.`,
     "",
     `Paid: $${amountUsd} (full season).`,
     "",

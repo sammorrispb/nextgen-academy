@@ -125,6 +125,15 @@ export const FALL_YOUTH_BLOCKS = [
 export type FallBlockLevel = (typeof FALL_YOUTH_BLOCKS)[number]["level"];
 
 /**
+ * The weather call is made this many hours before each group starts (Sam,
+ * 2026-09-26): 11:00 AM for Green, 12:30 PM for Yellow. Per GROUP, not per
+ * Sunday — the later Yellow block can wait for a forecast the Green one can't,
+ * so one group can play while the other is called off. The call times are
+ * derived from FALL_YOUTH_BLOCKS (src/lib/fall-calls.ts), never typed.
+ */
+export const FALL_WEATHER_CALL_LEAD_HOURS = 2;
+
+/**
  * Players per pickleball court, per color group (Sam, 2026-08-29).
  *
  * Green holds NGA's standard 4. Yellow runs 5 — the extra body was bought
