@@ -1,24 +1,40 @@
 import { test, expect } from "@playwright/test";
 import { FetchStub } from "./fixtures/fetch-stub";
 
-// Env BEFORE import. The L&D base URL is read at module load: leave it unset so
-// this spec exercises the production default (www.linkanddink.com). The failure
-// alert emails through Resend, whose fetch-based SDK the stub sees.
+// Env BEFORE import (the module reads it per call, but keep the convention).
+// Spec files can share a worker, so every key touched here is restored in
+// afterAll. The failure alert emails through Resend, whose fetch-based SDK
+// the stub sees; the TWILIO_* keys are cleared so its SMS fallback can never
+// text a real number from a test run (sendSms() self-skips without them).
+const TOUCHED_ENV = [
+  "NGA_SYNC_SECRET",
+  "RESEND_API_KEY",
+  "VERCEL_ENV",
+  "LINKDINK_BASE_URL",
+  "TWILIO_ACCOUNT_SID",
+  "TWILIO_AUTH_TOKEN",
+  "TWILIO_FROM_NUMBER",
+  "CRON_ALERT_SMS_TO",
+  "CRON_ALERT_LOGS_URL",
+] as const;
+const savedEnv = Object.fromEntries(TOUCHED_ENV.map((k) => [k, process.env[k]]));
+
 const SYNC_SECRET = "test-nga-sync-secret-7f3a";
 process.env.NGA_SYNC_SECRET = SYNC_SECRET;
 process.env.RESEND_API_KEY = "re_test_alert_key";
-delete process.env.LINKDINK_BASE_URL;
-delete process.env.VERCEL_ENV;
+process.env.VERCEL_ENV = "production";
+for (const key of TOUCHED_ENV.slice(3)) delete process.env[key];
 
 import { syncMvfRegistrationToLinkDink } from "../src/lib/linkdink-roster-sync";
 
 // THE Link & Dink egress invariant (MVF Junior Tournament roster sync). A
 // registrant's child first + last name leave NGA for exactly one destination,
-// the L&D roster endpoint, in a body of exactly four fields: the stable
-// division event key, the child's first and last name, and the parent's email
-// (L&D's idempotency-key input, never stored there). No phone, DOB, allergies
-// or emergency contact, and never one event row's exact slug. A failed sync
-// alerts Sam without any child or parent data in the alert or the logs.
+// the L&D roster endpoint, from a production deploy only, in a body of exactly
+// four fields: the stable division event key, the child's first and last
+// name, and the parent's email (L&D's idempotency-key input, never stored
+// there). No phone, DOB, allergies or emergency contact, and never one event
+// row's exact slug. A failed sync alerts Sam without any child or parent data
+// in the alert or the logs.
 const ENDPOINT = "https://www.linkanddink.com/play/api/internal/nga-roster-add";
 const CHILD_FIRST = "Egresskidfirst";
 const CHILD_LAST = "Egresskidlast";
@@ -37,8 +53,8 @@ function registration(division: string) {
 }
 
 const stub = new FetchStub();
-// FetchStub records url/method/body; the auth header is captured here.
-let sentHeaders: Headers[] = [];
+// FetchStub records url/method/body; the request options are captured here.
+let sentInits: RequestInit[] = [];
 // Log lines are asserted ONLY for the absence of PII (hostile review item 1:
 // a log line is an echo surface), never for their wording.
 let logged: string[] = [];
@@ -51,10 +67,11 @@ const originalConsole = {
 
 test.beforeEach(() => {
   stub.reset();
-  sentHeaders = [];
+  sentInits = [];
   logged = [];
   process.env.NGA_SYNC_SECRET = SYNC_SECRET;
-  delete process.env.VERCEL_ENV;
+  process.env.VERCEL_ENV = "production";
+  delete process.env.LINKDINK_BASE_URL;
   for (const level of ["error", "warn", "log", "info"] as const) {
     console[level] = (...args: unknown[]) => {
       logged.push(
@@ -77,11 +94,19 @@ test.afterEach(() => {
   Object.assign(console, originalConsole);
 });
 
+test.afterAll(() => {
+  for (const key of TOUCHED_ENV) {
+    const value = savedEnv[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+});
+
 function install(): void {
   stub.install();
   const stubbed = globalThis.fetch;
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
-    sentHeaders.push(new Headers(init?.headers));
+    sentInits.push(init ?? {});
     return stubbed(input, init);
   }) as typeof globalThis.fetch;
 }
@@ -139,8 +164,13 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
       expect(call.body).not.toContain(PARENT_PHONE);
 
       // Auth rides a header, never the URL.
-      expect(sentHeaders[i].get("x-nga-sync-secret")).toBe(SYNC_SECRET);
+      const init = sentInits[i];
+      expect(new Headers(init.headers).get("x-nga-sync-secret")).toBe(SYNC_SECRET);
       expect(call.url).not.toContain(SYNC_SECRET);
+      // A redirect would carry that header and the body to another origin.
+      expect(init.redirect).toBe("error");
+      // A hung L&D call is cut off, because the checkout route waits on it.
+      expect(init.signal).toBeInstanceOf(AbortSignal);
     });
   });
 
@@ -155,6 +185,35 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
 
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(true);
     expect(stub.calls).toHaveLength(1);
+  });
+
+  test("only a production deploy sends; preview and local builds stay off the live roster", async () => {
+    stub
+      .on("localhost:3001/play/api/internal/nga-roster-add", {
+        ok: true,
+        rsvpId: "rsvp_test",
+        alreadyOnRoster: false,
+        playerId: "player_test",
+      })
+      .on("api.resend.com", { id: "email_alert" });
+    install();
+
+    // The secret is set, which is exactly the drift this guards against.
+    for (const env of ["preview", "development", undefined]) {
+      if (env === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = env;
+      expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
+    }
+    expect(stub.calls).toHaveLength(0);
+
+    // An explicit LINKDINK_BASE_URL is the deliberate way to point a
+    // non-production build at an L&D instance (e.g. a local p3).
+    process.env.LINKDINK_BASE_URL = "http://localhost:3001";
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(true);
+    expect(stub.calls.map((c) => c.url)).toEqual([
+      "http://localhost:3001/play/api/internal/nga-roster-add",
+    ]);
+    for (const line of logged) expectNoPii(line, "a log line");
   });
 
   test("an L&D refusal (409 event_cancelled) returns false, never throws, and alerts without registrant PII", async () => {
@@ -242,36 +301,38 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
     for (const line of logged) expectNoPii(line, "a log line");
   });
 
-  test("fails closed without NGA_SYNC_SECRET: zero L&D calls; production alerts, preview and local stay quiet", async () => {
+  test("fails closed without NGA_SYNC_SECRET: zero L&D calls, and production alerts under its own signature", async () => {
     stub.on("api.resend.com", { id: "email_alert" });
     install();
 
-    // Preview and local builds carry no secret by design: no call anywhere.
     delete process.env.NGA_SYNC_SECRET;
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
     process.env.NGA_SYNC_SECRET = "";
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
-    expect(stub.calls).toHaveLength(0);
 
-    // Production without the secret is a silent-off sync: Sam hears about it.
-    process.env.VERCEL_ENV = "production";
-    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
     expect(stub.callsTo("linkanddink.com")).toHaveLength(0);
     const alerts = stub.callsTo("api.resend.com");
-    expect(alerts).toHaveLength(1);
-    expect(alerts[0].body).toContain("not_configured");
-    expectNoPii(alerts[0].body, "the alert email");
+    expect(alerts).toHaveLength(2);
+    for (const alert of alerts) {
+      // Distinct from L&D's own 503 not_configured, which needs a p3 fix.
+      expect(alert.body).toContain("nga_secret_unset");
+      expectNoPii(alert.body, "the alert email");
+    }
   });
 
-  test("a division with no L&D event makes zero L&D calls, prototype keys included", async () => {
+  test("a division with no L&D event makes zero L&D calls and alerts once each, prototype keys included", async () => {
     stub.on("api.resend.com", { id: "email_alert" });
     install();
 
-    for (const division of ["12u", "", "constructor", "__proto__", "toString"]) {
+    const divisions = ["12u", "", "constructor", "__proto__", "toString"];
+    for (const division of divisions) {
       expect(await syncMvfRegistrationToLinkDink(registration(division))).toBe(false);
     }
     expect(stub.callsTo("linkanddink.com")).toHaveLength(0);
-    for (const alert of stub.callsTo("api.resend.com")) {
+    const alerts = stub.callsTo("api.resend.com");
+    expect(alerts).toHaveLength(divisions.length);
+    for (const alert of alerts) {
+      expect(alert.body).toContain("unknown_division");
       expectNoPii(alert.body, "the alert email");
     }
     for (const line of logged) expectNoPii(line, "a log line");

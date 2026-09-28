@@ -16,7 +16,8 @@
  * What leaves NGA (a child-PII egress — see the docs/source-inventory.md risk
  * log): the event key, the child's first and last name, and the parent's
  * email, which L&D uses only as an input to its idempotency key and never
- * stores. Nothing else. Pinned by e2e/invariant-linkdink-roster-egress.spec.ts.
+ * stores. Nothing else, and only from a production deploy. Pinned by
+ * e2e/invariant-linkdink-roster-egress.spec.ts.
  *
  * Posture: never throws, never fails a registration. A failed sync is logged
  * and alerted without registrant data (L&D's error code, the division, the
@@ -24,13 +25,17 @@
  * idempotent, so a re-send is safe.
  */
 
+import { after } from "next/server";
 import type { MvfTournamentDivision } from "@/data/mvf-junior-tournament-2026";
 import { deliverCronAlert } from "@/lib/cron-alert";
 
-const LD_BASE_URL =
-  process.env.LINKDINK_BASE_URL ?? "https://www.linkanddink.com";
+const DEFAULT_LD_BASE_URL = "https://www.linkanddink.com";
 
 const TAG = "[linkdink-roster-sync]";
+
+/** Room for a cold L&D function, short enough that a hung call doesn't hold
+ * the parent's checkout response open (the route awaits this sync). */
+const LD_TIMEOUT_MS = 8000;
 
 /** The endpoint's refusal codes (community-os apps/p3/src/app/api/internal/
  * nga-roster-add/route.ts). Only these reach a log line or an alert; any
@@ -100,27 +105,39 @@ export function buildMvfRosterSyncBody(
   };
 }
 
-/** Email Sam (SMS if the email fails) with no registrant data: the failure
- * code, the division and key, and a PII-free detail. */
+/**
+ * Tell Sam, with no registrant data: the failure code, the division and key,
+ * and how to recover. Inside a request it is delivered after the response
+ * goes out, so a slow Resend or the SMS fallback never holds a parent's
+ * checkout open; outside one (a script, a test) it is delivered inline.
+ */
 async function alertSyncFailure(
   signature: string,
   ref: string,
   detail: string,
 ): Promise<void> {
+  const deliver = async () => {
+    try {
+      await deliverCronAlert("linkdink-roster-sync", {
+        attempted: 1,
+        succeeded: 0,
+        failures: [
+          {
+            signature,
+            ref,
+            detail: `${detail}. The player is not on the Link & Dink roster. Match this alert's time to the "invoice sent" admin email or a row in the NGA MVF Junior Tournament Registrations DB, then re-send that registration to the L&D endpoint (dry_run first; it is idempotent) or add the player on L&D by hand. Log tag ${TAG}.`,
+          },
+        ],
+      });
+    } catch {
+      // deliverCronAlert never throws; this keeps that promise if it ever does.
+      console.error(`${TAG} alert delivery threw for ${ref} (${signature})`);
+    }
+  };
   try {
-    await deliverCronAlert("linkdink-roster-sync", {
-      attempted: 1,
-      succeeded: 0,
-      failures: [
-        {
-          signature,
-          ref,
-          detail: `${detail}. The NGA registration is fine; the player is not on the Link & Dink roster. Re-sending is safe (the endpoint is idempotent). Log tag ${TAG}.`,
-        },
-      ],
-    });
+    after(deliver);
   } catch {
-    // deliverCronAlert never throws; this keeps that promise if it ever does.
+    await deliver();
   }
 }
 
@@ -132,22 +149,33 @@ async function alertSyncFailure(
 export async function syncMvfRegistrationToLinkDink(
   input: MvfRosterSyncInput,
 ): Promise<boolean> {
-  // Logs and alerts name the division and key, never the registrant.
-  const division = /^[a-z0-9]{1,8}$/.test(input.division)
-    ? input.division
-    : "invalid";
-  const body = buildMvfRosterSyncBody(input);
-  const ref = `${division} → ${body?.event_key ?? "no event key"}`;
+  let ref = "unknown registration";
   try {
+    // Logs and alerts name the division and key, never the registrant.
+    const division = /^[a-z0-9]{1,8}$/.test(input.division)
+      ? input.division
+      : "invalid";
+    const body = buildMvfRosterSyncBody(input);
+    ref = `${division} → ${body?.event_key ?? "no event key"}`;
+
+    // Only a production deploy sends. A preview or local build would seat
+    // test children on the live roster, so it skips unless LINKDINK_BASE_URL
+    // points it at an L&D instance on purpose.
+    const production = process.env.VERCEL_ENV === "production";
+    const baseUrlOverride = process.env.LINKDINK_BASE_URL;
+    if (!production && !baseUrlOverride) {
+      console.info(`${TAG} not a production deploy — skipping L&D roster sync (${ref})`);
+      return false;
+    }
+
     const secret = process.env.NGA_SYNC_SECRET;
     if (!secret) {
       console.error(`${TAG} NGA_SYNC_SECRET not set — skipping L&D roster sync (${ref})`);
-      // Preview and local builds skip by design; production must not.
-      if (process.env.VERCEL_ENV === "production") {
+      if (production) {
         await alertSyncFailure(
-          "not_configured",
+          "nga_secret_unset",
           ref,
-          "NGA_SYNC_SECRET is not set on the production deploy",
+          "NGA_SYNC_SECRET is not set on the NGA production deploy",
         );
       }
       return false;
@@ -161,15 +189,22 @@ export async function syncMvfRegistrationToLinkDink(
       );
       return false;
     }
-    const res = await fetch(`${LD_BASE_URL}/play/api/internal/nga-roster-add`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-nga-sync-secret": secret,
+
+    const res = await fetch(
+      `${baseUrlOverride ?? DEFAULT_LD_BASE_URL}/play/api/internal/nga-roster-add`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-nga-sync-secret": secret,
+        },
+        body: JSON.stringify(body),
+        // A redirect would carry the secret header (and, on a 307/308, the
+        // child's name) to wherever it points; treat one as a failure.
+        redirect: "error",
+        signal: AbortSignal.timeout(LD_TIMEOUT_MS),
       },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(15000),
-    });
+    );
     const payload = (await res.json().catch(() => ({}))) as {
       ok?: boolean;
       error?: unknown;
