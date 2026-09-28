@@ -126,7 +126,7 @@ async function alertSyncFailure(
           {
             signature,
             ref,
-            detail: `${detail}. The player may be missing from the Link & Dink roster; after a timeout they can still have been seated, so check the roster first. If they are missing, find the registration by this alert's time (the "invoice sent" admin email or the NGA MVF Junior Tournament Registrations DB) and re-send it to the L&D endpoint with NGA_SYNC_SECRET, dry_run first (it is idempotent). Never hand-add a junior through L&D's walk-up form: it ties the child to the parent's adult identity. Log tag ${TAG}.`,
+            detail: `${detail}. The player may be missing from the Link & Dink roster; after a timeout they can still have been seated, so check the roster first. If they are missing, find the registration by this alert's time (the "invoice sent" admin email or the NGA MVF Junior Tournament Registrations DB) and re-send it to the L&D endpoint with NGA_SYNC_SECRET, dry_run first (it is idempotent). Never hand-add a junior through L&D's walk-up form: it skips the junior protections (hidden from peers, the RSVP's child-name fields) and can tie the child to the parent's adult identity. Log tag ${TAG}.`,
           },
         ],
       });

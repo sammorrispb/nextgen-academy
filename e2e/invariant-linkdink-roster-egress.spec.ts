@@ -240,20 +240,35 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
     // Production with system env vars hidden would otherwise skip every
     // registration without a word; so would a local build holding the
     // production secret.
-    stub.on("api.resend.com", { id: "email_alert" });
+    stub
+      .on("localhost:3001/play/api/internal/nga-roster-add", ON_ROSTER)
+      .on("api.resend.com", { id: "email_alert" });
     install();
 
+    // Unset and empty VERCEL_ENV both count as unknown.
     delete process.env.VERCEL_ENV;
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
+    process.env.VERCEL_ENV = "";
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
     expect(stub.callsTo("linkanddink.com")).toHaveLength(0);
     const alerts = stub.callsTo("api.resend.com");
-    expect(alerts).toHaveLength(1);
-    expect(alerts[0].body).toContain("env_unknown");
-    expectNoPii(alerts[0].body, "the alert email");
+    expect(alerts).toHaveLength(2);
+    for (const alert of alerts) {
+      expect(alert.body).toContain("env_unknown");
+      expectNoPii(alert.body, "the alert email");
+    }
 
+    // An explicit override is a deliberate target (a local p3): it sends,
+    // with no alert.
+    process.env.LINKDINK_BASE_URL = "http://localhost:3001";
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(true);
+    expect(stub.callsTo("api.resend.com")).toHaveLength(2);
+
+    // Without the secret (CI, most local builds) it stays quiet.
+    delete process.env.LINKDINK_BASE_URL;
     delete process.env.NGA_SYNC_SECRET;
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
-    expect(stub.calls).toHaveLength(1);
+    expect(stub.calls).toHaveLength(3);
     for (const line of logged) expectNoPii(line, "a log line");
   });
 
@@ -278,6 +293,10 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
     expect(alerts).toHaveLength(1);
     expect(alerts[0].body).toContain("event_cancelled");
     expect(alerts[0].body).toContain("mvf-junior-tournament-10u-2026-10-24");
+    // The recovery steps carry a child-data rule: re-send through the
+    // endpoint, never L&D's walk-up form.
+    expect(alerts[0].body).toContain("dry_run");
+    expect(alerts[0].body).toContain("walk-up");
     expectNoPii(alerts[0].body, "the alert email");
     expect(logged.length).toBeGreaterThan(0);
     for (const line of logged) expectNoPii(line, "a log line");
