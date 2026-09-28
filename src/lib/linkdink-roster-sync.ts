@@ -16,7 +16,8 @@
  * What leaves NGA (a child-PII egress — see the docs/source-inventory.md risk
  * log): the event key, the child's first and last name, and the parent's
  * email, which L&D uses only as an input to its idempotency key and never
- * stores. Nothing else, and only from a production deploy. Pinned by
+ * stores. Nothing else, and only from a production deploy (or a build that
+ * LINKDINK_BASE_URL points at an L&D instance on purpose). Pinned by
  * e2e/invariant-linkdink-roster-egress.spec.ts.
  *
  * Posture: never throws, never fails a registration. A failed sync is logged
@@ -33,9 +34,9 @@ const DEFAULT_LD_BASE_URL = "https://www.linkanddink.com";
 
 const TAG = "[linkdink-roster-sync]";
 
-/** Room for a cold L&D function, short enough that a hung call doesn't hold
- * the parent's checkout response open (the route awaits this sync). */
-const LD_TIMEOUT_MS = 8000;
+/** Room for a cold L&D function. The checkout route awaits this sync, so a
+ * hung L&D call holds the parent's checkout response for at most this long. */
+export const LD_TIMEOUT_MS = 8000;
 
 /** The endpoint's refusal codes (community-os apps/p3/src/app/api/internal/
  * nga-roster-add/route.ts). Only these reach a log line or an alert; any
@@ -125,7 +126,7 @@ async function alertSyncFailure(
           {
             signature,
             ref,
-            detail: `${detail}. The player is not on the Link & Dink roster. Match this alert's time to the "invoice sent" admin email or a row in the NGA MVF Junior Tournament Registrations DB, then re-send that registration to the L&D endpoint (dry_run first; it is idempotent) or add the player on L&D by hand. Log tag ${TAG}.`,
+            detail: `${detail}. The player may be missing from the Link & Dink roster; after a timeout they can still have been seated, so check the roster first. If they are missing, find the registration by this alert's time (the "invoice sent" admin email or the NGA MVF Junior Tournament Registrations DB) and re-send it to the L&D endpoint with NGA_SYNC_SECRET, dry_run first (it is idempotent). Never hand-add a junior through L&D's walk-up form: it ties the child to the parent's adult identity. Log tag ${TAG}.`,
           },
         ],
       });
@@ -160,15 +161,27 @@ export async function syncMvfRegistrationToLinkDink(
 
     // Only a production deploy sends. A preview or local build would seat
     // test children on the live roster, so it skips unless LINKDINK_BASE_URL
-    // points it at an L&D instance on purpose.
+    // points it at an L&D instance on purpose ("" counts as unset).
     const production = process.env.VERCEL_ENV === "production";
-    const baseUrlOverride = process.env.LINKDINK_BASE_URL;
+    const baseUrlOverride = process.env.LINKDINK_BASE_URL || undefined;
+    const secret = process.env.NGA_SYNC_SECRET;
     if (!production && !baseUrlOverride) {
+      if (secret && !process.env.VERCEL_ENV) {
+        // A sync secret with no known environment: production with system
+        // env vars hidden (every registration would skip without a word), or
+        // a local build holding the production secret. Both need a human.
+        console.error(`${TAG} NGA_SYNC_SECRET is set but VERCEL_ENV is not — skipping L&D roster sync (${ref})`);
+        await alertSyncFailure(
+          "env_unknown",
+          ref,
+          "NGA_SYNC_SECRET is set but VERCEL_ENV is not, so this deploy cannot tell whether it is production",
+        );
+        return false;
+      }
       console.info(`${TAG} not a production deploy — skipping L&D roster sync (${ref})`);
       return false;
     }
 
-    const secret = process.env.NGA_SYNC_SECRET;
     if (!secret) {
       console.error(`${TAG} NGA_SYNC_SECRET not set — skipping L&D roster sync (${ref})`);
       if (production) {

@@ -1,11 +1,26 @@
 import { test, expect } from "@playwright/test";
 import { FetchStub } from "./fixtures/fetch-stub";
+import {
+  LD_TIMEOUT_MS,
+  syncMvfRegistrationToLinkDink,
+} from "../src/lib/linkdink-roster-sync";
 
-// Env BEFORE import (the module reads it per call, but keep the convention).
-// Spec files can share a worker, so every key touched here is restored in
-// afterAll. The failure alert emails through Resend, whose fetch-based SDK
-// the stub sees; the TWILIO_* keys are cleared so its SMS fallback can never
-// text a real number from a test run (sendSms() self-skips without them).
+// THE Link & Dink egress invariant (MVF Junior Tournament roster sync). A
+// registrant's child first + last name leave NGA for exactly one destination,
+// the L&D roster endpoint, from a production deploy only, in a body of exactly
+// four fields: the stable division event key, the child's first and last
+// name, and the parent's email (L&D's idempotency-key input, never stored
+// there). No phone, DOB, allergies or emergency contact, and never one event
+// row's exact slug. A failed sync alerts Sam without any child or parent data
+// in the alert or the logs.
+//
+// Env lives in the hooks, not at module scope: Playwright runs every spec's
+// module scope in the runner while collecting tests and forks the workers
+// with that environment, so module-scope env would leak into every worker.
+// The module under test reads env on each call. The TWILIO_* keys are
+// cleared so the alert's SMS fallback can never text a real number from a
+// test run (sendSms() self-skips without them); the alert email goes through
+// Resend, whose fetch-based SDK the stub sees.
 const TOUCHED_ENV = [
   "NGA_SYNC_SECRET",
   "RESEND_API_KEY",
@@ -20,27 +35,18 @@ const TOUCHED_ENV = [
 const savedEnv = Object.fromEntries(TOUCHED_ENV.map((k) => [k, process.env[k]]));
 
 const SYNC_SECRET = "test-nga-sync-secret-7f3a";
-process.env.NGA_SYNC_SECRET = SYNC_SECRET;
-process.env.RESEND_API_KEY = "re_test_alert_key";
-process.env.VERCEL_ENV = "production";
-for (const key of TOUCHED_ENV.slice(3)) delete process.env[key];
-
-import { syncMvfRegistrationToLinkDink } from "../src/lib/linkdink-roster-sync";
-
-// THE Link & Dink egress invariant (MVF Junior Tournament roster sync). A
-// registrant's child first + last name leave NGA for exactly one destination,
-// the L&D roster endpoint, from a production deploy only, in a body of exactly
-// four fields: the stable division event key, the child's first and last
-// name, and the parent's email (L&D's idempotency-key input, never stored
-// there). No phone, DOB, allergies or emergency contact, and never one event
-// row's exact slug. A failed sync alerts Sam without any child or parent data
-// in the alert or the logs.
 const ENDPOINT = "https://www.linkanddink.com/play/api/internal/nga-roster-add";
 const CHILD_FIRST = "Egresskidfirst";
 const CHILD_LAST = "Egresskidlast";
 const PARENT_EMAIL = "egress.parent@example.com";
 const PARENT_PHONE = "3015550187";
 const PII = [CHILD_FIRST, CHILD_LAST, PARENT_EMAIL, PARENT_PHONE];
+const ON_ROSTER = {
+  ok: true,
+  rsvpId: "rsvp_test",
+  alreadyOnRoster: false,
+  playerId: "player_test",
+};
 
 function registration(division: string) {
   return {
@@ -55,6 +61,10 @@ function registration(division: string) {
 const stub = new FetchStub();
 // FetchStub records url/method/body; the request options are captured here.
 let sentInits: RequestInit[] = [];
+// AbortSignal.timeout is wrapped to record what the sync asked for.
+const originalTimeout = AbortSignal.timeout;
+let timeoutsRequested: number[] = [];
+let timeoutSignals: AbortSignal[] = [];
 // Log lines are asserted ONLY for the absence of PII (hostile review item 1:
 // a log line is an echo surface), never for their wording.
 let logged: string[] = [];
@@ -68,10 +78,19 @@ const originalConsole = {
 test.beforeEach(() => {
   stub.reset();
   sentInits = [];
+  timeoutsRequested = [];
+  timeoutSignals = [];
   logged = [];
   process.env.NGA_SYNC_SECRET = SYNC_SECRET;
+  process.env.RESEND_API_KEY = "re_test_alert_key";
   process.env.VERCEL_ENV = "production";
-  delete process.env.LINKDINK_BASE_URL;
+  for (const key of TOUCHED_ENV.slice(3)) delete process.env[key];
+  AbortSignal.timeout = (ms: number) => {
+    const signal = originalTimeout.call(AbortSignal, ms);
+    timeoutsRequested.push(ms);
+    timeoutSignals.push(signal);
+    return signal;
+  };
   for (const level of ["error", "warn", "log", "info"] as const) {
     console[level] = (...args: unknown[]) => {
       logged.push(
@@ -91,6 +110,7 @@ test.beforeEach(() => {
 
 test.afterEach(() => {
   stub.uninstall();
+  AbortSignal.timeout = originalTimeout;
   Object.assign(console, originalConsole);
 });
 
@@ -122,12 +142,7 @@ function expectNoPii(text: string, where: string): void {
 
 test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
   test("one POST per registration to the L&D roster endpoint: stable event key + exactly four fields", async () => {
-    stub.on("www.linkanddink.com/play/api/internal/nga-roster-add", {
-      ok: true,
-      rsvpId: "rsvp_test",
-      alreadyOnRoster: false,
-      playerId: "player_test",
-    });
+    stub.on("www.linkanddink.com/play/api/internal/nga-roster-add", ON_ROSTER);
     install();
 
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(true);
@@ -169,18 +184,16 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
       expect(call.url).not.toContain(SYNC_SECRET);
       // A redirect would carry that header and the body to another origin.
       expect(init.redirect).toBe("error");
-      // A hung L&D call is cut off, because the checkout route waits on it.
-      expect(init.signal).toBeInstanceOf(AbortSignal);
+      // The checkout route waits on this call, so it carries a real timeout.
+      expect(init.signal).toBe(timeoutSignals[i]);
     });
+    expect(timeoutsRequested).toEqual([LD_TIMEOUT_MS, LD_TIMEOUT_MS]);
+    expect(LD_TIMEOUT_MS).toBeGreaterThanOrEqual(3_000);
+    expect(LD_TIMEOUT_MS).toBeLessThanOrEqual(10_000);
   });
 
   test("already on the roster (a retry) counts as success and does not alert", async () => {
-    stub.on("www.linkanddink.com", {
-      ok: true,
-      rsvpId: "rsvp_test",
-      alreadyOnRoster: true,
-      playerId: "player_test",
-    });
+    stub.on("www.linkanddink.com", { ...ON_ROSTER, alreadyOnRoster: true });
     install();
 
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(true);
@@ -189,30 +202,58 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
 
   test("only a production deploy sends; preview and local builds stay off the live roster", async () => {
     stub
-      .on("localhost:3001/play/api/internal/nga-roster-add", {
-        ok: true,
-        rsvpId: "rsvp_test",
-        alreadyOnRoster: false,
-        playerId: "player_test",
-      })
+      .on("localhost:3001/play/api/internal/nga-roster-add", ON_ROSTER)
+      .on("www.linkanddink.com/play/api/internal/nga-roster-add", ON_ROSTER)
       .on("api.resend.com", { id: "email_alert" });
     install();
 
     // The secret is set, which is exactly the drift this guards against.
-    for (const env of ["preview", "development", undefined]) {
-      if (env === undefined) delete process.env.VERCEL_ENV;
-      else process.env.VERCEL_ENV = env;
+    for (const env of ["preview", "development"]) {
+      process.env.VERCEL_ENV = env;
       expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
     }
     expect(stub.calls).toHaveLength(0);
 
     // An explicit LINKDINK_BASE_URL is the deliberate way to point a
-    // non-production build at an L&D instance (e.g. a local p3).
+    // non-production build at an L&D instance (e.g. a local p3)…
     process.env.LINKDINK_BASE_URL = "http://localhost:3001";
     expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(true);
+    // …and without the secret it stays quiet there: only production alerts.
+    delete process.env.NGA_SYNC_SECRET;
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
+    // An empty override counts as unset: preview skips again…
+    process.env.NGA_SYNC_SECRET = SYNC_SECRET;
+    process.env.LINKDINK_BASE_URL = "";
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
+    // …and production still reaches the real endpoint, not a relative URL.
+    process.env.VERCEL_ENV = "production";
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(true);
+
     expect(stub.calls.map((c) => c.url)).toEqual([
       "http://localhost:3001/play/api/internal/nga-roster-add",
+      ENDPOINT,
     ]);
+    for (const line of logged) expectNoPii(line, "a log line");
+  });
+
+  test("a secret with no known environment makes no L&D call and alerts; without the secret it stays quiet", async () => {
+    // Production with system env vars hidden would otherwise skip every
+    // registration without a word; so would a local build holding the
+    // production secret.
+    stub.on("api.resend.com", { id: "email_alert" });
+    install();
+
+    delete process.env.VERCEL_ENV;
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
+    expect(stub.callsTo("linkanddink.com")).toHaveLength(0);
+    const alerts = stub.callsTo("api.resend.com");
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].body).toContain("env_unknown");
+    expectNoPii(alerts[0].body, "the alert email");
+
+    delete process.env.NGA_SYNC_SECRET;
+    expect(await syncMvfRegistrationToLinkDink(registration("10u"))).toBe(false);
+    expect(stub.calls).toHaveLength(1);
     for (const line of logged) expectNoPii(line, "a log line");
   });
 
