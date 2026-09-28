@@ -6,8 +6,7 @@ import {
 import {
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
   MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
-  MVF_JUNIOR_TOURNAMENT_VENUE,
-  MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA,
+  MVF_JUNIOR_TOURNAMENT_WHERE_LINE,
   GUARANTEED_GAMES_TEXT,
   MEDALS_TEXT,
   NO_REFUNDS_TEXT,
@@ -62,7 +61,9 @@ export function mvfTournamentPreEventReminderText(
   return [
     `Hi ${parentFirst},`,
     ``,
-    `The MVF Junior Tournament is 5 days away — ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} at ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}. ${childFirst} is locked in for the ${divisionLabel} division.`,
+    `The MVF Junior Tournament is 5 days away — ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}. ${childFirst} is locked in for the ${divisionLabel} division.`,
+    ``,
+    `Where: ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}`,
     ``,
     `CHECK-IN (please arrive by 3:30 PM):`,
     `- Check in at the NGA tent by the courts — look for the Next Gen Pickleball Academy banner.`,
@@ -93,7 +94,8 @@ export function mvfTournamentPreEventReminderHtml(
 
   return `<div style="${s.wrapper}">
   <h1 style="${s.heading}">5 days out, ${parentFirst}!</h1>
-  <p>The MVF Junior Tournament is this Saturday — <strong>${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</strong> at ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}. <strong>${childFirst}</strong> is locked in for the ${divisionLabel} division.</p>
+  <p>The MVF Junior Tournament is this Saturday — <strong>${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</strong>. <strong>${childFirst}</strong> is locked in for the ${divisionLabel} division.</p>
+  <p><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}</p>
   <div style="${s.cardAccent}">
     <p style="${s.actionLabel}">Check-in — please arrive by 3:30 PM</p>
     <ul style="margin: 8px 0 0; padding-left: 20px;">

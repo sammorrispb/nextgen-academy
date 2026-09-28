@@ -6,8 +6,7 @@ import {
 import {
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
   MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
-  MVF_JUNIOR_TOURNAMENT_VENUE,
-  MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA,
+  MVF_JUNIOR_TOURNAMENT_WHERE_LINE,
   GUARANTEED_GAMES_TEXT,
   MEDALS_TEXT,
   NO_REFUNDS_TEXT,
@@ -66,7 +65,7 @@ export function mvfTournamentSignupConfirmationText(
     `Pay here: ${payUrl}`,
     ``,
     `When: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}`,
-    `Where: ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}`,
+    `Where: ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}`,
     `Format: rotating-partner round robin — ${GUARANTEED_GAMES_TEXT} ${MEDALS_TEXT}`,
     ``,
     `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT}`,
@@ -99,7 +98,7 @@ export function mvfTournamentSignupConfirmationHtml(
   <p style="margin: 24px 0;"><a href="${payUrl}" style="${s.cta}">Pay the entry fee</a></p>
   <div style="${s.card}">
     <p style="margin: 0 0 8px;"><strong>When:</strong> ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</p>
-    <p style="margin: 0 0 8px;"><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}</p>
+    <p style="margin: 0 0 8px;"><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}</p>
     <p style="margin: 0;"><strong>Format:</strong> rotating-partner round robin — ${GUARANTEED_GAMES_TEXT} ${MEDALS_TEXT}</p>
   </div>
   <p style="color: ${c.muted};">${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT}</p>

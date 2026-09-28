@@ -1,4 +1,5 @@
-// NGA MVF Junior Tournament at Apple Ridge Courts, Montgomery Village MD.
+// NGA MVF Junior Tournament at North Creek Community Center, Montgomery
+// Village MD.
 //
 // A NEW product (Sam, 2026-09-22): NGA sells this one on the NGA site —
 // invoice-based signup, same pattern as lessons and the Monday Girls drop-in.
@@ -7,9 +8,23 @@
 // Stripe invoice metadata (nga_share_usd / mvf_share_usd); remittance is
 // manual, there is no automatic transfer.
 //
-// EVENT: Saturday, October 24, 2026, 4:00–7:00 PM, Apple Ridge Courts.
+// EVENT: Saturday, October 24, 2026, 4:00–7:00 PM, North Creek Community
+// Center.
 // Format: rotating partner round robin, minimum 4 guaranteed games per
 // player. Medals for the winners of each division.
+//
+// VENUE MOVED 2026-09-28 (Sam): Apple Ridge Courts → North Creek Community
+// Center, which has lights and 3 dedicated pickleball courts. Sunset on Oct 24
+// is about 6:15 PM, so the last hour of a 4–7 PM event plays under the lights.
+// Nobody had registered yet (the registrations DB was empty and no invoice had
+// gone out), so no family was ever told Apple Ridge and no change notice was
+// needed. The address comes from `NORTH_CREEK` in mvf.ts — the same courts the
+// MVF Thursday classes use — so the two can't drift. Note that MVF's North
+// Creek court-renovation contingency (Watkins Mill) is written for the
+// Thursday classes; it does not move this event on its own.
+//
+// The Link & Dink event shells for the two divisions carry their own venue in
+// ld.events (community-os) — a venue change there is a separate edit.
 //
 // Divisions: 10U (age 10 and under as of Oct 24, 2026) and 14U (ages 11–14
 // as of Oct 24, 2026). Min 6 players per division to run, max 12.
@@ -21,12 +36,16 @@
 //
 // POLICY (Sam 2026-09-22): No refunds. Rain or shine — we play. No rain date.
 
+import { NORTH_CREEK } from "@/data/mvf";
+
 export const MVF_JUNIOR_TOURNAMENT_KIND = "mvf-junior-tournament";
 export const MVF_JUNIOR_TOURNAMENT_TITLE = "MVF Junior Tournament";
 export const MVF_JUNIOR_TOURNAMENT_DATE_LABEL = "Saturday, October 24, 2026";
 export const MVF_JUNIOR_TOURNAMENT_DATE_ISO = "2026-10-24";
 export const MVF_JUNIOR_TOURNAMENT_TIME_LABEL = "4:00–7:00 PM";
-export const MVF_JUNIOR_TOURNAMENT_VENUE = "Apple Ridge Courts";
+export const MVF_JUNIOR_TOURNAMENT_VENUE = NORTH_CREEK.center;
+/** Street address for the "Where" lines — the page, the success page, every email. */
+export const MVF_JUNIOR_TOURNAMENT_ADDRESS = `${NORTH_CREEK.streetAddress}, ${NORTH_CREEK.locality}, ${NORTH_CREEK.region} ${NORTH_CREEK.postalCode}`;
 export const MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA = "Montgomery Village, MD";
 
 /** Minimum players per division for the division to run. */
@@ -45,6 +64,11 @@ export const NO_REFUNDS_TEXT = "No refunds.";
 export const RAIN_OR_SHINE_TEXT = "Rain or shine — we play. No rain date.";
 export const GUARANTEED_GAMES_TEXT = "Minimum 4 guaranteed games.";
 export const MEDALS_TEXT = "Medals for the winners of each division.";
+/** Why this venue (Sam 2026-09-28) — rendered wherever the address is. */
+export const COURTS_TEXT = "3 dedicated pickleball courts with lights.";
+
+/** The "Where" line every tournament email carries: name, address, courts. */
+export const MVF_JUNIOR_TOURNAMENT_WHERE_LINE = `${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_ADDRESS} — ${COURTS_TEXT}`;
 
 /**
  * What happens when a division draws fewer than 6 players. Sam has not
