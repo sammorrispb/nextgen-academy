@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
 import {
+  COURTS_TEXT,
   GUARANTEED_GAMES_TEXT,
   MEDALS_TEXT,
+  MVF_JUNIOR_TOURNAMENT_ADDRESS,
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
   MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
   MVF_JUNIOR_TOURNAMENT_TITLE,
@@ -15,8 +17,7 @@ import {
 
 export const metadata: Metadata = {
   title: "You're In — MVF Junior Tournament",
-  description:
-    "Your player is registered for the Next Gen MVF Junior Tournament at Apple Ridge Courts. See you Saturday.",
+  description: `Your player is registered for the Next Gen MVF Junior Tournament at ${MVF_JUNIOR_TOURNAMENT_VENUE}. See you Saturday.`,
   robots: { index: false, follow: false },
 };
 
@@ -139,7 +140,8 @@ export default async function MvfJuniorTournamentSuccessPage({
           </p>
           <p className="text-ngpa-white/70 text-sm mt-2">
             <strong className="text-ngpa-white">Where:</strong>{" "}
-            {MVF_JUNIOR_TOURNAMENT_VENUE}
+            {MVF_JUNIOR_TOURNAMENT_VENUE}, {MVF_JUNIOR_TOURNAMENT_ADDRESS}.{" "}
+            {COURTS_TEXT}
           </p>
           <p className="text-ngpa-white/70 text-sm mt-2">
             <strong className="text-ngpa-white">Format:</strong> rotating

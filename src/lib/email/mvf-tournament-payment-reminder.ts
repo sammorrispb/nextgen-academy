@@ -6,8 +6,7 @@ import {
 import {
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
   MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
-  MVF_JUNIOR_TOURNAMENT_VENUE,
-  MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA,
+  MVF_JUNIOR_TOURNAMENT_WHERE_LINE,
   NO_REFUNDS_TEXT,
   RAIN_OR_SHINE_TEXT,
 } from "@/data/mvf-junior-tournament-2026";
@@ -58,7 +57,7 @@ export function mvfTournamentPaymentReminderText(
     `Finish payment here: ${payUrl}`,
     ``,
     `When: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}`,
-    `Where: ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}`,
+    `Where: ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}`,
     ``,
     `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT}`,
     ``,
@@ -89,7 +88,7 @@ export function mvfTournamentPaymentReminderHtml(
   <p style="margin: 24px 0;"><a href="${payUrl}" style="${s.cta}">Finish payment</a></p>
   <div style="${s.card}">
     <p style="margin: 0 0 8px;"><strong>When:</strong> ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</p>
-    <p style="margin: 0;"><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}</p>
+    <p style="margin: 0;"><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}</p>
   </div>
   <p style="color: ${c.muted};">${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT}</p>
   <p>Already paid or need a hand? Just reply to this email.</p>
