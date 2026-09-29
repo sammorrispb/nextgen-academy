@@ -9,6 +9,17 @@ import LessonBookPage from "../src/app/lessons/book/page";
 import { leadConfirmationHtml } from "../src/lib/email/lead-confirmation";
 
 const source = (path: string) => readFileSync(`src/${path}`, "utf8");
+const originalFetch = globalThis.fetch;
+const schedulingChecks: { url: string; options?: RequestInit }[] = [];
+
+test.beforeEach(() => {
+  schedulingChecks.length = 0;
+  globalThis.fetch = async (url, options) => {
+    schedulingChecks.push({ url: String(url), options });
+    return new Response(null, { status: 200 });
+  };
+});
+test.afterEach(() => { globalThis.fetch = originalFetch; });
 
 test("lesson entry shares Coach Sam's NGA request flow", () => {
   expect(lessonSchedulingUrl()).toBe("https://coach.sammorrispb.com/book/nga-lessons");
@@ -19,6 +30,38 @@ test("a new parent reaches request scheduling without an invoice or Stripe read"
     .rejects.toMatchObject({
       digest: "NEXT_REDIRECT;replace;https://coach.sammorrispb.com/book/nga-lessons?utm_source=newsletter;307;",
     });
+  expect(schedulingChecks).toHaveLength(1);
+  expect(schedulingChecks[0].url).toBe(lessonSchedulingUrl());
+  expect(schedulingChecks[0].options).toMatchObject({ method: "HEAD", cache: "no-store", redirect: "follow" });
+  expect(schedulingChecks[0].options?.signal).toBeInstanceOf(AbortSignal);
+});
+
+for (const status of [404, 503, 401]) {
+  test(`an unavailable scheduler (${status}) offers lesson scheduling by text`, async () => {
+    globalThis.fetch = async () => new Response(null, { status });
+    const view = JSON.stringify(await LessonBookPage({ searchParams: Promise.resolve({}) }));
+    expect(view).toContain('"href":"sms:+13013254731"');
+    expect(view).toContain("Text to schedule a lesson");
+    expect(view).toContain("301-325-4731");
+    expect(view).not.toContain("Find your invoice");
+    expect(view).not.toContain("evaluation");
+  });
+}
+
+test("scheduler network failure offers text scheduling without exposing provider errors", async () => {
+  globalThis.fetch = async () => { throw new Error("internal provider failure"); };
+  const view = JSON.stringify(await LessonBookPage({ searchParams: Promise.resolve({}) }));
+  expect(view).toContain("Text to schedule a lesson");
+  expect(view).not.toContain("internal provider failure");
+});
+
+test("a stalled scheduler request times out and offers text scheduling", async () => {
+  test.setTimeout(10_000);
+  globalThis.fetch = async (_url, options) => new Promise((_resolve, reject) => {
+    options?.signal?.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+  });
+  const view = JSON.stringify(await LessonBookPage({ searchParams: Promise.resolve({}) }));
+  expect(view).toContain("Text to schedule a lesson");
 });
 
 test("lesson redirect forwards only bounded campaign attribution, never child or invoice fields", () => {
@@ -36,7 +79,7 @@ test("lesson redirect forwards only bounded campaign attribution, never child or
 
 test("legacy paid lesson invoice path retains its payment and product guards", () => {
   const page = source("app/lessons/book/page.tsx");
-  expect(page).toContain("if (!inv) redirect(lessonSchedulingUrl(params))");
+  expect(page).toContain("if (!inv)");
   expect(page).toContain('m.kind !== "lesson"');
   expect(page).toContain('invoice.status !== "paid"');
   expect(page).toContain("<LessonBookingForm invoiceId={invoice.id}");
