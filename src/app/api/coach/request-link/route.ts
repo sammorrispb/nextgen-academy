@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { deliverCronAlert } from "@/lib/cron-alert";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { siteOrigin } from "@/lib/site-origin";
 import { isAllowedCoachEmail } from "@/lib/coach-allowlist";
 import { createMagicLinkToken } from "@/lib/coach-auth";
 
@@ -7,15 +10,16 @@ export const runtime = "nodejs";
 
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 
-function siteOrigin(req: NextRequest): string {
-  return (
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com"
-  );
-}
+// Per IP, never per email: a per-email bucket would let anyone lock Sam (or a
+// coach) out of sign-in by spamming their address. Checked before the
+// allowlist so a 429 says nothing about which addresses are valid.
+const limiter = createRateLimiter({ limit: 10 });
 
 export async function POST(req: NextRequest) {
+  if (limiter.isRateLimited(getClientIp(req))) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+
   let email = "";
   try {
     const body = (await req.json()) as { email?: string };
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
   }
 
   const token = createMagicLinkToken(email);
-  const link = `${siteOrigin(req)}/coach/auth/verify?token=${encodeURIComponent(token)}`;
+  const link = `${siteOrigin()}/coach/auth/verify?token=${encodeURIComponent(token)}`;
 
   const resend = new Resend(apiKey);
   const { error } = await resend.emails.send({
@@ -60,6 +64,14 @@ export async function POST(req: NextRequest) {
   });
   if (error) {
     console.error("[coach-request-link] Resend rejected", error);
+    // The only user of this form is Sam or a coach, and a sign-in email that
+    // never arrives looks identical to one that's slow. Alert (email, then SMS
+    // fallback — the likely failure is Resend itself) so it isn't a guess.
+    await deliverCronAlert("coach-request-link", {
+      attempted: 1,
+      succeeded: 0,
+      failures: [{ signature: "sign_in_email_rejected" }],
+    });
     return NextResponse.json({ error: "Could not send" }, { status: 502 });
   }
 
