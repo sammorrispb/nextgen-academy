@@ -4,6 +4,7 @@ import {
   classifyNotionFailure as classifyNotionFailureShared,
   createNotionPageSourceFailSoft,
 } from "./notion-utils";
+import { checkoutRowExists } from "./dedupe-lookup";
 
 export interface DropInRow {
   parentName: string;
@@ -379,11 +380,18 @@ export async function fetchAllDropInsInRange(
   return data.results.map(pageToDropIn);
 }
 
+// Webhook-only duplicate guard. Deliberately NOT built on
+// findDropInPageByCheckoutId, which the cancel page, coach check-in and
+// cancel-dropin share and which must keep answering null on a Notion blip:
+// this one throws DedupeLookupError instead, so a Stripe redelivery during a
+// Notion outage becomes a retry rather than a second roster row.
 export async function findDropInByCheckoutId(
   checkoutSessionId: string,
 ): Promise<boolean> {
-  const found = await findDropInPageByCheckoutId(checkoutSessionId);
-  return found !== null;
+  const notionKey = process.env.NOTION_API_KEY;
+  const dbId = process.env.NOTION_DROPINS_DB_ID;
+  if (!notionKey || !dbId) return false;
+  return checkoutRowExists(notionKey, dbId, checkoutSessionId);
 }
 
 export async function findDropInPageByCheckoutId(
