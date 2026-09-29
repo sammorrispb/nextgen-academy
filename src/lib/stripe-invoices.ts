@@ -45,6 +45,9 @@ export interface SignupInvoiceResult {
   /**
    * Stripe replayed the send: an earlier attempt of this same submission
    * already emailed this invoice, so the caller must not announce it again.
+   * Also true on a FIRST attempt whose send the SDK itself retried after
+   * Stripe processed it but the response was lost (maxNetworkRetries): the
+   * invoice is still right; only our announcement is skipped.
    */
   alreadySent: boolean;
 }
