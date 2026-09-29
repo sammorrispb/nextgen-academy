@@ -5,6 +5,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-29 — The MVF Junior Tournament's extra child fields are inventoried (D7 still open)
+
+- **Situation:** The MVF Junior Tournament checkout (live since 2026-09-22) collects a child's last name, full DOB, allergies and emergency contact: more than the first-name + birth-year baseline, and outside the camp-only safety exception. `docs/source-inventory.md` had no row for it and no decision record approves it (security review 2026-09-28, D7). Sam asked for the inventory row.
+- **Decision:** Inventory only; no code changes. There is a lib row for `notion-mvf-tournament-registrations.ts`, risk log #12 tracing every destination of each field, and a pointer from #8. All three say the flow is **not approved** and D7 is open. The trace found that the webhook's `invoice.paid` notice emails the DOB, allergies and emergency contact in plain text to MVF's partner contact. That is the one path that puts these fields in an outside organization's inbox.
+- **Risk:** Recording a flow is not approving it; the row says so. The fields keep accruing with each registration until D7 is decided. No spec pins what the MVF partner email or the Notion row carries.
+- **Change:** `docs/source-inventory.md` (row, #8 pointer, #12). Docs only.
+
 ## 2026-09-29 — Security follow-ups: /api/fall-interest retired; the name cleaner closes two look-alikes; L&D roster names cleaned; a read-only Stripe name audit
 
 - **Situation:** Four codeable follow-ups from the 2026-09-28 security review. Sam approved items 1–4 through IPAV on 2026-09-29, and nothing else.
