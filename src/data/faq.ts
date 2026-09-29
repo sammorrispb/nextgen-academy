@@ -1,5 +1,8 @@
 import { EVALUATION_SMS_URL } from "./scheduling";
-import { LESSON_PRICE_USD } from "./lessons";
+import {
+  GROUP_LESSON_PRICE_PER_PLAYER_USD,
+  PRIVATE_LESSON_PRICE_USD,
+} from "./lessons";
 import { CAMP_OPTIONS } from "./camps";
 import { FALL_SEASON_PRICE_USD } from "./fall-season-2026";
 import { PICKLPARK_LEAGUES } from "./picklpark-leagues-2026";
@@ -75,7 +78,7 @@ export const faq: FaqItem[] = [
     // so "how much" gets a concrete answer. The DROP-IN figure is never printed
     // (Sam, 2026-09-08) — e2e/invariant-dropin-price-not-quoted.spec.ts. Every
     // figure here is derived from its data file, never typed.
-    answer: `Start with the free 30-minute evaluation — it places your child on the right Red, Orange, Green, or Yellow Ball court and costs nothing. After that, group classes are drop-in, one hour at a time: no subscription and no commitment, and the rate is shown at checkout before you pay. Six-week season blocks are $${FALL_SEASON_PRICE_USD} per player, paid up front, and summer camp is $${CAMP_DAY_PRICE} a morning or $${CAMP_WEEK_PRICE} for the full week. The Pickl Park sets and shows the price for the Saturday leagues we coach in Frederick, and MVF classes are priced on MVF's own registration portal. Private, semi-private, and small-group lessons are $${LESSON_PRICE_USD} total for the hour, split between the players for group lessons. Request a time first; Coach Sam confirms before sending an invoice. Next Gen registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund.`,
+    answer: `Start with the free 30-minute evaluation — it places your child on the right Red, Orange, Green, or Yellow Ball court and costs nothing. After that, group classes are drop-in, one hour at a time: no subscription and no commitment, and the rate is shown at checkout before you pay. Six-week season blocks are $${FALL_SEASON_PRICE_USD} per player, paid up front, and summer camp is $${CAMP_DAY_PRICE} a morning or $${CAMP_WEEK_PRICE} for the full week. The Pickl Park sets and shows the price for the Saturday leagues we coach in Frederick, and MVF classes are priced on MVF's own registration portal. Private lessons are $${PRIVATE_LESSON_PRICE_USD} for the hour, and semi-private and small-group lessons are $${GROUP_LESSON_PRICE_PER_PLAYER_USD} per player for the hour. Request a time first; Coach Sam confirms before sending an invoice. Next Gen registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund.`,
   },
   {
     question: "What’s your refund policy?",

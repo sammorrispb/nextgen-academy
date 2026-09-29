@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
-import { LESSON_PRODUCTS, LESSON_PRICE_USD } from "@/data/lessons";
+import {
+  GROUP_LESSON_PRICE_PER_PLAYER_USD,
+  LESSON_PRODUCTS,
+  PRIVATE_LESSON_PRICE_USD,
+} from "@/data/lessons";
 
 export const metadata: Metadata = {
   title: "Private & Group Lessons",
-  description:
-    "One-hour private or group pickleball lessons for kids 6–16 in Montgomery County, MD — $60 per hour. A Next Gen coach, scheduled around your family.",
+  description: `One-hour pickleball lessons for kids 6–16 in Montgomery County, MD — $${PRIVATE_LESSON_PRICE_USD} private or $${GROUP_LESSON_PRICE_PER_PLAYER_USD} per player in a small group, scheduled around your family.`,
   alternates: { canonical: "/lessons" },
 };
 
@@ -30,7 +33,7 @@ export default function LessonsPage() {
             One hour with a Next Gen coach — private or in a small
             level-matched group.{" "}
             <strong className="text-ngpa-white">
-              ${LESSON_PRICE_USD} per hour
+              {`$${PRIVATE_LESSON_PRICE_USD} for a private hour, $${GROUP_LESSON_PRICE_PER_PLAYER_USD} per player in a group`}
             </strong>
             , for players ages 6&ndash;16. Choose up to three available times;
             Coach Sam confirms the time and location, then sends your invoice.
@@ -52,10 +55,10 @@ export default function LessonsPage() {
                     {product.title}
                   </h2>
                   <p className="mt-1 font-heading text-3xl font-black text-ngpa-teal">
-                    ${LESSON_PRICE_USD}
+                    ${product.priceUsd}
                     <span className="text-base font-bold text-ngpa-white/60">
                       {" "}
-                      / hour
+                      / {product.priceUnit}
                     </span>
                   </p>
                   <p className="text-xs text-ngpa-white/55 mt-1">
@@ -95,9 +98,9 @@ export default function LessonsPage() {
             </p>
             <p className="mt-3 text-base text-ngpa-white/75 leading-relaxed">
               Coach Sam confirms the time and location before sending your
-              invoice. Group lessons are ${LESSON_PRICE_USD} total for the hour,
-              split between the players. A parent or guardian must have the NGA
-              waiver on file before the lesson is confirmed.
+              invoice. Group lessons are ${GROUP_LESSON_PRICE_PER_PLAYER_USD} per
+              player for the hour. A parent or guardian must have the NGA waiver
+              on file before the lesson is confirmed.
             </p>
             <Link
               href="/lessons/book"

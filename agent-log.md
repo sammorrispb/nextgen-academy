@@ -5,6 +5,23 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-29 — Lessons re-priced: $75 private, $40 per player for a group
+
+- **Situation:** Sam, looking at the live `/lessons` page: private lessons should be $75/hour and group lessons $40 per person. The site quoted one $60 hour for both, with a group splitting the $60 between its players (the 2026-09-21 basis). The price lived in one constant (`LESSON_PRICE_USD`) read by `/lessons`, the cost FAQ, the legacy invoice route and an orphaned purchase form; the home-page intent card typed "$60" by hand. Parents no longer pay through this repo: since #377, `/lessons/book` forwards to Coach OS (`/book/nga-lessons`), whose draft program (community-os #1458, unmerged) invoices "$60 total per hour" and hardcodes `6000` cents in its migration seed, its reservation guard and `invoice.ts`. That link 404s today; NGA #380 is the fallback.
+- **Decision:**
+  - Two constants and one helper in `src/data/lessons.ts`: `PRIVATE_LESSON_PRICE_USD = 75`, `GROUP_LESSON_PRICE_PER_PLAYER_USD = 40`, `lessonTotalUsd(type, players)`. The helper throws a `RangeError` outside 2–8 players, so a bad count can't price an invoice. Semi-private (2 players) is a group lesson and costs $80.
+  - Every surface reads them. `/lessons` shows "$75 / hour" and "$40 / player", and so do the cost FAQ and the home-page card; no lesson surface types a figure.
+  - **Slop-Free Zone edit: `api/checkout-lesson/route.ts`.** The legacy route no longer has a UI caller, but it still makes Stripe email an invoice to any typed address. It now bills one line of `lessonTotalUsd(...)`: $75 private, or $40 × players for a group. The admin notice shows the same total. Its admin-notice import moved from a dynamic `import()` to a static one, with no behaviour change, because the test runner can't load a dynamic import of a `.ts` module; that is also why no spec had run the route to completion before. The copy and the charge move together (the rule in `lessons.ts`). This needs Sam's explicit go on the PR before merge.
+  - Deleted `src/components/LessonPurchaseForm.tsx`. Nothing has rendered it since #377, and keeping it meant writing per-player pricing into dead code.
+- **Risk:**
+  - **Coach OS still says $60 total.** Until community-os #1458 is re-priced before it ships, a parent who requests through the scheduler would be invoiced $60 for any lesson. The site would say $75 or $40 × N. Queued as a separate task for that repo.
+  - Per-player pricing makes a group invoice depend on the parent's self-reported headcount. Under the flat hour the count didn't move the charge. A family can under-report and bring more kids; that is a coach-side check at the court.
+  - `/api/checkout-lesson` is still an open invoice-sending endpoint with no UI caller (security review D2). Retiring it (410) would close it. That is Sam's call and is not done here.
+- **Change:**
+  - `src/data/lessons.ts`, `src/app/lessons/page.tsx`, `src/data/faq.ts`, `src/components/IntentChooser.tsx`, `src/app/api/checkout-lesson/route.ts`; comments in `validate-lesson.ts` and `stripe-invoices.ts`; `LessonPurchaseForm.tsx` deleted; `.env.example`, `CLAUDE.md` (one sentence) and a superseded note in `docs/conversion-build-2026-09-21.md`.
+  - New `e2e/invariant-lesson-pricing.spec.ts` (13 tests): pricing math; the route's actual invoice line and admin-notice amount, through a stubbed Stripe client and Resend; `/lessons`, FAQ and home-card text; no typed figure on any lesson surface. All 13 fail on main's source. On main the four route tests die at the dynamic import rather than on the amount, so the mutation runs below are what show they catch a wrong charge.
+  - Mutation-checked 10/10, each turning it red: flat group price, private back to 60, range guard dropped, the route charging a fixed private hour, the route charging $40 once, a wrong admin-notice amount, the group card quoted per hour, the FAQ reverting to a typed total, a typed figure on the home card, and the old rate typed into the page hero.
+
 ## 2026-09-29 — D7 approved: the MVF Junior Tournament's extra child fields are a scoped exception, pinned
 
 - **Situation:** Risk log #12 (PR #378) inventoried the MVF tournament's child last name, full DOB, allergies and emergency contact, and found that the webhook's "paid" notice sends the DOB, allergies and emergency contact in plain text to MVF's partner contact. Nothing had approved the flow. The options offered were to approve it as is, to trim the MVF email, or to replace the DOB.
