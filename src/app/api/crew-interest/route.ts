@@ -229,7 +229,6 @@ export async function POST(request: NextRequest) {
       preferred_days: preferredDays,
       preferred_time: preferredTime,
       preferred_location: preferredLocation || null,
-      friends_wanted: friendsWanted || null,
       crew_interest_source: source,
       notion_status: notionStatus,
       cluster: cluster?.slug ?? null,

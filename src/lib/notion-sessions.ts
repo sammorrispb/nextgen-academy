@@ -66,8 +66,10 @@ export interface NgaSession {
   status: "Open" | "Full" | "Cancelled" | "Completed" | "Passed";
   /** Child first names of confirmed registrants who opted in to public display. */
   roster: string[];
-  /** Non-PII social-proof aggregate over all confirmed registrants. */
-  ageStats: { count: number; minAge: number; maxAge: number } | null;
+  /** Social-proof aggregate: `count` covers every confirmed registrant, but
+   * ages come ONLY from families who consented to public display — the line
+   * renders beside a venue, date and time. Null ages = nobody consented. */
+  ageStats: { count: number; minAge: number | null; maxAge: number | null } | null;
   /** True once the coach 24h pre-event briefing email has fired (cron dedup). */
   coachReminderSent: boolean;
 }
@@ -219,7 +221,7 @@ export async function fetchUpcomingSessions(
   try {
     const drops = await fetchUpcomingDropIns(startIso, endIso, { revalidate: 300 });
     const namesByKey = new Map<string, string[]>();
-    const agesByKey = new Map<string, number[]>();
+    const dropsByKey = new Map<string, typeof drops>();
     for (const d of drops) {
       const k = rosterKey(d.sessionDate, d.sessionStartTime);
       if (d.childFirstName && d.displayConsent) {
@@ -227,20 +229,14 @@ export async function fetchUpcomingSessions(
         arr.push(d.childFirstName);
         namesByKey.set(k, arr);
       }
-      const age = ageFromBirthYear(d.childBirthYear, now);
-      if (age !== null) {
-        const arr = agesByKey.get(k) ?? [];
-        arr.push(age);
-        agesByKey.set(k, arr);
-      }
+      const group = dropsByKey.get(k) ?? [];
+      group.push(d);
+      dropsByKey.set(k, group);
     }
     for (const s of sessions) {
       const k = rosterKey(s.date, s.startTime);
       s.roster = namesByKey.get(k) ?? [];
-      const ages = agesByKey.get(k) ?? [];
-      s.ageStats = ages.length
-        ? { count: ages.length, minAge: Math.min(...ages), maxAge: Math.max(...ages) }
-        : null;
+      s.ageStats = buildAgeStats(dropsByKey.get(k) ?? [], now);
     }
   } catch (err) {
     console.error("[notion-sessions] roster batch failed", err);
@@ -326,16 +322,7 @@ export async function fetchSessionById(id: string): Promise<NgaSession | null> {
         .filter((d) => d.displayConsent)
         .map((d) => d.childFirstName)
         .filter(Boolean);
-      const ages = matching
-        .map((d) => ageFromBirthYear(d.childBirthYear))
-        .filter((a): a is number => a !== null);
-      if (ages.length) {
-        ageStats = {
-          count: ages.length,
-          minAge: Math.min(...ages),
-          maxAge: Math.max(...ages),
-        };
-      }
+      ageStats = buildAgeStats(matching);
     } catch (err) {
       console.error("[notion-sessions] single-session roster failed", err);
     }
@@ -912,4 +899,25 @@ export async function fetchSessionsInRange(
   }
 
   return { rows, ok: true, truncated: true };
+}
+
+/**
+ * Public social-proof aggregate for one session's confirmed registrants.
+ * Every registrant counts; only display-consented ones contribute an age.
+ * Pinned by e2e/invariant-open-brain-child-field-cap.spec.ts.
+ */
+export function buildAgeStats(
+  registrants: Array<{ childBirthYear?: number | null; displayConsent?: boolean }>,
+  now: Date = new Date(),
+): NgaSession["ageStats"] {
+  if (registrants.length === 0) return null;
+  const ages = registrants
+    .filter((r) => r.displayConsent)
+    .map((r) => (r.childBirthYear ? ageFromBirthYear(r.childBirthYear, now) : null))
+    .filter((a): a is number => a !== null);
+  return {
+    count: registrants.length,
+    minAge: ages.length ? Math.min(...ages) : null,
+    maxAge: ages.length ? Math.max(...ages) : null,
+  };
 }
