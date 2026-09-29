@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
   <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 8px;">
     You're on the waitlist.
   </h1>
-  <p style="font-size: 15px; line-height: 1.6;">Hi ${required.parentName},</p>
+  <p style="font-size: 15px; line-height: 1.6;">Hi ${esc(required.parentName)},</p>
   <p style="font-size: 15px; line-height: 1.6;">
     Thanks for adding yourself to the Next Gen waitlist for <strong style="color: #AADC00;">${required.preferredArea}</strong>. We&rsquo;ll email you the day new sessions open near you &mdash; usually 30 days ahead of the session date.
   </p>
