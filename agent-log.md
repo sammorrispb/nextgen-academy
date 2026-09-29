@@ -5,6 +5,39 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-29 — Security follow-ups: /api/fall-interest retired; the name cleaner closes two look-alikes; L&D roster names cleaned; a read-only Stripe name audit
+
+- **Situation:** Four codeable follow-ups from the 2026-09-28 security review. Sam approved items 1–4 through IPAV on 2026-09-29, and nothing else.
+  1. `/api/fall-interest` still upserted by email. Its form (`FallInterestForm`) is rendered nowhere, but anyone who knew a family's address could overwrite that family's child name, birth year and level. They could also make NGA email the address and forward the answers to Open Brain.
+  2. `invoiceSafeName` let U+01C0–U+01C3 (Latin letters that look like `|`, `‖` and `!`) through. It also let a combining mark stand alone, so "evil ̣ com" printed a floating dot.
+  3. `linkdink-roster-sync.ts` sent raw child names to L&D. Read-only check in community-os (origin/main, `apps/p3`): the organizer and MVF see the child as "First L." (`composeDisplayName`); `roster.csv` / `roster.json` and the organizer's registration alert carry the full names; peer and results surfaces say "Youth player". So typed text reaches organizer screens and inboxes.
+  4. A Stripe customer created before #375 keeps its stored name on future invoices.
+- **Decision:**
+  - **Item 1: retire (410 Gone), not "first response stands".** The route has no legitimate caller. Under "first response stands" it would keep three surfaces open for nothing: an anonymous write of child fields, an NGA email to any typed address (D2 territory) and an Open Brain egress. Retiring closes all three. The route reads nothing and returns the same 410 for any body. `upsertFallInterest` and `findFallInterestByEmail` are deleted, so no writer is left to re-wire. `fetchFallInterestDemand` (coach calendar) is unchanged. The "mirroring upsertPollResponse" comment is gone with them.
+  - **Item 2: shared `cleanPersonName()`** in `invoice-text.ts`, returning "" when nothing survives; `invoiceSafeName = cleanPersonName(raw) || fallback`. It adds U+01C0–U+01C3 to the strip set. A second pass removes every run of combining marks not directly after a letter (or a mark on a letter). It runs after the strip pass, so a mark after a stripped character, space, hyphen or apostrophe goes. A letter + mark with no precomposed form (q̇) still survives (positive control).
+  - **Item 3:** `buildMvfRosterSyncBody` sends `cleanPersonName` of both names, not `invoiceSafeName`: "your player" as a child's `first_name` would seat a phantom.
+    - An empty cleaned last name is sent as "" (L&D stores null).
+    - An empty cleaned first name (a name wholly in another script, or only symbols) is **not sent**. It alerts `name_unprintable` with no name, and the alert's recovery text says to seat the child through the endpoint with the name in Latin letters. Sending the raw value would reopen the look-alike hole, and a placeholder would seat a child nobody can find. This is a reversible call inside the approved scope.
+  - **Item 4:** `scripts/audit-stripe-customer-names.mjs`. It sends only GET `/v1/customers`, pages to exhaustion, and prints `id · created (UTC date) · reason codes` (`punct`, `digit`, `lookalike`, `non_latin`, `other`), then `scanned N, flagged M`. It never prints a name or email, and a Stripe error prints the status only. An `rk_` key with Customers: Read is enough. It was **not run against Stripe**; Sam runs it.
+    - It mirrors the cleaner rather than importing the TypeScript module: Playwright's loader can't load a `.ts` import from a plain ES module. A drift test runs the same fixtures through both copies.
+- **Risk:**
+  - The cleaning changes L&D's idempotency key (HMAC of email|first|last) for any name with a stripped character, so a child synced raw before this PR would seat twice on a re-send. The RLS-scoped L&D MCP sees 0 `nga-sync` RSVPs (positive control: 146 rsvps readable), but that reader can't prove zero. Confirm with a service-role read, and dry-run first, before any backfill.
+  - A non-Latin first name now needs a manual seat on L&D. The Notion row, Stripe metadata and admin email keep the raw value.
+  - `FallInterestForm.tsx`, `validate-fall-interest.ts` and `email/fall-interest-confirmation.ts` are now dead code, left in place to keep this PR to 8 code files (the form would POST to a 410). They should be deleted in a later cleanup.
+  - Bearing on open decisions, not acted on:
+    - D2: retiring the route removes one of the unverified-address senders.
+    - D3: the retired route's past `nga_fall_interest` ingests are part of the Open Brain rows the scrub covers.
+    - D8: `/fall` keeps its own registration path.
+- **Change:**
+  - Files: `src/app/api/fall-interest/route.ts` (410), `src/lib/notion-fall-interest.ts` (read-only), `src/lib/invoice-text.ts`, `src/lib/linkdink-roster-sync.ts`, the new `scripts/audit-stripe-customer-names.mjs`, and three specs.
+  - `invariant-fall-interest-pii-egress.spec.ts` is rewritten: env moves into hooks and Notion, Resend and Open Brain env are all SET, with a rule-less stub, so any fetch is caught. 5 of its 6 tests fail on main; the demand-read positive control passes on both.
+  - `invariant-invoice-route-abuse.spec.ts`: +7 cleaner tests (all fail on main; the q̇ control passes on both), +6 audit-script tests (reason codes, cleaner drift, GET-only pagination across 2 pages with no name or email in the output, error prints the status only, no write path).
+  - `invariant-linkdink-roster-egress.spec.ts`: +3 tests (cleaned body, an empty last name sent as "", `name_unprintable` with no name in alerts or logs), all failing on main.
+  - Mutation-checked 12/12, each turning the specs red: U+01C0–3 dropped (4 red), mark rule removed (7), roster first name raw (2), last name raw (2), unprintable skip removed (1), invoice fallback on the roster (1), the route restored from main (5), the script POSTs (2), stops after page 1 (1), prints the name (1), its cleaner drifts (1), `lookalike` dropped (1).
+  - Docs: `CLAUDE.md` (fall survey section), `docs/source-inventory.md` (lib row and risk log #11).
+  - Gate: `test:pure` 2223/2223 (before the doc edits), lint 0 errors (3 pre-existing warnings), `tsc` clean, `npm run build` green from a clean `.next`.
+  - **Rollback:** revert the commit.
+
 ## 2026-09-28 — Invoice routes: names Stripe (and the MVF pre-payment email) show a stranger are reduced to Latin letters
 
 - **Situation:** Security review 2026-09-28, finding H2. `checkout-lesson`, `checkout-monday-girls-dropin` and `checkout-mvf-junior-tournament` turn an anonymous form into a finalized Stripe invoice. The invoice is emailed to whatever address was typed, and typed names reached the invoice line, memo and customer name verbatim. So anyone could make NGA's Stripe account email "Pay at evil.example" to a stranger. MVF also sends its own pre-payment confirmation from `noreply@nextgenpbacademy.com`, and the subject and plain-text part carried the raw names too.
