@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { createAndSendSignupInvoice } from "@/lib/stripe-invoices";
+import { createAndSendSignupInvoice, type SignupInvoiceResult } from "@/lib/stripe-invoices";
+import { parseSubmissionId } from "@/lib/submission-key";
 import {
   MONDAY_GIRLS_DROPIN_KIND,
   MONDAY_GIRLS_DROPIN_PRICE_USD,
@@ -130,14 +131,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const submissionId =
-    typeof body.submissionId === "string" && body.submissionId.length > 0
-      ? body.submissionId
-      : undefined;
+  // The form resends the same id for a retry of the same content, so a retry
+  // replays this sign-up's invoice rather than sending a second one.
+  const submissionId = parseSubmissionId(body.submissionId);
 
-  let invoice;
+  let result: SignupInvoiceResult;
   try {
-    invoice = await createAndSendSignupInvoice({
+    result = await createAndSendSignupInvoice({
       customerEmail: data.email,
       customerName: invoiceSafeName(data.parentName, ""),
       items: [
@@ -191,26 +191,34 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     );
   }
+  const { invoice, alreadySent } = result;
 
-  // Both admin inboxes get an "invoice sent" heads-up. notifyInvoiceSent
-  // never throws, so this can't fail a signup whose invoice already went out.
-  await import("@/lib/signup-admin-notify").then(({ notifyInvoiceSent }) =>
-    notifyInvoiceSent({
-      kind: "monday-girls-dropin",
-      headline: `Monday Girls drop-in invoice sent`,
-      parentName: data.parentName,
-      parentEmail: data.email,
-      parentPhone: data.phone,
-      childFirstName: data.childFirstName,
-      amountUsd: (MONDAY_GIRLS_DROPIN_PRICE_USD).toFixed(2),
-      invoiceId: invoice.id,
-      hostedUrl: invoice.hosted_invoice_url ?? null,
-      dueDate: "3 days",
-      details: [
-        `Monday: ${data.monday} — ${option.label} (${MONDAY_GIRLS_TIME_LABEL})`,
-      ],
-    }),
-  );
+  // Both admin inboxes get an "invoice sent" heads-up — once per invoice, so
+  // not on a retry. notifyInvoiceSent never throws, so this can't fail a
+  // signup whose invoice already went out.
+  if (!alreadySent) {
+    await import("@/lib/signup-admin-notify").then(({ notifyInvoiceSent }) =>
+      notifyInvoiceSent({
+        kind: "monday-girls-dropin",
+        headline: `Monday Girls drop-in invoice sent`,
+        parentName: data.parentName,
+        parentEmail: data.email,
+        parentPhone: data.phone,
+        childFirstName: data.childFirstName,
+        amountUsd: (MONDAY_GIRLS_DROPIN_PRICE_USD).toFixed(2),
+        invoiceId: invoice.id,
+        hostedUrl: invoice.hosted_invoice_url ?? null,
+        dueDate: "3 days",
+        details: [
+          `Monday: ${data.monday} — ${option.label} (${MONDAY_GIRLS_TIME_LABEL})`,
+        ],
+      }),
+    );
+  } else {
+    console.info(
+      `[checkout-monday-girls-dropin] retry of a sign-up whose invoice ${invoice.id} already went out — not announcing it again`,
+    );
+  }
 
   return NextResponse.json({
     invoiceId: invoice.id,

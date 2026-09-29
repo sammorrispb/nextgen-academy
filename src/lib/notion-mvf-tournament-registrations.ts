@@ -1,4 +1,5 @@
 import { classifyNotionFailure, type CreateDropInResult } from "./notion-dropins";
+import { DedupeLookupError } from "./dedupe-lookup";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
@@ -79,6 +80,20 @@ export async function createMvfTournamentRegistration(
     return "ok";
   }
 
+  // One row per invoice. A retried sign-up gets the SAME invoice back from
+  // Stripe, and the webhook backfills a row it can't find — so look first. A
+  // lookup Notion can't answer writes nothing and reports the failure, like a
+  // failed create: a missing row is backfilled on payment, a second one is a
+  // phantom registration.
+  try {
+    if (await findRegByInvoiceId(env.notionKey, env.dbId, row.stripeInvoiceId)) {
+      return "ok";
+    }
+  } catch (err) {
+    if (err instanceof DedupeLookupError) return err.kind;
+    throw err;
+  }
+
   const res = await fetch(`${NOTION_API}/pages`, {
     method: "POST",
     headers: headers(env.notionKey),
@@ -116,8 +131,14 @@ export async function createMvfTournamentRegistration(
         },
       },
     }),
-  });
+  }).catch(() => null);
 
+  if (!res) {
+    // Unreachable Notion must not throw out of the checkout route after the
+    // invoice already went out; the webhook backfills the row on payment.
+    console.error("[notion-mvf-tournament-registrations] create failed: Notion unreachable");
+    return "transient";
+  }
   if (!res.ok) {
     console.error(
       `[notion-mvf-tournament-registrations] create failed ${res.status}: ${await res.text()}`,
@@ -127,21 +148,33 @@ export async function createMvfTournamentRegistration(
   return "ok";
 }
 
+/**
+ * The roster row for this Stripe invoice, or null when there is none. Throws
+ * DedupeLookupError when Notion can't say: both writers act on "no row" — the
+ * checkout route would add a second row for a retried sign-up, the webhook
+ * would backfill one — so it must never be a guess (the #371 rule, which the
+ * five checkout-session lookups already follow).
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function findRegByInvoiceId(notionKey: string, dbId: string, invoiceId: string): Promise<any | null> {
-  const res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
-    method: "POST",
-    headers: headers(notionKey),
-    body: JSON.stringify({
-      filter: {
-        property: "Stripe Invoice ID",
-        rich_text: { equals: invoiceId },
-      },
-      page_size: 1,
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
+  let res: Response;
+  try {
+    res = await fetch(`${NOTION_API}/databases/${dbId}/query`, {
+      method: "POST",
+      headers: headers(notionKey),
+      body: JSON.stringify({
+        filter: {
+          property: "Stripe Invoice ID",
+          rich_text: { equals: invoiceId },
+        },
+        page_size: 1,
+      }),
+      cache: "no-store",
+    });
+  } catch {
+    throw new DedupeLookupError("transient", null);
+  }
+  if (!res.ok) throw new DedupeLookupError(classifyNotionFailure(res.status), res.status);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = (await res.json()) as { results: any[] };
   return data.results[0] ?? null;
@@ -195,7 +228,10 @@ export async function markMvfTournamentRegPaid(
     return "ok";
   } catch (err) {
     console.error("[notion-mvf-tournament-registrations] mark-paid threw", err);
-    return "transient";
+    // A lookup Notion couldn't answer is never "not_found" (the webhook would
+    // backfill a second row): transient → 500 and Stripe redelivers;
+    // permanent → the webhook's alert path.
+    return err instanceof DedupeLookupError ? err.kind : "transient";
   }
 }
 

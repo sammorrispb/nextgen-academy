@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { createAndSendSignupInvoice } from "@/lib/stripe-invoices";
+import { createAndSendSignupInvoice, type SignupInvoiceResult } from "@/lib/stripe-invoices";
+import { parseSubmissionId } from "@/lib/submission-key";
 import {
   GROUP_LESSON_PRICE_PER_PLAYER_USD,
   LESSON_CHECKOUT_KIND,
@@ -108,14 +109,13 @@ export async function POST(req: NextRequest) {
       ? `Group lesson — ${invoiceSafeName(data.childFirstName)} (${groupPlayers} players × $${GROUP_LESSON_PRICE_PER_PLAYER_USD})`
       : `Private lesson — ${invoiceSafeName(data.childFirstName)} ($${PRIVATE_LESSON_PRICE_USD}/hr)`;
 
-  const submissionId =
-    typeof body.submissionId === "string" && body.submissionId.length > 0
-      ? body.submissionId
-      : undefined;
+  // A retry carrying the same id replays this sign-up's invoice rather than
+  // sending a second one.
+  const submissionId = parseSubmissionId(body.submissionId);
 
-  let invoice;
+  let result: SignupInvoiceResult;
   try {
-    invoice = await createAndSendSignupInvoice({
+    result = await createAndSendSignupInvoice({
       customerEmail: data.email,
       customerName: invoiceSafeName(data.parentName, ""),
       items: [
@@ -167,16 +167,24 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     );
   }
+  const { invoice, alreadySent } = result;
 
-  // Both admin inboxes get an "invoice sent" heads-up. notifyInvoiceSent
-  // never throws, so this can't fail a signup whose invoice already went out.
-  await notifyAdminInvoiceSent(
-    invoice,
-    product,
-    data,
-    product.type === "group" ? groupPlayers : null,
-    totalUsd,
-  );
+  // Both admin inboxes get an "invoice sent" heads-up — once per invoice, so
+  // not on a retry. notifyInvoiceSent never throws, so this can't fail a
+  // signup whose invoice already went out.
+  if (!alreadySent) {
+    await notifyAdminInvoiceSent(
+      invoice,
+      product,
+      data,
+      product.type === "group" ? groupPlayers : null,
+      totalUsd,
+    );
+  } else {
+    console.info(
+      `[checkout-lesson] retry of a sign-up whose invoice ${invoice.id} already went out — not announcing it again`,
+    );
+  }
 
   return NextResponse.json({
     invoiceId: invoice.id,
