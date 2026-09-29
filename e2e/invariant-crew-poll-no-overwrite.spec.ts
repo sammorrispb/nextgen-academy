@@ -64,6 +64,11 @@ test("a vote for an address that already voted changes nothing and emails no one
   expect(res.status).toBe(409);
   const body = await res.json();
   expect(body.error).toMatch(/already have a response/i);
+  // The lookup is scoped to THIS poll and THIS (lowercased) address — a filter
+  // that dropped either clause would block every family after the first.
+  const lookup = stub.callsTo("databases/db-poll-responses/query")[0];
+  expect(lookup.body).toContain("victim-parent@example.com");
+  expect(lookup.body).toContain("poll-1");
   expect(stub.callsTo("/v1/pages"), "no PATCH to the existing row, no new row").toHaveLength(0);
   expect(stub.callsTo("api.resend.com"), "no email to the address").toHaveLength(0);
 });

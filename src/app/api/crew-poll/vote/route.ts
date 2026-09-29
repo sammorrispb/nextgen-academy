@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error:
-          "We already have a response from this email for this crew. To change it, just reply to your confirmation email and Coach Sam will update it.",
+          `We already have a response from this email for this crew. Reply to your confirmation email (or write to ${site.email}) and Coach Sam will switch it for you.`,
       },
       { status: 409 },
     );

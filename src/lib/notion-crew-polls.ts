@@ -183,39 +183,6 @@ export async function fetchPollResponses(
   return data.results.map(pageToResponse);
 }
 
-export async function findResponseByEmail(
-  pollId: string,
-  email: string,
-): Promise<PollResponse | null> {
-  const notionKey = process.env.NOTION_API_KEY;
-  const db = process.env.NOTION_POLL_RESPONSES_DB_ID;
-  if (!notionKey || !db) return null;
-
-  const res = await fetch(`${NOTION_API}/databases/${db}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": NOTION_VERSION,
-    },
-    body: JSON.stringify({
-      filter: {
-        and: [
-          { property: "Poll", relation: { contains: pollId } },
-          { property: "Parent Email", email: { equals: email } },
-        ],
-      },
-      page_size: 1,
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = (await res.json()) as { results: any[] };
-  if (data.results.length === 0) return null;
-  return pageToResponse(data.results[0]);
-}
-
 export interface UpsertPollResponseInput {
   pollId: string;
   parentName: string;
