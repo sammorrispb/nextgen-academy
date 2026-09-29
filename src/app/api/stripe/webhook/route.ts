@@ -742,11 +742,24 @@ async function emailCampParent(session: Stripe.Checkout.Session) {
  *    check runs again once Notion answers. Answering "not recorded" here is
  *    how a redelivery used to create a second roster row.
  *  - permanent (other 4xx: DB unshared, property renamed) → a retry fails the
- *    same way for ~3 days, so alert ONCE and proceed as "not recorded": the
- *    family paid, and recording them beats a lost registration. This delivery
- *    is the only one unless the create itself later fails transiently.
+ *    same way for ~3 days, so alert (once per delivery) and proceed as "not
+ *    recorded": the family paid, and recording them beats a lost registration.
+ *    Normally this delivery is the only one; a transient create failure after
+ *    it would bring a redelivery and a second alert.
+ * The alert is awaited so it can't be lost, but capped at ALERT_WAIT_MS so a
+ * slow Resend/Twilio can't hold the response past Stripe's webhook timeout
+ * (a timeout redelivers, and on this path that means a second row).
  * Pinned by e2e/invariant-webhook-dedupe-fail-closed.spec.ts.
  */
+const ALERT_WAIT_MS = 4000;
+
+function withTimeout<T>(p: Promise<T>): Promise<T | undefined> {
+  return Promise.race([
+    p,
+    new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), ALERT_WAIT_MS)),
+  ]);
+}
+
 async function alreadyRecorded(
   session: Stripe.Checkout.Session,
   kind: string,
@@ -767,17 +780,17 @@ async function alreadyRecorded(
       `[stripe-webhook] ${kind} dedupe lookup rejected (${err.status}) — alerting and recording anyway`,
       session.id,
     );
-    await deliverCronAlert(`stripe-webhook-${kind}`, {
+    await withTimeout(deliverCronAlert(`stripe-webhook-${kind}`, {
       attempted: 1,
       succeeded: 0,
       failures: [
         {
           signature: "dedupe_lookup_rejected",
           ref: session.id,
-          detail: `Notion ${err.status} on the duplicate check — check the DB is shared with the integration and still has "Stripe Checkout Session ID". The registration was recorded without the check.`,
+          detail: `Notion ${err.status} on the duplicate check — check the DB is shared with the integration and still has "Stripe Checkout Session ID". The registration was recorded without the check. Log prefix: [stripe-webhook].`,
         },
       ],
-    });
+    }));
     return false;
   }
 }

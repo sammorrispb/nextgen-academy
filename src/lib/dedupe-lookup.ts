@@ -1,4 +1,4 @@
-import { NOTION_API, NOTION_VERSION } from "@/lib/notion-utils";
+import { NOTION_API, NOTION_VERSION, classifyNotionFailure } from "@/lib/notion-utils";
 
 /**
  * A Stripe-webhook duplicate check that could not answer.
@@ -52,8 +52,7 @@ export async function checkoutRowExists(
     throw new DedupeLookupError("transient", null);
   }
   if (!res.ok) {
-    const transient = res.status === 429 || res.status >= 500;
-    throw new DedupeLookupError(transient ? "transient" : "permanent", res.status);
+    throw new DedupeLookupError(classifyNotionFailure(res.status), res.status);
   }
   const data = (await res.json()) as { results?: unknown[] };
   return (data.results?.length ?? 0) > 0;

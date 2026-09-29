@@ -5,6 +5,28 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-28 — The Stripe webhook's duplicate check retries or alerts; it never creates a second roster row
+
+- **Situation:** Security review 2026-09-28, finding M7. The five webhook "already recorded?" guards (drop-in, fall, Pickl Park, Monday Girls, cluster) answered "not recorded" on ANY Notion failure. A 429 during a Stripe redelivery (after a timeout, or after a transient 500 whose write actually landed) therefore created a second roster row: a doubled seat (which blocks a real sale on the capped seasons), a doubled Registered count, and a second parent email and SMS.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - `src/lib/dedupe-lookup.ts` `checkoutRowExists` throws `DedupeLookupError`, classified by the shared `classifyNotionFailure`: 429, 5xx and network errors are transient; any other 4xx is permanent. If the env is unset, the lookup still answers "not recorded" and makes no fetch (ships dark).
+  - The guards are webhook-only, so it was safe to make them strict. `findDropInPageByCheckoutId`, which the cancel page, coach check-in and cancel-dropin share, is untouched and still answers null on a blip.
+  - The webhook's `alreadyRecorded()` handles the two cases differently:
+    - Transient: 500, so Stripe redelivers.
+    - Permanent: a cron alert, awaited but capped at 4s so it can't hold the response past Stripe's timeout, and then the family is recorded anyway, since a paid registration beats a lost one.
+  - `findProcessedEvent` (camp and league ledger) stays fail-open as documented. There the cost is a duplicate email, not a seat.
+- **Risk:**
+  - A multi-hour Notion outage now 500s paid deliveries one call earlier than before. Before this change they already 500'd, at the create, so the retry window is no worse. There is still no in-app alert while transient failures persist; Stripe's failing-endpoint email covers it (follow-up).
+  - A permanent lookup failure followed by a transient create failure alerts once per delivery and can duplicate on redelivery. This is narrow, and no worse than before.
+- **Change:**
+  - New `e2e/invariant-webhook-dedupe-fail-closed.spec.ts`, 12 tests, 8 of which failed on main. Coverage:
+    - Each lookup across found, absent, 429, 503, 400, network error and env-unset.
+    - Every handler returns 500 on a dedupe 429, with zero creates.
+    - On a drop-in dedupe 400, the family is recorded and exactly one alert fires, with no child name in it.
+    - A source pin that all five call sites go through the guard.
+  - Mutation checks turned it red for each of: non-OK answering "not recorded" again, everything classed transient, the alert removed, and fall bypassing the guard.
+  - Suite green, lint 0 errors, build green.
+  - Independent hostile review: VERDICT CLEAR. Findings applied: the capped alert wait, the env-unset test, the other four handlers exercised end to end, reuse of `classifyNotionFailure`, and the docstring. Not applied: a log-filter wording nit.
 ## 2026-09-29 — Sign-in links and Stripe return URLs come from server config, never the request
 
 - **Situation:** Finding H1 + M1 of the 2026-09-28 security review. `admin/request-link` and `coach/request-link` built the magic link from the request's `Origin` header. An attacker could POST Sam's (public) address with `Origin: https://nextgenpbacademy.com.evil.tld`, and the real NGA sender would email Sam a sign-in link to that host. One click leaked a 10-minute token worth a 30-day admin cookie, and with it the registrants API (parent contacts, child names and birth years). Six checkout routes built Stripe `success_url`/`cancel_url` the same way, so a genuine Stripe link could return a paying parent to an attacker site carrying the `cs_` id.

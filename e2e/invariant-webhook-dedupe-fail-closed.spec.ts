@@ -81,6 +81,25 @@ test.describe("dedupe lookups say 'I don't know' instead of 'not recorded'", () 
         expect((err as DedupeLookupError).kind).toBe(expected);
       }
 
+      // Env unset keeps the old ship-dark answer — and never fetches.
+      const envKey = {
+        "drop-in": "NOTION_DROPINS_DB_ID",
+        fall: "NOTION_FALL_REGS_DB_ID",
+        picklpark: "NOTION_PICKLPARK_REGS_DB_ID",
+        "monday-girls": "NOTION_MONDAY_GIRLS_REGS_DB_ID",
+        cluster: "NOTION_CLUSTER_REGS_DB_ID",
+      }[kind];
+      const prev = process.env[envKey];
+      delete process.env[envKey];
+      stub.reset();
+      stub.install();
+      try {
+        expect(await lookup("cs_1")).toBe(false);
+        expect(stub.calls).toHaveLength(0);
+      } finally {
+        process.env[envKey] = prev;
+      }
+
       stub.reset(); // no rule → the stub throws, like a dropped connection
       stub.install();
       const net = await lookup("cs_1").then(
@@ -104,6 +123,26 @@ test.describe("webhook: a transient dedupe failure is a retry, never a second ro
     expect(res.status).toBe(500);
     expect(stub.callsTo("/v1/pages")).toHaveLength(0);
   });
+
+  for (const [kind, db] of [
+    ["fall", "db-fall-dedupe"],
+    ["picklpark", "db-picklpark-dedupe"],
+    ["monday-girls", "db-mg-dedupe"],
+    ["cluster", "db-cluster-dedupe"],
+  ] as const) {
+    test(`${kind}: dedupe 429 → 500 and ZERO roster creates`, async () => {
+      stub
+        .on(`databases/${db}/query`, { error: "rate_limited" }, 429)
+        .on("api.notion.com/v1/pages", { id: "should-not-be-created" })
+        .on("api.notion.com", { results: [] })
+        .on("api.resend.com", { id: "email_test" })
+        .install();
+      const session = dropInSession({ id: `cs_dedupe_${kind}`, metadata: { kind } });
+      const res = await POST(webhookRequest(checkoutEvent(session)));
+      expect(res.status).toBe(500);
+      expect(stub.callsTo("/v1/pages")).toHaveLength(0);
+    });
+  }
 
   test("drop-in: dedupe 400 → the family is still recorded AND Sam is alerted once", async () => {
     stub
