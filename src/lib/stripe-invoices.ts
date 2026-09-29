@@ -12,7 +12,7 @@ import { getStripe } from "./stripe";
 // hosted page via the invoice description/footer URL.
 
 export interface InvoiceLineItem {
-  /** Line description shown on the invoice, e.g. "Group lesson — Mia (4 players, $60 total split)". */
+  /** Line description shown on the invoice, e.g. "Group lesson — Mia (4 players × $40)". */
   description: string;
   /** Unit amount in cents. */
   amountCents: number;

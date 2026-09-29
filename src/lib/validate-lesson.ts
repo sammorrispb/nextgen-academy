@@ -1,7 +1,7 @@
 // Validator for the lesson checkout (/api/checkout-lesson). Same
 // parent/child/emergency field set as the other program checkouts.
-// Group lessons additionally collect the player count so the $60 group
-// total can be split — the checkout puts it in session metadata for staff.
+// Group lessons additionally collect the player count — the group invoice is
+// priced per player, so the count sets the total and goes in the metadata.
 
 import {
   findLessonProduct,
@@ -57,9 +57,8 @@ export function validateLessonPurchase(
     errors.lessonType = "Pick private or group";
   }
   if (data.lessonType === "group") {
-    // The $60 group hour is split between the players — the count has to be
-    // a real number so the per-player split is visible to staff in the
-    // checkout metadata.
+    // The group invoice is priced per player — the count sets the total, so
+    // it has to be a whole number inside the bounds the price is defined for.
     const n = Number(data.groupPlayers);
     if (!data.groupPlayers?.trim()) {
       errors.groupPlayers = "How many players will be in the group?";
