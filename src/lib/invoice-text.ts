@@ -15,10 +15,12 @@
  * Latin modifier letters (\p{Lm}), U+A78F "ꞏ" and U+01C0–U+01C3 "ǀ ǁ ǂ ǃ"
  * (pipe and "!" look-alikes) are Latin-script look-alikes too. A combining mark
  * survives only on a letter: after a space, hyphen, apostrophe or stripped
- * character a dot-below mark would print as a floating ".". Only non-spacing
- * marks of the Inherited script (the ordinary accents) survive at all: a
- * spacing or enclosing mark prints its own glyph (U+302E is a dot, U+0903 a
- * colon), and another script's marks are that script's look-alikes.
+ * character a dot-below mark would print as a floating ".". Only the accents
+ * Latin names use survive at all (grave, acute, circumflex, tilde, macron,
+ * breve, dot above, diaeresis, hook, ring, double acute, caron, double grave,
+ * inverted breve, horn, dot/diaeresis/ring/comma below, cedilla, ogonek,
+ * macron below): every other mark can draw its own dot, colon or slash
+ * (U+302D corner dot, U+0903 colon, U+0338 slash overlay) or is invisible.
  * Capped at 40 characters (code points, never splitting one). Metadata (internal) may keep the raw value.
  * Pinned by e2e/invariant-invoice-route-abuse.spec.ts.
  */
@@ -27,7 +29,7 @@ export function invoiceSafeName(raw: unknown, fallback = "your player"): string 
 }
 
 const NOT_A_NAME_CHARACTER =
-  /(?:[^\p{Script=Latin}\p{Mn}'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3]|(?=\p{Mn})\P{Script=Inherited})+/gu;
+  /(?:[^\p{Script=Latin}\u0300-\u0304\u0306-\u030C\u030F\u0311\u031B\u0323-\u0328\u0331'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3])+/gu;
 const MARK_NOT_ON_A_LETTER = /(?<![\p{L}\p{M}])\p{M}+/gu;
 // 40 code points, not 40 UTF-16 units: a unit cut can split an astral letter
 // into a lone surrogate, which Stripe's form encoder throws on.

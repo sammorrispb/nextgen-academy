@@ -35,7 +35,7 @@ Append-only. One entry per consequential decision, newest first. Format:
   - `invariant-linkdink-roster-egress.spec.ts`: +3 tests (cleaned body, an empty last name sent as "", `name_unprintable` with no name in alerts or logs), all failing on main.
   - Mutation-checked 12/12, each turning the specs red: U+01C0–3 dropped (4 red), mark rule removed (7), roster first name raw (2), last name raw (2), unprintable skip removed (1), invoice fallback on the roster (1), the route restored from main (5), the script POSTs (2), stops after page 1 (1), prints the name (1), its cleaner drifts (1), `lookalike` dropped (1).
   - Docs: `CLAUDE.md` (fall survey section), `docs/source-inventory.md` (lib row and risk log #11).
-  - Gate: `test:pure` 2228/2228, lint 0 errors (3 pre-existing warnings), `tsc` clean, `npm run build` green from a clean `.next`.
+  - Gate: `test:pure` 2229/2229, lint 0 errors (3 pre-existing warnings), `tsc` clean, `npm run build` green from a clean `.next`.
   - **Independent hostile review, round 1: CHANGES-NEEDED.**
     - MAJOR: spacing (Mc) and enclosing (Me) marks, and other scripts' non-spacing marks, survived on a Latin letter. For example U+302E renders as a dot and U+0903 as a colon. 471 Mc + 13 Me code points were affected, and the flaw pre-dates this PR. **Fixed:** only Inherited-script non-spacing marks survive, in both copies. An exhaustive spec covers every Mc/Me code point.
     - MINOR, all fixed:
@@ -49,6 +49,12 @@ Append-only. One entry per consequential decision, newest first. Format:
       - Stacked accents on one letter still pass (no link risk).
       - Plain words still reach L&D (the accepted #375 residual).
       - Two siblings whose names differ only by stripped characters would share one L&D key, so the second is not seated and nothing alerts. Unlikely.
+  - **Hostile review, round 2: CHANGES-NEEDED.**
+    - MAJOR: some Inherited-script non-spacing marks still draw a dot beside a letter (U+302A–302D corner dots, U+1DFA, U+1DF8, U+0358, U+1CDD) or a slash overlay (U+0338, U+20EB). That still allowed "evil.com" and "https:" look-alikes.
+    - **Fixed** with a curated allowlist of the accents Latin names use: U+0300–0304, 0306–030C, 030F, 0311, 031B, 0323–0328 and 0331. Every other mark is stripped, in both copies; that also removes invisible variation selectors (a round-2 NIT).
+    - The exhaustive spec now checks that, for every mark outside the allowlist, the output holds only Latin letters, allowlisted accents, apostrophes, hyphens and spaces. NFC legitimately folds U+0340/0341/0344 into allowlisted accents, and composes l + U+032D into the Latin letter ḽ. A companion test pins that every allowlisted accent survives on a letter.
+    - The audit's `lookalike` flags any mark outside the allowlist.
+    - Mutation-checked 4/4: any Inherited Mn allowed again (3 red), the script alone drifts (1), dot below dropped from the allowlist (3), the audit ignores non-allowlisted marks (1).
   - **Rollback:** revert the commit.
 
 ## 2026-09-28 — Invoice routes: names Stripe (and the MVF pre-payment email) show a stranger are reduced to Latin letters

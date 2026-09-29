@@ -55,20 +55,40 @@ test.describe("invoiceSafeName — what a stranger can make Stripe print", () =>
       expect(invoiceSafeName(s)).not.toMatch(/[.:/@\uA4F8\u02D0\u141F\uA78F\u01C0-\u01C3]/);
     }
   });
-  test("no spacing or enclosing mark survives, even on a letter", () => {
-    // Mc/Me marks print their own glyph: U+302E is a dot, U+0903 a colon.
+  // The accents Latin names use (grave, acute, circumflex, tilde, macron,
+  // breve, dot above, diaeresis, hook, ring, double acute, caron, double
+  // grave, inverted breve, horn, dot/diaeresis/ring/comma below, cedilla,
+  // ogonek, macron below). Every other mark can draw its own dot, colon or
+  // slash (U+302D corner dot, U+0903 colon, U+0338 slash overlay) or is
+  // invisible (U+FE0F), so it is stripped even on a letter.
+  const NAME_ACCENTS = /^[\u0300-\u0304\u0306-\u030C\u030F\u0311\u031B\u0323-\u0328\u0331]$/u;
+  test("no combining mark outside the accent allowlist survives, even on a letter", () => {
     const survivors: string[] = [];
     for (let cp = 0; cp <= 0x10ffff; cp++) {
       if (cp >= 0xd800 && cp <= 0xdfff) continue;
       const ch = String.fromCodePoint(cp);
-      if (!/[\p{Mc}\p{Me}]/u.test(ch)) continue;
-      if (cleanPersonName(`evil${ch}com`) !== "evil com") survivors.push(cp.toString(16));
+      if (!/\p{M}/u.test(ch) || NAME_ACCENTS.test(ch)) continue;
+      // NFC may fold a mark into an allowlisted accent (U+0341 IS U+0301) or
+      // a precomposed Latin letter (l + U+032D = ḽ); anything else must go.
+      for (const c of cleanPersonName(`evil${ch}com`)) {
+        if (!/[\p{Script=Latin}'’\- ]/u.test(c) && !NAME_ACCENTS.test(c)) survivors.push(cp.toString(16));
+      }
     }
     expect(survivors).toEqual([]);
+  });
+  test("every allowlisted accent survives on a letter", () => {
+    for (let cp = 0x300; cp <= 0x36f; cp++) {
+      const ch = String.fromCodePoint(cp);
+      if (!NAME_ACCENTS.test(ch)) continue;
+      expect(cleanPersonName(`q${ch}`).normalize("NFD"), cp.toString(16)).toBe(`q${ch}`.normalize("NFD"));
+    }
   });
   test("a non-spacing mark from another script can't ride a Latin letter", () => {
     // U+0901 Devanagari candrabindu is Mn but Script=Devanagari.
     expect(cleanPersonName("evil\u0901com")).toBe("evil com");
+    // Inherited-script dots and overlays go too.
+    expect(cleanPersonName("evi\u302Dcom")).toBe("evi com");
+    expect(cleanPersonName("https\u302D\u0358")).toBe("https");
     // Inherited-script marks (the ordinary accents) still attach.
     expect(cleanPersonName("Nguye\u0302\u0303n")).toBe("Nguyễn");
   });
@@ -195,7 +215,7 @@ test.describe("scripts/audit-stripe-customer-names.mjs", () => {
   test("the script's cleaner matches the invoice cleaner (no drift)", () => {
     const fixtures = [
       "Zoë O’Brien-Nguyễn", "Pay at https://evil.example/pay", "evil\uA4F8com", "x\u02D0\u141Fy",
-      "Pay\u01C0evil\u01C3", "evil \u0323 com", "Mary-\u0323Kate", "Aq\u0307a", "A".repeat(80), "evil\u302Ecom", "evil\u{1D16D}com", "https\u0903", "evil\u0901com",
+      "Pay\u01C0evil\u01C3", "evil \u0323 com", "Mary-\u0323Kate", "Aq\u0307a", "A".repeat(80), "evil\u302Ecom", "evil\u{1D16D}com", "https\u0903", "evil\u0901com", "evil\u302Dcom", "c\u1DFAom", "a\u0338b", "a\uFE0Fb",
       "A".repeat(39) + "\u{1DF00}B",
       "\u674E\u5C0F\u9F99", "Kid 2 (call 555-0100!)", "ꞏ", "\u02B0i", "", "   ",
     ];
@@ -250,6 +270,9 @@ test.describe("scripts/audit-stripe-customer-names.mjs", () => {
 
   test("a spacing mark and a long clean name are classified correctly", () => {
     expect(nameAuditReasons("evil\u{1D16D}com")).toEqual(["lookalike"]);
+    for (const mark of ["\u302D", "\u1DFA", "\u0358", "\u0338", "\uFE0F"]) {
+      expect(nameAuditReasons(`evil${mark}com`), mark.codePointAt(0)!.toString(16)).toEqual(["lookalike"]);
+    }
     expect(nameAuditReasons("Ava ".repeat(15).trim())).toEqual([]);
   });
 

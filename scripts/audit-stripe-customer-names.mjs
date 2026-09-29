@@ -15,8 +15,8 @@
 // Reason codes:
 //   punct      the name contains . : / or @
 //   digit      the name contains a digit (any script)
-//   lookalike  a look-alike (any modifier letter, ꞏ, ǀ ǁ ǂ ǃ), a spacing or
-//              enclosing mark, or a combining mark not on a letter
+//   lookalike  a look-alike (any modifier letter, ꞏ, ǀ ǁ ǂ ǃ), a mark
+//              outside the name-accent allowlist, or a mark not on a letter
 //   non_latin  a character from another script: a real name (review, don't
 //              assume abuse) or a look-alike such as the Lisu dot ꓸ
 //   other      anything else the invoice cleaner would strip (<, !, emoji…)
@@ -36,7 +36,7 @@ const PAGE_SIZE = 100;
 // import the TypeScript module under every runner). The invoice spec runs the
 // same fixtures through both, so the two cannot drift silently.
 const NOT_A_NAME_CHARACTER =
-  /(?:[^\p{Script=Latin}\p{Mn}'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3]|(?=\p{Mn})\P{Script=Inherited})+/gu;
+  /(?:[^\p{Script=Latin}\u0300-\u0304\u0306-\u030C\u030F\u0311\u031B\u0323-\u0328\u0331'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3])+/gu;
 const MARK_NOT_ON_A_LETTER = /(?<![\p{L}\p{M}])\p{M}+/gu;
 // 40 code points, not 40 UTF-16 units: a unit cut can split an astral letter
 // into a lone surrogate, which Stripe's form encoder throws on.
@@ -54,7 +54,8 @@ export function cleanPersonName(raw) {
     .trim();
 }
 
-const LATIN_LOOKALIKE = /[\p{Lm}\p{Mc}\p{Me}\uA78F\u01C0-\u01C3]|(?<![\p{L}\p{M}])\p{M}/u;
+const LATIN_LOOKALIKE =
+  /[\p{Lm}\uA78F\u01C0-\u01C3]|(?![\u0300-\u0304\u0306-\u030C\u030F\u0311\u031B\u0323-\u0328\u0331])\p{M}|(?<![\p{L}\p{M}])\p{M}/u;
 const OTHER_SCRIPT = /[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/u;
 
 /** Reason codes for one stored name; [] when it is clean. */
