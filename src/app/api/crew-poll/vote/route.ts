@@ -101,6 +101,22 @@ export async function POST(request: NextRequest) {
     vote,
     note,
   });
+  if (upsert.alreadyRecorded) {
+    return NextResponse.json(
+      {
+        error:
+          "We already have a response from this email for this crew. To change it, just reply to your confirmation email and Coach Sam will update it.",
+      },
+      { status: 409 },
+    );
+  }
+  if (upsert.lookupFailed) {
+    console.error("[crew-poll/vote] response lookup failed:", upsert.error);
+    return NextResponse.json(
+      { error: "We couldn't save your vote just now. Please try again in a minute." },
+      { status: 503 },
+    );
+  }
   if (!upsert.ok) {
     console.error("[crew-poll/vote] notion write failed:", upsert.error);
     return NextResponse.json(
