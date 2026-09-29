@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { invoiceSafeName } from "@/lib/invoice-text";
 
 // Admin notifications for sign-up invoice lifecycle events that happen
 // OUTSIDE the webhook (the webhook only fires on payment). Both of Sam's
@@ -59,7 +60,7 @@ export async function notifyInvoiceSent(notice: InvoiceSentNotice): Promise<void
     from: FROM_EMAIL,
     to: recipients,
     replyTo: REPLY_TO,
-    subject: `Invoice sent — ${kindLabel}: ${notice.childFirstName} (${notice.parentName}) $${notice.amountUsd}`,
+    subject: `Invoice sent — ${kindLabel}: ${invoiceSafeName(notice.childFirstName)} (${invoiceSafeName(notice.parentName, "parent")}) $${notice.amountUsd}`,
     text: [
       `${kindLabel} invoice emailed to the parent — awaiting payment.`,
       ``,

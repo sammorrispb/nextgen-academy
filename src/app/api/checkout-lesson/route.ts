@@ -17,6 +17,13 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { invoiceSafeName } from "@/lib/invoice-text";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+
+// Per IP (best-effort, in-memory): each request can make NGA's Stripe account
+// email an invoice to the address typed in (security review 2026-09-28, H2).
+const invoiceLimiter = createRateLimiter({ limit: 20 });
+
 
 // Lesson sign-up — INVOICE-BASED. There are no fixed Stripe products/prices:
 // the invoice line items are built from the sign-up form (lesson type, player
@@ -44,6 +51,13 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (invoiceLimiter.isRateLimited(getClientIp(req))) {
+    return NextResponse.json(
+      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam at 301-325-4731 and he'll get you in." },
+      { status: 429 },
+    );
   }
 
   // Fail closed on configuration BEFORE validating the form.
@@ -87,8 +101,8 @@ export async function POST(req: NextRequest) {
     data.lessonType === "group" ? Number(data.groupPlayers) || null : null;
   const lineDescription =
     data.lessonType === "group"
-      ? `Group lesson — ${data.childFirstName} (${groupPlayers} players, $${LESSON_PRICE_USD} total split between the players)`
-      : `Private lesson — ${data.childFirstName} ($${LESSON_PRICE_USD}/hr)`;
+      ? `Group lesson — ${invoiceSafeName(data.childFirstName)} (${groupPlayers} players, $${LESSON_PRICE_USD} total split between the players)`
+      : `Private lesson — ${invoiceSafeName(data.childFirstName)} ($${LESSON_PRICE_USD}/hr)`;
 
   const submissionId =
     typeof body.submissionId === "string" && body.submissionId.length > 0
@@ -99,7 +113,7 @@ export async function POST(req: NextRequest) {
   try {
     invoice = await createAndSendSignupInvoice({
       customerEmail: data.email,
-      customerName: data.parentName,
+      customerName: invoiceSafeName(data.parentName, ""),
       items: [
         {
           description: lineDescription,

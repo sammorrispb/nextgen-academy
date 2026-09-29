@@ -5,6 +5,25 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-28 — Invoice routes: names Stripe (and the MVF pre-payment email) show a stranger are reduced to Latin letters
+
+- **Situation:** Security review 2026-09-28, finding H2. `checkout-lesson`, `checkout-monday-girls-dropin` and `checkout-mvf-junior-tournament` turn an anonymous form into a finalized Stripe invoice. The invoice is emailed to whatever address was typed, and typed names reached the invoice line, memo and customer name verbatim. So anyone could make NGA's Stripe account email "Pay at evil.example" to a stranger. MVF also sends its own pre-payment confirmation from `noreply@nextgenpbacademy.com`, and the subject and plain-text part carried the raw names too.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - `invoiceSafeName()` keeps only Latin-script letters, combining marks, apostrophes, hyphens and spaces, capped at 40 characters. It also strips `\p{Lm}` and U+A78F, because other scripts have letters that look like `.` `:` `/`.
+  - It is applied to the invoice line, memo, customer name, the MVF pre-payment email (subject, text and HTML) and the MVF partner-notice subject.
+  - Each of the three routes now allows 20 requests/hr per IP. The 429 message gives Coach Sam's number.
+  - **Not decided here (D2):** whether these routes should email an unverified address at all. Stopping all pre-payment email would also end the MVF "pay your entry fee" confirmation and payment-reminder cron before the Oct 24 tournament. That is Sam's call.
+- **Risk:**
+  - Up to 40 characters of plain words ("Visit evil dot com") can still reach a stranger. No link can.
+  - A name written entirely in a non-Latin script shows as "your player" on the invoice; Stripe metadata, the Notion row and the admin email keep the raw value.
+  - A Stripe customer created before this fix keeps its stored name on future invoices (follow-up: a one-time audit).
+  - The L&D roster sync still receives raw names (outside this PR).
+- **Change:** New `e2e/invariant-invoice-route-abuse.spec.ts` (19 tests; they fail against a pass-through cleaner).
+  - Coverage: the cleaner table (look-alike characters included), a source scan of each handler (including what it sends after the invoice), the per-IP 429 with zero network calls, and the MVF email and partner subject.
+  - Mutations, each of which turns the spec red: character filter removed; limiter off; MVF memo raw; MVF email name raw; any script allowed; partner subject raw.
+  - Suite green, lint 0 errors.
+  - Independent hostile review: CHANGES-NEEDED (the MVF email, look-alike characters). After the fixes it re-verified CLEAR.
+
 ## 2026-09-28 — The first crew-poll response from an address stands
 
 - **Situation:** Security review 2026-09-28, finding M4.
