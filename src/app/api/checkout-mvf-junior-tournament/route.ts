@@ -32,6 +32,13 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { invoiceSafeName } from "@/lib/invoice-text";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+
+// Per IP (best-effort, in-memory): each request can make NGA's Stripe account
+// email an invoice to the address typed in (security review 2026-09-28, H2).
+const invoiceLimiter = createRateLimiter({ limit: 10 });
+
 
 // MVF Junior Tournament sign-up — INVOICE-BASED, mirroring the lessons,
 // Monday Girls drop-in, and Winter League checkouts. The $50/$60 entry fee
@@ -57,6 +64,13 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (invoiceLimiter.isRateLimited(getClientIp(req))) {
+    return NextResponse.json(
+      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam." },
+      { status: 429 },
+    );
   }
 
   // Fail closed on configuration BEFORE validating the form.
@@ -125,10 +139,10 @@ export async function POST(req: NextRequest) {
   try {
     invoice = await createAndSendSignupInvoice({
       customerEmail: data.email,
-      customerName: data.parentName,
+      customerName: invoiceSafeName(data.parentName, ""),
       items: [
         {
-          description: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${data.childFirstName} ${data.childLastName} (${data.resident ? "Resident" : "Non-resident"})`,
+          description: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${invoiceSafeName(data.childFirstName + " " + data.childLastName)} (${data.resident ? "Resident" : "Non-resident"})`,
           amountCents: priceUsd * 100,
           quantity: 1,
         },
@@ -162,7 +176,7 @@ export async function POST(req: NextRequest) {
         sms_consent: data.smsConsent ? "true" : "false",
         sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
       },
-      memo: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${data.childFirstName} ${data.childLastName}`,
+      memo: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${invoiceSafeName(data.childFirstName + " " + data.childLastName)}`,
       footer: `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} Bring a refillable water bottle and court shoes — we have loaner paddles.`,
       // A week to pay keeps the roster real.
       daysUntilDue: 7,
