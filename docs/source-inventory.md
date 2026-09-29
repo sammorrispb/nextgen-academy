@@ -132,7 +132,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | src/lib/attendance.ts | 2026-06-14 | shared check-in core (Notion write + OB activity + profile recompute); reused by the coach action + /api/coach/attendance; idempotent | high |
 | src/lib/notion-camp-roster.ts | 2026-06-26 | camp roster read-model from Stripe + Friday reminder sync; reads child first name + birth year + **allergies/medical + emergency contact** (camp-safety exception, CLAUDE.md); surfaced auth-gated at /coach/camps/* (print-only, no file export) | high |
 | src/lib/linkdink-roster-sync.ts | 2026-09-28 | MVF Junior Tournament → Link & Dink roster sync, called by `api/checkout-mvf-junior-tournament`: sends child first + last name (cleaned by `cleanPersonName`, as on an invoice; a first name with nothing printable left is not sent and alerts `name_unprintable`) and the parent's email (L&D's idempotency input only, never stored there) by stable `event_key`, from a production deploy only (or a build `LINKDINK_BASE_URL` points at an L&D instance on purpose); never throws; a failure alerts Sam after the response, with no registrant data. Egress pinned by `invariant-linkdink-roster-egress.spec.ts` (risk log #11) | high |
-| src/lib/notion-mvf-tournament-registrations.ts | 2026-09-22 | MVF Junior Tournament roster store (`NOTION_MVF_TOURNAMENT_REGS_DB_ID`), written by `api/checkout-mvf-junior-tournament` (invoice sent, `Pending`) and the Stripe webhook (`invoice.paid` → `Paid`, or a backfill create from invoice metadata); read by `cron/mvf-tournament-payment-reminder`. Holds child first + **last** name, **full DOB**, allergies and an emergency contact beside parent contact: beyond the first-name + birth-year baseline, **approved by Sam 2026-09-29 as a scoped exception (D7)**. See risk log #12 (minor PII) | high |
+| src/lib/notion-mvf-tournament-registrations.ts | 2026-09-29 | MVF Junior Tournament roster store (`NOTION_MVF_TOURNAMENT_REGS_DB_ID`), written by `api/checkout-mvf-junior-tournament` (invoice sent, `Pending`) and the Stripe webhook (`invoice.payment_succeeded` → `Paid`, or a backfill create from invoice metadata — that event was not subscribed on the live endpoint as of 2026-09-28); read by `cron/mvf-tournament-payment-reminder`. **One row per invoice (2026-09-29):** the create looks the invoice up first, and a lookup Notion can't answer throws `DedupeLookupError` rather than reading as "no row" (pinned by `invariant-signup-invoice-idempotency`). Holds child first + **last** name, **full DOB**, allergies and an emergency contact beside parent contact: beyond the first-name + birth-year baseline, **approved by Sam 2026-09-29 as a scoped exception (D7)**. See risk log #12 (minor PII) | high |
 
 **Buckets (remaining):**
 
@@ -141,7 +141,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | src/lib/notion-* (11 more) | 2026-06-10 | Notion DB clients, one per database | high |
 | src/lib/email/ (22) | 2026-06-11 | Resend HTML templates + brand/ics/utm helpers | high |
 | src/lib/validate-* (11) | 2026-06-12 | per-form input validation | high |
-| payments: stripe, refund-amount, cancel-camp, cancel-dropin, cluster-refund | 2026-06-10 | Stripe client, refund math, cancel flows (SLOP-FREE) | high |
+| payments: stripe, stripe-invoices, submission-key, refund-amount, cancel-camp, cancel-dropin, cluster-refund | 2026-09-29 | Stripe client, invoice sign-ups (every write keyed per submission step; `submission-key` = the forms' idempotency key), refund math, cancel flows (SLOP-FREE) | high |
 | funnel: attribution, funnelClient, lead-segmentation, open-brain-ingest | 2026-06-12 | UTM attribution, OB ingest, DD-lead off-limits classifier | high |
 | sessions: session-slug/time/location/cancel, schedule-grouping, recurring-sessions, fill-meter, weather, venue-lookup | 2026-06-11 | session slug/time/venue/grouping/seeding/weather | high |
 | misc: seo, sports-event-jsonld, urls, schools, clusters, cluster-age, level-colors, news-scraper, newsletter-tips, eval-shared, eval-confirmation-send, forward-to-cohort-pool, referral-rewards, sms | 2026-06-12 | SEO/JSON-LD, schools data, news scraper, SMS (Twilio), referrals | med |
@@ -197,7 +197,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 
 ## 7. SLOP-FREE ZONE (no edits without separate explicit approval; tests observe, never modify)
 
-- `src/app/api/stripe/webhook/route.ts` + all `api/checkout*` + `api/commit/*` + `api/cancel-*` + `src/lib/{stripe,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`
+- `src/app/api/stripe/webhook/route.ts` + all `api/checkout*` + `api/commit/*` + `api/cancel-*` + `src/lib/{stripe,stripe-invoices,submission-key,refund-amount,cancel-camp,cancel-dropin,cluster-refund}.ts`
 - All 9 auth/token libs in §3 + the 4 auth-session routes + admin/coach allowlists
 - All 7 child-PII libs in §3 + `api/admin/sessions/registrants` + coach roster/player pages + eval routes
 - `src/lib/attendance.ts` + `src/app/api/coach/attendance/route.ts` (check-in core + agent route — minor-PII write + OB egress)
