@@ -55,6 +55,10 @@ Append-only. One entry per consequential decision, newest first. Format:
     - The exhaustive spec now checks that, for every mark outside the allowlist, the output holds only Latin letters, allowlisted accents, apostrophes, hyphens and spaces. NFC legitimately folds U+0340/0341/0344 into allowlisted accents, and composes l + U+032D into the Latin letter ḽ. A companion test pins that every allowlisted accent survives on a letter.
     - The audit's `lookalike` flags any mark outside the allowlist.
     - Mutation-checked 4/4: any Inherited Mn allowed again (3 red), the script alone drifts (1), dot below dropped from the allowlist (3), the audit ignores non-allowlisted marks (1).
+  - **Hostile review, round 3: CLEAR** (checklist 16 → PASS 9 / FAIL 0 / N-A 7, no kills).
+    - A sweep over all code points, on three bases, leaves no mark outside the allowlist and no character outside Latin letters, allowlisted accents, apostrophes, hyphens and spaces.
+    - The reviewer agreed that NFC composition only yields precomposed Latin letters that could always be typed directly, so it adds no new surface.
+    - Remaining NITs, not changed: stacked allowlisted accents on one letter, and the Roman numerals U+2160–2188 and ʔ. Neither can form `.` `:` `/` `@`.
   - **Rollback:** revert the commit.
 
 ## 2026-09-28 — Invoice routes: names Stripe (and the MVF pre-payment email) show a stranger are reduced to Latin letters
