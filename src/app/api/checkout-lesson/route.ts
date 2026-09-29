@@ -22,7 +22,7 @@ import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 
 // Per IP (best-effort, in-memory): each request can make NGA's Stripe account
 // email an invoice to the address typed in (security review 2026-09-28, H2).
-const invoiceLimiter = createRateLimiter({ limit: 10 });
+const invoiceLimiter = createRateLimiter({ limit: 20 });
 
 
 // Lesson sign-up — INVOICE-BASED. There are no fixed Stripe products/prices:
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   if (invoiceLimiter.isRateLimited(getClientIp(req))) {
     return NextResponse.json(
-      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam." },
+      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam at 301-325-4731 and he'll get you in." },
       { status: 429 },
     );
   }

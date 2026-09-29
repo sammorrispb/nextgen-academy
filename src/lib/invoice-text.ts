@@ -8,6 +8,11 @@
  * (security review 2026-09-28, H2). Letters (any script), combining marks,
  * apostrophes, hyphens and spaces survive; everything else — digits, dots,
  * slashes, colons, @ — becomes a space, so no link, domain or address can.
+ * LATIN script only: other scripts carry letters that LOOK like punctuation
+ * (Lisu U+A4F8 "ꓸ", modifier colon U+02D0 "ː", Canadian syllabics U+141F "ᐟ"),
+ * which would let "evilꓸcom" through. Accented Latin (Zoë, Nguyễn) survives;
+ * a name written entirely in another script falls back to the generic label.
+ * Latin modifier letters (\p{Lm}) and U+A78F "ꞏ" are Latin-script look-alikes too.
  * Capped at 40 characters. Metadata (internal) may keep the raw value.
  * Pinned by e2e/invariant-invoice-route-abuse.spec.ts.
  */
@@ -15,7 +20,7 @@ export function invoiceSafeName(raw: unknown, fallback = "your player"): string 
   if (typeof raw !== "string") return fallback;
   const cleaned = raw
     .normalize("NFC")
-    .replace(/[^\p{L}\p{M}'’\- ]+/gu, " ")
+    .replace(/(?:[^\p{Script=Latin}\p{M}'’\- ]|[\p{Lm}\uA78F])+/gu, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 40)

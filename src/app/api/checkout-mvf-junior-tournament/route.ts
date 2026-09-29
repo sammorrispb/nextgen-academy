@@ -37,7 +37,7 @@ import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 
 // Per IP (best-effort, in-memory): each request can make NGA's Stripe account
 // email an invoice to the address typed in (security review 2026-09-28, H2).
-const invoiceLimiter = createRateLimiter({ limit: 10 });
+const invoiceLimiter = createRateLimiter({ limit: 20 });
 
 
 // MVF Junior Tournament sign-up — INVOICE-BASED, mirroring the lessons,
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   if (invoiceLimiter.isRateLimited(getClientIp(req))) {
     return NextResponse.json(
-      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam." },
+      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam at 301-325-4731 and he'll get you in." },
       { status: 429 },
     );
   }
@@ -274,10 +274,12 @@ export async function POST(req: NextRequest) {
         mvfTournamentSignupConfirmationText,
         mvfTournamentSignupConfirmationHtml,
       } = await import("@/lib/email/mvf-tournament-signup-confirmation");
-      const parentFirst = data.parentName.split(/\s+/)[0] || "there";
+      // Sent BEFORE payment to the address typed in: the names must not be
+      // able to carry a link (the plain-text part and subject aren't HTML).
+      const parentFirst = invoiceSafeName(data.parentName.split(/\s+/)[0], "there");
       const emailInput = {
         parentFirst,
-        childFirst: data.childFirstName || "your player",
+        childFirst: invoiceSafeName(data.childFirstName),
         divisionLabel: division.label,
         amountUsd: priceUsd.toFixed(2),
         residencyLabel: data.resident ? "MV resident" : "non-resident",
