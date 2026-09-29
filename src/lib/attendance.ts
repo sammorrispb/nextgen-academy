@@ -80,10 +80,9 @@ export async function applyAttendance(input: {
       email: dropIn.parentEmail || undefined,
       phone: dropIn.parentPhone || undefined,
       name: dropIn.parentName || undefined,
-      interest: dropIn.childFirstName || undefined,
+      interest: dropIn.childFirstName.trim().split(/\s+/)[0] || undefined,
       metadata: {
         child_first_name: dropIn.childFirstName,
-        child_birth_year: dropIn.childBirthYear || undefined,
         session_title: dropIn.sessionTitle,
         session_date: dropIn.sessionDate,
         session_start_time: dropIn.sessionStartTime,

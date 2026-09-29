@@ -29,8 +29,10 @@ export interface OpenBrainIngestPayload {
 // nothing further. Enforced here because 27 call sites feed this helper and the
 // Stripe-webhook ones run inside after(), where no spec can watch the payload.
 // Keys are matched anywhere in the metadata tree; a match drops the whole value.
+// `friend` covers crew-interest's friends_wanted: free text naming OTHER
+// children, who never agreed to anything.
 const FORBIDDEN_CHILD_KEY =
-  /birth|(^|_)dob$|last_?name|surname|allerg|emergenc|school|medical/i;
+  /birth|(^|_)dob$|last_?name|surname|allerg|emergenc|school|medical|friend/i;
 // Child-name fields keep only their first word (forms take a full name).
 const CHILD_NAME_KEY = /^(child_name|child_first_name|nga_child_first_name)$/;
 
@@ -80,7 +82,17 @@ export async function ingestToOpenBrain(
         ...payload,
         metadata: capChildFields(payload.metadata, stripped) as Record<string, unknown>,
       }
-    : payload;
+    : { ...payload };
+  // Some callers put the child's name in the top-level `interest` too, which
+  // Open Brain copies into the activity summary — cap it like the metadata.
+  const childNames = new Set(
+    Object.entries(payload.metadata ?? {})
+      .filter(([k, v]) => CHILD_NAME_KEY.test(k) && typeof v === "string")
+      .map(([, v]) => (v as string).trim()),
+  );
+  if (typeof safePayload.interest === "string" && childNames.has(safePayload.interest.trim())) {
+    safePayload.interest = firstWord(safePayload.interest) as string;
+  }
   if (stripped.size) {
     // Key names only — never values.
     console.warn(`[OB ingest] ${payload.source}: dropped child fields ${[...stripped].sort().join(",")}`);

@@ -6,8 +6,9 @@ import FillMeter from "./FillMeter";
 
 export function socialProofLine(session: NgaSession): string | null {
   const s = session.ageStats;
-  // Below two it stops being social proof and starts being a location notice
-  // for one identifiable child ("1 going" beside a venue, date and time).
+  // Below two, the age line describes one identifiable child at a known venue,
+  // date and time. The registered count still shows elsewhere on the card; this
+  // floor keeps a lone child's AGE off it.
   if (!s || s.count < 2) return null;
   if (s.minAge === null || s.maxAge === null) return `${s.count} going`;
   const ageBit =

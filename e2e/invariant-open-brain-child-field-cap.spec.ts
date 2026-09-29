@@ -27,7 +27,9 @@ const FORBIDDEN_VALUES = {
 };
 
 const stub = new FetchStub();
+const saved: Record<string, string | undefined> = {};
 test.beforeEach(() => {
+  for (const k of ["OPEN_BRAIN_INGEST_URL", "LEAD_INGEST_TOKEN"]) saved[k] = process.env[k];
   process.env.OPEN_BRAIN_INGEST_URL = OB_URL;
   process.env.LEAD_INGEST_TOKEN = "ob_token_cap";
   stub.reset();
@@ -35,16 +37,19 @@ test.beforeEach(() => {
 });
 test.afterEach(() => {
   stub.uninstall();
-  delete process.env.OPEN_BRAIN_INGEST_URL;
-  delete process.env.LEAD_INGEST_TOKEN;
+  for (const [k, v] of Object.entries(saved)) {
+    if (v === undefined) delete process.env[k];
+    else process.env[k] = v;
+  }
 });
 
-async function sentBody(metadata: Record<string, unknown>) {
+async function sentBody(metadata: Record<string, unknown>, interest?: string) {
   await ingestToOpenBrain({
     email: "parent-cap@example.com",
     name: "Cap Parent",
     business: "nga",
     source: "nga_summer_camp",
+    interest,
     metadata,
   });
   const calls = stub.callsTo("ob.test.local");
@@ -79,6 +84,20 @@ test.describe("Open Brain ingest carries a child's first name + age and nothing 
     expect(JSON.stringify(json)).not.toContain("Forbiddensurname");
     expect(json.metadata.child_name).toBe("Allowedkid");
     expect(json.metadata.kids[0]).toEqual({ name: "Allowedkid", age: 9 });
+  });
+
+  test("a child name repeated in the top-level interest is capped too", async () => {
+    const { raw, json } = await sentBody(
+      { child_first_name: "Allowedkid Forbiddensurname" },
+      "Allowedkid Forbiddensurname",
+    );
+    expect(raw).not.toContain("Forbiddensurname");
+    expect(json.interest).toBe("Allowedkid");
+  });
+
+  test("free text naming OTHER children (friends_wanted) never leaves", async () => {
+    const { raw } = await sentBody({ friends_wanted: "Forbiddenfriend Jones from Forbidden ES" });
+    expect(raw).not.toContain("Forbiddenfriend");
   });
 
   test("approved fields and parent/ops fields survive (no over-stripping)", async () => {
@@ -117,8 +136,9 @@ test.describe("Open Brain ingest carries a child's first name + age and nothing 
 // ── Public schedule social proof (M3 + D9) ──────────────────────────────────
 // ageStats renders on public /schedule cards next to a venue, date and time.
 // Only families who consented to public display contribute an age, and the
-// line appears only when at least two players are going — "1 going" alone
-// tells a stranger one child will be at that place at that time.
+// line appears only when at least two players are going, so a lone child's
+// age is never shown beside a venue, date and time. (The registered count
+// itself still renders elsewhere on the card.)
 const THIS_YEAR = new Date().getUTCFullYear();
 const kid = (age: number, displayConsent: boolean) => ({
   childBirthYear: THIS_YEAR - age,
