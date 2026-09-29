@@ -8,8 +8,10 @@ export const WHATSAPP_PARENT_GROUP_URL =
 // so every family has a standing way to reach Coach Sam and each other.
 // Rendered as a utility block, not a CTA, so it never competes with the host
 // email's single primary CTA (per BRAND_GUIDELINES.md → COMMS TEMPLATES → CTA
-// hierarchy). Stays out of the public site footer on purpose; the invite
-// travels with a real hand-shake (a sent email), not scraped from the homepage.
+// hierarchy). The invite is ALSO published on the public site since
+// 2026-08-25 (Sam's call — BRAND_GUIDELINES.md "Community-channel invites",
+// Discoverability SUPERSEDED): CommunityGroupsCard + the footer link. This
+// card's own gating (first-touch families only) is unchanged.
 export function whatsappInviteHtml(): string {
   return `<div style="${s.card}">
     <p style="margin:0 0 6px 0;font-size:13px;color:${c.muted};text-transform:uppercase;letter-spacing:0.15em;font-weight:700;">You&rsquo;re invited &mdash; Next Gen parent WhatsApp</p>
