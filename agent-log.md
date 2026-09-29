@@ -5,6 +5,26 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-28 — Pure specs set env in hooks and restore it; "env before import" is retired
+
+- **Situation:** `skills/add-invariant-test.md` step 3 said to set env at the top of a spec, before the import, and that "each spec file gets its own worker." Throwaway probes on Playwright 1.59.1 (run, then deleted) showed all of that was wrong for `npm run test:pure`:
+  - The runner runs every spec's module scope while collecting tests, then forks the workers with that environment. The last file collected wins each key; on this date every worker started with `RESEND_API_KEY=re_test_dummy` from `session-reschedule.spec.ts`.
+  - Imports are hoisted. In the runner, a module imported below a `process.env` line saw it unset. In a worker it saw the runner's value, not the worker's own assignment.
+  - Workers are reused across files. A module imported by two files was evaluated once, and env set in one file's test body was visible in the next file.
+  - 71 specs set env at module scope: 66 directly, plus 5 only through `setWebhookTestEnv()`. 29 of them set `RESEND_API_KEY`. Of the 52 keys they touch, 29 get a different value, or are deleted, in different files.
+- **Decision:** Step 3 now requires env in `beforeEach`/`beforeAll`, `delete` for every key that must be absent, and every touched key restored in `afterAll`, with `e2e/invariant-linkdink-roster-egress.spec.ts` as the model. It also asks for modules that read env per call, and for each new spec to be run alone and in the suite. The existing specs were listed, not rewritten.
+  - No outcome depends on another file's env or on collection order. All 187 pure spec files gave the same per-test status counts in every condition we tried:
+    - each file alone;
+    - alone with the exact environment workers inherit;
+    - alone with the 29 conflicting keys flipped to another file's value;
+    - the full suite at 1, 2 and 9 workers.
+  - Code paths do depend on it. A fetch trace shows six specs making Notion calls only when other files' DB ids are present: `webhook-routing` (the processed-events ledger and the fall roster write), `webhook-charge-refunded`, `invariant-crew-followup-egress`, `invariant-crew-interest-pii-egress`, `invariant-ops-trigger-parity` and `invariant-weekly-newsletter-drafts-visibility`.
+  - Several of those calls hit unstubbed URLs, and fail-soft code swallows the error. Across three identical local runs, the DB ids some of them queried changed with worker scheduling.
+- **Risk:** Moving an old spec to hooks narrows what these six exercise to what they configure themselves. They all pass alone, so nothing turns red, but a branch that only ever ran on leaked env stops running.
+  - The 28 import-time reads of `NEXT_PUBLIC_SITE_URL` in `src/` are inert today, because every spec that sets it uses the fallback value.
+  - `--ui` and the VS Code extension load specs in a separate process, so they don't get the inherited env at all. That comes from reading the source; it wasn't probed.
+- **Change:** `skills/add-invariant-test.md` (step 3 rewritten, step 7 and the Don'ts amended, plus a new "How the pure runner actually loads specs" section with a grep that lists the specs still setting env at module scope). The `setWebhookTestEnv()` doc comment in `e2e/fixtures/stripe-sessions.ts` changed; there are no code or spec changes.
+
 ## 2026-09-28 — The MVF tournament's Link & Dink roster sync sends a stable event key, alerts on failure, and keeps names out of the logs
 
 - **Situation:** `src/lib/linkdink-roster-sync.ts` (#364) posted each MVF Junior Tournament registrant to the Link & Dink popup roster by exact event slug, `mvf-junior-tournament-10u-2026-10-24-3` and `…-14u-2026-10-24-2`. L&D has since cancelled and re-created both events: the live rows are `…-10u-…-4` (ages 8–10) and `…-14u-…-3` (ages 11–14), each the only non-cancelled row under its key (read from `ld.events` 2026-09-28). Its endpoint answers an exact cancelled slug with `409 event_cancelled`, so every sync would have failed, and nobody would have known: the checkout route ignores the result and the module only `console.error`'d, with the child's full name in the log line. Nothing has been lost yet. The registrations DB has 0 rows (the same Notion SQL reader returns 47 on the Internal Hub, so the zero is real) and L&D has 0 `nga-sync` RSVPs. #364 also opened a child-PII egress without the source-inventory entry or the egress invariant that CLAUDE.md requires. The endpoint has accepted a stable `event_key` since community-os 432feeb (2026-09-27), which is in the live p3 build (fc06ce05).

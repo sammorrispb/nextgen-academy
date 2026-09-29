@@ -13,15 +13,21 @@ export const TEST_WEBHOOK_SECRET = "whsec_test_invariants";
 export const TEST_NOTION_KEY = "ntn_test_key";
 export const TEST_DROPINS_DB = "db-dropins-test";
 
-/** Env every webhook spec needs BEFORE importing the route module. */
+/**
+ * Env every webhook spec needs. Call it from a hook and restore the keys in
+ * `afterAll` (skills/add-invariant-test.md step 3). The existing module-scope
+ * callers predate that rule: module scope runs in the Playwright runner and
+ * leaks into every worker, and it runs after the spec's hoisted imports.
+ */
 export function setWebhookTestEnv(): void {
   process.env.STRIPE_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET;
   process.env.STRIPE_SECRET_KEY = "sk_test_dummy_offline";
   process.env.NOTION_API_KEY = TEST_NOTION_KEY;
   process.env.NOTION_DROPINS_DB_ID = TEST_DROPINS_DB;
   process.env.NGA_ADMIN_SECRET = "test-admin-secret";
-  // Twilio env intentionally absent: sendSms() self-skips as not_configured.
-  // RESEND_API_KEY intentionally absent: email helpers warn + skip.
+  // Twilio and RESEND_API_KEY are not set here, but that does not make them
+  // absent: in the full suite every worker inherits RESEND_API_KEY from other
+  // specs. Delete a key in your hook if the test needs it absent.
 }
 
 const DROPIN_METADATA = {
