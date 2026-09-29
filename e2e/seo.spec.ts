@@ -440,16 +440,14 @@ test.describe("City pages — visible H1 + clickable Free Evaluation CTA", () =>
       expect(text).toMatch(new RegExp(route.cityInAreaServed!, "i"));
       expect(text.toLowerCase()).toContain("pickleball");
 
-      // Free-evaluation CTA reachable from the hero — either the in-page form
-      // anchor (#contact-form) or a direct link to /free-evaluation.
+      // Free-evaluation scheduling opens a text to Coach Sam.
       const cta = page
-        .getByRole("link", { name: /book.*free.*evaluation/i })
+        .getByRole("link", { name: /text.*free.*evaluation/i })
         .first();
       await expect(cta).toBeVisible();
       const href = await cta.getAttribute("href");
       expect(href, "CTA href").toBeTruthy();
-      // Accepts the in-page anchor or the dedicated /free-evaluation page.
-      expect(href!).toMatch(/(#contact-form|\/free-evaluation)/);
+      expect(href!).toBe("sms:+13013254731");
     });
   }
 });

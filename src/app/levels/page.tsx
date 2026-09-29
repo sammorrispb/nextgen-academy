@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import type { Metadata } from "next";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
@@ -174,7 +175,7 @@ export default function LevelsPage() {
               How placement works
             </h2>
             <p className="text-ngpa-white/80 leading-relaxed mb-3">
-              Book a free evaluation and Coach Sam places your player in the
+              Text for a free evaluation and Coach Sam places your player in the
               right color — it takes one session, and there&rsquo;s no
               &ldquo;not ready&rdquo;: every level from the first paddle touch
               has a group to join.
@@ -193,10 +194,10 @@ export default function LevelsPage() {
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
             <Link
-              href="/free-evaluation"
+              href={EVALUATION_SMS_URL}
               className="inline-flex items-center justify-center px-8 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
             >
-              Book a Free Evaluation →
+              Text for a Free Evaluation →
             </Link>
             <Link
               href="/schedule"

@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { seo } from "@/data/seo";
@@ -383,13 +384,13 @@ export default function MontgomeryVillagePage() {
               </svg>
             </TrackedCTA>
             <TrackedCTA
-              href="/free-evaluation"
+              href={EVALUATION_SMS_URL}
               label="mvf_hero_free_eval"
               section="mvf_hero"
               asNextLink
               className="inline-flex items-center justify-center px-7 py-3.5 bg-white/10 ring-1 ring-white/30 text-ngpa-white font-bold rounded-full hover:bg-white/15 hover:ring-white/50 transition-all min-h-[48px]"
             >
-              Book a Free Evaluation
+              Text for a Free Evaluation
             </TrackedCTA>
           </div>
         </div>
@@ -543,7 +544,7 @@ export default function MontgomeryVillagePage() {
             </Link>
             , or{" "}
             <Link
-              href="/free-evaluation"
+              href={EVALUATION_SMS_URL}
               className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
             >
               book a free evaluation

@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import type { Level } from "@/data/levels";
 
 interface LevelCardProps {
@@ -94,7 +95,7 @@ export default function LevelCard({ level }: LevelCardProps) {
             </div>
           ) : (
             <a
-              href="/free-evaluation/book"
+              href={EVALUATION_SMS_URL}
               className="inline-flex items-center gap-1.5 text-sm font-bold text-ngpa-teal hover:text-ngpa-teal-bright transition-colors"
             >
               Get Started

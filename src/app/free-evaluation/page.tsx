@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 import type { Metadata } from "next";
-import LeadForm from "@/components/LeadForm";
+import EvaluationSchedulingCard from "@/components/EvaluationSchedulingCard";
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import JsonLd from "@/components/JsonLd";
 import { testimonials } from "@/data/testimonials";
 import { site } from "@/data/site";
@@ -9,7 +9,7 @@ import { areaServedJsonLd, breadcrumbJsonLd, orgRef, SITE_URL } from "@/lib/seo"
 
 const PAGE_TITLE = "Free Youth Pickleball Evaluation — Montgomery County, MD";
 const PAGE_DESCRIPTION =
-  "Book a free 30-min pickleball evaluation for your child (ages 6–16) in Montgomery County, MD. Meet a coach, get a placement. No cost, no commitment.";
+  "Text Coach Sam to schedule a free 30-min pickleball evaluation for your child (ages 6–16) in Montgomery County, MD. Meet a coach, get a placement. No cost, no commitment.";
 const SHARE_DESCRIPTION =
   "Youth pickleball coaching for kids ages 6–16 in Montgomery County, MD. Your first 30 minutes are on us.";
 
@@ -99,7 +99,7 @@ export default function FreeEvaluationPage() {
             <div className="lg:col-span-7">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-ngpa-teal/15 ring-1 ring-ngpa-teal/40 backdrop-blur-sm text-ngpa-teal text-xs font-bold tracking-[0.18em] uppercase mb-5">
                 <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-ngpa-teal animate-pulse" />
-                Limited-Time Offer
+                Free Evaluation
               </div>
 
               <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.02] tracking-tight">
@@ -167,34 +167,7 @@ export default function FreeEvaluationPage() {
               id="contact-form"
               className="lg:col-span-5 lg:sticky lg:top-28 scroll-mt-24"
             >
-              <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
-                <div className="px-5 pt-6 pb-3 text-center">
-                  <p className="font-heading text-xl font-black text-ngpa-white tracking-tight">
-                    Book your free evaluation
-                  </p>
-                  <p className="text-ngpa-white/65 text-sm mt-1.5">
-                    We&rsquo;ll call or text within 24 hours to schedule.
-                  </p>
-                  <p className="text-sm mt-2.5">
-                    <Link
-                      href="/free-evaluation/book"
-                      className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
-                    >
-                      Or skip the wait — pick an open eval time now &rarr;
-                    </Link>
-                  </p>
-                  <p className="text-ngpa-white/55 text-xs mt-2.5 leading-relaxed">
-                    After the eval, group sessions are{" "}
-                    <span className="text-ngpa-white/80 font-bold">
-                      drop-in
-                    </span>{" "}
-                    &mdash; come when it fits your week. No contracts. Session
-                    and private-lesson rates come with your placement, after we
-                    see your child play.
-                  </p>
-                </div>
-                <LeadForm submitLabel="Schedule my free evaluation" />
-              </div>
+              <EvaluationSchedulingCard />
             </div>
           </div>
         </div>
@@ -278,18 +251,17 @@ export default function FreeEvaluationPage() {
               Also in Frederick.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Private lessons run at The Pickl Park in Frederick. Pick
-              &ldquo;Frederick&rdquo; on the form above and we&rsquo;ll set up a
-              time.
+              Private lessons are also available at The Pickl Park in Frederick.
+              Mention Frederick in your text and we&rsquo;ll find a time and court.
             </p>
           </div>
           <p className="mt-10 text-center text-base text-ngpa-white/65">
             Questions?{" "}
             <a
-              href={`tel:${site.phone.replace(/\D/g, "")}`}
+              href={EVALUATION_SMS_URL}
               className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
             >
-              Call or text Sam at {site.phone}
+              Text Coach Sam at {site.phone}
             </a>
           </p>
         </div>

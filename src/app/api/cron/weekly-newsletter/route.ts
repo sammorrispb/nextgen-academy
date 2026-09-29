@@ -1,7 +1,8 @@
 import { withCronAlert, rollupFailure, type CronFailure } from "@/lib/cron-alert";
 import { Resend } from "resend";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
-import { fetchActiveSubscribers } from "@/lib/notion-newsletter";
+import { syncNewsletterAudience } from "@/lib/notion-newsletter-sync";
+import { newsletterPrograms } from "@/lib/newsletter-programs";
 import { pickWeeklyTip } from "@/lib/newsletter-tips";
 import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
@@ -51,6 +52,7 @@ import {
 } from "@/lib/email/weekly-newsletter";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 // Cron path — never cache.
 export const dynamic = "force-dynamic";
 
@@ -373,10 +375,12 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     0,
   );
 
-  const subscribers = await fetchActiveSubscribers();
+  const audience = await syncNewsletterAudience();
+  const subscribers = audience.subscribers;
   // First-party click attribution: tag this week's send so /api/analytics can
   // separate newsletter-driven traffic from organic. One campaign per issue.
   const utmCampaign = `weekly-${new Date().toISOString().slice(0, 10)}`;
+  const programs = newsletterPrograms(todayIso, SITE_ORIGIN, utmCampaign);
   const scheduleUrl = appendUtm(`${SITE_ORIGIN}/schedule`, "schedule", utmCampaign);
   const crewInterestUrl = appendUtm(`${SITE_ORIGIN}/crew`, "crew", utmCampaign);
   // Re-enabled 2026-08-05. It was suppressed on 2026-06-15 as a duplicate of
@@ -436,7 +440,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     : fallOpen
       ? "Fall season registration is open — Next Gen"
       : picklParkPromotable
-        ? "Saturday youth leagues at The Pickl Park — Next Gen"
+        ? "Saturday Drill and Play at The Pickl Park — Next Gen"
         : sessions.length
       ? "Open courts this week — Next Gen"
       : camps.length
@@ -461,6 +465,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
 
     const input = {
       parentFirst,
+      programs,
       fallSeason,
       picklParkSeason,
       sessions,
@@ -508,7 +513,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   try {
     const adminInput = {
       parentFirst: "Coach",
+      programs,
       fallSeason,
+      picklParkSeason,
       sessions,
       laterSessions,
       openPolls,
@@ -638,6 +645,14 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     newsletter_lead_unreadable: draftsResult.unreadablePageIds.length,
     newsletter_lead_stranded: draftsResult.strandedPageIds.length,
     subscribers: subscribers.length,
+    crm_families: audience.crmFamilies,
+    crm_subscribers_created: audience.created,
+    crm_eligible: audience.eligible,
+    crm_ambiguous: audience.ambiguous,
+    crm_suppressed: audience.suppressed,
+    crm_dd_derived: audience.ddDerived,
+    crm_test: audience.test,
+    crm_invalid: audience.invalid,
     sent,
     failed,
     tip: tip.title,

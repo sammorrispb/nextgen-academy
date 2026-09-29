@@ -6,6 +6,10 @@
 
 **Stack reality:** Next.js (Vercel) + Stripe + **Notion as the only database** (no Supabase, no SQL). Auth = signed session cookies (coach/admin, magic-link issued) + HMAC tokens for one-shot parent/coach actions. Email = Resend; SMS = Twilio.
 
+## September 29 scheduling addition (pending release)
+
+`/lessons/book` retains paid-invoice links and sends new requests to Coach OS `/book/nga-lessons`. Coach OS stores guardian contacts only and uses Sam's shared availability; no child fields are transferred. Its authenticated calls to `POST /api/lesson-scheduling` use the dedicated `NGA_LESSON_SCHEDULING_SECRET`, never the admin secret. `check_waiver` strictly reads the existing NGA waiver store. `prepare_request` also ensures a parent-only CRM inquiry exists; it never overwrites existing family or subscriber records. Missing configuration, malformed/incomplete reads, and Notion failures refuse the handoff. The public `/api/eval-book` slot picker is retired (410); evaluations are arranged by text. Tests: `invariant-lesson-scheduling-bridge`, `invariant-eval-book-egress`, `lesson-scheduling-entry`.
+
 ## Classification definitions
 
 - **MOUSE-CATCHER** — wired to money or production traffic: Stripe checkout/webhook, Notion roster writes, scheduled sends to real recipients.
