@@ -27,10 +27,10 @@ Append-only. One entry per consequential decision, newest first. Format:
   - Mutation checks turned it red for each of: non-OK answering "not recorded" again, everything classed transient, the alert removed, and fall bypassing the guard.
   - Suite green, lint 0 errors, build green.
   - Independent hostile review: VERDICT CLEAR. Findings applied: the capped alert wait, the env-unset test, the other four handlers exercised end to end, reuse of `classifyNotionFailure`, and the docstring. Not applied: a log-filter wording nit.
-## 2026-09-29 — Sign-in links and Stripe return URLs come from server config, never the request
+## 2026-09-28 — Sign-in links and Stripe return URLs come from server config, never the request
 
 - **Situation:** Finding H1 + M1 of the 2026-09-28 security review. `admin/request-link` and `coach/request-link` built the magic link from the request's `Origin` header. An attacker could POST Sam's (public) address with `Origin: https://nextgenpbacademy.com.evil.tld`, and the real NGA sender would email Sam a sign-in link to that host. One click leaked a 10-minute token worth a 30-day admin cookie, and with it the registrants API (parent contacts, child names and birth years). Six checkout routes built Stripe `success_url`/`cancel_url` the same way, so a genuine Stripe link could return a paying parent to an attacker site carrying the `cs_` id.
-- **Decision:** Sam approved every Plan v2 PR on 2026-09-29 ("do all"). Gauntlet verdict: GO-WITH-CHANGES.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all"). Gauntlet verdict: GO-WITH-CHANGES.
   - `src/lib/site-origin.ts` picks the origin in this order:
     1. `NEXT_PUBLIC_SITE_URL` when it is valid https, reduced to its origin. Plain http is accepted only for localhost outside production.
     2. On a Vercel preview, the platform-set `VERCEL_URL`.
