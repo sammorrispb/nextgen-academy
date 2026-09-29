@@ -5,6 +5,30 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-28 — Open Brain carries a child's first name + age and nothing further; public ages follow display consent
+
+- **Situation:** Security review 2026-09-28, findings H3 and M3.
+  - **H3.** On 2026-08-30 Sam capped child data in Open Brain at first name + age; the decision is recorded in open-brain `supabase/functions/nga-crm-sync/index.ts`. This repo broke that cap across 27 `ingestToOpenBrain` callers:
+    - Camp and league webhooks sent allergies and emergency contacts.
+    - Several routes sent birth years.
+    - MVF sent a child's last name and full DOB.
+    - Some `interest` and `child_name` fields carried full names.
+    - Crew-interest forwarded `friends_wanted`, parent free text that names other children.
+  - **M3.** `/schedule` showed a child's exact age ("1 going · age 9") beside the venue, date and time, even when the family had not consented to display.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - Callers no longer build the forbidden keys. `ingestToOpenBrain` enforces the cap as a backstop: it applies a key denylist at any depth, cuts child-name fields (including an `interest` that repeats one) to their first word, and logs the key names it drops, never their values.
+  - `buildAgeStats`: the count covers every registrant, but only display-consented families contribute an age. `socialProofLine` renders nothing below 2 registrants, so a lone child's age never appears.
+  - This file's Minor-Data Governance section records the cap and its scope limits.
+- **Risk:**
+  - Parent free text (contact message, lead notes, lesson notes, Yellow Ball notes, preferred times) is still forwarded as written, because triage needs it. `/api/analytics` is a separate Open Brain egress; it forwards only `child_age` today.
+  - A composite `interest` string containing a full name would slip past the exact-match cap. No caller builds one.
+  - Rows already in Open Brain still hold the old fields. The scrub is a separate, Sam-approved cleanup (decision D3).
+- **Change:** New `e2e/invariant-open-brain-child-field-cap.spec.ts`, 11 tests.
+  - Coverage: forbidden keys at the top level and nested, first-name cuts, the `interest` cap, `friends_wanted`, no over-stripping, and five consent/age cases.
+  - Mutations, each of which turns the spec red: denylist emptied, first-name cut removed, raw payload sent, consent filter dropped, D9 floor removed, interest cap removed, `friend` dropped.
+  - Suite green, lint 0 errors, build green.
+  - Independent hostile review: CHANGES-NEEDED (two majors, the `interest` field and `friends_wanted`). After fixes, re-verified CLEAR.
+
 ## 2026-09-28 — The Stripe webhook's duplicate check retries or alerts; it never creates a second roster row
 
 - **Situation:** Security review 2026-09-28, finding M7. The five webhook "already recorded?" guards (drop-in, fall, Pickl Park, Monday Girls, cluster) answered "not recorded" on ANY Notion failure. A 429 during a Stripe redelivery (after a timeout, or after a transient 500 whose write actually landed) therefore created a second roster row: a doubled seat (which blocks a real sale on the capped seasons), a doubled Registered count, and a second parent email and SMS.
