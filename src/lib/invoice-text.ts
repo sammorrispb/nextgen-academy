@@ -15,8 +15,11 @@
  * Latin modifier letters (\p{Lm}), U+A78F "ꞏ" and U+01C0–U+01C3 "ǀ ǁ ǂ ǃ"
  * (pipe and "!" look-alikes) are Latin-script look-alikes too. A combining mark
  * survives only on a letter: after a space, hyphen, apostrophe or stripped
- * character a dot-below mark would print as a floating ".".
- * Capped at 40 characters. Metadata (internal) may keep the raw value.
+ * character a dot-below mark would print as a floating ".". Only non-spacing
+ * marks of the Inherited script (the ordinary accents) survive at all: a
+ * spacing or enclosing mark prints its own glyph (U+302E is a dot, U+0903 a
+ * colon), and another script's marks are that script's look-alikes.
+ * Capped at 40 characters (code points, never splitting one). Metadata (internal) may keep the raw value.
  * Pinned by e2e/invariant-invoice-route-abuse.spec.ts.
  */
 export function invoiceSafeName(raw: unknown, fallback = "your player"): string {
@@ -24,8 +27,11 @@ export function invoiceSafeName(raw: unknown, fallback = "your player"): string 
 }
 
 const NOT_A_NAME_CHARACTER =
-  /(?:[^\p{Script=Latin}\p{M}'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3])+/gu;
+  /(?:[^\p{Script=Latin}\p{Mn}'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3]|(?=\p{Mn})\P{Script=Inherited})+/gu;
 const MARK_NOT_ON_A_LETTER = /(?<![\p{L}\p{M}])\p{M}+/gu;
+// 40 code points, not 40 UTF-16 units: a unit cut can split an astral letter
+// into a lone surrogate, which Stripe's form encoder throws on.
+const FIRST_40_CHARACTERS = /^([\s\S]{0,40})[\s\S]*$/u;
 
 /**
  * The same cleaning with no fallback: "" when nothing printable survives, so a
@@ -41,6 +47,6 @@ export function cleanPersonName(raw: unknown): string {
     .replace(MARK_NOT_ON_A_LETTER, "")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 40)
+    .replace(FIRST_40_CHARACTERS, "$1")
     .trim();
 }

@@ -97,7 +97,9 @@ export function mvfTournamentLdEventKey(division: string): string | null {
  * L&D event. Names go through cleanPersonName: they are typed on an anonymous
  * form and shown to the organizer and MVF, so no link, domain or look-alike
  * punctuation may ride them. first_name is "" when nothing printable is left;
- * the sync refuses that rather than seat a placeholder. */
+ * the sync refuses that rather than seat a placeholder. L&D's idempotency key
+ * hashes the names AS SENT, so a hand re-send must send them cleaned the same
+ * way; the raw Notion value can seat the child a second time. */
 export function buildMvfRosterSyncBody(
   input: MvfRosterSyncInput,
 ): MvfRosterSyncBody | null {
@@ -131,7 +133,7 @@ async function alertSyncFailure(
           {
             signature,
             ref,
-            detail: `${detail}. The player may be missing from the Link & Dink roster; after a timeout they can still have been seated, so check the roster first. If they are missing, find the registration by this alert's time (the "invoice sent" admin email or the NGA MVF Junior Tournament Registrations DB) and re-send it to the L&D endpoint with NGA_SYNC_SECRET, dry_run first (it is idempotent). Never hand-add a junior through L&D's walk-up form: it skips the junior protections (hidden from peers, the RSVP's child-name fields) and can tie the child to the parent's adult identity. Log tag ${TAG}.`,
+            detail: `${detail}. The player may be missing from the Link & Dink roster; after a timeout they can still have been seated, so check the roster first. If they are missing, find the registration by this alert's time (the "invoice sent" admin email or the NGA MVF Junior Tournament Registrations DB) and re-send it to the L&D endpoint with NGA_SYNC_SECRET, dry_run first. It is idempotent only on the names as this sync sends them: Latin letters, accents on a letter, apostrophes, hyphens and spaces, at most 40 characters. Re-sending the raw name from Notion can seat the child twice. Never hand-add a junior through L&D's walk-up form: it skips the junior protections (hidden from peers, the RSVP's child-name fields) and can tie the child to the parent's adult identity. Log tag ${TAG}.`,
           },
         ],
       });

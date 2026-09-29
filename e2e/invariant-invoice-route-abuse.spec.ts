@@ -55,6 +55,29 @@ test.describe("invoiceSafeName — what a stranger can make Stripe print", () =>
       expect(invoiceSafeName(s)).not.toMatch(/[.:/@\uA4F8\u02D0\u141F\uA78F\u01C0-\u01C3]/);
     }
   });
+  test("no spacing or enclosing mark survives, even on a letter", () => {
+    // Mc/Me marks print their own glyph: U+302E is a dot, U+0903 a colon.
+    const survivors: string[] = [];
+    for (let cp = 0; cp <= 0x10ffff; cp++) {
+      if (cp >= 0xd800 && cp <= 0xdfff) continue;
+      const ch = String.fromCodePoint(cp);
+      if (!/[\p{Mc}\p{Me}]/u.test(ch)) continue;
+      if (cleanPersonName(`evil${ch}com`) !== "evil com") survivors.push(cp.toString(16));
+    }
+    expect(survivors).toEqual([]);
+  });
+  test("a non-spacing mark from another script can't ride a Latin letter", () => {
+    // U+0901 Devanagari candrabindu is Mn but Script=Devanagari.
+    expect(cleanPersonName("evil\u0901com")).toBe("evil com");
+    // Inherited-script marks (the ordinary accents) still attach.
+    expect(cleanPersonName("Nguye\u0302\u0303n")).toBe("Nguyễn");
+  });
+  test("the 40-character cap never splits a character", () => {
+    const astralLatin = String.fromCodePoint(0x1df00); // Latin Extended-G, Script=Latin
+    const out = cleanPersonName("A".repeat(39) + astralLatin + "B");
+    expect(out.isWellFormed()).toBe(true);
+    expect(Array.from(out)).toHaveLength(40);
+  });
   test("no combining mark survives anywhere but on a letter", () => {
     for (const s of [" \u0323 ", "a \u0323\u0323 b", "1\u0307x", "-\u0301", "ꓸ\u0323com", "\u01C3\u0323"]) {
       expect(invoiceSafeName(s, "")).not.toMatch(/(?<![\p{L}\p{M}])\p{M}/u);
@@ -172,7 +195,8 @@ test.describe("scripts/audit-stripe-customer-names.mjs", () => {
   test("the script's cleaner matches the invoice cleaner (no drift)", () => {
     const fixtures = [
       "Zoë O’Brien-Nguyễn", "Pay at https://evil.example/pay", "evil\uA4F8com", "x\u02D0\u141Fy",
-      "Pay\u01C0evil\u01C3", "evil \u0323 com", "Mary-\u0323Kate", "Aq\u0307a", "A".repeat(80),
+      "Pay\u01C0evil\u01C3", "evil \u0323 com", "Mary-\u0323Kate", "Aq\u0307a", "A".repeat(80), "evil\u302Ecom", "evil\u{1D16D}com", "https\u0903", "evil\u0901com",
+      "A".repeat(39) + "\u{1DF00}B",
       "\u674E\u5C0F\u9F99", "Kid 2 (call 555-0100!)", "ꞏ", "\u02B0i", "", "   ",
     ];
     for (const f of fixtures) expect(scriptCleanPersonName(f), JSON.stringify(f)).toBe(cleanPersonName(f));
@@ -211,6 +235,22 @@ test.describe("scripts/audit-stripe-customer-names.mjs", () => {
     ]);
     const out = lines.join("\n");
     for (const pii of ["evil", "Zoë", "Auditkid", "@example.com", "victim"]) expect(out).not.toContain(pii);
+  });
+
+  test("a page that says there is more but carries no customers stops the run instead of reporting a clean scan", async () => {
+    for (const data of [[], null]) {
+      const fetchImpl = async () => new Response(JSON.stringify({ has_more: true, data }), { status: 200 });
+      const lines: string[] = [];
+      await expect(
+        auditCustomers({ apiKey: "rk_test_audit", fetchImpl, write: (l: string) => lines.push(l) }),
+      ).rejects.toThrow(/incomplete/);
+      expect(lines).toEqual([]);
+    }
+  });
+
+  test("a spacing mark and a long clean name are classified correctly", () => {
+    expect(nameAuditReasons("evil\u{1D16D}com")).toEqual(["lookalike"]);
+    expect(nameAuditReasons("Ava ".repeat(15).trim())).toEqual([]);
   });
 
   test("a Stripe error stops the run and reports the status alone", async () => {

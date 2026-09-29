@@ -23,7 +23,7 @@ Append-only. One entry per consequential decision, newest first. Format:
 - **Risk:**
   - The cleaning changes L&D's idempotency key (HMAC of email|first|last) for any name with a stripped character, so a child synced raw before this PR would seat twice on a re-send. The RLS-scoped L&D MCP sees 0 `nga-sync` RSVPs (positive control: 146 rsvps readable), but that reader can't prove zero. Confirm with a service-role read, and dry-run first, before any backfill.
   - A non-Latin first name now needs a manual seat on L&D. The Notion row, Stripe metadata and admin email keep the raw value.
-  - `FallInterestForm.tsx`, `validate-fall-interest.ts` and `email/fall-interest-confirmation.ts` are now dead code, left in place to keep this PR to 8 code files (the form would POST to a 410). They should be deleted in a later cleanup.
+  - `FallInterestForm.tsx` and `email/fall-interest-confirmation.ts` (now used only by `fall-survey.spec.ts`) are dead code, left in place to keep this PR to 8 code files; the form would POST to a 410. **`validate-fall-interest.ts` is NOT dead**: five live checkout validators import its `FALL_CHILD_AGE_MIN/MAX`. A later cleanup must move those constants out before deleting it.
   - Bearing on open decisions, not acted on:
     - D2: retiring the route removes one of the unverified-address senders.
     - D3: the retired route's past `nga_fall_interest` ingests are part of the Open Brain rows the scrub covers.
@@ -35,7 +35,20 @@ Append-only. One entry per consequential decision, newest first. Format:
   - `invariant-linkdink-roster-egress.spec.ts`: +3 tests (cleaned body, an empty last name sent as "", `name_unprintable` with no name in alerts or logs), all failing on main.
   - Mutation-checked 12/12, each turning the specs red: U+01C0–3 dropped (4 red), mark rule removed (7), roster first name raw (2), last name raw (2), unprintable skip removed (1), invoice fallback on the roster (1), the route restored from main (5), the script POSTs (2), stops after page 1 (1), prints the name (1), its cleaner drifts (1), `lookalike` dropped (1).
   - Docs: `CLAUDE.md` (fall survey section), `docs/source-inventory.md` (lib row and risk log #11).
-  - Gate: `test:pure` 2223/2223 (before the doc edits), lint 0 errors (3 pre-existing warnings), `tsc` clean, `npm run build` green from a clean `.next`.
+  - Gate: `test:pure` 2228/2228, lint 0 errors (3 pre-existing warnings), `tsc` clean, `npm run build` green from a clean `.next`.
+  - **Independent hostile review, round 1: CHANGES-NEEDED.**
+    - MAJOR: spacing (Mc) and enclosing (Me) marks, and other scripts' non-spacing marks, survived on a Latin letter. For example U+302E renders as a dot and U+0903 as a colon. 471 Mc + 13 Me code points were affected, and the flaw pre-dates this PR. **Fixed:** only Inherited-script non-spacing marks survive, in both copies. An exhaustive spec covers every Mc/Me code point.
+    - MINOR, all fixed:
+      - The 40-unit cap could split an astral Latin letter into a lone surrogate, which Stripe's encoder throws on. The cap now counts code points.
+      - The roster alert's recovery text now says to re-send the name cleaned (L&D's key hashes the names as sent), with a code comment.
+      - The audit throws instead of reporting a partial count when an empty page claims `has_more`. It also no longer flags long clean names, and it flags Mc/Me as `lookalike`.
+      - This entry had wrongly called `validate-fall-interest.ts` dead.
+    - Mutation-checked the round-1 fixes 6/6: any-script marks (2 red), other-script Mn (2), UTF-16 slice (2), empty-page throw removed (1), Mc/Me dropped from the audit (1), recovery text reverted (1).
+    - NITs not changed:
+      - Latin `ʔ` `ʖ` `Ɂ` and the Roman numerals still pass. None can form `.` `:` `/` `@`, so none can build a link.
+      - Stacked accents on one letter still pass (no link risk).
+      - Plain words still reach L&D (the accepted #375 residual).
+      - Two siblings whose names differ only by stripped characters would share one L&D key, so the second is not seated and nothing alerts. Unlikely.
   - **Rollback:** revert the commit.
 
 ## 2026-09-28 — Invoice routes: names Stripe (and the MVF pre-payment email) show a stranger are reduced to Latin letters

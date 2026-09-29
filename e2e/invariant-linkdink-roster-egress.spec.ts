@@ -297,6 +297,9 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
     // endpoint, never L&D's walk-up form.
     expect(alerts[0].body).toContain("dry_run");
     expect(alerts[0].body).toContain("walk-up");
+    // L&D's idempotency key hashes the names as sent, so a hand re-send must
+    // send them cleaned; the raw Notion value can seat the child twice.
+    expect(alerts[0].body).toContain("seat the child twice");
     expectNoPii(alerts[0].body, "the alert email");
     expect(logged.length).toBeGreaterThan(0);
     for (const line of logged) expectNoPii(line, "a log line");
@@ -397,6 +400,7 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
     ).toBe(true);
     const body = JSON.parse(stub.calls[0].body) as Record<string, string>;
     expect(body.first_name).toBe("Visit evil example pay");
+
     expect(body.last_name).toBe("O’Brien-Nguyễn");
     expect(body.email).toBe(PARENT_EMAIL);
   });

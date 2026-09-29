@@ -15,8 +15,8 @@
 // Reason codes:
 //   punct      the name contains . : / or @
 //   digit      the name contains a digit (any script)
-//   lookalike  a look-alike (any modifier letter, ꞏ, ǀ ǁ ǂ ǃ) or a
-//              combining mark not on a letter
+//   lookalike  a look-alike (any modifier letter, ꞏ, ǀ ǁ ǂ ǃ), a spacing or
+//              enclosing mark, or a combining mark not on a letter
 //   non_latin  a character from another script: a real name (review, don't
 //              assume abuse) or a look-alike such as the Lisu dot ꓸ
 //   other      anything else the invoice cleaner would strip (<, !, emoji…)
@@ -36,8 +36,11 @@ const PAGE_SIZE = 100;
 // import the TypeScript module under every runner). The invoice spec runs the
 // same fixtures through both, so the two cannot drift silently.
 const NOT_A_NAME_CHARACTER =
-  /(?:[^\p{Script=Latin}\p{M}'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3])+/gu;
+  /(?:[^\p{Script=Latin}\p{Mn}'’\- ]|[\p{Lm}\uA78F\u01C0-\u01C3]|(?=\p{Mn})\P{Script=Inherited})+/gu;
 const MARK_NOT_ON_A_LETTER = /(?<![\p{L}\p{M}])\p{M}+/gu;
+// 40 code points, not 40 UTF-16 units: a unit cut can split an astral letter
+// into a lone surrogate, which Stripe's form encoder throws on.
+const FIRST_40_CHARACTERS = /^([\s\S]{0,40})[\s\S]*$/u;
 
 export function cleanPersonName(raw) {
   if (typeof raw !== "string") return "";
@@ -47,11 +50,11 @@ export function cleanPersonName(raw) {
     .replace(MARK_NOT_ON_A_LETTER, "")
     .replace(/\s+/g, " ")
     .trim()
-    .slice(0, 40)
+    .replace(FIRST_40_CHARACTERS, "$1")
     .trim();
 }
 
-const LATIN_LOOKALIKE = /[\p{Lm}\uA78F\u01C0-\u01C3]|(?<![\p{L}\p{M}])\p{M}/u;
+const LATIN_LOOKALIKE = /[\p{Lm}\p{Mc}\p{Me}\uA78F\u01C0-\u01C3]|(?<![\p{L}\p{M}])\p{M}/u;
 const OTHER_SCRIPT = /[^\p{Script=Latin}\p{Script=Common}\p{Script=Inherited}]/u;
 
 /** Reason codes for one stored name; [] when it is clean. */
@@ -65,7 +68,8 @@ export function nameAuditReasons(name) {
   if (OTHER_SCRIPT.test(n)) reasons.push("non_latin");
   if (
     reasons.length === 0 &&
-    cleanPersonName(n) !== n.replace(/\s+/g, " ").trim()
+    // Compared uncapped: a clean name over 40 characters is not a finding.
+    cleanPersonName(n) !== n.replace(/\s+/g, " ").trim().replace(FIRST_40_CHARACTERS, "$1").trim()
   ) {
     reasons.push("other");
   }
@@ -94,6 +98,10 @@ export async function auditCustomers({ apiKey, fetchImpl = fetch, write }) {
     }
     const page = await res.json();
     const customers = Array.isArray(page.data) ? page.data : [];
+    if (page.has_more && customers.length === 0) {
+      // Stopping here would print a partial count that reads like a clean scan.
+      throw new Error(`Stripe customer list incomplete: an empty page claimed more after ${scanned} customers`);
+    }
     for (const customer of customers) {
       scanned += 1;
       const reasons = nameAuditReasons(customer.name);
