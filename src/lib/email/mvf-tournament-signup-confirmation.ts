@@ -1,3 +1,4 @@
+import { escapeHtml } from "@/lib/html";
 import { c, s } from "./brand";
 import {
   signatureExtrasHtml,
@@ -93,9 +94,9 @@ export function mvfTournamentSignupConfirmationHtml(
   } = input;
 
   return `<div style="${s.wrapper}">
-  <h1 style="${s.heading}">One step left, ${parentFirst}!</h1>
-  <p>Thanks for registering <strong>${childFirst}</strong> for the MVF Junior Tournament (${divisionLabel} division). Complete the <strong>$${amountUsd}</strong> entry fee (${residencyLabel}) to lock in the spot.</p>
-  <p style="margin: 24px 0;"><a href="${payUrl}" style="${s.cta}">Pay the entry fee</a></p>
+  <h1 style="${s.heading}">One step left, ${escapeHtml(parentFirst)}!</h1>
+  <p>Thanks for registering <strong>${escapeHtml(childFirst)}</strong> for the MVF Junior Tournament (${escapeHtml(divisionLabel)} division). Complete the <strong>$${escapeHtml(amountUsd)}</strong> entry fee (${escapeHtml(residencyLabel)}) to lock in the spot.</p>
+  <p style="margin: 24px 0;"><a href="${escapeHtml(payUrl)}" style="${s.cta}">Pay the entry fee</a></p>
   <div style="${s.card}">
     <p style="margin: 0 0 8px;"><strong>When:</strong> ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</p>
     <p style="margin: 0 0 8px;"><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}</p>

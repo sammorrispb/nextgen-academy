@@ -20,6 +20,7 @@ import {
 } from "@/lib/validate-schools";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { site } from "@/data/site";
+import { escapeHtml } from "@/lib/html";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -229,6 +230,19 @@ export async function POST(request: NextRequest) {
   const ageRangeLabel = AGE_RANGE_LABELS[body.ageRange as AgeRange] ?? "";
 
   // ─── Emails ────────────────────────────────
+  // Every submitted string lands in HTML sent to an address the submitter
+  // chose — escape them all, or the form relays phishing from our domain.
+  const e = {
+    orgName: escapeHtml(body.orgName),
+    contactName: escapeHtml(body.contactName),
+    role: body.role ? escapeHtml(body.role) : "",
+    email: escapeHtml(body.email),
+    phone: body.phone ? escapeHtml(body.phone) : "",
+    preferredDates: body.preferredDates ? escapeHtml(body.preferredDates) : "",
+    location: body.location ? escapeHtml(body.location) : "",
+    notes: body.notes ? escapeHtml(body.notes) : "",
+    attribution: escapeHtml(formatAttribution(body)),
+  };
   const adminHtml = `
 <div style="${s.wrapper}">
   <h1 style="${s.heading} margin-bottom: 24px;">
@@ -237,14 +251,14 @@ export async function POST(request: NextRequest) {
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
     <tr style="${s.tableRow}">
       <td style="padding: 10px 8px; color: ${c.muted}; width: 160px;">Organization</td>
-      <td style="${s.tableValue}"><strong>${body.orgName}</strong></td>
+      <td style="${s.tableValue}"><strong>${e.orgName}</strong></td>
     </tr>
     <tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Contact</td>
       <td style="${s.tableValue}">
-        ${body.contactName}${body.role ? ` — ${body.role}` : ""}<br/>
-        <a href="mailto:${body.email}" style="${s.link}">${body.email}</a>
-        ${body.phone ? ` · <a href="tel:${body.phone}" style="${s.link}">${body.phone}</a>` : ""}
+        ${e.contactName}${e.role ? ` — ${e.role}` : ""}<br/>
+        <a href="mailto:${e.email}" style="${s.link}">${e.email}</a>
+        ${e.phone ? ` · <a href="tel:${e.phone}" style="${s.link}">${e.phone}</a>` : ""}
       </td>
     </tr>
     <tr style="${s.tableRow}">
@@ -264,26 +278,26 @@ export async function POST(request: NextRequest) {
       <td style="${s.tableValue}">${frequencyLabel}</td>
     </tr>
     ${
-      body.preferredDates
+      e.preferredDates
         ? `<tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Preferred Dates</td>
-      <td style="${s.tableValue}">${body.preferredDates}</td>
+      <td style="${s.tableValue}">${e.preferredDates}</td>
     </tr>`
         : ""
     }
     ${
-      body.location
+      e.location
         ? `<tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Location</td>
-      <td style="${s.tableValue}">${body.location}</td>
+      <td style="${s.tableValue}">${e.location}</td>
     </tr>`
         : ""
     }
     ${
-      body.notes
+      e.notes
         ? `<tr style="${s.tableRow}">
       <td style="${s.tableLabel} vertical-align: top;">Notes</td>
-      <td style="${s.tableValue} white-space: pre-wrap;">${body.notes}</td>
+      <td style="${s.tableValue} white-space: pre-wrap;">${e.notes}</td>
     </tr>`
         : ""
     }
@@ -292,10 +306,10 @@ export async function POST(request: NextRequest) {
       <td style="${s.tableValue}">${notionStatus}</td>
     </tr>
     ${
-      formatAttribution(body)
+      e.attribution
         ? `<tr style="${s.tableRow}">
       <td style="${s.tableLabel} vertical-align: top;">Attribution</td>
-      <td style="${s.tableValue} font-size: 12px; word-break: break-all;">${formatAttribution(body)}</td>
+      <td style="${s.tableValue} font-size: 12px; word-break: break-all;">${e.attribution}</td>
     </tr>`
         : ""
     }
@@ -303,7 +317,7 @@ export async function POST(request: NextRequest) {
   <div style="${s.actionCallout}">
     <p style="${s.actionLabel}">ACTION NEEDED</p>
     <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
-      Send a quote to ${body.contactName} within 1 business day.
+      Send a quote to ${e.contactName} within 1 business day.
     </p>
   </div>
 </div>`;
@@ -313,9 +327,9 @@ export async function POST(request: NextRequest) {
   <h1 style="${s.heading} margin-bottom: 8px;">
     Thanks — we got your inquiry!
   </h1>
-  <p style="font-size: 15px; line-height: 1.6;">Hi ${body.contactName},</p>
+  <p style="font-size: 15px; line-height: 1.6;">Hi ${e.contactName},</p>
   <p style="font-size: 15px; line-height: 1.6;">
-    Thanks for reaching out about pickleball at <strong>${body.orgName}</strong>. We&rsquo;ll review the details
+    Thanks for reaching out about pickleball at <strong>${e.orgName}</strong>. We&rsquo;ll review the details
     and send a tailored quote within 1 business day.
   </p>
   <div style="${s.card}">
