@@ -115,6 +115,19 @@ test.describe("createAndSendSignupInvoice — one submission, one invoice", () =
     });
   }
 
+  test("the same submission twice AT ONCE (a double tap that beat the disabled button): one customer, one invoice", async () => {
+    // Both calls look the customer up before either creates it; only the
+    // keyed customer create stops the second from minting another customer,
+    // whose id would then collide with the first request under the invoice key.
+    const results = await Promise.allSettled([
+      createAndSendSignupInvoice(helperArgs("mvf-" + SUB_A)),
+      createAndSendSignupInvoice(helperArgs("mvf-" + SUB_A)),
+    ]);
+    expect(fake.customers.size, "customers").toBe(1);
+    expectOneInvoiceSentOnce(fake);
+    expect(results.every((r) => r.status === "fulfilled"), "neither tap errors").toBe(true);
+  });
+
   test("two different submissions still make two invoices (siblings, a second division)", async () => {
     const a = await createAndSendSignupInvoice(helperArgs("mvf-" + SUB_A, "Ava P"));
     const b = await createAndSendSignupInvoice(helperArgs("mvf-" + SUB_B, "Max P"));
