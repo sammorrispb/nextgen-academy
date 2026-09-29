@@ -5,6 +5,26 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-28 — The first crew-poll response from an address stands
+
+- **Situation:** Security review 2026-09-28, finding M4.
+  - `/api/crew-poll/vote` is unauthenticated, and `upsertPollResponse` PATCHed the existing `(poll, email)` row.
+  - So anyone who knew a parent's email could replace that family's vote, child name, age, level and phone. They could also flip a Yes to a No on a crew Sam was about to confirm.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - The first response from an address stands. A second vote gets a 409 telling the parent to reply to their confirmation email (or write to `site.email`) so Coach Sam can switch it. There is no write and no email.
+  - A Notion lookup failure writes nothing and returns 503, instead of treating the address as new.
+  - Polls are a prototype module, so there is no new token family.
+  - The dead, fail-open `findResponseByEmail` is removed.
+- **Risk:**
+  - Squatting: someone who votes first with a parent's address holds the row. That parent then gets the confirmation email (BCC Sam) showing a vote they didn't cast, so the squat is loud, not silent.
+  - The 409 reveals that an address voted on that poll. This is low value: the limit is 5/hr per IP, and the poll page already shows counts.
+  - Not changed: the retired `/fall` survey route (`/api/fall-interest`) still upserts by email. Its form was retired with the /fall conversion, but the route is still live. Logged as a follow-up.
+- **Change:** New `e2e/invariant-crew-poll-no-overwrite.spec.ts` (3 tests; 2 fail on main).
+  - Coverage: re-vote → 409 with no write and no email, and the lookup is scoped to this poll and this address; first vote → recorded; lookup 429 → 503 with no write.
+  - Mutations, each turning the spec red: existing-response check removed; lookup failure treated as a new address.
+  - Suite green, lint 0 errors.
+  - Independent hostile review: CLEAR. Findings applied: dead lookup removed, filter pinned, fallback contact added to the 409.
+
 ## 2026-09-28 — Open Brain carries a child's first name + age and nothing further; public ages follow display consent
 
 - **Situation:** Security review 2026-09-28, findings H3 and M3.
