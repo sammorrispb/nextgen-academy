@@ -5,6 +5,69 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-29 — The MVF Junior Tournament's extra child fields are inventoried (D7 still open)
+
+- **Situation:** The MVF Junior Tournament checkout (live since 2026-09-22) collects a child's last name, full DOB, allergies and emergency contact: more than the first-name + birth-year baseline, and outside the camp-only safety exception. `docs/source-inventory.md` had no row for it and no decision record approves it (security review 2026-09-28, D7). Sam asked for the inventory row.
+- **Decision:** Inventory only; no code changes. There is a lib row for `notion-mvf-tournament-registrations.ts`, risk log #12 tracing every destination of each field, and a pointer from #8. All three say the flow is **not approved** and D7 is open. The trace found that the webhook's `invoice.paid` notice emails the DOB, allergies and emergency contact in plain text to MVF's partner contact. That is the one path that puts these fields in an outside organization's inbox.
+- **Risk:** Recording a flow is not approving it; the row says so. The fields keep accruing with each registration until D7 is decided. No spec pins what the MVF partner email or the Notion row carries.
+- **Change:** `docs/source-inventory.md` (row, #8 pointer, #12). Docs only.
+
+## 2026-09-29 — Security follow-ups: /api/fall-interest retired; the name cleaner closes two look-alikes; L&D roster names cleaned; a read-only Stripe name audit
+
+- **Situation:** Four codeable follow-ups from the 2026-09-28 security review. Sam approved items 1–4 through IPAV on 2026-09-29, and nothing else.
+  1. `/api/fall-interest` still upserted by email. Its form (`FallInterestForm`) is rendered nowhere, but anyone who knew a family's address could overwrite that family's child name, birth year and level. They could also make NGA email the address and forward the answers to Open Brain.
+  2. `invoiceSafeName` let U+01C0–U+01C3 (Latin letters that look like `|`, `‖` and `!`) through. It also let a combining mark stand alone, so "evil ̣ com" printed a floating dot.
+  3. `linkdink-roster-sync.ts` sent raw child names to L&D. Read-only check in community-os (origin/main, `apps/p3`): the organizer and MVF see the child as "First L." (`composeDisplayName`); `roster.csv` / `roster.json` and the organizer's registration alert carry the full names; peer and results surfaces say "Youth player". So typed text reaches organizer screens and inboxes.
+  4. A Stripe customer created before #375 keeps its stored name on future invoices.
+- **Decision:**
+  - **Item 1: retire (410 Gone), not "first response stands".** The route has no legitimate caller. Under "first response stands" it would keep three surfaces open for nothing: an anonymous write of child fields, an NGA email to any typed address (D2 territory) and an Open Brain egress. Retiring closes all three. The route reads nothing and returns the same 410 for any body. `upsertFallInterest` and `findFallInterestByEmail` are deleted, so no writer is left to re-wire. `fetchFallInterestDemand` (coach calendar) is unchanged. The "mirroring upsertPollResponse" comment is gone with them.
+  - **Item 2: shared `cleanPersonName()`** in `invoice-text.ts`, returning "" when nothing survives; `invoiceSafeName = cleanPersonName(raw) || fallback`. It adds U+01C0–U+01C3 to the strip set. A second pass removes every run of combining marks not directly after a letter (or a mark on a letter). It runs after the strip pass, so a mark after a stripped character, space, hyphen or apostrophe goes. A letter + mark with no precomposed form (q̇) still survives (positive control).
+  - **Item 3:** `buildMvfRosterSyncBody` sends `cleanPersonName` of both names, not `invoiceSafeName`: "your player" as a child's `first_name` would seat a phantom.
+    - An empty cleaned last name is sent as "" (L&D stores null).
+    - An empty cleaned first name (a name wholly in another script, or only symbols) is **not sent**. It alerts `name_unprintable` with no name, and the alert's recovery text says to seat the child through the endpoint with the name in Latin letters. Sending the raw value would reopen the look-alike hole, and a placeholder would seat a child nobody can find. This is a reversible call inside the approved scope.
+  - **Item 4:** `scripts/audit-stripe-customer-names.mjs`. It sends only GET `/v1/customers`, pages to exhaustion, and prints `id · created (UTC date) · reason codes` (`punct`, `digit`, `lookalike`, `non_latin`, `other`), then `scanned N, flagged M`. It never prints a name or email, and a Stripe error prints the status only. An `rk_` key with Customers: Read is enough. It was **not run against Stripe**; Sam runs it.
+    - It mirrors the cleaner rather than importing the TypeScript module: Playwright's loader can't load a `.ts` import from a plain ES module. A drift test runs the same fixtures through both copies.
+- **Risk:**
+  - The cleaning changes L&D's idempotency key (HMAC of email|first|last) for any name with a stripped character, so a child synced raw before this PR would seat twice on a re-send. The RLS-scoped L&D MCP sees 0 `nga-sync` RSVPs (positive control: 146 rsvps readable), but that reader can't prove zero. Confirm with a service-role read, and dry-run first, before any backfill.
+  - A non-Latin first name now needs a manual seat on L&D. The Notion row, Stripe metadata and admin email keep the raw value.
+  - `FallInterestForm.tsx` and `email/fall-interest-confirmation.ts` (now used only by `fall-survey.spec.ts`) are dead code, left in place to keep this PR to 8 code files; the form would POST to a 410. **`validate-fall-interest.ts` is NOT dead**: five live checkout validators import its `FALL_CHILD_AGE_MIN/MAX`. A later cleanup must move those constants out before deleting it.
+  - Bearing on open decisions, not acted on:
+    - D2: retiring the route removes one of the unverified-address senders.
+    - D3: the retired route's past `nga_fall_interest` ingests are part of the Open Brain rows the scrub covers.
+    - D8: `/fall` keeps its own registration path.
+- **Change:**
+  - Files: `src/app/api/fall-interest/route.ts` (410), `src/lib/notion-fall-interest.ts` (read-only), `src/lib/invoice-text.ts`, `src/lib/linkdink-roster-sync.ts`, the new `scripts/audit-stripe-customer-names.mjs`, and three specs.
+  - `invariant-fall-interest-pii-egress.spec.ts` is rewritten: env moves into hooks and Notion, Resend and Open Brain env are all SET, with a rule-less stub, so any fetch is caught. 5 of its 6 tests fail on main; the demand-read positive control passes on both.
+  - `invariant-invoice-route-abuse.spec.ts`: +7 cleaner tests (all fail on main; the q̇ control passes on both), +6 audit-script tests (reason codes, cleaner drift, GET-only pagination across 2 pages with no name or email in the output, error prints the status only, no write path).
+  - `invariant-linkdink-roster-egress.spec.ts`: +3 tests (cleaned body, an empty last name sent as "", `name_unprintable` with no name in alerts or logs), all failing on main.
+  - Mutation-checked 12/12, each turning the specs red: U+01C0–3 dropped (4 red), mark rule removed (7), roster first name raw (2), last name raw (2), unprintable skip removed (1), invoice fallback on the roster (1), the route restored from main (5), the script POSTs (2), stops after page 1 (1), prints the name (1), its cleaner drifts (1), `lookalike` dropped (1).
+  - Docs: `CLAUDE.md` (fall survey section), `docs/source-inventory.md` (lib row and risk log #11).
+  - Gate: `test:pure` 2229/2229, lint 0 errors (3 pre-existing warnings), `tsc` clean, `npm run build` green from a clean `.next`.
+  - **Independent hostile review, round 1: CHANGES-NEEDED.**
+    - MAJOR: spacing (Mc) and enclosing (Me) marks, and other scripts' non-spacing marks, survived on a Latin letter. For example U+302E renders as a dot and U+0903 as a colon. 471 Mc + 13 Me code points were affected, and the flaw pre-dates this PR. **Fixed:** only Inherited-script non-spacing marks survive, in both copies. An exhaustive spec covers every Mc/Me code point.
+    - MINOR, all fixed:
+      - The 40-unit cap could split an astral Latin letter into a lone surrogate, which Stripe's encoder throws on. The cap now counts code points.
+      - The roster alert's recovery text now says to re-send the name cleaned (L&D's key hashes the names as sent), with a code comment.
+      - The audit throws instead of reporting a partial count when an empty page claims `has_more`. It also no longer flags long clean names, and it flags Mc/Me as `lookalike`.
+      - This entry had wrongly called `validate-fall-interest.ts` dead.
+    - Mutation-checked the round-1 fixes 6/6: any-script marks (2 red), other-script Mn (2), UTF-16 slice (2), empty-page throw removed (1), Mc/Me dropped from the audit (1), recovery text reverted (1).
+    - NITs not changed:
+      - Latin `ʔ` `ʖ` `Ɂ` and the Roman numerals still pass. None can form `.` `:` `/` `@`, so none can build a link.
+      - Stacked accents on one letter still pass (no link risk).
+      - Plain words still reach L&D (the accepted #375 residual).
+      - Two siblings whose names differ only by stripped characters would share one L&D key, so the second is not seated and nothing alerts. Unlikely.
+  - **Hostile review, round 2: CHANGES-NEEDED.**
+    - MAJOR: some Inherited-script non-spacing marks still draw a dot beside a letter (U+302A–302D corner dots, U+1DFA, U+1DF8, U+0358, U+1CDD) or a slash overlay (U+0338, U+20EB). That still allowed "evil.com" and "https:" look-alikes.
+    - **Fixed** with a curated allowlist of the accents Latin names use: U+0300–0304, 0306–030C, 030F, 0311, 031B, 0323–0328 and 0331. Every other mark is stripped, in both copies; that also removes invisible variation selectors (a round-2 NIT).
+    - The exhaustive spec now checks that, for every mark outside the allowlist, the output holds only Latin letters, allowlisted accents, apostrophes, hyphens and spaces. NFC legitimately folds U+0340/0341/0344 into allowlisted accents, and composes l + U+032D into the Latin letter ḽ. A companion test pins that every allowlisted accent survives on a letter.
+    - The audit's `lookalike` flags any mark outside the allowlist.
+    - Mutation-checked 4/4: any Inherited Mn allowed again (3 red), the script alone drifts (1), dot below dropped from the allowlist (3), the audit ignores non-allowlisted marks (1).
+  - **Hostile review, round 3: CLEAR** (checklist 16 → PASS 9 / FAIL 0 / N-A 7, no kills).
+    - A sweep over all code points, on three bases, leaves no mark outside the allowlist and no character outside Latin letters, allowlisted accents, apostrophes, hyphens and spaces.
+    - The reviewer agreed that NFC composition only yields precomposed Latin letters that could always be typed directly, so it adds no new surface.
+    - Remaining NITs, not changed: stacked allowlisted accents on one letter, and the Roman numerals U+2160–2188 and ʔ. Neither can form `.` `:` `/` `@`.
+  - **Rollback:** revert the commit.
+
 ## 2026-09-29 — Shared NGA lesson requests; evaluations stay text-to-schedule
 
 - **Situation:** The public NGA lessons page was closed behind obsolete Stripe-price flags, while its paid-invoice time picker was not a public scheduler. Sam requested the same request-first flow as his personal coaching site and retained text-to-schedule evaluations, then explicitly approved the cross-repository scope with “go.”
