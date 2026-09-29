@@ -380,6 +380,66 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
     }
   });
 
+  // The roster shows these names to the organizer and MVF (as "First L.",
+  // full in the roster export and the organizer's registration alert), so
+  // they get the same cleaning as a Stripe invoice: no link, domain or
+  // look-alike punctuation can ride a child's name onto an L&D screen.
+  test("names are cleaned before they leave: no link, digit or look-alike reaches L&D", async () => {
+    stub.on("www.linkanddink.com/play/api/internal/nga-roster-add", ON_ROSTER);
+    install();
+
+    expect(
+      await syncMvfRegistrationToLinkDink({
+        ...registration("10u"),
+        childFirstName: "Visit evil.example/pay\u01C3",
+        childLastName: "O’Brien-Nguyễn \u0323 2",
+      }),
+    ).toBe(true);
+    const body = JSON.parse(stub.calls[0].body) as Record<string, string>;
+    expect(body.first_name).toBe("Visit evil example pay");
+    expect(body.last_name).toBe("O’Brien-Nguyễn");
+    expect(body.email).toBe(PARENT_EMAIL);
+  });
+
+  test("a last name with nothing printable is sent empty, never a placeholder", async () => {
+    stub.on("www.linkanddink.com/play/api/internal/nga-roster-add", ON_ROSTER);
+    install();
+
+    expect(
+      await syncMvfRegistrationToLinkDink({ ...registration("14u"), childLastName: "@@ 123" }),
+    ).toBe(true);
+    const body = JSON.parse(stub.calls[0].body) as Record<string, string>;
+    expect(body.first_name).toBe(CHILD_FIRST);
+    expect(body.last_name).toBe("");
+  });
+
+  test("a first name with nothing printable makes zero L&D calls and alerts name_unprintable without the name", async () => {
+    stub
+      .on("www.linkanddink.com", ON_ROSTER)
+      .on("api.resend.com", { id: "email_alert" });
+    install();
+
+    const unprintable = "\u674E\u5C0F\u9F99"; // a name in another script
+    for (const first of [unprintable, "ꓸꓸ 42", "   "]) {
+      expect(
+        await syncMvfRegistrationToLinkDink({ ...registration("10u"), childFirstName: first }),
+      ).toBe(false);
+    }
+    expect(stub.callsTo("linkanddink.com")).toHaveLength(0);
+    const alerts = stub.callsTo("api.resend.com");
+    expect(alerts).toHaveLength(3);
+    for (const alert of alerts) {
+      expect(alert.body).toContain("name_unprintable");
+      expect(alert.body).not.toContain(unprintable);
+      expect(alert.body).not.toContain(JSON.stringify(unprintable).slice(1, -1));
+      expectNoPii(alert.body, "the alert email");
+    }
+    for (const line of logged) {
+      expect(line).not.toContain(unprintable);
+      expectNoPii(line, "a log line");
+    }
+  });
+
   test("a division with no L&D event makes zero L&D calls and alerts once each, prototype keys included", async () => {
     stub.on("api.resend.com", { id: "email_alert" });
     install();

@@ -14,7 +14,8 @@
  * shipped with were both cancelled before a single registration synced.
  *
  * What leaves NGA (a child-PII egress — see the docs/source-inventory.md risk
- * log): the event key, the child's first and last name, and the parent's
+ * log): the event key, the child's first and last name (cleaned like an
+ * invoice name: the organizer and MVF read them on L&D), and the parent's
  * email, which L&D uses only as an input to its idempotency key and never
  * stores. Nothing else, and only from a production deploy (or a build that
  * LINKDINK_BASE_URL points at an L&D instance on purpose). Pinned by
@@ -29,6 +30,7 @@
 import { after } from "next/server";
 import type { MvfTournamentDivision } from "@/data/mvf-junior-tournament-2026";
 import { deliverCronAlert } from "@/lib/cron-alert";
+import { cleanPersonName } from "@/lib/invoice-text";
 
 const DEFAULT_LD_BASE_URL = "https://www.linkanddink.com";
 
@@ -92,7 +94,10 @@ export function mvfTournamentLdEventKey(division: string): string | null {
 }
 
 /** The request body for one registrant, or null when the division has no
- * L&D event. */
+ * L&D event. Names go through cleanPersonName: they are typed on an anonymous
+ * form and shown to the organizer and MVF, so no link, domain or look-alike
+ * punctuation may ride them. first_name is "" when nothing printable is left;
+ * the sync refuses that rather than seat a placeholder. */
 export function buildMvfRosterSyncBody(
   input: MvfRosterSyncInput,
 ): MvfRosterSyncBody | null {
@@ -100,8 +105,8 @@ export function buildMvfRosterSyncBody(
   if (!eventKey) return null;
   return {
     event_key: eventKey,
-    first_name: input.childFirstName,
-    last_name: input.childLastName,
+    first_name: cleanPersonName(input.childFirstName),
+    last_name: cleanPersonName(input.childLastName),
     email: input.parentEmail,
   };
 }
@@ -199,6 +204,18 @@ export async function syncMvfRegistrationToLinkDink(
         "unknown_division",
         ref,
         "No L&D event key for this division: the key map has drifted from the tournament data",
+      );
+      return false;
+    }
+    if (!body.first_name) {
+      // A name wholly in another script (or nothing but symbols) cleans to
+      // nothing. A placeholder would seat a child nobody can find, and the
+      // raw value is what the cleaning exists to keep off L&D.
+      console.error(`${TAG} child first name has no printable Latin letters — skipping L&D roster sync (${ref})`);
+      await alertSyncFailure(
+        "name_unprintable",
+        ref,
+        "The child's first name has no Latin letters left after cleaning, so it was not sent. Seat the player through the L&D endpoint with the name spelled in Latin letters",
       );
       return false;
     }
