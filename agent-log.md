@@ -5,6 +5,29 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-29 — Sign-in links and Stripe return URLs come from server config, never the request
+
+- **Situation:** Finding H1 + M1 of the 2026-09-28 security review. `admin/request-link` and `coach/request-link` built the magic link from the request's `Origin` header. An attacker could POST Sam's (public) address with `Origin: https://nextgenpbacademy.com.evil.tld`, and the real NGA sender would email Sam a sign-in link to that host. One click leaked a 10-minute token worth a 30-day admin cookie, and with it the registrants API (parent contacts, child names and birth years). Six checkout routes built Stripe `success_url`/`cancel_url` the same way, so a genuine Stripe link could return a paying parent to an attacker site carrying the `cs_` id.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-29 ("do all"). Gauntlet verdict: GO-WITH-CHANGES.
+  - `src/lib/site-origin.ts` picks the origin in this order:
+    1. `NEXT_PUBLIC_SITE_URL` when it is valid https, reduced to its origin. Plain http is accepted only for localhost outside production.
+    2. On a Vercel preview, the platform-set `VERCEL_URL`.
+    3. Otherwise `SITE_URL` from `seo.ts`.
+  - It never reads the request.
+  - Both request-link routes gained a per-IP limit (10/hr), checked before the allowlist and never keyed per email: a per-email bucket would let anyone lock Sam out by spamming his address. A rejected sign-in email now fires a cron alert (email, then SMS fallback) as well as the existing 502.
+  - `checkout-fall` is excluded: the unmerged `feat/admin-prorated-fall-registration` rewrites it and adds `admin/fall-registration`. Both files are allowlisted in the guard, and the guard fails once an entry stops needing its exemption.
+- **Risk:**
+  - `NEXT_PUBLIC_SITE_URL` is unset in every Vercel environment, so prod links are `https://nextgenpbacademy.com`, which is the intent.
+  - Local dev now emails prod links unless `.env.local` sets `NEXT_PUBLIC_SITE_URL=http://localhost:3000`. The pulled `.env.local` says `VERCEL_ENV=production`, so the preview branch doesn't apply locally.
+  - The limiter is best-effort (in-memory, per instance, trusts `x-forwarded-for`).
+  - M1 stays open on `checkout-fall` until the fall branch lands with a two-line `siteOrigin()` swap.
+  - The guard is a line-based tripwire, not a proof.
+- **Change:**
+  - New `e2e/invariant-canonical-site-origin.spec.ts`: 19 tests, 15 of which fail on main. They cover the `siteOrigin` env table (including preview), evil Origin/Host/X-Forwarded-Host/Referer headers on both link routes, the per-IP boundary, alert-on-failure, and a source guard with a self-test and a stale-exemption check.
+  - Mutation checks, each turning the spec red: link built from Origin again, limiter off, alert removed, any protocol accepted, a checkout reading Origin, the preview branch removed.
+  - Suite 2165/2165, lint 0 errors, build green.
+  - An independent hostile review returned CLEAR. Its minor findings are applied; the nits are logged in the PR.
+
 ## 2026-09-28 — Public-form HTML emails escape everything the submitter typed
 
 - **Situation:** A read-only security review (2026-09-28, finding M2) found that anonymous forms interpolated submitted text straight into HTML email sent to an address the submitter chooses, from `noreply@nextgenpbacademy.com`. Affected: `schools-lead` (both emails), the `waitlist` parent email, `yellowball-lead` (both emails), the `lead` admin email and the MVF signup confirmation (sent before payment). The `notion-session-webhook` waitlist blast re-sends the form-stored parent name. A POST with `contactName=<a href=…>Verify your payment</a>` produced a phishing mail that passes SPF/DKIM for NGA's domain.
