@@ -35,6 +35,7 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { siteOrigin } from "@/lib/site-origin";
 
 // Monday Girls block checkout — ENV-GATED like
 // checkout-fall and checkout-picklpark: until STRIPE_MONDAY_GIRLS_PRICE_ID is
@@ -140,10 +141,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com";
+  const origin = siteOrigin();
 
   const stripe = getStripe();
 
