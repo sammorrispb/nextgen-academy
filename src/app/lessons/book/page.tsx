@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { lessonSchedulingUrl } from "@/data/scheduling";
 import { getStripe } from "@/lib/stripe";
 import { formatLongDate } from "@/lib/format-date";
 import LessonBookingForm from "@/components/LessonBookingForm";
@@ -14,13 +16,15 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ inv?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function LessonBookPage({ searchParams }: PageProps) {
-  const { inv } = await searchParams;
+  const params = await searchParams;
+  const inv = typeof params.inv === "string" ? params.inv : undefined;
+  if (!inv) redirect(lessonSchedulingUrl(params));
 
-  if (!inv || !process.env.STRIPE_SECRET_KEY) {
+  if (!process.env.STRIPE_SECRET_KEY) {
     return <BookShell title="Find your invoice">Use the booking link from your payment confirmation email to pick a lesson time.</BookShell>;
   }
 

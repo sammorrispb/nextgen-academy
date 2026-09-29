@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -198,10 +199,10 @@ export default function CampIndexPage() {
                 </Link>{" "}
                 or{" "}
                 <Link
-                  href="/free-evaluation"
+                  href={EVALUATION_SMS_URL}
                   className="text-ngpa-teal-bright font-semibold hover:underline"
                 >
-                  book a free evaluation
+                  text for a free evaluation
                 </Link>{" "}
                 to get your child on the court now.
               </p>
@@ -240,10 +241,10 @@ export default function CampIndexPage() {
           <p className="mt-8 text-center text-sm text-ngpa-muted">
             Not sure it&rsquo;s the right fit?{" "}
             <Link
-              href="/free-evaluation"
+              href={EVALUATION_SMS_URL}
               className="text-ngpa-teal-bright font-semibold hover:underline"
             >
-              Book a free evaluation
+              Text for a free evaluation
             </Link>{" "}
             and we&rsquo;ll place your child at the right level.
           </p>

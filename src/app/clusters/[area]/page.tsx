@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -162,10 +163,10 @@ export default async function ClusterPage({ params }: ClusterRouteProps) {
           >
             Not sure if your kid is ready for group play?{" "}
             <Link
-              href="/free-evaluation"
+              href={EVALUATION_SMS_URL}
               className="font-semibold text-ngpa-teal-bright underline-offset-2 hover:underline"
             >
-              Book a free evaluation
+              Text for a free evaluation
             </Link>
             {" "}— we&apos;ll place them on the pathway and tell you whether a
             cluster or private lessons fit best right now.

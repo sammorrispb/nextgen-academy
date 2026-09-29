@@ -31,6 +31,7 @@ process.env.CRON_SECRET = "test-cron-secret";
 process.env.NOTION_API_KEY = "ntn_test";
 process.env.NOTION_SESSIONS_DB_ID = "sessions-db";
 process.env.NOTION_NEWSLETTER_DB_ID = "subs-db";
+process.env.NOTION_PLAYER_CRM_DB_ID = "crm-db";
 process.env.NOTION_NEWS_DB_ID = "news-db";
 process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID = "drafts-db";
 process.env.RESEND_API_KEY = "re_test";
@@ -46,7 +47,7 @@ const ALLOWED_HOSTS = ["api.notion.com", "api.resend.com"];
 
 // A parent on the list. Neither this address nor the child's name may ever
 // appear in an alert body.
-const PARENT_EMAIL = "parent@example.com";
+const PARENT_EMAIL = "parent@example.org";
 const PARENT_NAME = "Dana Whitfield";
 // Free-text operator title — the exact field that could carry a family name,
 // which is why the alert refs are page IDs and never the `Week` title.
@@ -118,16 +119,19 @@ function wire(opts: {
   stub.on(/databases\/sessions-db\/query/, { results: [] });
   stub.on(/databases\/news-db\/query/, { results: [] });
   stub.on(/databases\/subs-db\/query/, {
+    has_more: false,
     results: [
       {
         id: "sub-1",
         properties: {
           "Parent Name": { title: [{ plain_text: PARENT_NAME }] },
           Email: { email: PARENT_EMAIL },
+          Status: { select: { name: "Active" } },
         },
       },
     ],
   });
+  stub.on(/databases\/crm-db\/query/, { results: [], has_more: false });
   stub.on("api.resend.com", { id: "email-1" });
   // Any other Notion write (e.g. the Sent At stamp) succeeds quietly.
   stub.on("api.notion.com", { ok: true });

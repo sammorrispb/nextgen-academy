@@ -258,12 +258,12 @@ export default async function Home() {
               And if you&rsquo;re wondering &mdash; yes, Sam coaches adults too,
               separately from NGA.{" "}
               <a
-                href={familySiteUrl("sammorrispb", "/evaluation", "about_adults")}
+                href={familySiteUrl("sammorrispb", "https://coach.sammorrispb.com/book/private-lesson", "about_adults")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
               >
-                Book a free 30-minute skill evaluation &rarr;
+                Request an adult lesson with Sam &rarr;
               </a>
             </p>
           </div>
