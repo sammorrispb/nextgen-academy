@@ -5,6 +5,29 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-29 — D7 approved: the MVF Junior Tournament's extra child fields are a scoped exception, pinned
+
+- **Situation:** Risk log #12 (PR #378) inventoried the MVF tournament's child last name, full DOB, allergies and emergency contact, and found that the webhook's "paid" notice sends the DOB, allergies and emergency contact in plain text to MVF's partner contact. Nothing had approved the flow. The options offered were to approve it as is, to trim the MVF email, or to replace the DOB.
+- **Decision:** Sam approved it as it runs today ("approve it", 2026-09-29). This covers every current field and recipient, including the partner email. No code changed. The exception is recorded beside the camp exception in CLAUDE.md's Minor-Data Governance, and #12 now reads as approved and scoped. A new field, destination or recipient still needs its own approval.
+- **Risk:**
+  - The DOB, allergies and emergency contact of every paid registrant reach an outside organization's inbox by email, not through an auth-gated view. That is broader than the camp exception, which is coach-screen-only and print-only. Sam accepted it knowingly.
+  - The pins read source text, not a live send, so a refactor that moves the paid notice's fields out of that block could slip past them. The `between()` helper fails loudly if the block's markers disappear.
+  - The narrowing options stay open for later.
+- **Change:**
+  - New `e2e/invariant-mvf-tournament-child-fields.spec.ts` (5 tests) pins:
+    - the child keys in the checkout's Stripe metadata;
+    - the Notion row's child properties;
+    - the paid notice's recipients (the only send to MVF) and the fields it reads;
+    - the invoice-sent notice carrying none of the extra fields.
+  - It passes on main by design (it pins current behaviour). Mutation-checked 6/6, each turning it red:
+    - a new metadata key;
+    - a new Notion property;
+    - a new paid-notice field (applied to the MVF block itself; the first attempt hit an identical line in another webhook branch and proved nothing);
+    - a second send to MVF;
+    - a changed partner address;
+    - a DOB in the invoice-sent notice.
+  - Docs: `CLAUDE.md` (MVF exception bullet, "only sanctioned expansion" line updated) and `docs/source-inventory.md` (lib row, #8, #12).
+
 ## 2026-09-29 — The MVF Junior Tournament's extra child fields are inventoried (D7 still open)
 
 - **Situation:** The MVF Junior Tournament checkout (live since 2026-09-22) collects a child's last name, full DOB, allergies and emergency contact: more than the first-name + birth-year baseline, and outside the camp-only safety exception. `docs/source-inventory.md` had no row for it and no decision record approves it (security review 2026-09-28, D7). Sam asked for the inventory row.
