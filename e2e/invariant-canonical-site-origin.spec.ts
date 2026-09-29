@@ -67,6 +67,33 @@ test.describe("siteOrigin() — server configuration only", () => {
     ["trailing slash is dropped", "https://nextgenpbacademy.com/", CANONICAL],
     ["a path is reduced to the origin", "https://nextgenpbacademy.com/some/path?x=1", CANONICAL],
   ];
+  const envKeys = ["NEXT_PUBLIC_SITE_URL", "VERCEL_ENV", "VERCEL_URL"] as const;
+  function withEnv(env: Partial<Record<(typeof envKeys)[number], string>>, fn: () => void) {
+    const prev = Object.fromEntries(envKeys.map((k) => [k, process.env[k]]));
+    try {
+      for (const k of envKeys) {
+        if (env[k] === undefined) delete process.env[k];
+        else process.env[k] = env[k];
+      }
+      fn();
+    } finally {
+      for (const k of envKeys) {
+        if (prev[k] === undefined) delete process.env[k];
+        else process.env[k] = prev[k];
+      }
+    }
+  }
+  test("a Vercel preview uses its own platform-set URL", () => {
+    withEnv({ VERCEL_ENV: "preview", VERCEL_URL: "nga-git-x.vercel.app" }, () =>
+      expect(siteOrigin()).toBe("https://nga-git-x.vercel.app"),
+    );
+  });
+  test("production ignores VERCEL_URL; preview without VERCEL_URL → canonical", () => {
+    withEnv({ VERCEL_ENV: "production", VERCEL_URL: "nga-abc.vercel.app" }, () =>
+      expect(siteOrigin()).toBe(CANONICAL),
+    );
+    withEnv({ VERCEL_ENV: "preview" }, () => expect(siteOrigin()).toBe(CANONICAL));
+  });
   for (const [name, value, expected] of cases) {
     test(name, () => {
       const prev = process.env.NEXT_PUBLIC_SITE_URL;
@@ -136,11 +163,13 @@ test.describe("magic-link routes ignore every request-supplied host", () => {
 // ── Source guard: no link or redirect may be built from request data ───────
 const SRC = join(__dirname, "..", "src");
 const REQUEST_ORIGIN_PATTERNS: RegExp[] = [
-  /\.get\(\s*["'`](origin|host|x-forwarded-host|x-forwarded-proto|referer)["'`]\s*\)/i,
+  /\.get\(\s*["'`](origin|host|x-forwarded-host|x-forwarded-proto|forwarded|referer)["'`]\s*\)/i,
   /\bnextUrl\.(origin|host|hostname|href)\b/,
   /new\s+URL\(\s*(req|request)\.url\s*\)\.(origin|host|hostname)\b/,
+  /new\s+URL\([^)]*,\s*(req|request)\.url\s*\)/,
 ];
-// Reviewed exceptions. checkout-fall is rewritten on the unmerged branch
+// A line-based tripwire, not a proof — it catches the shapes a hurried fix
+// reaches for. Reviewed exceptions. checkout-fall is rewritten on the unmerged branch
 // feat/admin-prorated-fall-registration (which also adds admin/fall-registration);
 // that branch swaps to siteOrigin() when it lands — remove both entries then.
 const ALLOWLIST = new Set([
@@ -173,6 +202,8 @@ test.describe("source guard — request-derived origins", () => {
       `const r = request.headers.get("referer");`,
       `const base = req.nextUrl.origin;`,
       `const base = new URL(request.url).origin;`,
+      `const f = req.headers.get("forwarded");`,
+      `const u = new URL("/admin", req.url);`,
     ];
     for (const line of bad) expect(findRequestOriginReads(line), line).toHaveLength(1);
     const fine = [
@@ -192,5 +223,18 @@ test.describe("source guard — request-derived origins", () => {
       for (const h of hits) offenders.push(`${rel}: ${h}`);
     }
     expect(offenders).toEqual([]);
+  });
+
+  test("every allowlist entry still needs its exemption (stale entries fail)", () => {
+    const root = join(__dirname, "..");
+    for (const rel of ALLOWLIST) {
+      let source: string;
+      try {
+        source = readFileSync(join(root, rel), "utf8");
+      } catch {
+        continue; // lives on an unmerged branch; checked once it lands
+      }
+      expect(findRequestOriginReads(source), `${rel} is clean — drop it from ALLOWLIST`).not.toHaveLength(0);
+    }
   });
 });

@@ -12,11 +12,13 @@ import { SITE_URL } from "@/lib/seo";
  *
  * NEXT_PUBLIC_SITE_URL wins when it is a well-formed https URL (reduced to its
  * origin); plain http is accepted only for localhost outside production, so
- * local dev can point links at itself. Anything else — unset, empty,
- * malformed, http on a real host — falls back to the canonical SITE_URL.
+ * local dev can point links at itself. Otherwise a Vercel PREVIEW deploy uses
+ * its own VERCEL_URL — set by the platform, never by the request — so a
+ * test-mode checkout returns to the preview, not to prod's live-key success
+ * page. Anything else falls back to the canonical SITE_URL.
  */
 export function siteOrigin(): string {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim() || previewOrigin();
   if (!raw) return SITE_URL;
   let url: URL;
   try {
@@ -30,4 +32,9 @@ export function siteOrigin(): string {
     return url.origin;
   }
   return SITE_URL;
+}
+
+function previewOrigin(): string | undefined {
+  const host = process.env.VERCEL_URL?.trim();
+  return process.env.VERCEL_ENV === "preview" && host ? `https://${host}` : undefined;
 }

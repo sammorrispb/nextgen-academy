@@ -10,7 +10,8 @@ export const runtime = "nodejs";
 
 const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 
-// Per IP, never per email: a per-email bucket would let anyone lock Sam (or a
+// Best-effort (in-memory, per instance; getClientIp trusts x-forwarded-for,
+// which Vercel sets). Per IP, never per email: a per-email bucket would let anyone lock Sam (or a
 // coach) out of sign-in by spamming their address. Checked before the
 // allowlist so a 429 says nothing about which addresses are valid.
 const limiter = createRateLimiter({ limit: 10 });
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.error("[coach-request-link] RESEND_API_KEY missing");
+    console.error("[cron/coach-request-link] RESEND_API_KEY missing");
     return NextResponse.json({ error: "Email not configured" }, { status: 500 });
   }
 
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
     ].join("\n"),
   });
   if (error) {
-    console.error("[coach-request-link] Resend rejected", error);
+    console.error("[cron/coach-request-link] Resend rejected", error);
     // The only user of this form is Sam or a coach, and a sign-in email that
     // never arrives looks identical to one that's slow. Alert (email, then SMS
     // fallback — the likely failure is Resend itself) so it isn't a guess.
