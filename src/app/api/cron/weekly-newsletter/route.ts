@@ -22,7 +22,7 @@ import {
   FALL_PUBLIC_AREA,
   FALL_SEASON_LABEL,
   FALL_SEASON_WEEKS,
-  FALL_SUNDAYS,
+  FALL_RAIN_DATES,
   FALL_VENUE_SHORT,
 } from "@/data/fall-2026";
 import {
@@ -32,6 +32,8 @@ import {
   FALL_SEASON_TITLE,
 } from "@/data/fall-season-2026";
 import { countFallRegistrations } from "@/lib/notion-fall-registrations";
+import { fetchFallCalls } from "@/lib/notion-fall-calls";
+import { fallNewsletterProgress, picklParkNewsletterProgress, type FallNewsletterProgress } from "@/lib/newsletter-season-progress";
 import {
   PICKLPARK_INDOOR_NOTE,
   PICKLPARK_PUBLIC_AREA,
@@ -203,10 +205,12 @@ async function loadFallSeason(
   priceUsd: number;
   groups: NewsletterFallGroup[];
   url: string;
+  progress: FallNewsletterProgress;
 } | null> {
   if (process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN !== "true") return null;
-  const lastSunday = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
-  if (todayIso > lastSunday) return null;
+  if (todayIso > FALL_RAIN_DATES[FALL_RAIN_DATES.length - 1]) return null;
+  const progress = fallNewsletterProgress(todayIso, await fetchFallCalls({ fresh: true }));
+  if (!progress.hasUpcoming) return null;
 
   const groups: NewsletterFallGroup[] = [];
   for (const option of FALL_SEASON_GROUPS) {
@@ -227,6 +231,7 @@ async function loadFallSeason(
     priceUsd: FALL_SEASON_PRICE_USD,
     groups,
     url: appendUtm(`${SITE_ORIGIN}/fall`, "fall-season", utmCampaign),
+    progress,
   };
 }
 
@@ -251,6 +256,7 @@ async function loadPicklParkSeason(
   indoorNote: string;
   groups: NewsletterFallGroup[];
   url: string;
+  progress: ReturnType<typeof picklParkNewsletterProgress>;
 } | null> {
   // Gated on whether the Saturday is RUNNING, not on whether NGA is selling
   // it. NGA retired its own Pickl Park checkout on 2026-09-07; keeping this on
@@ -278,6 +284,7 @@ async function loadPicklParkSeason(
     indoorNote: PICKLPARK_INDOOR_NOTE,
     groups,
     url: appendUtm(`${SITE_ORIGIN}/picklpark`, "picklpark-leagues", utmCampaign),
+    progress: picklParkNewsletterProgress(todayIso),
   };
 }
 

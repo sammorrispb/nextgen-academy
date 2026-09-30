@@ -170,12 +170,56 @@ test("October 1 cron sends the winter subject and first lead to parent and archi
       expect(message.subject).toContain("Your player's winter pickleball options");
       for (const body of [message.html, message.text]) {
         expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Another approved announcement"));
-        expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Montgomery Village classes"));
+        expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Fall Session II"));
         expect(body).not.toContain("Winter league interest — Montgomery Village and Frederick");
       }
     }
   } finally {
     mock.timers.reset();
+  }
+});
+
+test("the cron keeps the actual fall makeup visible after the regular season ends", async () => {
+  const savedOpen = process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN;
+  const savedCallsDb = process.env.NOTION_FALL_CALLS_DB_ID;
+  process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN = "true";
+  process.env.NOTION_FALL_CALLS_DB_ID = "fall-calls-db";
+  mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-29T22:00:00Z") });
+  try {
+    stub.on(/databases\/fall-calls-db\/query/, {
+      has_more: false,
+      results: [
+        { id: "rainout", properties: {
+          Date: { title: [{ plain_text: "2026-09-27" }] },
+          Green: { select: { name: "Cancelled" } },
+          Yellow: { select: { name: "Cancelled" } },
+        } },
+        { id: "makeup", properties: {
+          Date: { title: [{ plain_text: "2026-11-01" }] },
+          CUPF: { select: { name: "Booked" } },
+        } },
+      ],
+    });
+    wire();
+    expect((await GET(req("test-cron-secret"))).status).toBe(200);
+    expect(stub.callsTo(/databases\/fall-calls-db\/query/)).toHaveLength(1);
+    const messages = stub.callsTo("api.resend.com").map(call => JSON.parse(call.body));
+    expect(messages).toHaveLength(2);
+    for (const message of messages) {
+      for (const body of [message.html, message.text]) {
+        expect(body).toContain("1 Sunday remaining");
+        expect(body).toContain("Nov 1");
+        expect(body).toContain("makeup for Sun, Sep 27");
+        expect(body).not.toContain("$225 for all six weeks");
+        expect(body).not.toContain("Court booking confirmation is pending");
+      }
+    }
+  } finally {
+    mock.timers.reset();
+    if (savedOpen === undefined) delete process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN;
+    else process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN = savedOpen;
+    if (savedCallsDb === undefined) delete process.env.NOTION_FALL_CALLS_DB_ID;
+    else process.env.NOTION_FALL_CALLS_DB_ID = savedCallsDb;
   }
 });
 
