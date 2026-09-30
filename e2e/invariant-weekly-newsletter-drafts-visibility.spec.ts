@@ -23,6 +23,7 @@
  * Status. And no PII may ride an alert body — refs are Notion page IDs only.
  */
 import { test, expect } from "@playwright/test";
+import { mock } from "node:test";
 import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 
@@ -150,6 +151,33 @@ test.beforeEach(() => {
   stub.install();
 });
 test.afterEach(() => stub.uninstall());
+
+test("October 1 cron sends the winter subject and first lead to parent and archive", async () => {
+  const winterId = "3ebfa3ac-27dc-8167-8030-e58c8c7bbe8e";
+  mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-01T22:00:00Z") });
+  try {
+    wire({
+      drafts: [draftRow("earlier-lead"), draftRow(winterId)],
+      blocks: {
+        "earlier-lead": bodyBlocks("Another approved announcement."),
+        [winterId]: bodyBlocks("Your winter options are still being finalized."),
+      },
+    });
+    expect((await GET(req("test-cron-secret"))).status).toBe(200);
+    const messages = stub.callsTo("api.resend.com").map(call => JSON.parse(call.body));
+    expect(messages).toHaveLength(2);
+    for (const message of messages) {
+      expect(message.subject).toContain("Your player's winter pickleball options");
+      for (const body of [message.html, message.text]) {
+        expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Another approved announcement"));
+        expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Montgomery Village classes"));
+        expect(body).not.toContain("Winter league interest — Montgomery Village and Frederick");
+      }
+    }
+  } finally {
+    mock.timers.reset();
+  }
+});
 
 test.describe("Bearer gate fails closed", () => {
   test("no Authorization → 401 and zero downstream calls", async () => {

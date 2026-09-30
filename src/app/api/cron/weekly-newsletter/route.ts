@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { fetchUpcomingSessions, type NgaSession } from "@/lib/notion-sessions";
 import { syncNewsletterAudience } from "@/lib/notion-newsletter-sync";
 import { newsletterPrograms } from "@/lib/newsletter-programs";
+import { newsletterEditorial } from "@/lib/newsletter-editorial";
 import { pickWeeklyTip } from "@/lib/newsletter-tips";
 import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
@@ -359,7 +360,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     );
     draftsResult = { ...draftsResult, status: "query_failed" };
   }
-  const newsletterDrafts = draftsResult.drafts;
+  const editorial = newsletterEditorial(todayIso, draftsResult.drafts);
+  const newsletterDrafts = [...draftsResult.drafts].sort((a, b) =>
+    Number(b.pageId === editorial?.leadPageId) - Number(a.pageId === editorial?.leadPageId),
+  );
   // Concatenate every approved row into the single lead-block field so all of
   // them ship, not just the latest. A thin rule separates rows; null when none
   // so the template keeps the block hidden.
@@ -435,7 +439,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   // claiming an NGA season is open for a checkout that returns 410. The
   // leagues ARE promotable while they run — they just aren't ours to "open".
   const picklParkPromotable = picklParkSeason !== null;
-  const subject = fallOpen && picklParkPromotable
+  const subject = editorial?.subject ?? (fallOpen && picklParkPromotable
     ? "Fall season is open, and Saturdays are on in Frederick"
     : fallOpen
       ? "Fall season registration is open — Next Gen"
@@ -449,7 +453,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
           ? "Crews forming this week — Next Gen"
           : laterSessions.length
             ? "New dates on the calendar — Next Gen"
-            : `Coach tip of the week — ${tip.title}`;
+            : `Coach tip of the week — ${tip.title}`);
 
   let sent = 0;
   let failed = 0;
@@ -465,6 +469,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
 
     const input = {
       parentFirst,
+      editorial,
       programs,
       fallSeason,
       picklParkSeason,
@@ -513,6 +518,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   try {
     const adminInput = {
       parentFirst: "Coach",
+      editorial,
       programs,
       fallSeason,
       picklParkSeason,
