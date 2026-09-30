@@ -104,8 +104,10 @@ export async function decideDraftAction(
   if (!status) return { ok: false, message: "Unknown decision." };
 
   let ridesSend: boolean | null = null; // null = couldn't verify
+  let sendOn = "";
   if (status === "Approved") {
     const fields = await fetchDraftShipFields(pageId);
+    sendOn = fields?.sendOn ?? "";
     ridesSend = fields ? willRideThursdaySend(fields, new Date()) : null;
     if (!opts?.force) {
       if (ridesSend === null) {
@@ -121,7 +123,9 @@ export async function decideDraftAction(
           ok: false,
           needsForce: true,
           message:
-            "This draft is past the freshness window — it will NOT ship Thursday. Regenerate it (or bump Drafted At in Notion), or approve anyway.",
+            sendOn
+              ? `This draft has Send On ${sendOn} — it will NOT ship Thursday. Check its send date and expiry, or approve anyway to keep its scheduled date.`
+              : "This draft is outside the freshness window or expiry — it will NOT ship Thursday. Check Drafted At and Expires At in Notion, or approve anyway.",
         };
       }
     }
@@ -146,7 +150,9 @@ export async function decideDraftAction(
     ok: true,
     message:
       ridesSend === false
-        ? "Approved — but it's past the freshness window, so it will NOT ship Thursday. Regenerate or bump Drafted At in Notion."
+        ? sendOn
+          ? `Approved with Send On ${sendOn} — it will NOT ship Thursday. It remains eligible only on its scheduled date if the draft date and expiry are valid.`
+          : "Approved — but it will NOT ship Thursday. Check Drafted At and Expires At in Notion."
         : "Approved — but the freshness window couldn't be verified; check Notion whether it rides Thursday's send.",
   };
 }

@@ -61,7 +61,7 @@ test("invalid dates and exhausted makeup dates never invent upcoming sessions", 
 
 test("MVF Fall II leads Fall I and midseason fees are never represented as a late-join price", () => {
   const programs = newsletterPrograms("2026-10-01", "https://nextgenpbacademy.com", "wk");
-  const mvf = programs.filter(program => program.key?.startsWith("mvf-"));
+  const mvf = programs.filter(program => program.key?.startsWith("mvf-") && program.key !== "mvf-junior-tournament");
   expect(mvf).toHaveLength(2);
   expect(mvf[0].title).toContain("Fall Session II");
   expect(mvf[0].body).toContain("$90 resident / $100 non-resident");

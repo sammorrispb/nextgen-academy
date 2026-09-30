@@ -179,6 +179,71 @@ test("October 1 cron sends the winter subject and first lead to parent and archi
   }
 });
 
+for (const issue of [
+  { date: "2026-10-01", id: "3ebfa3ac-27dc-813f-b2f2-c0b5beb68332", subject: "Your player's winter pickleball options",
+    lead: "Where will your player play this winter?", winterSuppressed: true },
+  { date: "2026-10-08", id: "3ebfa3ac-27dc-8192-be55-f3feaaea8244", subject: "A game-day goal for your player: October 24",
+    lead: "Give your player a game-day goal", winterSuppressed: false },
+]) {
+  test(`${issue.date} scheduled cron sends the reviewed lead first once with automatic sections intact`, async () => {
+    mock.timers.enable({ apis: ["Date"], now: new Date(`${issue.date}T22:00:00Z`) });
+    try {
+      wire({
+        drafts: [draftRow("earlier-lead"), { ...draftRow(issue.id), properties: {
+          ...draftRow(issue.id).properties,
+          "Drafted At": { date: { start: "2026-09-30" } },
+          "Send On": { date: { start: issue.date } },
+          "Expires At": { date: { start: issue.date } },
+        } }],
+        blocks: {
+          "earlier-lead": bodyBlocks("Another approved announcement."),
+          [issue.id]: bodyBlocks(`${issue.lead}. MVF Junior Tournament: October 24, 4–7 PM ET. $50 MV resident / $60 non-resident. At least four games per player.`),
+        },
+      });
+      expect((await GET(req("test-cron-secret"))).status).toBe(200);
+      const messages = stub.callsTo("api.resend.com").map(call => JSON.parse(call.body));
+      expect(messages).toHaveLength(2);
+      for (const message of messages) {
+        expect(message.subject).toContain(issue.subject);
+        for (const body of [message.html, message.text]) {
+          expect(body.split(issue.lead)).toHaveLength(2);
+          expect(body.split("At least four games per player.")).toHaveLength(2);
+          expect(body.indexOf(issue.lead)).toBeLessThan(body.indexOf("Another approved announcement"));
+          expect(body.indexOf(issue.lead)).toBeLessThan(body.indexOf("Fall Session II"));
+          expect(body).not.toContain("Montgomery Village junior tournament");
+          expect(body.includes("Winter league interest — Montgomery Village and Frederick")).toBe(!issue.winterSuppressed);
+          expect(body).toContain("/book/private-lesson");
+          expect(body).toContain("Unsubscribe"); expect(body).toContain("chat.whatsapp.com");
+        }
+      }
+      const stamps = stub.calls.filter(call => call.method === "PATCH" && call.url.includes(issue.id));
+      expect(stamps).toHaveLength(1);
+      expect(stamps[0].body).toContain('"Sent At"');
+      expect(stamps[0].body).not.toContain('"Status"');
+      expect(stamps[0].body).not.toContain('"Drafted At"');
+    } finally { mock.timers.reset(); }
+  });
+}
+
+test("an unreadable October 8 campaign row cannot select its subject or suppress the automatic tournament", async () => {
+  const id = "3ebfa3ac-27dc-8192-be55-f3feaaea8244";
+  mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-08T22:00:00Z") });
+  try {
+    wire({ drafts: [{ ...draftRow(id), properties: { ...draftRow(id).properties,
+      "Drafted At": { date: { start: "2026-09-30" } }, "Send On": { date: { start: "2026-10-08" } },
+      "Expires At": { date: { start: "2026-10-08" } },
+    } }], blocks: { [id]: null } });
+    expect((await GET(req("test-cron-secret"))).status).toBe(500);
+    const messages = stub.callsTo("api.resend.com").filter(call => !call.body.includes("[cron-alert]")).map(call => JSON.parse(call.body));
+    expect(messages).toHaveLength(2);
+    for (const message of messages) {
+      expect(message.subject).not.toContain("A game-day goal for your player");
+      for (const body of [message.html, message.text]) expect(body).toContain("Montgomery Village junior tournament");
+    }
+    expect(alertBodies()[0]).toContain("newsletter_draft_unreadable");
+  } finally { mock.timers.reset(); }
+});
+
 test("the cron keeps the actual fall makeup visible after the regular season ends", async () => {
   const savedOpen = process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN;
   const savedCallsDb = process.env.NOTION_FALL_CALLS_DB_ID;

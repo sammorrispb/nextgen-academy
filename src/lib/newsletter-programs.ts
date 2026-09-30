@@ -45,6 +45,7 @@ export function newsletterPrograms(today: string, origin: string, campaign: stri
     });
   }
   if (today <= MVF_JUNIOR_TOURNAMENT_DATE_ISO) programs.push({
+    key: "mvf-junior-tournament",
     title: "Montgomery Village junior tournament",
     body: `${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} ET at ${MVF_JUNIOR_TOURNAMENT_VENUE}. 10U and 14U divisions, with rotating partners and at least four games per player. From $${RESIDENT_PRICE_USD} per player: $${RESIDENT_PRICE_USD} for Montgomery Village residents, $${NONRESIDENT_PRICE_USD} for non-residents. Register through Next Gen.`,
     url: link("/mvf-junior-tournament", "mvf-tournament"), linkLabel: "View tournament details",

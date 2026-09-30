@@ -98,6 +98,7 @@ export function DraftCard({
   pageId,
   weekTitle,
   draftedAt,
+  sendOn,
   withinShipWindow,
   bodyHtml,
   bodyUnavailable,
@@ -105,6 +106,7 @@ export function DraftCard({
   pageId: string;
   weekTitle: string;
   draftedAt: string;
+  sendOn?: string;
   withinShipWindow: boolean;
   bodyHtml: string;
   bodyUnavailable: boolean;
@@ -118,15 +120,15 @@ export function DraftCard({
             {weekTitle || "Newsletter draft"}
           </p>
           <p className="text-xs text-ngpa-white/60 mt-0.5">
-            Drafted {draftedAt || "(no date)"} ·{" "}
+            Drafted {draftedAt || "(no date)"}{sendOn ? ` · Send On ${sendOn}` : ""} ·{" "}
             {withinShipWindow ? (
               <span className="text-ngpa-teal font-bold">
                 rides Thursday&rsquo;s send if approved
               </span>
             ) : (
               <span className="text-amber-300 font-bold">
-                misses Thursday&rsquo;s send — the cron&rsquo;s freshness
-                filter will exclude it
+                misses Thursday&rsquo;s send — check the send date, draft date
+                and expiry
               </span>
             )}
           </p>

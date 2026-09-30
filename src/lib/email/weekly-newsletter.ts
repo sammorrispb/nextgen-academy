@@ -219,7 +219,7 @@ function picklParkGroupLine(g: NewsletterFallGroup): string {
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const editorial = input.editorial;
-  const programs = (input.programs ?? []).filter(p => !editorial || p.key !== "winter-interest");
+  const programs = (input.programs ?? []).filter(p => !p.key || !editorial?.excludedProgramKeys?.includes(p.key));
   const {
     parentFirst,
     fallSeason,
@@ -510,7 +510,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 
 export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   const editorial = input.editorial;
-  const programs = (input.programs ?? []).filter(p => !editorial || p.key !== "winter-interest");
+  const programs = (input.programs ?? []).filter(p => !p.key || !editorial?.excludedProgramKeys?.includes(p.key));
   const {
     parentFirst,
     fallSeason,

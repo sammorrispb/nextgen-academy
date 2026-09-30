@@ -10,6 +10,55 @@ const winter = {
   text: "Where will your player play this winter?\nWinter dates and prices are not confirmed.",
 };
 const origin = "https://nextgenpbacademy.com";
+const rampDrafts = [
+  { date: "2026-10-01", pageId: "3ebfa3ac-27dc-813f-b2f2-c0b5beb68332", subject: "Your player's winter pickleball options",
+    previewText: "Indoor plans for Montgomery Village and Frederick. Tell us what works for your family.",
+    heading: "Where will your player play this winter?", excludesWinter: true },
+  { date: "2026-10-08", pageId: "3ebfa3ac-27dc-8192-be55-f3feaaea8244", subject: "A game-day goal for your player: October 24",
+    previewText: "No fixed partner needed. Four games or more at North Creek.",
+    heading: "Give your player a game-day goal", excludesWinter: false },
+];
+
+for (const issue of rampDrafts) {
+  const draft = { pageId: issue.pageId, html: `<h2>${issue.heading}</h2><p>MVF Junior Tournament: October 24, 4–7 PM ET. $50 / $60. At least four games.</p>`,
+    text: `${issue.heading}\nMVF Junior Tournament: October 24, 4–7 PM ET. $50 / $60. At least four games.` };
+  test(`${issue.date} campaign framing requires its readable approved row, expires exactly with its issue`, () => {
+    expect(newsletterEditorial(issue.date, [draft])).toMatchObject({ leadPageId: issue.pageId, subject: issue.subject,
+      previewText: issue.previewText, headline: issue.subject });
+    for (const date of ["2026-09-30", "2026-10-02", "2026-10-09", "2026-10-15", "2026-10-24", "invalid"])
+      expect(newsletterEditorial(date, [draft])).toBeNull();
+    for (const drafts of [[], [{ ...draft, pageId: "unapproved" }], [{ ...draft, html: " " }], [{ ...draft, text: "" }]])
+      expect(newsletterEditorial(issue.date, drafts)).toBeNull();
+  });
+  test(`${issue.date} lead appears once in each MIME part with no duplicate tournament card and automatic offers retained`, () => {
+    const input: WeeklyNewsletterInput = {
+      parentFirst: "Taylor", editorial: newsletterEditorial(issue.date, [draft]),
+      newsletterLeadHtml: draft.html, newsletterLeadText: draft.text,
+      programs: newsletterPrograms(issue.date, origin, `weekly-${issue.date}`),
+      fallSeason: null, sessions: [], laterSessions: [], openPolls: [], news: [], camps: [],
+      tip: { title: "Practice", body: "Try one thing." }, scheduleUrl: `${origin}/schedule`,
+      crewInterestUrl: `${origin}/crew`, unsubscribeUrl: `${origin}/unsubscribe`, origin,
+      utmCampaign: `weekly-${issue.date}`, campUrl: `${origin}/camp`, campAgeMin: 8, campPriceFromUsd: 50,
+    };
+    for (const body of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
+      expect(body.split(issue.heading)).toHaveLength(2);
+      expect(body.split("At least four games.")).toHaveLength(2);
+      expect(body.indexOf(issue.heading)).toBeLessThan(body.indexOf("Fall Session II"));
+      expect(body).not.toContain("Montgomery Village junior tournament");
+      expect(body.includes("Winter league interest — Montgomery Village and Frederick")).toBe(!issue.excludesWinter);
+      expect(body).toContain("$50"); expect(body).toContain("$60"); expect(body).toContain("4–7 PM ET");
+      expect(body).toContain("/book/private-lesson"); expect(body).toContain("Unsubscribe"); expect(body).toContain("chat.whatsapp.com");
+      expect(body).toContain("Try one thing.");
+    }
+    expect(weeklyNewsletterHtml(input)).toContain(issue.previewText);
+  });
+}
+
+test("October 1 campaign takes precedence over the original approved Winter fallback", () => {
+  const draft = { ...winter, pageId: rampDrafts[0].pageId };
+  expect(newsletterEditorial("2026-10-01", [winter, draft])?.leadPageId).toBe(draft.pageId);
+  expect(newsletterEditorial("2026-10-01", [winter])?.leadPageId).toBe(winter.pageId);
+});
 
 test("October 1 editorial requires the readable approved winter draft", () => {
   expect(newsletterEditorial("2026-10-01", [winter])).toMatchObject({
