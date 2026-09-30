@@ -5,6 +5,7 @@ import { fillLabel, fillBar } from "@/lib/fill-meter";
 import { seatStatusLabel } from "@/lib/seat-status";
 import type { NewsletterProgram } from "@/lib/newsletter-programs";
 import type { NewsletterEditorial } from "@/lib/newsletter-editorial";
+import type { FallNewsletterProgress, picklParkNewsletterProgress } from "@/lib/newsletter-season-progress";
 import {
   phoneLineHtml,
   phoneLineText,
@@ -72,15 +73,9 @@ export interface WeeklyNewsletterInput {
   editorial?: NewsletterEditorial | null;
   programs?: NewsletterProgram[];
   /**
-   * Fall season registration — the top block while registration is open. A
-   * season is the one thing in this email a family can only buy once: 8 seats
-   * a group, full-season commitment, and the door closes when the first Sunday
-   * arrives. A drop-in they miss this week runs again next week; a season they
-   * miss is gone until next fall.
-   *
-   * The price is real (a live Stripe product), so this block quotes it — the
-   * no-quoting rule targets prices that don't exist yet. Null hides the block;
-   * the cron gates on the registration flag and the season's own end date.
+   * Fall calendar and registration. Once underway, show current remaining
+   * dates/makeups and invite a reply about joining, without inventing a late
+   * join fee. Null hides a completed season, including its recorded makeups.
    */
   fallSeason: {
     title: string;
@@ -93,15 +88,13 @@ export interface WeeklyNewsletterInput {
     groups: NewsletterFallGroup[];
     /** UTM-stamped /fall registration URL. */
     url: string;
+    progress?: FallNewsletterProgress;
   } | null;
   /**
    * Pickl Park Saturday season — the SECOND fall option (Frederick, indoors),
    * rendered directly under the fall block while its registration is open.
-   * Same rules as `fallSeason`: a live Stripe price, so the block quotes it;
-   * seat counts from the live roster, fail-soft; null (or absent) hides it.
-   * The cron gates on the season's own registration window — open by default
-   * through the last Saturday, `NEXT_PUBLIC_PICKLPARK_REGISTRATION_OPEN` as
-   * the kill switch (the opposite posture from the fall flag, on purpose).
+   * The Pickl Park owns registration, fees and availability. The cron gates
+   * on the public leagues window and carries date-derived progress.
    * Optional rather than required so existing fixtures and callers keep
    * type-checking; absent means "not promoted", exactly like null.
    */
@@ -126,6 +119,7 @@ export interface WeeklyNewsletterInput {
     groups: NewsletterFallGroup[];
     /** UTM-stamped /picklpark URL. */
     url: string;
+    progress?: ReturnType<typeof picklParkNewsletterProgress>;
   } | null;
   sessions: NewsletterSessionGroup[];
   /**
@@ -212,7 +206,7 @@ export function fallSpotsLabel(g: NewsletterFallGroup): string {
 
 function seasonGroupLine(g: NewsletterFallGroup, dayWord: string): string {
   const spots = fallSpotsLabel(g);
-  return `${dayWord} ${g.timeLabel}${spots ? ` · ${spots}` : ""}`;
+  return `${dayWord} ${g.timeLabel} ET${spots ? ` · ${spots}` : ""}`;
 }
 
 function fallGroupLine(g: NewsletterFallGroup): string {
@@ -252,24 +246,38 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const hasPolls = openPolls.length > 0;
   const hasNews = news.length > 0;
   const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
+  const enrollingPrograms = programs.filter(program => program.enrolling);
+  const otherPrograms = programs.filter(program => !program.enrolling);
+  const programCards = (items: NewsletterProgram[]) => items.map(p => `<div style="${s.card}"><h2 style="margin:0 0 8px;font-size:16px;color:${c.text};">${escape(p.title)}</h2><p style="margin:0;color:${c.text};line-height:1.6;">${escape(p.body)}</p>${p.url ? `<p style="margin:12px 0 0;"><a href="${escape(p.url)}" style="${s.link}">${escape(p.linkLabel ?? "View details")}</a></p>` : ""}</div>`).join("\n");
+  const fallUnderway = fallSeason?.progress?.underway ?? false;
+  const fallDescription = fallSeason ? fallUnderway
+    ? `The Sunday season is underway at ${fallSeason.venueLine}. Your player builds through coached practice and games with rotating partners.`
+    : `${fallSeason.weeks} Sundays at ${fallSeason.venueLine}. Coached practice first, then a rotating-partner round robin — so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.` : "";
+  const fallJoinCopy = fallSeason ? fallUnderway
+    ? "Want your player to join the remaining sessions or the sub list? Reply to this email and Coach Sam will help you check availability and registration options."
+    : `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.` : "";
+  const picklParkUnderway = picklParkSeason?.progress?.underway ?? false;
+  const picklParkDescription = picklParkSeason ? `${picklParkUnderway ? "The Saturday season is underway" : `${picklParkSeason.weeks} Saturdays indoors`} at ${picklParkSeason.venueLine} — ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.` : "";
+  const picklParkNote = picklParkUnderway ? "Sessions are indoors. Ask The Pickl Park about joining the remaining dates, current fees and availability." : picklParkSeason?.indoorNote ?? "";
 
-  // Fall season — the lead block while registration is open. Derived from the
+  // Fall season — current dates and joining options. Derived from the
   // season data files by the cron, so (like camps) it can't fall off the issue
   // the way a hand-drafted Notion row can.
   const fallBlock = fallSeason
     ? `
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Fall season &mdash; registration is open</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Fall season &mdash; ${fallUnderway ? "underway" : "registration is open"}</p>
       <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(fallSeason.title)} &mdash; ${escape(fallSeason.seasonLabel)}</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${fallSeason.weeks} Sundays at ${escape(fallSeason.venueLine)}. Coached practice first, then a rotating-partner round robin &mdash; so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(fallDescription)}</p>
+      ${[...(fallSeason.progress?.scheduleNotes ?? []), ...(fallSeason.progress?.makeupNotes ?? [])].map(note => `<p style="margin:0 0 8px;color:${c.text};font-size:14px;line-height:1.55;">${escape(note)}</p>`).join("")}
       ${fallSeason.groups
         .map(
           (g) =>
             `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;"><strong>${escape(g.label)}</strong> &mdash; <span style="color:${c.muted};">${escape(fallGroupLine(g))}</span></p>`,
         )
         .join("")}
-      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">$${fallSeason.priceUsd} per player for the full season &middot; first come, first serve. Can&rsquo;t make all ${fallSeason.weeks}? Reply and we&rsquo;ll put you on the sub list.</p>
-      <p style="margin:14px 0 0 0;"><a href="${fallSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">Register for the season &rarr;</a></p>
+      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(fallJoinCopy)}</p>
+      <p style="margin:14px 0 0 0;"><a href="${fallSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">${fallUnderway ? "View remaining dates and weather calls" : "Register for the season →"}</a></p>
     </div>`
     : "";
 
@@ -282,14 +290,15 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <div style="${s.cardAccent}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturdays in Frederick &mdash; Drill and Play</p>
       <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(picklParkSeason.title)} &mdash; ${escape(picklParkSeason.seasonLabel)}</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${picklParkSeason.weeks} Saturdays indoors at ${escape(picklParkSeason.venueLine)} &mdash; ${escape(picklParkSeason.sessionFormat)}. Coached by Next Gen; The Pickl Park handles registration.</p>
+      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(picklParkDescription)}</p>
+      ${picklParkSeason.progress ? `<p style="margin:0 0 8px;color:${c.text};font-size:14px;line-height:1.55;">${escape(picklParkSeason.progress.scheduleNote)}</p>` : ""}
       ${picklParkSeason.groups
         .map(
           (g) =>
             `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;"><strong>${escape(g.label)}</strong> &mdash; <span style="color:${c.muted};">${escape(picklParkGroupLine(g))}</span></p>`,
         )
         .join("")}
-      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(picklParkSeason.indoorNote)}</p>
+      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(picklParkNote)}</p>
       ${picklParkSeason.priceUsd ? `<p style="margin:8px 0 0 0;color:${c.muted};font-size:13px;">$${picklParkSeason.priceUsd} per player for the full season.</p>` : ""}
       <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">View Saturday sessions</a></p>
     </div>`
@@ -454,11 +463,13 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 
     ${editorial ? leadBlock : ""}
 
+    ${programCards(enrollingPrograms)}
+
     ${fallBlock}
 
     ${picklParkBlock}
 
-    ${programs.map(p => `<div style="${s.card}"><h2 style="margin:0 0 8px;font-size:16px;color:${c.text};">${escape(p.title)}</h2><p style="margin:0;color:${c.text};line-height:1.6;">${escape(p.body)}</p>${p.url ? `<p style="margin:12px 0 0;"><a href="${escape(p.url)}" style="${s.link}">${escape(p.linkLabel ?? "View details")}</a></p>` : ""}</div>`).join("\n")}
+    ${programCards(otherPrograms)}
 
     ${sessionBlock}
 
@@ -520,6 +531,10 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     campAgeMin,
     campPriceFromUsd,
   } = input;
+  const fallUnderway = fallSeason?.progress?.underway ?? false;
+  const picklParkUnderway = picklParkSeason?.progress?.underway ?? false;
+  const programLines = (program: NewsletterProgram): string[] => [program.title, program.body,
+    ...(program.url ? [`${program.linkLabel ?? "View details"}: ${program.url}`] : []), ""];
   const lines: string[] = [
     editorial?.headline ?? `Where to play, ${parentFirst}.`,
     "",
@@ -533,11 +548,15 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
   }
 
+  for (const program of programs.filter(program => program.enrolling)) lines.push(...programLines(program));
+
   if (fallSeason) {
     lines.push(
-      "Fall season — registration is open:",
+      `Fall season — ${fallUnderway ? "underway" : "registration is open"}:`,
       `${fallSeason.title} — ${fallSeason.seasonLabel}`,
-      `${fallSeason.weeks} Sundays at ${fallSeason.venueLine}. Coached practice first, then a rotating-partner round robin — so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.`,
+      fallUnderway ? `The Sunday season is underway at ${fallSeason.venueLine}. Your player builds through coached practice and games with rotating partners.` : `${fallSeason.weeks} Sundays at ${fallSeason.venueLine}. Coached practice first, then a rotating-partner round robin — so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.`,
+      ...(fallSeason.progress?.scheduleNotes ?? []),
+      ...(fallSeason.progress?.makeupNotes ?? []),
       "",
     );
     for (const g of fallSeason.groups) {
@@ -545,8 +564,8 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     }
     lines.push(
       "",
-      `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.`,
-      `Register for the season: ${fallSeason.url}`,
+      fallUnderway ? "Want your player to join the remaining sessions or the sub list? Reply to this email and Coach Sam will help you check availability and registration options." : `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.`,
+      `${fallUnderway ? "View remaining dates and weather calls" : "Register for the season"}: ${fallSeason.url}`,
       "",
     );
   }
@@ -555,13 +574,14 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     lines.push(
       "Pickl Park Saturdays in Frederick — Drill and Play:",
       `${picklParkSeason.title} — ${picklParkSeason.seasonLabel}`,
-      `${picklParkSeason.weeks} Saturdays indoors at ${picklParkSeason.venueLine} — ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.`,
+      `${picklParkUnderway ? "The Saturday season is underway" : `${picklParkSeason.weeks} Saturdays indoors`} at ${picklParkSeason.venueLine} — ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.`,
+      ...(picklParkSeason.progress ? [picklParkSeason.progress.scheduleNote] : []),
       "",
     );
     for (const g of picklParkSeason.groups) {
       lines.push(`  ${g.label} — ${picklParkGroupLine(g)}`);
     }
-    lines.push("", picklParkSeason.indoorNote);
+    lines.push("", picklParkUnderway ? "Sessions are indoors. Ask The Pickl Park about joining the remaining dates, current fees and availability." : picklParkSeason.indoorNote);
     if (picklParkSeason.priceUsd) {
       lines.push(
         `$${picklParkSeason.priceUsd} per player for the full season.`,
@@ -570,11 +590,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     lines.push(`View Saturday sessions: ${picklParkSeason.url}`, "");
   }
 
-  for (const program of programs) {
-    lines.push(program.title, program.body);
-    if (program.url) lines.push(`${program.linkLabel ?? "View details"}: ${program.url}`);
-    lines.push("");
-  }
+  for (const program of programs.filter(program => !program.enrolling)) lines.push(...programLines(program));
 
   if (sessions.length > 0) {
     lines.push(

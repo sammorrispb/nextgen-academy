@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { newsletterEditorial } from "../src/lib/newsletter-editorial";
 import { newsletterPrograms } from "../src/lib/newsletter-programs";
 import { weeklyNewsletterHtml, weeklyNewsletterText, type WeeklyNewsletterInput } from "../src/lib/email/weekly-newsletter";
+import { fallNewsletterProgress, picklParkNewsletterProgress } from "../src/lib/newsletter-season-progress";
 
 const winter = {
   pageId: "3ebfa3ac-27dc-8167-8030-e58c8c7bbe8e",
@@ -54,5 +55,42 @@ test("winter leads both MIME parts once, ahead of fall, with supporting offers i
   for (const body of [weeklyNewsletterHtml(ordinary), weeklyNewsletterText(ordinary)]) {
     expect(body).toContain("Winter league interest — Montgomery Village and Frederick");
     expect(body.indexOf("Fall season")).toBeLessThan(body.indexOf("Where will your player play this winter?"));
+  }
+});
+
+test("current fall sections show remaining dates in both MIME parts, after the winter lead and upcoming enrollment", () => {
+  const input: WeeklyNewsletterInput = {
+    parentFirst: "Taylor", editorial: newsletterEditorial("2026-10-01", [winter]),
+    newsletterLeadHtml: winter.html, newsletterLeadText: winter.text,
+    programs: newsletterPrograms("2026-10-01", origin, "weekly-2026-10-01"),
+    fallSeason: { title: "WJHS Sunday season", seasonLabel: "September 20 – October 25, 2026", weeks: 6,
+      venueLine: "Walter Johnson High School, Bethesda", priceUsd: 225, groups: [], url: `${origin}/fall`,
+      progress: fallNewsletterProgress("2026-10-01", { status: "ok", duplicates: [], rows: [
+        { pageId: "cancel", date: "2026-09-27", status: { Green: "Cancelled", Yellow: "Cancelled" } },
+        { pageId: "rain", date: "2026-11-01", cupf: "Booked" },
+      ] }) },
+    picklParkSeason: { title: "Pickl Park Saturdays", seasonLabel: "September 26 – October 31, 2026", weeks: 6,
+      venueLine: "The Pickl Park, Frederick", sessionFormat: "30 minutes of coached drills, then 30 minutes of game play",
+      indoorNote: "Indoors", groups: [{ label: "Kid's Drill and Play (Ages 8–13)", timeLabel: "2:00–3:00 PM", spotsLeft: null }],
+      url: `${origin}/picklpark`, progress: picklParkNewsletterProgress("2026-10-01") },
+    sessions: [], laterSessions: [], openPolls: [], news: [], camps: [], tip: { title: "Practice", body: "Try one thing." },
+    scheduleUrl: `${origin}/schedule`, crewInterestUrl: `${origin}/crew`, unsubscribeUrl: `${origin}/unsubscribe`,
+    origin, utmCampaign: "weekly-2026-10-01", campUrl: `${origin}/camp`, campAgeMin: 8, campPriceFromUsd: 50,
+  };
+  for (const body of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
+    expect(body.indexOf("Where will your player play this winter?")).toBeLessThan(body.indexOf("Fall Session II"));
+    expect(body.indexOf("Fall Session II")).toBeLessThan(body.indexOf("WJHS Sunday season"));
+    expect(body).toContain("5 Sundays remaining");
+    expect(body).toContain("5 Saturdays remaining");
+    expect(body).toContain("Sun, Nov 1 is the makeup for Sun, Sep 27");
+    expect(body).toContain("availability and registration options");
+    expect(body).toContain("Ask The Pickl Park about joining");
+    expect(body).not.toContain("6 Sundays at");
+    expect(body).not.toContain("6 Saturdays indoors");
+    expect(body).not.toContain("$225");
+    expect(body).toContain("$90 resident / $100 non-resident");
+    expect(body).toContain("4:00–7:00 PM");
+    expect(body).toContain("$50");
+    expect(body).toContain("$60");
   }
 });
