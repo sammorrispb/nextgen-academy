@@ -4,6 +4,7 @@ import type { CoachTip } from "@/lib/newsletter-tips";
 import { fillLabel, fillBar } from "@/lib/fill-meter";
 import { seatStatusLabel } from "@/lib/seat-status";
 import type { NewsletterProgram } from "@/lib/newsletter-programs";
+import type { NewsletterEditorial } from "@/lib/newsletter-editorial";
 import {
   phoneLineHtml,
   phoneLineText,
@@ -68,6 +69,7 @@ export interface NewsletterFallGroup {
 
 export interface WeeklyNewsletterInput {
   parentFirst: string;
+  editorial?: NewsletterEditorial | null;
   programs?: NewsletterProgram[];
   /**
    * Fall season registration — the top block while registration is open. A
@@ -222,6 +224,8 @@ function picklParkGroupLine(g: NewsletterFallGroup): string {
 }
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
+  const editorial = input.editorial;
+  const programs = (input.programs ?? []).filter(p => !editorial || p.key !== "winter-interest");
   const {
     parentFirst,
     fallSeason,
@@ -383,9 +387,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s group &rarr;</a></p>
     </div>`;
 
-  // "From Coach Sam" lead block — rendered HTML from an Approved row in the
-  // newsletter-drafts Notion DB. Sits between the Coach Tip and the existing
-  // news-cards block so the editorial voice leads into the raw news items.
+  // An issue-specific editorial moves the approved lead above the programs.
   // Hidden by default; only renders when Sam has flipped a draft to Approved
   // for this week's send.
   const leadBlock = hasLead
@@ -442,18 +444,21 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   <title>Next Gen this week</title>
 </head>
 <body style="margin:0;padding:0;background:${c.bgDark};">
+  ${editorial ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escape(editorial.previewText)}</div>` : ""}
   <div style="${s.wrapper}">
     <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Next Gen this week</p>
-    <h1 style="${s.heading} margin:0 0 16px 0;">Where to play, ${escape(parentFirst)}.</h1>
-    <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions.</p>
+    <h1 style="${s.heading} margin:0 0 16px 0;">${editorial ? escape(editorial.headline) : `Where to play, ${escape(parentFirst)}.`}</h1>
+    <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">${editorial ? escape(editorial.intro) : "Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions."}</p>
 
     ${whatsappGroupsTopHtml()}
+
+    ${editorial ? leadBlock : ""}
 
     ${fallBlock}
 
     ${picklParkBlock}
 
-    ${(input.programs ?? []).map(p => `<div style="${s.card}"><h2 style="margin:0 0 8px;font-size:16px;color:${c.text};">${escape(p.title)}</h2><p style="margin:0;color:${c.text};line-height:1.6;">${escape(p.body)}</p>${p.url ? `<p style="margin:12px 0 0;"><a href="${escape(p.url)}" style="${s.link}">${escape(p.linkLabel ?? "View details")}</a></p>` : ""}</div>`).join("\n")}
+    ${programs.map(p => `<div style="${s.card}"><h2 style="margin:0 0 8px;font-size:16px;color:${c.text};">${escape(p.title)}</h2><p style="margin:0;color:${c.text};line-height:1.6;">${escape(p.body)}</p>${p.url ? `<p style="margin:12px 0 0;"><a href="${escape(p.url)}" style="${s.link}">${escape(p.linkLabel ?? "View details")}</a></p>` : ""}</div>`).join("\n")}
 
     ${sessionBlock}
 
@@ -468,7 +473,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">Coach tip: ${escape(tip.title)}</h2>
     <p style="margin:0;color:${c.text};line-height:1.7;">${escape(tip.body)}</p>
 
-    ${leadBlock}
+    ${editorial ? "" : leadBlock}
 
     ${newsBlock}
 
@@ -493,6 +498,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 }
 
 export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
+  const editorial = input.editorial;
+  const programs = (input.programs ?? []).filter(p => !editorial || p.key !== "winter-interest");
   const {
     parentFirst,
     fallSeason,
@@ -514,13 +521,17 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     campPriceFromUsd,
   } = input;
   const lines: string[] = [
-    `Where to play, ${parentFirst}.`,
+    editorial?.headline ?? `Where to play, ${parentFirst}.`,
     "",
-    `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
+    editorial?.intro ?? `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
     "",
     whatsappGroupsTopText(),
     "",
   ];
+
+  if (editorial && newsletterLeadText?.trim()) {
+    lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
+  }
 
   if (fallSeason) {
     lines.push(
@@ -559,7 +570,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     lines.push(`View Saturday sessions: ${picklParkSeason.url}`, "");
   }
 
-  for (const program of input.programs ?? []) {
+  for (const program of programs) {
     lines.push(program.title, program.body);
     if (program.url) lines.push(`${program.linkLabel ?? "View details"}: ${program.url}`);
     lines.push("");
@@ -641,7 +652,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     "",
   );
 
-  if (newsletterLeadText && newsletterLeadText.trim()) {
+  if (!editorial && newsletterLeadText && newsletterLeadText.trim()) {
     lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
   }
 
