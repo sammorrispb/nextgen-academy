@@ -12,7 +12,7 @@ import { getStripe } from "./stripe";
 // hosted page via the invoice description/footer URL.
 
 export interface InvoiceLineItem {
-  /** Line description shown on the invoice, e.g. "Group lesson — Mia (4 players, $60 total split)". */
+  /** Line description shown on the invoice, e.g. "Group lesson — Mia (4 players × $40)". */
   description: string;
   /** Unit amount in cents. */
   amountCents: number;
@@ -32,28 +32,51 @@ export interface CreateSignupInvoiceArgs {
   footer?: string;
   /** Days until the invoice is due. Defaults to 7. */
   daysUntilDue?: number;
-  /** Stable per-submission id for Stripe's Idempotency-Key (safe retries). */
+  /**
+   * The sign-up's submission key (see submission-key.ts). Every Stripe write
+   * below is keyed off it, so a retry of the same submission replays the
+   * invoice that already exists instead of making another.
+   */
   idempotencyKey?: string;
+}
+
+export interface SignupInvoiceResult {
+  invoice: Stripe.Invoice;
+  /**
+   * Stripe replayed the send: an earlier attempt of this same submission
+   * already emailed this invoice, so the caller must not announce it again.
+   * Also true on a FIRST attempt whose send the SDK itself retried after
+   * Stripe processed it but the response was lost (maxNetworkRetries): the
+   * invoice is still right; only our announcement is skipped.
+   */
+  alreadySent: boolean;
 }
 
 export async function findOrCreateCustomer(
   stripe: Stripe,
   email: string,
   name?: string,
+  options?: Stripe.RequestOptions,
 ): Promise<Stripe.Customer> {
   const existing = await stripe.customers.list({ email, limit: 1 });
   if (existing.data.length > 0) return existing.data[0];
-  return stripe.customers.create({ email, name: name || undefined });
+  return stripe.customers.create({ email, name: name || undefined }, options);
 }
 
 /**
- * Build, finalize, and email an invoice from sign-up form data.
- * Throws if any Stripe call fails; the invoice is only finalized after all
- * items are attached, so a failure leaves a draft (never a sent invoice).
+ * Build, finalize, and email an invoice from sign-up form data. Throws if any
+ * Stripe call fails.
+ *
+ * Retry-safe when given an idempotencyKey: EVERY write carries a key derived
+ * from it, one per step. Keying only the invoice create is worse than no key —
+ * Stripe replays the create's original DRAFT response, so a retry would add a
+ * second line to a still-draft invoice (double the price), or be refused a
+ * line on a finalized one ("couldn't create your invoice" about an invoice
+ * already emailed). Pinned by e2e/invariant-signup-invoice-idempotency.spec.ts.
  */
 export async function createAndSendSignupInvoice(
   args: CreateSignupInvoiceArgs,
-): Promise<Stripe.Invoice> {
+): Promise<SignupInvoiceResult> {
   const stripe = getStripe();
   const {
     customerEmail,
@@ -75,15 +98,15 @@ export async function createAndSendSignupInvoice(
     }
   }
 
+  const keyed = (step: string): Stripe.RequestOptions | undefined =>
+    idempotencyKey ? { idempotencyKey: `${idempotencyKey}:${step}` } : undefined;
+
   const customer = await findOrCreateCustomer(
     stripe,
     customerEmail,
     customerName,
+    keyed("customer"),
   );
-
-  const requestOptions = idempotencyKey
-    ? { idempotencyKey }
-    : undefined;
 
   const invoice = await stripe.invoices.create(
     {
@@ -95,24 +118,31 @@ export async function createAndSendSignupInvoice(
       footer: footer || undefined,
       metadata,
     },
-    requestOptions,
+    keyed("invoice"),
   );
 
-  for (const item of items) {
+  for (const [i, item] of items.entries()) {
     // Legacy-style amount + description: no Product catalog entries needed,
     // the per-signup description (child name, Monday, split) goes straight on
     // the line item. `amount` is the line TOTAL — the API rejects amount +
     // quantity together, so quantity is folded into the amount (always 1x).
-    await stripe.invoiceItems.create({
-      customer: customer.id,
-      invoice: invoice.id,
-      amount: item.amountCents * (item.quantity ?? 1),
-      currency: "usd",
-      description: item.description,
-    });
+    await stripe.invoiceItems.create(
+      {
+        customer: customer.id,
+        invoice: invoice.id,
+        amount: item.amountCents * (item.quantity ?? 1),
+        currency: "usd",
+        description: item.description,
+      },
+      keyed(`item-${i}`),
+    );
   }
 
-  const finalized = await stripe.invoices.finalizeInvoice(invoice.id);
-  await stripe.invoices.sendInvoice(finalized.id);
-  return stripe.invoices.retrieve(finalized.id);
+  await stripe.invoices.finalizeInvoice(invoice.id, {}, keyed("finalize"));
+  const sent = await stripe.invoices.sendInvoice(invoice.id, {}, keyed("send"));
+  return {
+    invoice: await stripe.invoices.retrieve(invoice.id),
+    // Stripe's documented replay marker (docs.stripe.com/error-low-level).
+    alreadySent: sent.lastResponse?.headers?.["idempotent-replayed"] === "true",
+  };
 }

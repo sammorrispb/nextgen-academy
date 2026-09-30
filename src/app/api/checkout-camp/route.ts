@@ -9,6 +9,7 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { siteOrigin } from "@/lib/site-origin";
 
 export async function POST(req: NextRequest) {
   let body: Partial<CampFormData>;
@@ -58,10 +59,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com";
+  const origin = siteOrigin();
 
   // For the single-morning SKU, bake the chosen day into the label so the
   // confirmation email, admin alert, Player CRM, and success page all show

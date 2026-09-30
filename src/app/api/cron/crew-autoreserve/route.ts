@@ -337,7 +337,7 @@ async function processOne(
     email: commit.parentEmail,
     name: commit.parentName || undefined,
     phone: commit.parentPhone || undefined,
-    interest: commit.childFirstName,
+    interest: commit.childFirstName.trim().split(/\s+/)[0],
     metadata: {
       child_first_name: commit.childFirstName,
       session_title: next.title,

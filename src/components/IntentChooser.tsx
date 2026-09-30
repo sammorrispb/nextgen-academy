@@ -1,5 +1,10 @@
 "use client";
 
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
+import {
+  GROUP_LESSON_PRICE_PER_PLAYER_USD,
+  PRIVATE_LESSON_PRICE_USD,
+} from "@/data/lessons";
 import Link from "next/link";
 import { trackEvent } from "@/lib/funnelClient";
 
@@ -14,7 +19,7 @@ const INTENTS = [
     eyebrow: "New to pickleball",
     title: "Start with a free evaluation",
     body: "Never played or just getting going? We'll place your player at the right level in 30 minutes — free, no commitment.",
-    primary: { href: "/free-evaluation/book", label: "Book a free evaluation" },
+    primary: { href: EVALUATION_SMS_URL, label: "Text for a free evaluation" },
     secondary: { href: "/lessons", label: "Or see lessons →" },
   },
   {
@@ -32,9 +37,9 @@ const INTENTS = [
     id: "looking-to-improve",
     eyebrow: "Looking to improve",
     title: "Train with a coach",
-    body: "Already playing and want to level up? One hour private or group — $60, scheduled around your family.",
+    body: `Already playing and want to level up? One hour with a coach — $${PRIVATE_LESSON_PRICE_USD} private, or $${GROUP_LESSON_PRICE_PER_PLAYER_USD} per player in a small group — scheduled around your family.`,
     primary: { href: "/lessons", label: "Book a lesson" },
-    secondary: { href: "/free-evaluation/book", label: "Or get evaluated first →" },
+    secondary: { href: EVALUATION_SMS_URL, label: "Or text for an evaluation →" },
   },
 ];
 

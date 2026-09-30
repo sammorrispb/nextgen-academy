@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import TrackedCTA from "@/components/TrackedCTA";
 
 interface Step {
@@ -84,13 +85,13 @@ export default function HowItWorks() {
 
         <div className="mt-10 text-center">
           <TrackedCTA
-            href="/free-evaluation/book"
+            href={EVALUATION_SMS_URL}
             label="how_it_works_book_eval"
             section="how_it_works"
             asNextLink
             className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors text-base shadow-lg shadow-ngpa-teal/20 min-h-[48px]"
           >
-            Book a Free Evaluation
+            Text for a Free Evaluation
             <svg
               className="w-4 h-4"
               fill="none"

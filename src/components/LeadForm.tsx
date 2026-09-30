@@ -13,6 +13,7 @@ import {
 } from "@/lib/validate-lead";
 import { trackEvent, getVisitorIdForForm, getUtm } from "@/lib/funnelClient";
 import { site } from "@/data/site";
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 
 const AGE_OPTIONS = Array.from({ length: 11 }, (_, i) => i + 6); // 6-16 (NGA strict)
 
@@ -39,7 +40,7 @@ interface LeadFormProps {
 }
 
 export default function LeadForm({
-  submitLabel = "Book my free evaluation",
+  submitLabel = "Send my inquiry",
 }: LeadFormProps = {}) {
   const [parentName, setParentName] = useState("");
   const [contact, setContact] = useState("");
@@ -216,19 +217,17 @@ export default function LeadForm({
           Thanks, {parentName.split(" ")[0]}!
         </h3>
         <p className="text-ngpa-white/75 text-lg mb-6 max-w-md mx-auto">
-          We&rsquo;ll reach out within 24 hours to schedule a free evaluation
-          and figure out the right next step &mdash; the group court for your
-          child&rsquo;s level, plus private lessons if they want 1:1 work.
+          Your inquiry is in. We&rsquo;ll follow up within one business day
+          to help you find the right next step for your child. To arrange a
+          free evaluation, text Coach Sam at {site.phone} with the days and
+          area that work for your family.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <a
-            href={`tel:${site.phone.replace(/\D/g, "")}`}
+            href={EVALUATION_SMS_URL}
             className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
-            </svg>
-            Call or Text Sam
+            Text to schedule an evaluation
           </a>
           <Link
             href="/schedule"

@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import Image from "next/image";
 import { seasons } from "@/data/schedule";
 import TrackedCTA from "@/components/TrackedCTA";
@@ -62,13 +63,13 @@ export default function Hero() {
 
             <div className="mt-9 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
               <TrackedCTA
-                href="/free-evaluation/book"
+                href={EVALUATION_SMS_URL}
                 label="hero_book_eval"
                 section="hero"
                 asNextLink
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors text-base shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
               >
-                Book a Free 30-Minute Evaluation
+                Text for a Free 30-Minute Evaluation
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>

@@ -3,12 +3,20 @@ import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
 import { fillLabel, fillBar } from "@/lib/fill-meter";
 import { seatStatusLabel } from "@/lib/seat-status";
+import type { NewsletterProgram } from "@/lib/newsletter-programs";
+import type { NewsletterEditorial } from "@/lib/newsletter-editorial";
 import {
   phoneLineHtml,
   phoneLineText,
   whatsappGroupsTopHtml,
   whatsappGroupsTopText,
 } from "./signature";
+
+// Evergreen invitations remain visible in quiet weeks, alongside seasonal programs.
+const LESSONS_HEADING = "Private, semi-private and small-group lessons";
+const YOUTH_LESSONS_COPY = "Help your player build a more consistent serve, rally or match plan with focused coaching. Choose one-on-one, semi-private (two players), or a small group at a similar level. Choose up to three available times for your player. Sam confirms the time and sends an invoice; there is no charge when you request.";
+const PARENT_LESSONS_COPY = "Want coaching for your own game? Request a private lesson, a semi-private lesson with a partner, or a small-group lesson with friends. Choose up to three available times and enter your player count. Sam confirms the time and sends an invoice; there is no charge when you request.";
+const SAM_LESSON_REQUEST_URL = "https://coach.sammorrispb.com/book/private-lesson";
 
 /** One open time slot within a date+location group. */
 export interface NewsletterSessionSlot {
@@ -61,6 +69,8 @@ export interface NewsletterFallGroup {
 
 export interface WeeklyNewsletterInput {
   parentFirst: string;
+  editorial?: NewsletterEditorial | null;
+  programs?: NewsletterProgram[];
   /**
    * Fall season registration — the top block while registration is open. A
    * season is the one thing in this email a family can only buy once: 8 seats
@@ -214,6 +224,8 @@ function picklParkGroupLine(g: NewsletterFallGroup): string {
 }
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
+  const editorial = input.editorial;
+  const programs = (input.programs ?? []).filter(p => !editorial || p.key !== "winter-interest");
   const {
     parentFirst,
     fallSeason,
@@ -268,7 +280,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   const picklParkBlock = picklParkSeason
     ? `
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturdays in Frederick &mdash; the league is registering now</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturdays in Frederick &mdash; Drill and Play</p>
       <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(picklParkSeason.title)} &mdash; ${escape(picklParkSeason.seasonLabel)}</p>
       <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${picklParkSeason.weeks} Saturdays indoors at ${escape(picklParkSeason.venueLine)} &mdash; ${escape(picklParkSeason.sessionFormat)}. Coached by Next Gen; The Pickl Park handles registration.</p>
       ${picklParkSeason.groups
@@ -279,7 +291,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
         .join("")}
       <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(picklParkSeason.indoorNote)}</p>
       ${picklParkSeason.priceUsd ? `<p style="margin:8px 0 0 0;color:${c.muted};font-size:13px;">$${picklParkSeason.priceUsd} per player for the full season.</p>` : ""}
-      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">See the league &rarr;</a></p>
+      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">View Saturday sessions</a></p>
     </div>`
     : "";
 
@@ -375,9 +387,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s group &rarr;</a></p>
     </div>`;
 
-  // "From Coach Sam" lead block — rendered HTML from an Approved row in the
-  // newsletter-drafts Notion DB. Sits between the Coach Tip and the existing
-  // news-cards block so the editorial voice leads into the raw news items.
+  // An issue-specific editorial moves the approved lead above the programs.
   // Hidden by default; only renders when Sam has flipped a draft to Approved
   // for this week's send.
   const leadBlock = hasLead
@@ -406,13 +416,16 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       .join("")}`
     : "";
 
-  // "Brand new to a court?" card — surfaces the Red Ball group court plus the
-  // optional private-lesson fast-track. Routes to the lead form (#contact-form).
+  // Always present, including weeks without sessions or an approved draft.
   const privateBlock = `
     <div style="${s.card}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.muted};font-weight:700;">Brand new to a court?</p>
-      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">No problem &mdash; our Red Ball court is built for kids just starting out, so they can jump in and play right away. Prefer to fast-track? A private one-on-one with Coach Sam is there too. Book a free evaluation to see where they fit.</p>
-      <p style="margin:0;"><a href="${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}" style="${s.link}font-weight:700;text-decoration:none;">Get a free evaluation &rarr;</a></p>
+      <h2 style="margin:0 0 12px 0;font-size:16px;color:${c.text};">${LESSONS_HEADING}</h2>
+      <p style="margin:0 0 6px 0;color:${c.text};font-weight:700;">For your player</p>
+      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(YOUTH_LESSONS_COPY)}</p>
+      <p style="margin:0;"><a href="${escape(appendUtm(`${origin}/lessons/book`, "youth-lessons", utmCampaign))}" style="${s.link}font-weight:700;">Request a youth lesson</a> &middot; <a href="sms:+13013254731" style="${s.link}">Text Coach Sam</a></p>
+      <p style="margin:20px 0 6px 0;color:${c.text};font-weight:700;">For parents who play</p>
+      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(PARENT_LESSONS_COPY)}</p>
+      <p style="margin:0;"><a href="${escape(appendUtm(SAM_LESSON_REQUEST_URL, "parent-lessons", utmCampaign))}" style="${s.link}font-weight:700;">Request a private or group lesson with Sam</a></p>
     </div>`;
 
   // Forward card — a plain ask, on purpose. The personalized referral link
@@ -431,16 +444,21 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
   <title>Next Gen this week</title>
 </head>
 <body style="margin:0;padding:0;background:${c.bgDark};">
+  ${editorial ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escape(editorial.previewText)}</div>` : ""}
   <div style="${s.wrapper}">
     <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Next Gen this week</p>
-    <h1 style="${s.heading} margin:0 0 16px 0;">Where to play, ${escape(parentFirst)}.</h1>
-    <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions.</p>
+    <h1 style="${s.heading} margin:0 0 16px 0;">${editorial ? escape(editorial.headline) : `Where to play, ${escape(parentFirst)}.`}</h1>
+    <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">${editorial ? escape(editorial.intro) : "Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions."}</p>
 
     ${whatsappGroupsTopHtml()}
+
+    ${editorial ? leadBlock : ""}
 
     ${fallBlock}
 
     ${picklParkBlock}
+
+    ${programs.map(p => `<div style="${s.card}"><h2 style="margin:0 0 8px;font-size:16px;color:${c.text};">${escape(p.title)}</h2><p style="margin:0;color:${c.text};line-height:1.6;">${escape(p.body)}</p>${p.url ? `<p style="margin:12px 0 0;"><a href="${escape(p.url)}" style="${s.link}">${escape(p.linkLabel ?? "View details")}</a></p>` : ""}</div>`).join("\n")}
 
     ${sessionBlock}
 
@@ -455,7 +473,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">Coach tip: ${escape(tip.title)}</h2>
     <p style="margin:0;color:${c.text};line-height:1.7;">${escape(tip.body)}</p>
 
-    ${leadBlock}
+    ${editorial ? "" : leadBlock}
 
     ${newsBlock}
 
@@ -470,7 +488,7 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
       </p>
       ${phoneLineHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
-        You&rsquo;re getting this because you joined the Next Gen newsletter.
+        You&rsquo;re receiving Next Gen updates because you signed up for the newsletter or connected with us through an inquiry or program.
         <a href="${unsubscribeUrl}" style="color:${c.muted};text-decoration:underline;">Unsubscribe</a>.
       </p>
     </div>
@@ -480,6 +498,8 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 }
 
 export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
+  const editorial = input.editorial;
+  const programs = (input.programs ?? []).filter(p => !editorial || p.key !== "winter-interest");
   const {
     parentFirst,
     fallSeason,
@@ -501,13 +521,17 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     campPriceFromUsd,
   } = input;
   const lines: string[] = [
-    `Where to play, ${parentFirst}.`,
+    editorial?.headline ?? `Where to play, ${parentFirst}.`,
     "",
-    `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
+    editorial?.intro ?? `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
     "",
     whatsappGroupsTopText(),
     "",
   ];
+
+  if (editorial && newsletterLeadText?.trim()) {
+    lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
+  }
 
   if (fallSeason) {
     lines.push(
@@ -529,7 +553,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
 
   if (picklParkSeason) {
     lines.push(
-      "Pickl Park Saturdays in Frederick — the league is registering now:",
+      "Pickl Park Saturdays in Frederick — Drill and Play:",
       `${picklParkSeason.title} — ${picklParkSeason.seasonLabel}`,
       `${picklParkSeason.weeks} Saturdays indoors at ${picklParkSeason.venueLine} — ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.`,
       "",
@@ -543,7 +567,13 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
         `$${picklParkSeason.priceUsd} per player for the full season.`,
       );
     }
-    lines.push(`See the league: ${picklParkSeason.url}`, "");
+    lines.push(`View Saturday sessions: ${picklParkSeason.url}`, "");
+  }
+
+  for (const program of programs) {
+    lines.push(program.title, program.body);
+    if (program.url) lines.push(`${program.linkLabel ?? "View details"}: ${program.url}`);
+    lines.push("");
   }
 
   if (sessions.length > 0) {
@@ -622,7 +652,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     "",
   );
 
-  if (newsletterLeadText && newsletterLeadText.trim()) {
+  if (!editorial && newsletterLeadText && newsletterLeadText.trim()) {
     lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
   }
 
@@ -637,8 +667,15 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
   }
 
   lines.push(
-    `Brand new to a court? A private one-on-one with Coach Sam gets your kid rallying before they join a group.`,
-    `Book a free evaluation: ${appendUtm(`${origin}/#contact-form`, "eval", utmCampaign)}`,
+    LESSONS_HEADING,
+    "For your player",
+    YOUTH_LESSONS_COPY,
+    `Request a youth lesson: ${appendUtm(`${origin}/lessons/book`, "youth-lessons", utmCampaign)}`,
+    "Text Coach Sam: sms:+13013254731",
+    "",
+    "For parents who play",
+    PARENT_LESSONS_COPY,
+    `Request a private or group lesson with Sam: ${appendUtm(SAM_LESSON_REQUEST_URL, "parent-lessons", utmCampaign)}`,
     "",
   );
 
@@ -653,7 +690,7 @@ export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
     "",
     phoneLineText(),
     "",
-    `You're getting this because you joined the Next Gen newsletter.`,
+    `You're receiving Next Gen updates because you signed up for the newsletter or connected with us through an inquiry or program.`,
     `Unsubscribe: ${unsubscribeUrl}`,
   );
 

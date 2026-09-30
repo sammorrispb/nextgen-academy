@@ -1,5 +1,6 @@
 "use client";
 
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import TrackedCTA from "@/components/TrackedCTA";
 
 // Session II as a product: Oct 15 – Nov 19, 2026, six Thursdays, two classes
@@ -94,10 +95,10 @@ export default function MvfSessionTwoFeature({
         Registration runs through the Montgomery Village Foundation&rsquo;s
         ActiveCommunities portal. Not sure which class fits?{" "}
         <a
-          href="/free-evaluation/book"
+          href={EVALUATION_SMS_URL}
           className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
         >
-          Book a free evaluation
+          Text for a free evaluation
         </a>{" "}
         and we&rsquo;ll place your player.
       </p>

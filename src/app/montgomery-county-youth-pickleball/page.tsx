@@ -8,7 +8,8 @@ import { coaches } from "@/data/coaches";
 import { localFaq } from "@/data/faq";
 import { testimonials } from "@/data/testimonials";
 import JsonLd from "@/components/JsonLd";
-import LeadForm from "@/components/LeadForm";
+import EvaluationSchedulingCard from "@/components/EvaluationSchedulingCard";
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import TrackedCTA from "@/components/TrackedCTA";
 import { NGA_POSTAL_ADDRESS, areaServedJsonLd, CITY_LANDING_PAGES, orgRef } from "@/lib/seo";
 
@@ -127,13 +128,13 @@ export default function MontgomeryCountyPage() {
 
           <div className="mt-9 flex flex-col sm:flex-row gap-3">
             <TrackedCTA
-              href="#contact-form"
+              href={EVALUATION_SMS_URL}
               label="moco_hero_book_eval"
               section="moco_hero"
               asNextLink
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-xl shadow-ngpa-teal/20"
             >
-              Book a Free 30-Minute Evaluation
+              Text for a Free 30-Minute Evaluation
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -425,15 +426,13 @@ export default function MontgomeryCountyPage() {
               Free 30-min Evaluation
             </p>
             <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight">
-              Book your free evaluation.
+              Arrange your free evaluation.
             </h2>
             <p className="text-ngpa-white/70 mt-3 text-lg">
-              We&rsquo;ll call or text within 24 hours to schedule.
+              Text Coach Sam to find a time and court for your family.
             </p>
           </div>
-          <div className="rounded-3xl border-2 border-ngpa-teal/30 bg-ngpa-deep/60 backdrop-blur-md p-1 shadow-2xl shadow-ngpa-teal/10">
-            <LeadForm />
-          </div>
+          <EvaluationSchedulingCard />
         </div>
       </section>
     </>

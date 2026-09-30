@@ -1,18 +1,13 @@
-// Parent confirmation for the lead form — extracted from the inline HTML in
-// src/app/api/lead/route.ts (Phase 1a ride-along; that route is minor-PII, so
-// the template now lives beside the other email modules instead of inside the
-// handler). Adds the /free-evaluation/book self-scheduling CTA — the piece
-// that deletes the email/phone tag from eval scheduling.
+// Parent inquiry confirmation with text-to-schedule evaluation next step.
 
 import { c, s } from "./brand";
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import { site } from "@/data/site";
 import { escapeHtml } from "@/lib/html";
 import { signatureExtrasHtml } from "./signature";
 
 export const LEAD_CONFIRMATION_SUBJECT =
   "Thanks for Reaching Out — Next Gen Pickleball Academy";
-
-const BOOK_URL = "https://nextgenpbacademy.com/free-evaluation/book";
 
 export interface LeadConfirmationInput {
   parentName: string;
@@ -31,12 +26,12 @@ export function leadConfirmationHtml(input: LeadConfirmationInput): string {
     Thanks for your interest in Next Gen Pickleball Academy! We’ll be in touch within 24 hours to help find the right group for your child.
   </p>
   <div style="${s.card}">
-    <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">Skip the phone tag</p>
+    <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">Arrange a free evaluation</p>
     <p style="margin: 0 0 12px; font-size: 15px; line-height: 1.6;">
-      Want to get your child’s free evaluation scheduled? Request any open time that works for you — Coach Sam confirms within 24 hours, then your confirmation and calendar invite land in your inbox.
+      Text Coach Sam at ${site.phone} to arrange your child’s free 30-minute evaluation. Share the days that work and your preferred area; we’ll agree on a time and court by text.
     </p>
       ${signatureExtrasHtml()}
-    <a href="${BOOK_URL}" style="${s.cta}">Pick your eval time →</a>
+    <a href="${EVALUATION_SMS_URL}" style="${s.cta}">Text to schedule an evaluation →</a>
   </div>
   <div style="${s.card}">
     <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">In the meantime</p>
@@ -46,7 +41,7 @@ export function leadConfirmationHtml(input: LeadConfirmationInput): string {
   </div>
   <div style="${s.footer}">
     <p style="font-size: 14px; line-height: 1.6;">
-      Questions? Reply to this email or text Sam at <a href="tel:${site.phone}" style="${s.link}">${site.phone}</a>.
+      Questions? Reply to this email or text Sam at <a href="${EVALUATION_SMS_URL}" style="${s.link}">${site.phone}</a>.
     </p>
     <p style="font-size: 14px; line-height: 1.6; margin-top: 16px;">
       See you on the court!<br/>

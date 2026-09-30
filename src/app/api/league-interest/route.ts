@@ -171,7 +171,6 @@ export async function POST(request: NextRequest) {
     metadata: {
       child_first_name: childFirstName,
       child_age: childAge,
-      child_birth_year: childBirthYear,
       preferred_band: preferredBand,
       child_level: childLevel || null,
       league_interest_source: source,

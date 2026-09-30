@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse, after } from "next/server";
+import { deliverCronAlert } from "@/lib/cron-alert";
+import { DedupeLookupError } from "@/lib/dedupe-lookup";
 import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
@@ -454,7 +456,8 @@ export async function POST(req: NextRequest) {
 
   // Idempotency: Stripe retries webhook delivery, so skip if we've already
   // recorded this checkout.
-  const already = await findDropInByCheckoutId(session.id);
+  const already = await alreadyRecorded(session, "dropin", findDropInByCheckoutId);
+  if (already instanceof NextResponse) return already;
   if (already) {
     return NextResponse.json({ received: true, idempotent: true });
   }
@@ -731,6 +734,67 @@ async function emailCampParent(session: Stripe.Checkout.Session) {
   if (error) console.error("[stripe-webhook] camp parent email rejected", error);
 }
 
+
+/**
+ * The roster-row duplicate guard, with its failure classified. Returns the
+ * lookup's answer, or the Response the handler must return instead:
+ *  - transient (Notion 429/5xx/network) → 500, so Stripe redelivers and the
+ *    check runs again once Notion answers. Answering "not recorded" here is
+ *    how a redelivery used to create a second roster row.
+ *  - permanent (other 4xx: DB unshared, property renamed) → a retry fails the
+ *    same way for ~3 days, so alert (once per delivery) and proceed as "not
+ *    recorded": the family paid, and recording them beats a lost registration.
+ *    Normally this delivery is the only one; a transient create failure after
+ *    it would bring a redelivery and a second alert.
+ * The alert is awaited so it can't be lost, but capped at ALERT_WAIT_MS so a
+ * slow Resend/Twilio can't hold the response past Stripe's webhook timeout
+ * (a timeout redelivers, and on this path that means a second row).
+ * Pinned by e2e/invariant-webhook-dedupe-fail-closed.spec.ts.
+ */
+const ALERT_WAIT_MS = 4000;
+
+function withTimeout<T>(p: Promise<T>): Promise<T | undefined> {
+  return Promise.race([
+    p,
+    new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), ALERT_WAIT_MS)),
+  ]);
+}
+
+async function alreadyRecorded(
+  session: Stripe.Checkout.Session,
+  kind: string,
+  lookup: (checkoutSessionId: string) => Promise<boolean>,
+): Promise<boolean | NextResponse> {
+  try {
+    return await lookup(session.id);
+  } catch (err) {
+    if (!(err instanceof DedupeLookupError)) throw err;
+    if (err.kind === "transient") {
+      console.error(
+        `[stripe-webhook] ${kind} dedupe lookup failed (transient ${err.status ?? "network"}) — returning 500 so Stripe retries`,
+        session.id,
+      );
+      return NextResponse.json({ error: `${kind} dedupe lookup failed (transient)` }, { status: 500 });
+    }
+    console.error(
+      `[stripe-webhook] ${kind} dedupe lookup rejected (${err.status}) — alerting and recording anyway`,
+      session.id,
+    );
+    await withTimeout(deliverCronAlert(`stripe-webhook-${kind}`, {
+      attempted: 1,
+      succeeded: 0,
+      failures: [
+        {
+          signature: "dedupe_lookup_rejected",
+          ref: session.id,
+          detail: `Notion ${err.status} on the duplicate check — check the DB is shared with the integration and still has "Stripe Checkout Session ID". The registration was recorded without the check. Log prefix: [stripe-webhook].`,
+        },
+      ],
+    }));
+    return false;
+  }
+}
+
 async function handleCampCheckout(session: Stripe.Checkout.Session) {
   const m = session.metadata ?? {};
   const parentName = metaString(m, "parent_name");
@@ -808,10 +872,6 @@ async function handleCampCheckout(session: Stripe.Checkout.Session) {
         option: optionLabel,
         option_hours: optionHours,
         child_first_name: childFirst,
-        child_birth_year: childBirthYear,
-        emergency_name: metaString(m, "emergency_name"),
-        emergency_phone: metaString(m, "emergency_phone"),
-        allergies: metaString(m, "allergies"),
         amount_paid_usd: amount,
         stripe_session: session.id,
       },
@@ -973,10 +1033,6 @@ async function handleLeagueCheckout(session: Stripe.Checkout.Session) {
         season_title: seasonTitle,
         option: metaString(m, "option_label"),
         child_first_name: childFirst,
-        child_birth_year: childBirthYear,
-        emergency_name: metaString(m, "emergency_name"),
-        emergency_phone: metaString(m, "emergency_phone"),
-        allergies: metaString(m, "allergies"),
         amount_paid_usd: amount,
         stripe_session: session.id,
       },
@@ -1063,7 +1119,9 @@ async function handleFallCheckout(session: Stripe.Checkout.Session) {
   const m = session.metadata ?? {};
 
   // The roster row IS the idempotency key — a redelivered event no-ops here.
-  if (await findFallRegByCheckoutId(session.id)) {
+  const alreadyRow = await alreadyRecorded(session, "fall", findFallRegByCheckoutId);
+  if (alreadyRow instanceof NextResponse) return alreadyRow;
+  if (alreadyRow) {
     return NextResponse.json({ received: true, idempotent: true });
   }
 
@@ -1124,7 +1182,6 @@ async function handleFallCheckout(session: Stripe.Checkout.Session) {
           season_label: metaString(m, "season_label"),
           group: metaString(m, "group"),
           child_first_name: metaString(m, "child_first_name"),
-          child_birth_year: Number(metaString(m, "child_birth_year")) || 0,
           amount_paid_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
           stripe_session: session.id,
         },
@@ -1213,7 +1270,9 @@ async function handlePicklParkCheckout(session: Stripe.Checkout.Session) {
   const m = session.metadata ?? {};
 
   // The roster row IS the idempotency key — a redelivered event no-ops here.
-  if (await findPicklParkRegByCheckoutId(session.id)) {
+  const alreadyRow = await alreadyRecorded(session, "picklpark", findPicklParkRegByCheckoutId);
+  if (alreadyRow instanceof NextResponse) return alreadyRow;
+  if (alreadyRow) {
     return NextResponse.json({ received: true, idempotent: true });
   }
 
@@ -1274,7 +1333,6 @@ async function handlePicklParkCheckout(session: Stripe.Checkout.Session) {
           season_label: metaString(m, "season_label"),
           group: metaString(m, "group"),
           child_first_name: metaString(m, "child_first_name"),
-          child_birth_year: Number(metaString(m, "child_birth_year")) || 0,
           amount_paid_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
           stripe_session: session.id,
         },
@@ -1383,7 +1441,9 @@ async function handleMondayGirlsCheckout(session: Stripe.Checkout.Session) {
   const m = session.metadata ?? {};
 
   // The roster row IS the idempotency key — a redelivered event no-ops here.
-  if (await findMondayGirlsRegByCheckoutId(session.id)) {
+  const alreadyRow = await alreadyRecorded(session, "monday-girls", findMondayGirlsRegByCheckoutId);
+  if (alreadyRow instanceof NextResponse) return alreadyRow;
+  if (alreadyRow) {
     return NextResponse.json({ received: true, idempotent: true });
   }
 
@@ -1444,7 +1504,6 @@ async function handleMondayGirlsCheckout(session: Stripe.Checkout.Session) {
           season_label: metaString(m, "season_label"),
           group: metaString(m, "group"),
           child_first_name: metaString(m, "child_first_name"),
-          child_birth_year: Number(metaString(m, "child_birth_year")) || 0,
           amount_paid_usd: ((session.amount_total ?? 0) / 100).toFixed(2),
           stripe_session: session.id,
         },
@@ -1814,8 +1873,6 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
           division,
           resident: resident ? "true" : "false",
           child_first_name: metaString(m, "child_first_name"),
-          child_last_name: metaString(m, "child_last_name"),
-          child_dob: metaString(m, "child_dob"),
           amount_paid_usd: amount,
           nga_share_usd: metaString(m, "nga_share_usd"),
           mvf_share_usd: metaString(m, "mvf_share_usd"),
@@ -2036,7 +2093,9 @@ async function handleClusterCheckout(session: Stripe.Checkout.Session) {
   const m = session.metadata ?? {};
 
   // The roster row IS the idempotency key — a redelivered event no-ops here.
-  if (await findClusterRegByCheckoutId(session.id)) {
+  const alreadyRow = await alreadyRecorded(session, "cluster", findClusterRegByCheckoutId);
+  if (alreadyRow instanceof NextResponse) return alreadyRow;
+  if (alreadyRow) {
     return NextResponse.json({ received: true, idempotent: true });
   }
 

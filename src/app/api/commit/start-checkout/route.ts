@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { verifyCommitToken } from "@/lib/commit-token";
+import { siteOrigin } from "@/lib/site-origin";
 
 interface Body {
   token?: string;
@@ -47,10 +48,7 @@ export async function POST(request: NextRequest) {
       },
     }));
 
-  const origin =
-    request.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com";
+  const origin = siteOrigin();
 
   const checkout = await stripe.checkout.sessions.create({
     mode: "setup",

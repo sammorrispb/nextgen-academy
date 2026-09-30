@@ -5,6 +5,132 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-30 — October 1 newsletter leads with winter options
+
+- **Situation:** Sam approved a winter-led October 1 issue, but the cron still chose a fall/Pickl Park subject and placed approved editorial below the recurring programs. The recurring winter card would duplicate the new lead. Tournament copy omitted the published resident/non-resident prices.
+- **Decision:** Date-scope the subject, preview and opening to October 1 and require the specific readable, Approved winter Notion draft. Put that draft first in both email parts and the admin archive; omit the shorter winter card only for this editorial. Quote tournament prices from the existing pricing constants. Keep recipients, approval filtering and scheduled sends unchanged.
+- **Risk:** The October 1 code must deploy before the Thursday send and the Notion row must be Approved. If the row is missing/unreadable or the date differs, the existing issue remains the fallback; existing draft diagnostics still report failures. No winter dates or prices are represented as confirmed.
+- **Change:** `src/lib/newsletter-editorial.ts`, weekly newsletter cron/template, `newsletter-programs.ts`, editorial render tests and the mocked October 1 cron test. Validated with the pure suite, UTC renders, lint, TypeScript and production build. Brand review: parent-facing Skills, clear provisional status, direct lesson scheduler, existing signature and unsubscribe retained.
+
+## 2026-09-29 — A retried invoice sign-up replays its invoice instead of sending a second
+
+- **Situation:** A hostile review of #368 (2026-09-28) found the MVF Junior Tournament form minting `crypto.randomUUID()` on every submit and sending it as the Stripe idempotency key, so any retry — a dropped connection, or a 502 after Stripe finished part of the job — created and emailed a second invoice (for MVF also a second roster row, admin notice and parent confirmation). The Monday Girls drop-in form had identical code; the lesson purchase form had it until #381 deleted the form (the route still invoices any caller); the Winter League form deleted in #362 had it too. The obvious fix — a stable id — was unsafe alone: `createAndSendSignupInvoice` keyed only `invoices.create`, and Stripe replays that call's original DRAFT response, so the unkeyed line create either added a second line (shown by the new spec: $50 became $100 on one invoice) or was refused on the finalized invoice (a 502 "couldn't create your invoice" for an invoice already emailed). Read-only live checks, 2026-09-28: no sign-up invoice exists yet (three readers agree, positive controls pass), and the production webhook endpoint subscribes to `checkout.session.completed` only, so `invoice.payment_succeeded` never arrives and every invoice product's paid handler is dormant.
+- **Decision:** Sam approved the core fix 2026-09-29. One submission key per distinct form content for the life of the page (`submissionKeyFor` over a `useRef(new Map())` in each form); the server takes only a UUID (`parseSubmissionId` — anything else is no key, never a 502; Stripe caps keys at 255); every Stripe write keyed per step (`:customer|invoice|item-N|finalize|send`); `alreadySent`, from Stripe's documented `Idempotent-Replayed` header on the send, gates the "invoice sent" announcements; the MVF roster keeps one row per invoice — the create looks first, and the invoice lookup throws `DedupeLookupError` instead of reading a Notion error as "no row" (#371's rule, which the five checkout-session lookups already follow). That lookup change is the one step beyond the proposal's wording, and it is the same function: with it the webhook's mark-paid returns transient (500 → Stripe redelivers) on a Notion blip rather than backfilling a second row, which matters the moment `invoice.payment_succeeded` is subscribed. The test seam is the existing one — patching the cached `getStripe()` client, #381's technique — not a new injectable dependency. The MVF route's lazy `@/lib` imports became static so the route runs end to end in a spec (no behaviour change, as #381 did for the lesson route; the 86 existing specs that load the route stayed green before the fix went in). No Stripe test key exists locally (only `sk_live_`), so the fake — replay with the header, reject a changed request, cache errors, 255-character cap, no lines on a finalized invoice, all from Stripe's docs — was not cross-checked against real Stripe.
+- **Risk:** Payments + minor PII, so IPAV throughout. Specs first: the server spec was red 23 of 26 on its first run, and after the no-behaviour-change static-import step 21 of 26 red for the right reasons (the doubled line, the false 502, the second roster row, the blind write; the 5 green were the positive controls and the unchanged mark-paid paths); the form spec was red on load. **Mutation-checked 16 of 16**, each confirmed landed and restored: the item, send, finalize and customer keys dropped; `alreadySent` forced false; a per-attempt UUID and a fresh `Map` per submit in the MVF form; `submissionKeyFor` minting every call; the old any-string parse; the roster lookup removed; the create's unreachable-Notion catch removed; mark-paid reading a failed lookup as `not_found`; and each of the four announcement guards removed. The customer-key mutation was at first uncatchable — a sequential retry finds the customer by email — so a concurrent double-submit case was added, and it turns that mutation red. **Known limits:** an edit after a lost response, a reload or a second device is a new submission, so a second invoice (only server-side dedup by player would cover it; offered, not built); a Stripe error on a keyed step replays for 24 hours on an unchanged retry; if a first attempt dies between the send and its announcements, the retry doesn't announce (Stripe's own email still reached the parent) — and the same happens on a first attempt whose send the Stripe SDK itself retried after Stripe processed it, since `Idempotent-Replayed` can't tell the two apart (the fake can't model this one: it patches below the SDK's retry layer); no sign-up invoice existed as of a re-run of the read-only scan on 2026-09-29; the drop-in route's announcement gate is pinned by source, because its lazy import can't load in the test runner. **Beside this change:** `invoice.payment_succeeded` was subscribed on the live endpoint 2026-09-29 on Sam's explicit go (one API update of `enabled_events` — the union of what was there and the new event — then read back; URL, status and API version unchanged); until #382 merges, the deployed mark-paid still reads a failed Notion lookup as "no row". **Not in this change:** `auto_advance` hardening for abandoned drafts (whether Stripe auto-finalizes a one-off API draft is unverified). **Rollback:** revert — no data, schema or Stripe-config change; invoices made under this code are ordinary invoices.
+- **Change:** NEW `src/lib/submission-key.ts`, `e2e/fixtures/fake-stripe-invoices.ts`, `e2e/invariant-signup-invoice-idempotency.spec.ts` (28), `e2e/invariant-invoice-form-retry-key.spec.ts` (14). MODIFIED `src/lib/stripe-invoices.ts` (per-step keys, `SignupInvoiceResult`), `src/lib/notion-mvf-tournament-registrations.ts` (find-or-create, fail-closed lookup, mark-paid keeps the lookup's verdict, the create survives an unreachable Notion), the three invoice routes, `MvfJuniorTournamentForm.tsx` + `MondayGirlsDropinForm.tsx`, `CLAUDE.md` (new "Invoice sign-ups" section; Slop-Free list gains `stripe-invoices`, `submission-key`, `notion-mvf-tournament-registrations`; webhook caveat re-verified), `docs/source-inventory.md`. `npm run test:pure` **2314 passed** + lint + tsc + build green.
+
+## 2026-09-29 — Lessons re-priced: $75 private, $40 per player for a group
+
+- **Situation:** Sam, looking at the live `/lessons` page: private lessons should be $75/hour and group lessons $40 per person. The site quoted one $60 hour for both, with a group splitting the $60 between its players (the 2026-09-21 basis). The price lived in one constant (`LESSON_PRICE_USD`) read by `/lessons`, the cost FAQ, the legacy invoice route and an orphaned purchase form; the home-page intent card typed "$60" by hand. Parents no longer pay through this repo: since #377, `/lessons/book` forwards to Coach OS (`/book/nga-lessons`), whose draft program (community-os #1458, unmerged) invoices "$60 total per hour" and hardcodes `6000` cents in its migration seed, its reservation guard and `invoice.ts`. That link 404s today; NGA #380 is the fallback.
+- **Decision:**
+  - Two constants and one helper in `src/data/lessons.ts`: `PRIVATE_LESSON_PRICE_USD = 75`, `GROUP_LESSON_PRICE_PER_PLAYER_USD = 40`, `lessonTotalUsd(type, players)`. The helper throws a `RangeError` outside 2–8 players, so a bad count can't price an invoice. Semi-private (2 players) is a group lesson and costs $80.
+  - Every surface reads them. `/lessons` shows "$75 / hour" and "$40 / player", and so do the cost FAQ and the home-page card; no lesson surface types a figure.
+  - **Slop-Free Zone edit: `api/checkout-lesson/route.ts`.** The legacy route no longer has a UI caller, but it still makes Stripe email an invoice to any typed address. It now bills one line of `lessonTotalUsd(...)`: $75 private, or $40 × players for a group. The admin notice shows the same total. Its admin-notice import moved from a dynamic `import()` to a static one, with no behaviour change, because the test runner can't load a dynamic import of a `.ts` module; that is also why no spec had run the route to completion before. The copy and the charge move together (the rule in `lessons.ts`). This needs Sam's explicit go on the PR before merge.
+  - Deleted `src/components/LessonPurchaseForm.tsx`. Nothing has rendered it since #377, and keeping it meant writing per-player pricing into dead code.
+- **Risk:**
+  - **Coach OS still says $60 total.** Until community-os #1458 is re-priced before it ships, a parent who requests through the scheduler would be invoiced $60 for any lesson. The site would say $75 or $40 × N. Queued as a separate task for that repo.
+  - Per-player pricing makes a group invoice depend on the parent's self-reported headcount. Under the flat hour the count didn't move the charge. A family can under-report and bring more kids; that is a coach-side check at the court.
+  - `/api/checkout-lesson` is still an open invoice-sending endpoint with no UI caller (security review D2). Retiring it (410) would close it. That is Sam's call and is not done here.
+- **Change:**
+  - `src/data/lessons.ts`, `src/app/lessons/page.tsx`, `src/data/faq.ts`, `src/components/IntentChooser.tsx`, `src/app/api/checkout-lesson/route.ts`; comments in `validate-lesson.ts` and `stripe-invoices.ts`; `LessonPurchaseForm.tsx` deleted; `.env.example`, `CLAUDE.md` (one sentence) and a superseded note in `docs/conversion-build-2026-09-21.md`.
+  - New `e2e/invariant-lesson-pricing.spec.ts` (13 tests): pricing math; the route's actual invoice line and admin-notice amount, through a stubbed Stripe client and Resend; `/lessons`, FAQ and home-card text; no typed figure on any lesson surface. All 13 fail on main's source. On main the four route tests die at the dynamic import rather than on the amount, so the mutation runs below are what show they catch a wrong charge.
+  - Mutation-checked 10/10, each turning it red: flat group price, private back to 60, range guard dropped, the route charging a fixed private hour, the route charging $40 once, a wrong admin-notice amount, the group card quoted per hour, the FAQ reverting to a typed total, a typed figure on the home card, and the old rate typed into the page hero.
+
+## 2026-09-29 — D7 approved: the MVF Junior Tournament's extra child fields are a scoped exception, pinned
+
+- **Situation:** Risk log #12 (PR #378) inventoried the MVF tournament's child last name, full DOB, allergies and emergency contact, and found that the webhook's "paid" notice sends the DOB, allergies and emergency contact in plain text to MVF's partner contact. Nothing had approved the flow. The options offered were to approve it as is, to trim the MVF email, or to replace the DOB.
+- **Decision:** Sam approved it as it runs today ("approve it", 2026-09-29). This covers every current field and recipient, including the partner email. No code changed. The exception is recorded beside the camp exception in CLAUDE.md's Minor-Data Governance, and #12 now reads as approved and scoped. A new field, destination or recipient still needs its own approval.
+- **Risk:**
+  - The DOB, allergies and emergency contact of every paid registrant reach an outside organization's inbox by email, not through an auth-gated view. That is broader than the camp exception, which is coach-screen-only and print-only. Sam accepted it knowingly.
+  - The pins read source text, not a live send, so a refactor that moves the paid notice's fields out of that block could slip past them. The `between()` helper fails loudly if the block's markers disappear.
+  - The narrowing options stay open for later.
+- **Change:**
+  - New `e2e/invariant-mvf-tournament-child-fields.spec.ts` (5 tests) pins:
+    - the child keys in the checkout's Stripe metadata;
+    - the Notion row's child properties;
+    - the paid notice's recipients (the only send to MVF) and the fields it reads;
+    - the invoice-sent notice carrying none of the extra fields.
+  - It passes on main by design (it pins current behaviour). Mutation-checked 6/6, each turning it red:
+    - a new metadata key;
+    - a new Notion property;
+    - a new paid-notice field (applied to the MVF block itself; the first attempt hit an identical line in another webhook branch and proved nothing);
+    - a second send to MVF;
+    - a changed partner address;
+    - a DOB in the invoice-sent notice.
+  - Docs: `CLAUDE.md` (MVF exception bullet, "only sanctioned expansion" line updated) and `docs/source-inventory.md` (lib row, #8, #12).
+
+## 2026-09-29 — The MVF Junior Tournament's extra child fields are inventoried (D7 still open)
+
+- **Situation:** The MVF Junior Tournament checkout (live since 2026-09-22) collects a child's last name, full DOB, allergies and emergency contact: more than the first-name + birth-year baseline, and outside the camp-only safety exception. `docs/source-inventory.md` had no row for it and no decision record approves it (security review 2026-09-28, D7). Sam asked for the inventory row.
+- **Decision:** Inventory only; no code changes. There is a lib row for `notion-mvf-tournament-registrations.ts`, risk log #12 tracing every destination of each field, and a pointer from #8. All three say the flow is **not approved** and D7 is open. The trace found that the webhook's `invoice.paid` notice emails the DOB, allergies and emergency contact in plain text to MVF's partner contact. That is the one path that puts these fields in an outside organization's inbox.
+- **Risk:** Recording a flow is not approving it; the row says so. The fields keep accruing with each registration until D7 is decided. No spec pins what the MVF partner email or the Notion row carries.
+- **Change:** `docs/source-inventory.md` (row, #8 pointer, #12). Docs only.
+
+## 2026-09-29 — Security follow-ups: /api/fall-interest retired; the name cleaner closes two look-alikes; L&D roster names cleaned; a read-only Stripe name audit
+
+- **Situation:** Four codeable follow-ups from the 2026-09-28 security review. Sam approved items 1–4 through IPAV on 2026-09-29, and nothing else.
+  1. `/api/fall-interest` still upserted by email. Its form (`FallInterestForm`) is rendered nowhere, but anyone who knew a family's address could overwrite that family's child name, birth year and level. They could also make NGA email the address and forward the answers to Open Brain.
+  2. `invoiceSafeName` let U+01C0–U+01C3 (Latin letters that look like `|`, `‖` and `!`) through. It also let a combining mark stand alone, so "evil ̣ com" printed a floating dot.
+  3. `linkdink-roster-sync.ts` sent raw child names to L&D. Read-only check in community-os (origin/main, `apps/p3`): the organizer and MVF see the child as "First L." (`composeDisplayName`); `roster.csv` / `roster.json` and the organizer's registration alert carry the full names; peer and results surfaces say "Youth player". So typed text reaches organizer screens and inboxes.
+  4. A Stripe customer created before #375 keeps its stored name on future invoices.
+- **Decision:**
+  - **Item 1: retire (410 Gone), not "first response stands".** The route has no legitimate caller. Under "first response stands" it would keep three surfaces open for nothing: an anonymous write of child fields, an NGA email to any typed address (D2 territory) and an Open Brain egress. Retiring closes all three. The route reads nothing and returns the same 410 for any body. `upsertFallInterest` and `findFallInterestByEmail` are deleted, so no writer is left to re-wire. `fetchFallInterestDemand` (coach calendar) is unchanged. The "mirroring upsertPollResponse" comment is gone with them.
+  - **Item 2: shared `cleanPersonName()`** in `invoice-text.ts`, returning "" when nothing survives; `invoiceSafeName = cleanPersonName(raw) || fallback`. It adds U+01C0–U+01C3 to the strip set. A second pass removes every run of combining marks not directly after a letter (or a mark on a letter). It runs after the strip pass, so a mark after a stripped character, space, hyphen or apostrophe goes. A letter + mark with no precomposed form (q̇) still survives (positive control).
+  - **Item 3:** `buildMvfRosterSyncBody` sends `cleanPersonName` of both names, not `invoiceSafeName`: "your player" as a child's `first_name` would seat a phantom.
+    - An empty cleaned last name is sent as "" (L&D stores null).
+    - An empty cleaned first name (a name wholly in another script, or only symbols) is **not sent**. It alerts `name_unprintable` with no name, and the alert's recovery text says to seat the child through the endpoint with the name in Latin letters. Sending the raw value would reopen the look-alike hole, and a placeholder would seat a child nobody can find. This is a reversible call inside the approved scope.
+  - **Item 4:** `scripts/audit-stripe-customer-names.mjs`. It sends only GET `/v1/customers`, pages to exhaustion, and prints `id · created (UTC date) · reason codes` (`punct`, `digit`, `lookalike`, `non_latin`, `other`), then `scanned N, flagged M`. It never prints a name or email, and a Stripe error prints the status only. An `rk_` key with Customers: Read is enough. It was **not run against Stripe**; Sam runs it.
+    - It mirrors the cleaner rather than importing the TypeScript module: Playwright's loader can't load a `.ts` import from a plain ES module. A drift test runs the same fixtures through both copies.
+- **Risk:**
+  - The cleaning changes L&D's idempotency key (HMAC of email|first|last) for any name with a stripped character, so a child synced raw before this PR would seat twice on a re-send. The RLS-scoped L&D MCP sees 0 `nga-sync` RSVPs (positive control: 146 rsvps readable), but that reader can't prove zero. Confirm with a service-role read, and dry-run first, before any backfill.
+  - A non-Latin first name now needs a manual seat on L&D. The Notion row, Stripe metadata and admin email keep the raw value.
+  - `FallInterestForm.tsx` and `email/fall-interest-confirmation.ts` (now used only by `fall-survey.spec.ts`) are dead code, left in place to keep this PR to 8 code files; the form would POST to a 410. **`validate-fall-interest.ts` is NOT dead**: five live checkout validators import its `FALL_CHILD_AGE_MIN/MAX`. A later cleanup must move those constants out before deleting it.
+  - Bearing on open decisions, not acted on:
+    - D2: retiring the route removes one of the unverified-address senders.
+    - D3: the retired route's past `nga_fall_interest` ingests are part of the Open Brain rows the scrub covers.
+    - D8: `/fall` keeps its own registration path.
+- **Change:**
+  - Files: `src/app/api/fall-interest/route.ts` (410), `src/lib/notion-fall-interest.ts` (read-only), `src/lib/invoice-text.ts`, `src/lib/linkdink-roster-sync.ts`, the new `scripts/audit-stripe-customer-names.mjs`, and three specs.
+  - `invariant-fall-interest-pii-egress.spec.ts` is rewritten: env moves into hooks and Notion, Resend and Open Brain env are all SET, with a rule-less stub, so any fetch is caught. 5 of its 6 tests fail on main; the demand-read positive control passes on both.
+  - `invariant-invoice-route-abuse.spec.ts`: +7 cleaner tests (all fail on main; the q̇ control passes on both), +6 audit-script tests (reason codes, cleaner drift, GET-only pagination across 2 pages with no name or email in the output, error prints the status only, no write path).
+  - `invariant-linkdink-roster-egress.spec.ts`: +3 tests (cleaned body, an empty last name sent as "", `name_unprintable` with no name in alerts or logs), all failing on main.
+  - Mutation-checked 12/12, each turning the specs red: U+01C0–3 dropped (4 red), mark rule removed (7), roster first name raw (2), last name raw (2), unprintable skip removed (1), invoice fallback on the roster (1), the route restored from main (5), the script POSTs (2), stops after page 1 (1), prints the name (1), its cleaner drifts (1), `lookalike` dropped (1).
+  - Docs: `CLAUDE.md` (fall survey section), `docs/source-inventory.md` (lib row and risk log #11).
+  - Gate: `test:pure` 2229/2229, lint 0 errors (3 pre-existing warnings), `tsc` clean, `npm run build` green from a clean `.next`.
+  - **Independent hostile review, round 1: CHANGES-NEEDED.**
+    - MAJOR: spacing (Mc) and enclosing (Me) marks, and other scripts' non-spacing marks, survived on a Latin letter. For example U+302E renders as a dot and U+0903 as a colon. 471 Mc + 13 Me code points were affected, and the flaw pre-dates this PR. **Fixed:** only Inherited-script non-spacing marks survive, in both copies. An exhaustive spec covers every Mc/Me code point.
+    - MINOR, all fixed:
+      - The 40-unit cap could split an astral Latin letter into a lone surrogate, which Stripe's encoder throws on. The cap now counts code points.
+      - The roster alert's recovery text now says to re-send the name cleaned (L&D's key hashes the names as sent), with a code comment.
+      - The audit throws instead of reporting a partial count when an empty page claims `has_more`. It also no longer flags long clean names, and it flags Mc/Me as `lookalike`.
+      - This entry had wrongly called `validate-fall-interest.ts` dead.
+    - Mutation-checked the round-1 fixes 6/6: any-script marks (2 red), other-script Mn (2), UTF-16 slice (2), empty-page throw removed (1), Mc/Me dropped from the audit (1), recovery text reverted (1).
+    - NITs not changed:
+      - Latin `ʔ` `ʖ` `Ɂ` and the Roman numerals still pass. None can form `.` `:` `/` `@`, so none can build a link.
+      - Stacked accents on one letter still pass (no link risk).
+      - Plain words still reach L&D (the accepted #375 residual).
+      - Two siblings whose names differ only by stripped characters would share one L&D key, so the second is not seated and nothing alerts. Unlikely.
+  - **Hostile review, round 2: CHANGES-NEEDED.**
+    - MAJOR: some Inherited-script non-spacing marks still draw a dot beside a letter (U+302A–302D corner dots, U+1DFA, U+1DF8, U+0358, U+1CDD) or a slash overlay (U+0338, U+20EB). That still allowed "evil.com" and "https:" look-alikes.
+    - **Fixed** with a curated allowlist of the accents Latin names use: U+0300–0304, 0306–030C, 030F, 0311, 031B, 0323–0328 and 0331. Every other mark is stripped, in both copies; that also removes invisible variation selectors (a round-2 NIT).
+    - The exhaustive spec now checks that, for every mark outside the allowlist, the output holds only Latin letters, allowlisted accents, apostrophes, hyphens and spaces. NFC legitimately folds U+0340/0341/0344 into allowlisted accents, and composes l + U+032D into the Latin letter ḽ. A companion test pins that every allowlisted accent survives on a letter.
+    - The audit's `lookalike` flags any mark outside the allowlist.
+    - Mutation-checked 4/4: any Inherited Mn allowed again (3 red), the script alone drifts (1), dot below dropped from the allowlist (3), the audit ignores non-allowlisted marks (1).
+  - **Hostile review, round 3: CLEAR** (checklist 16 → PASS 9 / FAIL 0 / N-A 7, no kills).
+    - A sweep over all code points, on three bases, leaves no mark outside the allowlist and no character outside Latin letters, allowlisted accents, apostrophes, hyphens and spaces.
+    - The reviewer agreed that NFC composition only yields precomposed Latin letters that could always be typed directly, so it adds no new surface.
+    - Remaining NITs, not changed: stacked allowlisted accents on one letter, and the Roman numerals U+2160–2188 and ʔ. Neither can form `.` `:` `/` `@`.
+  - **Rollback:** revert the commit.
+
+## 2026-09-29 — Shared NGA lesson requests; evaluations stay text-to-schedule
+
+- **Situation:** The public NGA lessons page was closed behind obsolete Stripe-price flags, while its paid-invoice time picker was not a public scheduler. Sam requested the same request-first flow as his personal coaching site and retained text-to-schedule evaluations, then explicitly approved the cross-repository scope with “go.”
+- **Decision:** `/lessons/book` without an invoice forwards only campaign parameters to Coach OS `/book/nga-lessons`; existing invoice links retain their paid-booking flow. Coach OS shares Sam's availability, takes parent contacts only, verifies the NGA waiver through a dedicated authenticated bridge, confirms time/court, and invoices the NGA account. Evaluations open SMS to 301-325-4731; the retired public slot-booking API returns 410 without reading or writing external data. Ordinary inquiry capture remains available.
+- **Risk:** The new `NGA_LESSON_SCHEDULING_SECRET` must match in both deployments. The bridge fails closed if missing, malformed, or unable to verify a signed parent waiver; it never reads a provider failure as permission to create a duplicate CRM lead. New parent inquiries are labelled as such, contain no child fields, and join the normal newsletter reconciliation without overwriting existing families or subscription exclusions. No production migration, invoice, email, or deployment was performed during implementation. Existing paid links and coach evaluation records remain intact. Release requires the companion Coach OS migration and reviewed configuration.
+- **Change:** Added strict parent-only `/api/lesson-scheduling` and behavioral auth/waiver/egress/retry tests; added request-first lesson entry and browser-safe time constants; replaced evaluation scheduling CTAs with a shared SMS link and retired the public evaluation booking endpoint; updated the evergreen newsletter lesson CTA. The time-constant extraction fixes the earlier client-to-node:crypto build error. The implementation scope was tested with synthetic data; review and activation details are on the existing Notion review page.
+
+---
+
 ## 2026-09-28 — Pure specs set env in hooks and restore it; "env before import" is retired
 
 - **Situation:** `skills/add-invariant-test.md` step 3 said to set env at the top of a spec, before the import, and that "each spec file gets its own worker." Throwaway probes on Playwright 1.59.1 (run, then deleted) showed all of that was wrong for `npm run test:pure`:
@@ -24,6 +150,130 @@ Append-only. One entry per consequential decision, newest first. Format:
   - The 28 import-time reads of `NEXT_PUBLIC_SITE_URL` in `src/` are inert today, because every spec that sets it uses the fallback value.
   - `--ui` and the VS Code extension load specs in a separate process, so they don't get the inherited env at all. That comes from reading the source; it wasn't probed.
 - **Change:** `skills/add-invariant-test.md` (step 3 rewritten, step 7 and the Don'ts amended, plus a new "How the pure runner actually loads specs" section with a grep that lists the specs still setting env at module scope). The `setWebhookTestEnv()` doc comment in `e2e/fixtures/stripe-sessions.ts` changed; there are no code or spec changes.
+
+## 2026-09-28 — CRM families reach the weekly newsletter without a second signup
+
+- **Situation:** Live Notion audit found 287 distinct CRM parent emails across 403 rows with email, but only 16 were active newsletter subscribers. The subscriber DB held 18 Active and 3 Unsubscribed rows. The last approved editorial insert had expired; MVF classes/tournament, Monday girls, and proposed winter/Orange Ball sessions needed recurring coverage.
+- **Decision:** Sam approved reconciling eligible CRM families before each weekly send and a one-time backfill. Normalize/dedupe per family; any unsubscribe or CRM quarantine suppresses all duplicates. DD/CR provenance, unknown sources, tests/internal addresses and invalid addresses cannot auto-enroll. Reuse the shared provenance classifier, recognizing four additional direct NGA sources only in this newsletter path. New subscriber rows record operator enrollment, not self-signup consent; never reactivate or patch existing rows. The live backfill added 96 rows: 114 Active total, including 112 CRM emails, with all 3 unsubscribe rows preserved. Audit categories: 107 eligible, 80 ambiguous, 87 DD-derived, 5 suppressed, 7 test/internal, 1 invalid.
+- **Risk:** Notion has no atomic unique-email constraint; concurrent signup/backfill can create duplicate rows. Full-read reconciliation, a per-address recheck, normalized send deduplication and unsubscribe precedence prevent duplicate sends or reactivation. Read/write failures abort before broadcast; reruns recover completed creates. Program dates derive from existing data; winter and Orange Ball are explicitly interest-only, with expiry dates so tentative copy cannot repeat indefinitely. No payment/auth paths or child data writes change. The standard production build is blocked locally by Turbopack's worker port permission; webpack additionally reports pre-existing Google Font and lesson-booking client-to-node:crypto errors. No deployment claimed.
+- **Change:** Added `notion-newsletter-sync.ts` and `newsletter-programs.ts`; wired both into the weekly cron, added a 300-second runtime budget and aggregate audience diagnostics; updated HTML/text sections, enrollment footer, Frederick Drill and Play wording, and admin-copy parity. Added behavior/invariant tests for family suppression, idempotent parent-only writes, pagination/failure closure, program expiry and HTML/text parity. Mutation-check confirmed the unsubscribe invariant fails when its opt-out fixture is changed to Active. Review copy and live audience audit saved to Notion: https://app.notion.com/p/3e9fa3ac27dc81a592f8c59fcd975fb2. Rollback: revert code; the 96 new subscriber pages are individually identifiable by their operator-enrollment note, without changing prior rows.
+
+---
+
+## 2026-09-28 — Invoice routes: names Stripe (and the MVF pre-payment email) show a stranger are reduced to Latin letters
+
+- **Situation:** Security review 2026-09-28, finding H2. `checkout-lesson`, `checkout-monday-girls-dropin` and `checkout-mvf-junior-tournament` turn an anonymous form into a finalized Stripe invoice. The invoice is emailed to whatever address was typed, and typed names reached the invoice line, memo and customer name verbatim. So anyone could make NGA's Stripe account email "Pay at evil.example" to a stranger. MVF also sends its own pre-payment confirmation from `noreply@nextgenpbacademy.com`, and the subject and plain-text part carried the raw names too.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - `invoiceSafeName()` keeps only Latin-script letters, combining marks, apostrophes, hyphens and spaces, capped at 40 characters. It also strips `\p{Lm}` and U+A78F, because other scripts have letters that look like `.` `:` `/`.
+  - It is applied to the invoice line, memo, customer name, the MVF pre-payment email (subject, text and HTML) and the MVF partner-notice subject.
+  - Each of the three routes now allows 20 requests/hr per IP. The 429 message gives Coach Sam's number.
+  - **Not decided here (D2):** whether these routes should email an unverified address at all. Stopping all pre-payment email would also end the MVF "pay your entry fee" confirmation and payment-reminder cron before the Oct 24 tournament. That is Sam's call.
+- **Risk:**
+  - Up to 40 characters of plain words ("Visit evil dot com") can still reach a stranger. No link can.
+  - A name written entirely in a non-Latin script shows as "your player" on the invoice; Stripe metadata, the Notion row and the admin email keep the raw value.
+  - A Stripe customer created before this fix keeps its stored name on future invoices (follow-up: a one-time audit).
+  - The L&D roster sync still receives raw names (outside this PR).
+- **Change:** New `e2e/invariant-invoice-route-abuse.spec.ts` (19 tests; they fail against a pass-through cleaner).
+  - Coverage: the cleaner table (look-alike characters included), a source scan of each handler (including what it sends after the invoice), the per-IP 429 with zero network calls, and the MVF email and partner subject.
+  - Mutations, each of which turns the spec red: character filter removed; limiter off; MVF memo raw; MVF email name raw; any script allowed; partner subject raw.
+  - Suite green, lint 0 errors.
+  - Independent hostile review: CHANGES-NEEDED (the MVF email, look-alike characters). After the fixes it re-verified CLEAR.
+
+## 2026-09-28 — The first crew-poll response from an address stands
+
+- **Situation:** Security review 2026-09-28, finding M4.
+  - `/api/crew-poll/vote` is unauthenticated, and `upsertPollResponse` PATCHed the existing `(poll, email)` row.
+  - So anyone who knew a parent's email could replace that family's vote, child name, age, level and phone. They could also flip a Yes to a No on a crew Sam was about to confirm.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - The first response from an address stands. A second vote gets a 409 telling the parent to reply to their confirmation email (or write to `site.email`) so Coach Sam can switch it. There is no write and no email.
+  - A Notion lookup failure writes nothing and returns 503, instead of treating the address as new.
+  - Polls are a prototype module, so there is no new token family.
+  - The dead, fail-open `findResponseByEmail` is removed.
+- **Risk:**
+  - Squatting: someone who votes first with a parent's address holds the row. That parent then gets the confirmation email (BCC Sam) showing a vote they didn't cast, so the squat is loud, not silent.
+  - The 409 reveals that an address voted on that poll. This is low value: the limit is 5/hr per IP, and the poll page already shows counts.
+  - Not changed: the retired `/fall` survey route (`/api/fall-interest`) still upserts by email. Its form was retired with the /fall conversion, but the route is still live. Logged as a follow-up.
+- **Change:** New `e2e/invariant-crew-poll-no-overwrite.spec.ts` (3 tests; 2 fail on main).
+  - Coverage: re-vote → 409 with no write and no email, and the lookup is scoped to this poll and this address; first vote → recorded; lookup 429 → 503 with no write.
+  - Mutations, each turning the spec red: existing-response check removed; lookup failure treated as a new address.
+  - Suite green, lint 0 errors.
+  - Independent hostile review: CLEAR. Findings applied: dead lookup removed, filter pinned, fallback contact added to the 409.
+
+## 2026-09-28 — Open Brain carries a child's first name + age and nothing further; public ages follow display consent
+
+- **Situation:** Security review 2026-09-28, findings H3 and M3.
+  - **H3.** On 2026-08-30 Sam capped child data in Open Brain at first name + age; the decision is recorded in open-brain `supabase/functions/nga-crm-sync/index.ts`. This repo broke that cap across 27 `ingestToOpenBrain` callers:
+    - Camp and league webhooks sent allergies and emergency contacts.
+    - Several routes sent birth years.
+    - MVF sent a child's last name and full DOB.
+    - Some `interest` and `child_name` fields carried full names.
+    - Crew-interest forwarded `friends_wanted`, parent free text that names other children.
+  - **M3.** `/schedule` showed a child's exact age ("1 going · age 9") beside the venue, date and time, even when the family had not consented to display.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - Callers no longer build the forbidden keys. `ingestToOpenBrain` enforces the cap as a backstop: it applies a key denylist at any depth, cuts child-name fields (including an `interest` that repeats one) to their first word, and logs the key names it drops, never their values.
+  - `buildAgeStats`: the count covers every registrant, but only display-consented families contribute an age. `socialProofLine` renders nothing below 2 registrants, so a lone child's age never appears.
+  - This file's Minor-Data Governance section records the cap and its scope limits.
+- **Risk:**
+  - Parent free text (contact message, lead notes, lesson notes, Yellow Ball notes, preferred times) is still forwarded as written, because triage needs it. `/api/analytics` is a separate Open Brain egress; it forwards only `child_age` today.
+  - A composite `interest` string containing a full name would slip past the exact-match cap. No caller builds one.
+  - Rows already in Open Brain still hold the old fields. The scrub is a separate, Sam-approved cleanup (decision D3).
+- **Change:** New `e2e/invariant-open-brain-child-field-cap.spec.ts`, 11 tests.
+  - Coverage: forbidden keys at the top level and nested, first-name cuts, the `interest` cap, `friends_wanted`, no over-stripping, and five consent/age cases.
+  - Mutations, each of which turns the spec red: denylist emptied, first-name cut removed, raw payload sent, consent filter dropped, D9 floor removed, interest cap removed, `friend` dropped.
+  - Suite green, lint 0 errors, build green.
+  - Independent hostile review: CHANGES-NEEDED (two majors, the `interest` field and `friends_wanted`). After fixes, re-verified CLEAR.
+
+## 2026-09-28 — The Stripe webhook's duplicate check retries or alerts; it never creates a second roster row
+
+- **Situation:** Security review 2026-09-28, finding M7. The five webhook "already recorded?" guards (drop-in, fall, Pickl Park, Monday Girls, cluster) answered "not recorded" on ANY Notion failure. A 429 during a Stripe redelivery (after a timeout, or after a transient 500 whose write actually landed) therefore created a second roster row: a doubled seat (which blocks a real sale on the capped seasons), a doubled Registered count, and a second parent email and SMS.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all").
+  - `src/lib/dedupe-lookup.ts` `checkoutRowExists` throws `DedupeLookupError`, classified by the shared `classifyNotionFailure`: 429, 5xx and network errors are transient; any other 4xx is permanent. If the env is unset, the lookup still answers "not recorded" and makes no fetch (ships dark).
+  - The guards are webhook-only, so it was safe to make them strict. `findDropInPageByCheckoutId`, which the cancel page, coach check-in and cancel-dropin share, is untouched and still answers null on a blip.
+  - The webhook's `alreadyRecorded()` handles the two cases differently:
+    - Transient: 500, so Stripe redelivers.
+    - Permanent: a cron alert, awaited but capped at 4s so it can't hold the response past Stripe's timeout, and then the family is recorded anyway, since a paid registration beats a lost one.
+  - `findProcessedEvent` (camp and league ledger) stays fail-open as documented. There the cost is a duplicate email, not a seat.
+- **Risk:**
+  - A multi-hour Notion outage now 500s paid deliveries one call earlier than before. Before this change they already 500'd, at the create, so the retry window is no worse. There is still no in-app alert while transient failures persist; Stripe's failing-endpoint email covers it (follow-up).
+  - A permanent lookup failure followed by a transient create failure alerts once per delivery and can duplicate on redelivery. This is narrow, and no worse than before.
+- **Change:**
+  - New `e2e/invariant-webhook-dedupe-fail-closed.spec.ts`, 12 tests, 8 of which failed on main. Coverage:
+    - Each lookup across found, absent, 429, 503, 400, network error and env-unset.
+    - Every handler returns 500 on a dedupe 429, with zero creates.
+    - On a drop-in dedupe 400, the family is recorded and exactly one alert fires, with no child name in it.
+    - A source pin that all five call sites go through the guard.
+  - Mutation checks turned it red for each of: non-OK answering "not recorded" again, everything classed transient, the alert removed, and fall bypassing the guard.
+  - Suite green, lint 0 errors, build green.
+  - Independent hostile review: VERDICT CLEAR. Findings applied: the capped alert wait, the env-unset test, the other four handlers exercised end to end, reuse of `classifyNotionFailure`, and the docstring. Not applied: a log-filter wording nit.
+## 2026-09-28 — Sign-in links and Stripe return URLs come from server config, never the request
+
+- **Situation:** Finding H1 + M1 of the 2026-09-28 security review. `admin/request-link` and `coach/request-link` built the magic link from the request's `Origin` header. An attacker could POST Sam's (public) address with `Origin: https://nextgenpbacademy.com.evil.tld`, and the real NGA sender would email Sam a sign-in link to that host. One click leaked a 10-minute token worth a 30-day admin cookie, and with it the registrants API (parent contacts, child names and birth years). Six checkout routes built Stripe `success_url`/`cancel_url` the same way, so a genuine Stripe link could return a paying parent to an attacker site carrying the `cs_` id.
+- **Decision:** Sam approved every Plan v2 PR on 2026-09-28 ("do all"). Gauntlet verdict: GO-WITH-CHANGES.
+  - `src/lib/site-origin.ts` picks the origin in this order:
+    1. `NEXT_PUBLIC_SITE_URL` when it is valid https, reduced to its origin. Plain http is accepted only for localhost outside production.
+    2. On a Vercel preview, the platform-set `VERCEL_URL`.
+    3. Otherwise `SITE_URL` from `seo.ts`.
+  - It never reads the request.
+  - Both request-link routes gained a per-IP limit (10/hr), checked before the allowlist and never keyed per email: a per-email bucket would let anyone lock Sam out by spamming his address. A rejected sign-in email now fires a cron alert (email, then SMS fallback) as well as the existing 502.
+  - `checkout-fall` is excluded: the unmerged `feat/admin-prorated-fall-registration` rewrites it and adds `admin/fall-registration`. Both files are allowlisted in the guard, and the guard fails once an entry stops needing its exemption.
+- **Risk:**
+  - `NEXT_PUBLIC_SITE_URL` is unset in every Vercel environment, so prod links are `https://nextgenpbacademy.com`, which is the intent.
+  - Local dev now emails prod links unless `.env.local` sets `NEXT_PUBLIC_SITE_URL=http://localhost:3000`. The pulled `.env.local` says `VERCEL_ENV=production`, so the preview branch doesn't apply locally.
+  - The limiter is best-effort (in-memory, per instance, trusts `x-forwarded-for`).
+  - M1 stays open on `checkout-fall` until the fall branch lands with a two-line `siteOrigin()` swap.
+  - The guard is a line-based tripwire, not a proof.
+- **Change:**
+  - New `e2e/invariant-canonical-site-origin.spec.ts`: 19 tests, 15 of which fail on main. They cover the `siteOrigin` env table (including preview), evil Origin/Host/X-Forwarded-Host/Referer headers on both link routes, the per-IP boundary, alert-on-failure, and a source guard with a self-test and a stale-exemption check.
+  - Mutation checks, each turning the spec red: link built from Origin again, limiter off, alert removed, any protocol accepted, a checkout reading Origin, the preview branch removed.
+  - Suite 2165/2165, lint 0 errors, build green.
+  - An independent hostile review returned CLEAR. Its minor findings are applied; the nits are logged in the PR.
+
+## 2026-09-28 — Public-form HTML emails escape everything the submitter typed
+
+- **Situation:** A read-only security review (2026-09-28, finding M2) found that anonymous forms interpolated submitted text straight into HTML email sent to an address the submitter chooses, from `noreply@nextgenpbacademy.com`. Affected: `schools-lead` (both emails), the `waitlist` parent email, `yellowball-lead` (both emails), the `lead` admin email and the MVF signup confirmation (sent before payment). The `notion-session-webhook` waitlist blast re-sends the form-stored parent name. A POST with `contactName=<a href=…>Verify your payment</a>` produced a phishing mail that passes SPF/DKIM for NGA's domain.
+- **Decision:** Escape every HTML-body interpolation with the shared `escapeHtml` (`src/lib/html.ts`). Subjects and text parts stay raw, so names like "Zoë O'Brien" read correctly. This is output encoding only: no payments, auth/token or child-data flow changes, so it is outside IPAV. It is PR 1 of 6 in `nga-security-fixes-v2` (gauntlet GO-WITH-CHANGES). PRs 2–6 touch payments, auth or minor PII and wait on Sam's IPAV approval.
+- **Risk:** The 9 older inline `[<>&]` escapers flagged in the `html.ts` TODO are untouched. Post-checkout confirmation templates are out of scope: they go to the payer's own address after payment. A new public-form email must use `escapeHtml`; the new spec only pins these 6 surfaces.
+- **Change:** 5 routes and 1 template now escape. New `e2e/invariant-public-email-escaping.spec.ts`: 7 of 8 tests fail on origin/main (raw attacker anchor in the HTML); the 8th pins subjects against over-escaping. Mutation check: removing the escape from one field in each of the 6 files turns exactly 1 test red per file, and restoring returns all 8 to green. Full `test:pure` 2146/2146, lint 0 errors, build green.
 
 ## 2026-09-28 — The MVF tournament's Link & Dink roster sync sends a stable event key, alerts on failure, and keeps names out of the logs
 
