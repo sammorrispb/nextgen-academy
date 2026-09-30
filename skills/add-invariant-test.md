@@ -52,17 +52,17 @@ Use when pinning a security/money/PII behavior so CI catches regressions. Patter
 
 ## How the pure runner actually loads specs
 
-Probed on 2026-09-28 with Playwright 1.59.1, reviewing PR #368. The old step 3 said "set env before the import; per-file env is isolated, each spec file gets its own worker." All of that was wrong for `npm run test:pure`:
+Probed on 2026-09-28 with Playwright 1.59.1 while reviewing PR #368, and re-checked on 2026-09-30. The old step 3 said "set env before the import; per-file env is isolated, each spec file gets its own worker." All of that was wrong for `npm run test:pure`:
 
 - **The runner runs every spec's module scope while collecting tests, then forks the workers with that environment.** The source shows it: `createLoadTask("in-process")` in `playwright/lib/runner/testRunner.js`, then `fork(…, { env: { ...process.env, … } })` in `processHost.js`.
   - So module-scope env from any spec lands in every worker's starting environment, whichever files that worker runs.
-  - Files are collected in alphabetical order, so for each key the last file collected wins. On 2026-09-28 every worker started with `RESEND_API_KEY=re_test_dummy` from `session-reschedule.spec.ts`.
+  - Files are collected in alphabetical order, so for each key the last file collected wins. As of 2026-09-30, every worker starts with `RESEND_API_KEY=re_test_dummy` from `session-reschedule.spec.ts`.
   - `afterAll` runs in the worker, so it can't reach the runner's copy.
 - **Imports are hoisted.** A `process.env.X = …` written above an `import` runs after the imported module has already evaluated. "Env before import" only seemed to work because the worker had inherited that same assignment from the runner.
 - **Workers are reused across spec files.** Env changes and the module cache carry over from whichever files ran earlier in the same worker. Which files share a worker depends on the worker count and on timing, so it can change from run to run. Playwright defaults to half the CPUs: 2 on CI's 4-vCPU `ubuntu-latest`, more locally.
 - `playwright test --ui` and the VS Code extension load specs in a separate process (`createLoadTask("out-of-process")`), so their workers inherit none of this. A spec that leans on inherited env can behave differently there. (This is from the source; it wasn't probed.)
 
-The specs that still set env at module scope (71 on 2026-09-28) all pass both alone and in the suite. Move one to hooks when you next edit it; don't bulk-rewrite them. To list them:
+The specs that still set env at module scope all pass both alone and in the suite. There were 76 on 2026-09-30, up from 71 two days earlier. Move one to hooks when you next edit it; don't bulk-rewrite them. To list them:
 
 ```bash
 grep -lE '^(process\.env\b|delete process\.env\b|Object\.assign\(process\.env|setWebhookTestEnv\(\))' e2e/*.spec.ts

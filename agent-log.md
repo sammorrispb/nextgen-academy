@@ -5,6 +5,27 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-09-30 — Pure specs set env in hooks and restore it; "env before import" is retired
+
+- **Situation:** `skills/add-invariant-test.md` step 3 said to set env at the top of a spec, before the import, and that "each spec file gets its own worker." Throwaway probes on Playwright 1.59.1 (run on 2026-09-28, then deleted) showed all of that was wrong for `npm run test:pure`:
+  - The runner runs every spec's module scope while collecting tests, then forks the workers with that environment. The last file collected wins each key; every worker starts with `RESEND_API_KEY=re_test_dummy` from `session-reschedule.spec.ts`.
+  - Imports are hoisted. In the runner, a module imported below a `process.env` line saw it unset. In a worker it saw the runner's value, not the worker's own assignment.
+  - Workers are reused across files. A module imported by two files was evaluated once, and env set in one file's test body was visible in the next file.
+  - On 2026-09-30, 76 specs set env at module scope. It was 71 on 2026-09-28: 7 new specs copied the pattern and 2 moved off it. 32 of the 76 set `RESEND_API_KEY`. Of the 57 keys they touch, 31 get a different value, or are deleted, in different files.
+- **Decision:** Step 3 now requires env in `beforeEach`/`beforeAll`, `delete` for every key that must be absent, and every touched key restored in `afterAll`, with `e2e/invariant-linkdink-roster-egress.spec.ts` as the model. It also asks for modules that read env per call, and for each new spec to be run alone and in the suite. The existing specs were listed, not rewritten.
+  - No outcome depends on another file's env or on collection order. Re-checked on 2026-09-30, all 202 pure spec files gave the same per-test status counts in every condition we tried:
+    - each file alone;
+    - alone with the exact environment workers inherit;
+    - alone with the 31 conflicting keys flipped to another file's value or deletion;
+    - the full suite at 1, 2 and 9 workers.
+  - Code paths do depend on it. A fetch trace shows six specs making Notion calls only when other files' DB ids are present: `webhook-routing` (the processed-events ledger and the cluster and fall roster writes), `webhook-charge-refunded`, `invariant-crew-followup-egress`, `invariant-crew-interest-pii-egress`, `invariant-ops-trigger-parity` and `invariant-weekly-newsletter-drafts-visibility`.
+  - Several of those calls hit unstubbed URLs, and fail-soft code swallows the error. Across three identical local runs, the DB ids some of them queried changed with worker scheduling.
+- **Risk:** Moving an old spec to hooks narrows what these six exercise to what they configure themselves. They all pass alone, so nothing turns red, but a branch that only ever ran on leaked env stops running.
+  - The pattern keeps spreading. `invariant-canonical-site-origin` (#370) deletes `NEXT_PUBLIC_SITE_URL` above its imports. It works only because `siteOrigin()` reads env per call, and the delete leaks into the next file in its worker.
+  - The 28 import-time reads of `NEXT_PUBLIC_SITE_URL` in `src/` are inert today, because every spec that sets it uses the fallback value.
+  - `--ui` and the VS Code extension load specs in a separate process, so they don't get the inherited env at all. That comes from reading the source; it wasn't probed.
+- **Change:** `skills/add-invariant-test.md` (step 3 rewritten, step 7 and the Don'ts amended, plus a new "How the pure runner actually loads specs" section with a grep that lists the specs still setting env at module scope). The `setWebhookTestEnv()` doc comment in `e2e/fixtures/stripe-sessions.ts` changed; there are no code or spec changes.
+
 ## 2026-09-30 — October 1 newsletter leads with winter options
 
 - **Situation:** Sam approved a winter-led October 1 issue, but the cron still chose a fall/Pickl Park subject and placed approved editorial below the recurring programs. The recurring winter card would duplicate the new lead. Tournament copy omitted the published resident/non-resident prices.
@@ -130,26 +151,6 @@ Append-only. One entry per consequential decision, newest first. Format:
 - **Change:** Added strict parent-only `/api/lesson-scheduling` and behavioral auth/waiver/egress/retry tests; added request-first lesson entry and browser-safe time constants; replaced evaluation scheduling CTAs with a shared SMS link and retired the public evaluation booking endpoint; updated the evergreen newsletter lesson CTA. The time-constant extraction fixes the earlier client-to-node:crypto build error. The implementation scope was tested with synthetic data; review and activation details are on the existing Notion review page.
 
 ---
-
-## 2026-09-28 — Pure specs set env in hooks and restore it; "env before import" is retired
-
-- **Situation:** `skills/add-invariant-test.md` step 3 said to set env at the top of a spec, before the import, and that "each spec file gets its own worker." Throwaway probes on Playwright 1.59.1 (run, then deleted) showed all of that was wrong for `npm run test:pure`:
-  - The runner runs every spec's module scope while collecting tests, then forks the workers with that environment. The last file collected wins each key; on this date every worker started with `RESEND_API_KEY=re_test_dummy` from `session-reschedule.spec.ts`.
-  - Imports are hoisted. In the runner, a module imported below a `process.env` line saw it unset. In a worker it saw the runner's value, not the worker's own assignment.
-  - Workers are reused across files. A module imported by two files was evaluated once, and env set in one file's test body was visible in the next file.
-  - 71 specs set env at module scope: 66 directly, plus 5 only through `setWebhookTestEnv()`. 29 of them set `RESEND_API_KEY`. Of the 52 keys they touch, 29 get a different value, or are deleted, in different files.
-- **Decision:** Step 3 now requires env in `beforeEach`/`beforeAll`, `delete` for every key that must be absent, and every touched key restored in `afterAll`, with `e2e/invariant-linkdink-roster-egress.spec.ts` as the model. It also asks for modules that read env per call, and for each new spec to be run alone and in the suite. The existing specs were listed, not rewritten.
-  - No outcome depends on another file's env or on collection order. All 187 pure spec files gave the same per-test status counts in every condition we tried:
-    - each file alone;
-    - alone with the exact environment workers inherit;
-    - alone with the 29 conflicting keys flipped to another file's value;
-    - the full suite at 1, 2 and 9 workers.
-  - Code paths do depend on it. A fetch trace shows six specs making Notion calls only when other files' DB ids are present: `webhook-routing` (the processed-events ledger and the fall roster write), `webhook-charge-refunded`, `invariant-crew-followup-egress`, `invariant-crew-interest-pii-egress`, `invariant-ops-trigger-parity` and `invariant-weekly-newsletter-drafts-visibility`.
-  - Several of those calls hit unstubbed URLs, and fail-soft code swallows the error. Across three identical local runs, the DB ids some of them queried changed with worker scheduling.
-- **Risk:** Moving an old spec to hooks narrows what these six exercise to what they configure themselves. They all pass alone, so nothing turns red, but a branch that only ever ran on leaked env stops running.
-  - The 28 import-time reads of `NEXT_PUBLIC_SITE_URL` in `src/` are inert today, because every spec that sets it uses the fallback value.
-  - `--ui` and the VS Code extension load specs in a separate process, so they don't get the inherited env at all. That comes from reading the source; it wasn't probed.
-- **Change:** `skills/add-invariant-test.md` (step 3 rewritten, step 7 and the Don'ts amended, plus a new "How the pure runner actually loads specs" section with a grep that lists the specs still setting env at module scope). The `setWebhookTestEnv()` doc comment in `e2e/fixtures/stripe-sessions.ts` changed; there are no code or spec changes.
 
 ## 2026-09-28 — CRM families reach the weekly newsletter without a second signup
 
