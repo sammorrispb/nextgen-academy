@@ -80,7 +80,7 @@ export default async function CoachInboxPage() {
         <SectionHeader
           title="Newsletter drafts"
           count={queues.drafts.length}
-          hint={`Approve before ${deadline} to ride this week's parent newsletter. Only drafts from the last 7 days ship; Skip suppresses a row for good.`}
+          hint={`Approve before ${deadline} to ride this week's parent newsletter. Scheduled drafts ship only on Send On; other drafts need a date within the last 7 days. Skip suppresses a row for good.`}
         />
         {queues.drafts.length === 0 ? (
           <EmptyQueue label="No drafts awaiting review. The Wednesday drafter writes the next one." />
@@ -92,6 +92,7 @@ export default async function CoachInboxPage() {
                 pageId={d.pageId}
                 weekTitle={d.weekTitle}
                 draftedAt={formatLongDate(d.draftedAt)}
+                sendOn={d.sendOn ? formatLongDate(d.sendOn) : ""}
                 withinShipWindow={willRideThursdaySend(d, now)}
                 bodyHtml={d.html}
                 bodyUnavailable={d.bodyUnavailable}

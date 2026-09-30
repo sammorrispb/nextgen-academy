@@ -5,10 +5,10 @@
  * sections sourced from the Tuesday NGA News Radar.
  *
  * Sam flips a row's Status to 'Approved' (in Notion) before Thursday 6pm ET.
- * The weekly-newsletter cron then fetches the most recent approved row whose
- * Drafted At falls within the last 7 days, converts its page body blocks to
- * HTML, and renders it as a "From Coach Sam" lead block between the Coach
- * Tip and the existing news-cards block.
+ * The weekly-newsletter cron fetches Approved rows for this issue, converts
+ * their page body blocks to HTML, and renders a "From Coach Sam" lead block.
+ * Optional "Send On" pins a reviewed row to one ET issue date; undated rows
+ * retain the seven-day Drafted At freshness window.
  *
  * Status=Pending or Skip = cron sends the existing static-tip-bank email
  * unchanged. Nothing ships without Sam's explicit approval.
@@ -19,8 +19,8 @@
  * on the next Thursday as long as its Drafted At is still inside the 7-day
  * window — shipping a promo for an event that already happened. The query now
  * excludes any row whose Expires At is before today (ET). Empty Expires At = no
- * expiry: behaviour is unchanged and the existing 7-day Drafted At window stays
- * the only freshness guard for that row.
+ * expiry: unscheduled rows retain the 7-day Drafted At window, while scheduled
+ * rows remain pinned to their Send On date.
  */
 import { c } from "@/lib/email/brand";
 
@@ -37,6 +37,13 @@ export interface NewsletterDraft {
   /** Plain-text equivalent for the text/plain MIME part. */
   text: string;
   sectionCount: number;
+}
+
+export interface DraftShipFields {
+  draftedAt: string;
+  expiresAt: string;
+  /** Optional date-only ET issue date. Empty preserves the rolling window. */
+  sendOn?: string;
 }
 
 interface NotionRichText {
@@ -224,20 +231,29 @@ export function blocksToText(blocks: any[]): string {
 
 /**
  * Build the Notion query filter for Approved drafts that are still eligible to
- * ship. Pure (no I/O) so it's unit-testable. Three conditions, all ANDed:
- *   1. Status = Approved.
- *   2. Drafted At on_or_after `cutoff` (the 7-day freshness window).
- *   3. Expires At is empty OR on_or_after `todayEt` — i.e. the row hasn't
- *      passed its inclusive last-ship date. Empty Expires At = no expiry, so
- *      such rows rely solely on the 7-day Drafted At window (unchanged
- *      behaviour). This is what stops a time-sensitive Approved row (an event
- *      promo) from re-injecting after its event has passed.
+ * ship. A Send On row qualifies only on its ET issue date and does not age
+ * out while waiting. Unscheduled rows keep the seven-day freshness guard.
+ * Both paths require approval, a non-future Drafted At and a live expiry.
  */
 export function buildDraftsQueryFilter(cutoff: string, todayEt: string) {
   return {
     and: [
       { property: "Status", select: { equals: "Approved" } },
-      { property: "Drafted At", date: { on_or_after: cutoff } },
+      { property: "Drafted At", date: { on_or_before: todayEt } },
+      {
+        or: [
+          { property: "Send On", date: { equals: todayEt } },
+          { property: "Send On", date: { is_empty: true } },
+        ],
+      },
+      // Notion permits only two compound levels: due OR (empty AND fresh)
+      // is expressed as (due OR empty) AND (due OR fresh).
+      {
+        or: [
+          { property: "Send On", date: { equals: todayEt } },
+          { property: "Drafted At", date: { on_or_after: cutoff } },
+        ],
+      },
       {
         or: [
           { property: "Expires At", date: { is_empty: true } },
@@ -249,8 +265,9 @@ export function buildDraftsQueryFilter(cutoff: string, todayEt: string) {
 }
 
 /**
- * The mirror image of buildDraftsQueryFilter: Approved rows the freshness
- * window is SUPPRESSING even though their operator declared them still live.
+ * Unscheduled Approved rows the freshness window is suppressing even though
+ * their operator declared them still live. Scheduled rows deliberately wait
+ * outside that window and must not trigger this alert.
  *
  * Rows stay Approved forever after a send — the 7-day Drafted At window
  * retires them, not a status flip — so "Status = Approved" alone describes the
@@ -269,6 +286,7 @@ export function buildStrandedDraftsQueryFilter(cutoff: string, todayEt: string) 
   return {
     and: [
       { property: "Status", select: { equals: "Approved" } },
+      { property: "Send On", date: { is_empty: true } },
       { property: "Drafted At", date: { before: cutoff } },
       { property: "Expires At", date: { is_not_empty: true } },
       { property: "Expires At", date: { on_or_after: todayEt } },
@@ -335,25 +353,34 @@ export function formatNewsletterDeadline(fire: Date): string {
   }).format(fire);
 }
 
-/**
- * Pure mirror of buildDraftsQueryFilter's date conditions for a single row
- * (Status=Approved is what the caller is about to write, so only the date
- * legs matter here):
- *   - Drafted At on_or_after cutoff — a missing/garbage Drafted At can never
- *     match a Notion date filter, so it reads ineligible;
- *   - Expires At empty OR on_or_after todayEt (inclusive last-ship date).
- * ISO date strings compare correctly as strings, exactly like Notion's
- * date-only comparisons.
- */
+function validIsoDay(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function notionDateDay(value: string): string | null {
+  const day = value.slice(0, 10);
+  if (!validIsoDay(day)) return null;
+  if (value !== day && (!value.startsWith(`${day}T`) || !Number.isFinite(Date.parse(value)))) return null;
+  return day;
+}
+
+/** Pure mirror of the cron query; the caller supplies the approval gate. */
 export function draftPassesShipFilter(
-  draft: { draftedAt: string; expiresAt: string },
+  draft: DraftShipFields,
   bounds: { cutoff: string; todayEt: string },
 ): boolean {
-  const drafted = (draft.draftedAt ?? "").slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(drafted)) return false;
-  if (drafted < bounds.cutoff) return false;
-  const expires = (draft.expiresAt ?? "").slice(0, 10);
-  if (expires && expires < bounds.todayEt) return false;
+  if (!validIsoDay(bounds.cutoff) || !validIsoDay(bounds.todayEt)) return false;
+  const drafted = notionDateDay(draft.draftedAt ?? "");
+  if (!drafted || drafted > bounds.todayEt) return false;
+  const sendOn = draft.sendOn ?? "";
+  if (sendOn) {
+    if (!validIsoDay(sendOn) || sendOn !== bounds.todayEt) return false;
+  } else if (drafted < bounds.cutoff) return false;
+  const expiry = draft.expiresAt ?? "";
+  const expires = expiry ? notionDateDay(expiry) : "";
+  if (expires === null || (expires && expires < bounds.todayEt)) return false;
   return true;
 }
 
@@ -365,21 +392,15 @@ export function draftPassesShipFilter(
  * inbox UI hint AND re-checked server-side by the approve action (F4).
  */
 export function willRideThursdaySend(
-  draft: { draftedAt: string; expiresAt: string },
+  draft: DraftShipFields,
   now: Date,
 ): boolean {
   return draftPassesShipFilter(draft, shipWindowBounds(nextNewsletterFire(now)));
 }
 
 /**
- * Query the drafts DB for Approved rows whose Drafted At falls within the last
- * 7 days AND whose Expires At (if set) has not passed. Returns the raw Notion
- * rows (or null on a query error so callers can fail soft). The 7-day window
- * prevents stale Approved rows from earlier weeks shipping if Sam never flipped
- * them to Skip; with weekly sends and a date-only window, each Approved row is
- * caught by exactly one Thursday broadcast. The Expires At guard additionally
- * excludes any row past its inclusive last-ship date (empty = no expiry), so a
- * time-sensitive promo can't re-inject for an event that already happened.
+ * Read this issue's Approved rows. Send On is date-only; the local guard
+ * also rejects a timestamp accidentally entered in that Notion date field.
  */
 async function queryApprovedRows(
   notionKey: string,
@@ -415,7 +436,17 @@ async function queryApprovedRows(
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const queryData = (await queryRes.json()) as { results: any[] };
-  return queryData.results;
+  return queryData.results.filter(row => !row.properties?.["Send On"]?.date?.start ||
+    draftPassesShipFilter(shipFieldsFromRow(row), { cutoff, todayEt }));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function shipFieldsFromRow(row: any): DraftShipFields {
+  return {
+    draftedAt: row.properties?.["Drafted At"]?.date?.start ?? "",
+    expiresAt: row.properties?.["Expires At"]?.date?.start ?? "",
+    sendOn: row.properties?.["Send On"]?.date?.start ?? "",
+  };
 }
 
 /** Read the non-body draft fields off a Notion row's properties. */
@@ -544,7 +575,7 @@ export interface NewsletterDraftsResult {
 }
 
 /**
- * Return ALL Approved newsletter drafts within the last 7 days, oldest first,
+ * Return ALL Approved newsletter drafts eligible for this issue, oldest first,
  * WITH the diagnostics the caller needs to tell an empty queue apart from a
  * dropped announcement. The cron concatenates `drafts` into the "From Coach
  * Sam" lead block so that *every* row Sam approved in a given week ships — not
@@ -623,11 +654,7 @@ export async function stampDraftsSentAt(
 export type NewsletterDraftStatus = "Pending" | "Approved" | "Skip";
 
 /** A Pending draft awaiting Sam's review in the coach inbox. */
-export interface PendingNewsletterDraft extends NewsletterDraft {
-  /** Drafted At (YYYY-MM-DD or ISO). Empty when the property is unset. */
-  draftedAt: string;
-  /** Expires At (YYYY-MM-DD or ISO). Empty = no expiry. */
-  expiresAt: string;
+export interface PendingNewsletterDraft extends NewsletterDraft, DraftShipFields {
   /**
    * True when the row's body blocks could not be fetched (transient Notion
    * error) — the row still surfaces in the inbox, but html/text are empty and
@@ -670,8 +697,7 @@ export function pendingDraftFromRow(
 ): PendingNewsletterDraft | null {
   const shared = {
     ...draftFieldsFromRow(row),
-    draftedAt: row.properties?.["Drafted At"]?.date?.start ?? "",
-    expiresAt: row.properties?.["Expires At"]?.date?.start ?? "",
+    ...shipFieldsFromRow(row),
   };
   if (blocks === null) {
     return { ...shared, html: "", text: "", bodyUnavailable: true };
@@ -766,7 +792,7 @@ export async function fetchPendingDraftCount(): Promise<number> {
  */
 export async function fetchDraftShipFields(
   pageId: string,
-): Promise<{ draftedAt: string; expiresAt: string } | null> {
+): Promise<DraftShipFields | null> {
   const notionKey = process.env.NOTION_API_KEY;
   if (!notionKey) return null;
   const res = await fetch(`${NOTION_API}/pages/${pageId}`, {
@@ -786,10 +812,7 @@ export async function fetchDraftShipFields(
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const page = (await res.json()) as any;
-  return {
-    draftedAt: page.properties?.["Drafted At"]?.date?.start ?? "",
-    expiresAt: page.properties?.["Expires At"]?.date?.start ?? "",
-  };
+  return shipFieldsFromRow(page);
 }
 
 /**
