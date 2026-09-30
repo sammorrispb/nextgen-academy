@@ -27,7 +27,8 @@ export function setWebhookTestEnv(): void {
   process.env.NGA_ADMIN_SECRET = "test-admin-secret";
   // Twilio and RESEND_API_KEY are not set here, but that does not make them
   // absent: in the full suite every worker inherits RESEND_API_KEY from other
-  // specs. Delete a key in your hook if the test needs it absent.
+  // specs (or from your shell). Delete a key in your hook if the test needs it
+  // absent.
 }
 
 const DROPIN_METADATA = {
