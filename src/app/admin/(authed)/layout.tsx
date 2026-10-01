@@ -42,6 +42,7 @@ export default async function AdminAuthedLayout({
             { href: "/admin/fall", label: "Fall season" },
             { href: "/admin/weather", label: "Weather call" },
             { href: "/admin/monday-girls", label: "Monday Girls" },
+            { href: "/admin/mvf-roster-sync", label: "MVF roster sync" },
           ].map((l) => (
             <Link
               key={l.href}

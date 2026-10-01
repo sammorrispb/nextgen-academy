@@ -4,15 +4,11 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 
-// Env pinned BEFORE the routes import. NEXT_PUBLIC_SITE_URL is deliberately
-// unset so the canonical fallback (seo.ts SITE_URL) is what links must use.
-process.env.RESEND_API_KEY = "re_test_origin";
-process.env.ADMIN_ALLOWLIST = "admin-origin@example.com";
-process.env.COACH_ALLOWED_EMAILS = "coach-origin@example.com";
-process.env.COACH_SIGNING_SECRET = "origin-test-signing-secret-0123456789";
-delete process.env.NEXT_PUBLIC_SITE_URL;
-delete process.env.TWILIO_ACCOUNT_SID;
-delete process.env.TWILIO_AUTH_TOKEN;
+// Per-call origin resolution and route gates let hooks isolate these values.
+const TOUCHED_ENV = ["RESEND_API_KEY", "ADMIN_ALLOWLIST", "COACH_ALLOWED_EMAILS",
+  "COACH_SIGNING_SECRET", "NEXT_PUBLIC_SITE_URL", "TWILIO_ACCOUNT_SID",
+  "TWILIO_AUTH_TOKEN", "VERCEL_ENV", "VERCEL_URL"] as const;
+const savedEnv = Object.fromEntries(TOUCHED_ENV.map((k) => [k, process.env[k]]));
 
 import { POST as adminRequestLink } from "../src/app/api/admin/request-link/route";
 import { POST as coachRequestLink } from "../src/app/api/coach/request-link/route";
@@ -47,10 +43,18 @@ function linkReq(path: string, email: string, fixedIp?: string): NextRequest {
 
 const stub = new FetchStub();
 test.beforeEach(() => {
+  for (const key of TOUCHED_ENV) delete process.env[key];
+  Object.assign(process.env, { RESEND_API_KEY: "re_test_origin", ADMIN_ALLOWLIST: "admin-origin@example.com",
+    COACH_ALLOWED_EMAILS: "coach-origin@example.com", COACH_SIGNING_SECRET: "origin-test-signing-secret-0123456789" });
   stub.reset();
   stub.on("api.resend.com", { id: "email_test" }).install();
 });
 test.afterEach(() => stub.uninstall());
+test.afterAll(() => {
+  for (const key of TOUCHED_ENV) {
+    if (savedEnv[key] === undefined) delete process.env[key]; else process.env[key] = savedEnv[key];
+  }
+});
 
 function sent(): Array<{ to: string | string[]; subject: string; text?: string }> {
   return stub.callsTo("api.resend.com").map((c: RecordedFetch) => JSON.parse(c.body));
@@ -177,6 +181,11 @@ const ALLOWLIST = new Set([
   "src/app/api/admin/fall-registration/route.ts",
 ]);
 
+// This read compares an Origin to trusted server configuration for CSRF; it
+// builds no URL. Only this exact comparison may bypass the link-origin scanner.
+const CSRF_COMPARE_FILE = "src/app/api/admin/mvf-roster-sync/route.ts";
+const CSRF_COMPARE_LINE = 'if (req.headers.get("origin") !== siteOrigin()) return json(403, { ok: false, error: "bad_origin" });';
+
 function findRequestOriginReads(source: string): string[] {
   return source
     .split("\n")
@@ -220,7 +229,10 @@ test.describe("source guard — request-derived origins", () => {
       const rel = relative(join(__dirname, ".."), file);
       if (ALLOWLIST.has(rel)) continue;
       const hits = findRequestOriginReads(readFileSync(file, "utf8"));
-      for (const h of hits) offenders.push(`${rel}: ${h}`);
+      for (const h of hits) {
+        if (rel === CSRF_COMPARE_FILE && h === CSRF_COMPARE_LINE) continue;
+        offenders.push(`${rel}: ${h}`);
+      }
     }
     expect(offenders).toEqual([]);
   });
