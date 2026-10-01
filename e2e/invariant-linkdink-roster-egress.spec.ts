@@ -293,9 +293,11 @@ test.describe("Link & Dink roster sync egress (MVF Junior Tournament)", () => {
     expect(alerts).toHaveLength(1);
     expect(alerts[0].body).toContain("event_cancelled");
     expect(alerts[0].body).toContain("mvf-junior-tournament-10u-2026-10-24");
-    // The recovery steps carry a child-data rule: re-send through the
-    // endpoint, never L&D's walk-up form.
-    expect(alerts[0].body).toContain("dry_run");
+    // Recovery previews through the admin action using existing server auth,
+    // never a copied secret or L&D's walk-up form.
+    expect(alerts[0].body).toContain("/admin/mvf-roster-sync");
+    expect(alerts[0].body).toContain("Preview first");
+    expect(alerts[0].body).not.toContain("with NGA_SYNC_SECRET");
     expect(alerts[0].body).toContain("walk-up");
     // L&D's idempotency key hashes the names as sent, so a hand re-send must
     // send them cleaned; the raw Notion value can seat the child twice.
