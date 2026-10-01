@@ -12,6 +12,7 @@ import {
   isDuplicateClusterRegistration,
   type ClusterFormData,
 } from "@/lib/validate-cluster";
+import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
 import { fetchClusterRegistrationKeys } from "@/lib/notion-clusters";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import {
@@ -44,6 +45,14 @@ export async function POST(req: NextRequest) {
   }
 
   const data = body as ClusterFormData;
+
+  // Correct parent-entered email domain typos (e.g. gmail.fom → gmail.com)
+  // so the invoice, confirmation, and CRM row use a deliverable address.
+  // The local part is never altered; unrecognized domains pass through.
+  if (hadEmailTypo(data.email)) {
+    console.log("[checkout-cluster] corrected parent email domain typo");
+  }
+  data.email = normalizeEmailTypos(data.email);
   const slug = data.clusterSlug.trim() as ClusterSlug;
   const cluster = getClusterBySlug(slug);
   if (!cluster) {

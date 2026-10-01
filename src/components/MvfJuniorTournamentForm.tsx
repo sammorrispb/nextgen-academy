@@ -21,6 +21,7 @@ import {
 } from "@/lib/validate-mvf-junior-tournament";
 import { isWaiverRequired } from "@/lib/waiver-required";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
+import EmailTypoHint from "@/components/EmailTypoHint";
 
 // MVF Junior Tournament sign-up form — $50 Montgomery Village resident / $60
 // non-resident, resolved server-side from the resident flag. Posts to
@@ -290,6 +291,10 @@ export default function MvfJuniorTournamentForm() {
               value={form.email}
               onChange={(e) => update("email", e.target.value)}
               autoComplete="email"
+            />
+            <EmailTypoHint
+              email={form.email}
+              onApply={(fixed) => update("email", fixed)}
             />
             {errors.email && <p className={errorClass}>{errors.email}</p>}
           </div>

@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { validateEvalBookForm } from "@/lib/validate-eval-book";
+import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
 import {
   claimEvalSlot,
   fetchOpenEvalSlots,
@@ -158,9 +159,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Validation failed", errors }, { status: 400 });
   }
 
+  if (hadEmailTypo(form.email)) {
+    console.log("[eval-book] corrected parent email domain typo");
+  }
   const booking = {
     parentName: form.parentName.trim(),
-    parentEmail: form.email.trim(),
+    // Correct parent-entered domain typos (e.g. gmail.fom → gmail.com) so the
+    // request-received email reaches a deliverable address.
+    parentEmail: normalizeEmailTypos(form.email),
     parentPhone: form.phone.trim(),
     childFirst: form.childFirstName.trim(),
     level: form.level,

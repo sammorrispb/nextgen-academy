@@ -3,6 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { findCampBySlug, findCampOption } from "@/data/camps";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import { validateCampForm, type CampFormData } from "@/lib/validate-camp";
+import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
 import {
   hasWaiverOnFile,
   buildWaiverSignUrl,
@@ -24,6 +25,14 @@ export async function POST(req: NextRequest) {
   }
 
   const data = body as CampFormData;
+
+  // Correct parent-entered email domain typos (e.g. gmail.fom → gmail.com)
+  // so the invoice, confirmation, and CRM row use a deliverable address.
+  // The local part is never altered; unrecognized domains pass through.
+  if (hadEmailTypo(data.email)) {
+    console.log("[checkout-camp] corrected parent email domain typo");
+  }
+  data.email = normalizeEmailTypos(data.email);
 
   const camp = findCampBySlug(data.campSlug);
   const option = findCampOption(data.optionKey);

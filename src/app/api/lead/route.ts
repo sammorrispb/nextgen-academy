@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EMAIL_RE, playerCrmDbId } from "@/lib/notion-utils";
+import { normalizeEmailTypos } from "@/lib/email-typo";
 import {
   appendLeadInquiry,
   findFamilyRows,
@@ -37,7 +38,9 @@ const { isRateLimited } = createRateLimiter();
 
 function parseContact(contact: string): { email: string | null; phone: string | null } {
   if (EMAIL_RE.test(contact.trim())) {
-    return { email: contact.trim(), phone: null };
+    // Correct parent-entered domain typos (e.g. gmail.fom → gmail.com) so the
+    // lead confirmation reaches a deliverable address.
+    return { email: normalizeEmailTypos(contact), phone: null };
   }
   return { email: null, phone: contact.trim() };
 }

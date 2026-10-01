@@ -21,6 +21,7 @@ import {
   validateMvfJuniorTournament,
   type MvfJuniorTournamentData,
 } from "@/lib/validate-mvf-junior-tournament";
+import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
 import {
   countPaidMvfTournamentRegistrations,
   createMvfTournamentRegistration,
@@ -75,6 +76,14 @@ export async function POST(req: NextRequest) {
   }
 
   const data = body as MvfJuniorTournamentData;
+
+  // Correct parent-entered email domain typos (e.g. gmail.fom → gmail.com)
+  // so the invoice, confirmation, and CRM row use a deliverable address.
+  // The local part is never altered; unrecognized domains pass through.
+  if (hadEmailTypo(data.email)) {
+    console.log("[checkout-mvf-junior-tournament] corrected parent email domain typo");
+  }
+  data.email = normalizeEmailTypos(data.email);
   const division = findMvfTournamentDivision(data.division);
   if (!division) {
     return NextResponse.json({ error: "Division not found" }, { status: 404 });
