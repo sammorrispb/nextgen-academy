@@ -1,3 +1,4 @@
+import { checkoutRowExists } from "./dedupe-lookup";
 import { classifyNotionFailure, type CreateDropInResult } from "./notion-dropins";
 import type { MondayGirlsRegistrationKey } from "./validate-monday-girls-registration";
 
@@ -115,21 +116,9 @@ export async function findMondayGirlsRegByCheckoutId(
   const env = notionEnv();
   if (!env) return false;
 
-  const res = await fetch(`${NOTION_API}/databases/${env.dbId}/query`, {
-    method: "POST",
-    headers: headers(env.notionKey),
-    body: JSON.stringify({
-      filter: {
-        property: "Stripe Checkout Session ID",
-        rich_text: { equals: checkoutSessionId },
-      },
-      page_size: 1,
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) return false;
-  const data = (await res.json()) as { results: unknown[] };
-  return data.results.length > 0;
+  // Throws DedupeLookupError rather than answering "not recorded" when
+  // Notion can't say — the webhook turns that into a retry, not a second row.
+  return checkoutRowExists(env.notionKey, env.dbId, checkoutSessionId);
 }
 
 /** A roster row, resolved far enough to cancel it and email the parent. */

@@ -6,6 +6,8 @@ What shipped in this change set (all uncommitted until this doc was written; not
 
 ### One-hour lessons — `/lessons`
 
+> **Superseded 2026-09-29.** Lessons are now $75 private and $40 per player for a group (`src/data/lessons.ts`), parents request times through Coach OS (#377), and `LessonPurchaseForm` is gone. The bullets below are the 2026-09-21 record.
+
 - Two products at **$60/hr** (one-time): private 1:1 (`STRIPE_PRIVATE_LESSON_PRICE_ID`) and small-group (`STRIPE_GROUP_LESSON_PRICE_ID`) — the group $60 is the **total for the group**, split between the players.
 - Checkout API: `POST /api/checkout-lesson` → creates a Stripe Checkout Session with `kind=lesson` metadata (product key, parent/player details, availability, allergies, coaching notes, SMS consent, waiver).
 - Validation: `src/lib/validate-lesson.ts`. Form: `src/components/LessonPurchaseForm.tsx`.

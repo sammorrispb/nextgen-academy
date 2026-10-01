@@ -19,6 +19,9 @@ import {
   type FallSeasonGroup,
 } from "@/data/fall-season-2026";
 import { countFallRegistrations } from "@/lib/notion-fall-registrations";
+import FallWeatherStatus, { FallWeatherAlert } from "@/components/FallWeatherStatus";
+import { fetchFallCalls } from "@/lib/notion-fall-calls";
+import { todayET } from "@/lib/fall-refund-policy";
 import { familySiteUrl } from "@/lib/urls";
 import {
   PICKLPARK_PUBLIC_AREA,
@@ -53,7 +56,10 @@ export const metadata: Metadata = {
   alternates: { canonical: "https://nextgenpbacademy.com/fall" },
 };
 
-export const revalidate = 300;
+// A minute, not five: this page carries the live weather call on a Sunday
+// morning. The call route also revalidates /fall the moment a call is made,
+// so this is only the fallback bound.
+export const revalidate = 60;
 
 const MONTH_DAY: Intl.DateTimeFormatOptions = {
   weekday: "long",
@@ -75,6 +81,9 @@ export default async function FallPage() {
   // leagues itself. Tying this to the retired checkout would have hidden two
   // live leagues from the page our paying families actually land on.
   const picklParkOpen = picklParkLeaguesOpen(picklParkTodayET());
+
+  const todayIso = todayET();
+  const calls = await fetchFallCalls();
 
   const spotsTaken: Partial<Record<FallSeasonGroup, number | null>> = {};
   if (registrationOpen) {
@@ -108,6 +117,7 @@ export default async function FallPage() {
   return (
     <div className="bg-ngpa-navy">
       <JsonLd data={eventJsonLd} />
+      <FallWeatherAlert calls={calls} todayIso={todayIso} />
       <section className="relative bg-ngpa-deep border-b border-ngpa-slate/40">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
           <p className="font-heading text-xs font-bold text-ngpa-lime uppercase tracking-[0.2em] mb-4">
@@ -145,6 +155,9 @@ export default async function FallPage() {
 
       <section className="bg-ngpa-navy">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
+          <div id="weather" className="scroll-mt-24">
+            <FallWeatherStatus calls={calls} todayIso={todayIso} />
+          </div>
           <h2 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white tracking-tight mb-6">
             The season at a glance
           </h2>
@@ -216,7 +229,8 @@ export default async function FallPage() {
                     <time dateTime={d}>{sundayLabel(d)}</time>
                   </span>
                 ))}
-                .
+                {" "}&mdash; whichever is next open. We make the call two hours before
+                your group starts.
               </li>
               <li>
                 <strong className="text-ngpa-white">

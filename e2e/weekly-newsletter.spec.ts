@@ -6,6 +6,7 @@ import {
   type WeeklyNewsletterInput,
 } from "../src/lib/email/weekly-newsletter";
 import { appendUtm } from "../src/lib/email/utm";
+import { newsletterPrograms } from "../src/lib/newsletter-programs";
 import { CAMP_OPTIONS, CAMPS, upcomingCamps } from "../src/data/camps";
 import {
   FALL_SEASON_LABEL,
@@ -66,6 +67,32 @@ const baseInput: WeeklyNewsletterInput = {
   campAgeMin: 8,
   campPriceFromUsd: 50,
 };
+
+test("program announcements have HTML/text parity and safe escaping", () => {
+  const programs = newsletterPrograms("2026-10-01", ORIGIN, "weekly-2026-10-01");
+  const html = weeklyNewsletterHtml({ ...baseInput, programs });
+  const text = weeklyNewsletterText({ ...baseInput, programs });
+  for (const p of programs) {
+    expect(text).toContain(p.title);
+    expect(text).toContain(p.body);
+    expect(html).toContain(p.title);
+    if (p.url) {
+      expect(text).toContain(p.url);
+      expect(html).toContain(p.url.replaceAll("&", "&amp;"));
+    }
+  }
+  const unsafe = weeklyNewsletterHtml({ ...baseInput, programs: [{ title: "<script>", body: "<img src=x>" }] });
+  expect(unsafe).not.toContain("<script>");
+  expect(unsafe).toContain("&lt;img src=x&gt;");
+});
+
+test("enrollment explanation covers CRM families and preserves unsubscribe", () => {
+  for (const body of [weeklyNewsletterHtml(baseInput), weeklyNewsletterText(baseInput)]) {
+    expect(body).toContain("connected with us through an inquiry or program");
+    expect(body).not.toContain("because you joined the Next Gen newsletter");
+    expect(body).toContain(baseInput.unsubscribeUrl);
+  }
+});
 
 test.describe("appendUtm", () => {
   test("appends utm params to a bare path", () => {
@@ -163,14 +190,34 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(html).toContain("2 in · need 2 more to lock it in");
   });
 
-  test("private-lessons card routes to the free evaluation form", () => {
-    const html = weeklyNewsletterHtml(baseInput);
-    expect(html).toContain("Brand new to a court?");
-    // UTM query is inserted before the #hash so the anchor still jumps.
-    expect(html).toContain(`${ORIGIN}/?utm_source=newsletter`);
-    expect(html).toContain("utm_content=eval");
-    expect(html).toContain("#contact-form");
-    expect(html).toContain("Get a free evaluation");
+  test("private, semi-private and small-group lessons always have direct, audience-labeled CTAs", () => {
+    // These invitations belong to the recurring template, even in a quiet
+    // week with no sessions, camps, seasonal programs or approved draft.
+    const input = { ...baseInput, sessions: [], programs: [], camps: [] };
+    const html = weeklyNewsletterHtml(input);
+    const text = weeklyNewsletterText(input);
+    for (const body of [html, text]) {
+      expect(body).toContain("Private, semi-private and small-group lessons");
+      expect(body).toContain("For your player");
+      expect(body).toContain("For parents who play");
+      expect(body).toContain("Choose up to three available times for your player");
+      expect(body).toContain("Sam confirms the time and sends an invoice");
+      expect(body).toContain(WHATSAPP_NGA_GROUP_URL);
+      expect(body).not.toContain("utm_content=eval");
+      expect(body).not.toContain("youth online booking is not open yet");
+      expect(body).toContain("/lessons/book");
+    }
+    for (const [base, content] of [
+      [`${ORIGIN}/lessons/book`, "youth-lessons"],
+      ["https://coach.sammorrispb.com/book/private-lesson", "parent-lessons"],
+    ]) {
+      const expected = appendUtm(base, content, input.utmCampaign);
+      expect(text).toContain(expected);
+      expect(html).toContain(expected.replaceAll("&", "&amp;"));
+      const url = new URL(expected);
+      expect(url.searchParams.get("utm_campaign")).toBe(input.utmCampaign);
+      expect(url.searchParams.get("utm_medium")).toBe("email");
+    }
   });
 
   test("internal CTA links carry first-party UTM tags for click attribution", () => {
@@ -190,7 +237,7 @@ test.describe("weeklyNewsletterHtml", () => {
         },
       ],
     });
-    // Poll + eval links built inside the template get stamped with the campaign.
+    // Poll + lesson links built inside the template get stamped with the campaign.
     expect(html).toContain(
       `${ORIGIN}/poll/sat-4pm-green?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-2026-06-04&utm_content=poll`,
     );
@@ -739,8 +786,10 @@ test.describe("weekly newsletter — Pickl Park season block", () => {
     const html = weeklyNewsletterHtml(input);
     const text = weeklyNewsletterText(input);
     expect(html).not.toContain("Pickl Park Saturday season");
-    expect(html).toContain("the league is registering now");
-    expect(text).toContain("the league is registering now");
+    expect(html).toContain("Drill and Play");
+    expect(text).toContain("Drill and Play");
+    expect(html).not.toContain("the league is registering now");
+    expect(text).not.toContain("the league is registering now");
   });
 
   test("the block quotes no minute count — the split is described as a half", () => {

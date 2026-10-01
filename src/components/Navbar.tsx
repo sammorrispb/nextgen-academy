@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import { trackEvent } from "@/lib/funnelClient";
 
 // Six doors, no more. The three intents Sam named map to the first three;
@@ -128,17 +129,17 @@ export default function Navbar() {
               );
             })}
             <a
-              href={resolveHref("#contact-form")}
+              href={EVALUATION_SMS_URL}
               onClick={() =>
                 trackEvent("cta_click", {
                   label: "navbar_get_started",
-                  destination: resolveHref("#contact-form"),
+                  destination: EVALUATION_SMS_URL,
                   section: "navbar_desktop",
                 })
               }
               className="ml-4 inline-flex items-center gap-2 px-5 py-2.5 bg-ngpa-teal text-ngpa-deep text-sm font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors shadow-lg shadow-ngpa-teal/20"
             >
-              Free Evaluation
+              Text for an Evaluation
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -191,18 +192,18 @@ export default function Navbar() {
                 );
               })}
               <a
-                href={resolveHref("#contact-form")}
+                href={EVALUATION_SMS_URL}
                 onClick={() => {
                   setOpen(false);
                   trackEvent("cta_click", {
                     label: "navbar_get_started",
-                    destination: resolveHref("#contact-form"),
+                    destination: EVALUATION_SMS_URL,
                     section: "navbar_mobile",
                   });
                 }}
                 className="mt-3 mx-1 px-5 py-3.5 bg-ngpa-teal text-ngpa-deep text-base font-bold rounded-full text-center hover:bg-ngpa-teal-bright transition-colors"
               >
-                Book a Free Evaluation
+                Text for a Free Evaluation
               </a>
             </div>
           </div>

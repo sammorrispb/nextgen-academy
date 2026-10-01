@@ -1,6 +1,13 @@
 // Pure-function specs for the three MVF Junior Tournament lifecycle emails.
 // No dev server needed; runs in the pure suite (playwright.pure.config.ts).
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test, expect } from "@playwright/test";
+import { NORTH_CREEK } from "../src/data/mvf";
+import {
+  MVF_JUNIOR_TOURNAMENT_ADDRESS,
+  MVF_JUNIOR_TOURNAMENT_VENUE,
+} from "../src/data/mvf-junior-tournament-2026";
 import {
   mvfTournamentSignupConfirmationSubject,
   mvfTournamentSignupConfirmationText,
@@ -59,7 +66,7 @@ test.describe("mvf tournament signup confirmation", () => {
     expect(text).toContain("$50.00");
     expect(text).toContain("https://pay.stripe.com/invoice/test");
     expect(text).toContain("Saturday, October 24, 2026");
-    expect(text).toContain("Apple Ridge Courts");
+    expect(text).toContain("North Creek Community Center");
     expect(text).toContain("No refunds.");
     expect(text).toContain("Rain or shine");
     expect(text).toContain("Coach Sam");
@@ -136,5 +143,57 @@ test.describe("todayEtIso — the pre-event date gate", () => {
     expect(todayEtIso(new Date("2026-10-19T04:00:00Z"))).toBe("2026-10-19");
     // 2026-10-19T03:59:59Z is still 2026-10-18 23:59 ET — not the send date.
     expect(todayEtIso(new Date("2026-10-19T03:59:59Z"))).toBe("2026-10-18");
+  });
+});
+
+// Sam 2026-09-28: the tournament moved from Apple Ridge Courts to North Creek
+// Community Center (lights, 3 dedicated courts). Every email a family gets
+// must name the new venue with its street address, and none may still say
+// Apple Ridge. (The post-payment "You're in" email lives in the Stripe
+// webhook and reads MVF_JUNIOR_TOURNAMENT_VENUE, which the first test pins.)
+test.describe("mvf tournament venue — North Creek Community Center", () => {
+  test("the venue and address derive from the North Creek record in mvf.ts", () => {
+    expect(MVF_JUNIOR_TOURNAMENT_VENUE).toBe("North Creek Community Center");
+    expect(MVF_JUNIOR_TOURNAMENT_VENUE).toBe(NORTH_CREEK.center);
+    expect(MVF_JUNIOR_TOURNAMENT_ADDRESS).toBe(
+      "20125 Arrowhead Road, Montgomery Village, MD 20886",
+    );
+  });
+
+  const renders: Array<[string, string]> = [
+    ["signup confirmation text", mvfTournamentSignupConfirmationText(signupInput)],
+    ["signup confirmation html", mvfTournamentSignupConfirmationHtml(signupInput)],
+    ["payment reminder text", mvfTournamentPaymentReminderText(reminderInput)],
+    ["payment reminder html", mvfTournamentPaymentReminderHtml(reminderInput)],
+    ["pre-event reminder text", mvfTournamentPreEventReminderText(preEventInput)],
+    ["pre-event reminder html", mvfTournamentPreEventReminderHtml(preEventInput)],
+  ];
+
+  for (const [name, body] of renders) {
+    test(`${name} names North Creek, its address and its lit courts — never Apple Ridge`, () => {
+      expect(body).toContain("North Creek Community Center");
+      expect(body).toContain("20125 Arrowhead Road, Montgomery Village, MD 20886");
+      expect(body).toContain("3 dedicated pickleball courts with lights");
+      expect(body).not.toMatch(/apple ridge/i);
+    });
+  }
+
+  test("no tournament web surface hardcodes a venue name", () => {
+    // The success page's metadata once hardcoded "Apple Ridge Courts" and
+    // would have kept saying it after the constant moved. Every surface reads
+    // the venue from the data module instead.
+    const surfaces = [
+      "src/app/mvf-junior-tournament/page.tsx",
+      "src/app/mvf-junior-tournament/success/page.tsx",
+      "src/components/MvfJuniorTournamentForm.tsx",
+      "src/components/TournamentBanner.tsx",
+      "src/lib/email/mvf-tournament-signup-confirmation.ts",
+      "src/lib/email/mvf-tournament-payment-reminder.ts",
+      "src/lib/email/mvf-tournament-pre-event-reminder.ts",
+    ];
+    for (const file of surfaces) {
+      const src = readFileSync(join(__dirname, "..", file), "utf8");
+      expect(src, file).not.toMatch(/apple ridge|north creek/i);
+    }
   });
 });

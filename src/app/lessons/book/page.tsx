@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { lessonSchedulingUrl } from "@/data/scheduling";
+import { site } from "@/data/site";
 import { getStripe } from "@/lib/stripe";
 import { formatLongDate } from "@/lib/format-date";
 import LessonBookingForm from "@/components/LessonBookingForm";
@@ -14,13 +17,45 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 interface PageProps {
-  searchParams: Promise<{ inv?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function LessonBookPage({ searchParams }: PageProps) {
-  const { inv } = await searchParams;
+  const params = await searchParams;
+  const inv = typeof params.inv === "string" ? params.inv : undefined;
+  if (!inv) {
+    let schedulerAvailable = false;
+    try {
+      const response = await fetch(lessonSchedulingUrl(), {
+        method: "HEAD",
+        redirect: "follow",
+        cache: "no-store",
+        signal: AbortSignal.timeout(3000),
+      });
+      schedulerAvailable = response.ok;
+    } catch {
+      // A delayed release or unavailable scheduler must not strand a parent.
+    }
+    if (schedulerAvailable) redirect(lessonSchedulingUrl(params));
+    return (
+      <BookShell title="Let’s find a lesson time">
+        <p>
+          Text Coach Sam to arrange a private, semi-private or small-group lesson
+          for your player. Share the days that work for your family and your
+          preferred area. We’ll confirm the time and court by text.
+        </p>
+        <a
+          href={`sms:+1${site.phone.replace(/\D/g, "")}`}
+          className="mt-6 inline-flex min-h-[48px] items-center justify-center rounded-full bg-ngpa-teal px-6 py-3 font-bold text-ngpa-deep hover:bg-ngpa-teal-bright transition-colors"
+        >
+          Text to schedule a lesson
+        </a>
+        <p className="mt-4 font-mono text-lg text-ngpa-white">{site.phone}</p>
+      </BookShell>
+    );
+  }
 
-  if (!inv || !process.env.STRIPE_SECRET_KEY) {
+  if (!process.env.STRIPE_SECRET_KEY) {
     return <BookShell title="Find your invoice">Use the booking link from your payment confirmation email to pick a lesson time.</BookShell>;
   }
 

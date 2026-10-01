@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { createAndSendSignupInvoice } from "@/lib/stripe-invoices";
+import { createAndSendSignupInvoice, type SignupInvoiceResult } from "@/lib/stripe-invoices";
+import { parseSubmissionId } from "@/lib/submission-key";
 import {
+  GROUP_LESSON_PRICE_PER_PLAYER_USD,
   LESSON_CHECKOUT_KIND,
-  LESSON_PRICE_USD,
+  PRIVATE_LESSON_PRICE_USD,
   findLessonProduct,
+  lessonTotalUsd,
 } from "@/data/lessons";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import {
@@ -17,6 +20,14 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { invoiceSafeName } from "@/lib/invoice-text";
+import { notifyInvoiceSent } from "@/lib/signup-admin-notify";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+
+// Per IP (best-effort, in-memory): each request can make NGA's Stripe account
+// email an invoice to the address typed in (security review 2026-09-28, H2).
+const invoiceLimiter = createRateLimiter({ limit: 20 });
+
 
 // Lesson sign-up — INVOICE-BASED. There are no fixed Stripe products/prices:
 // the invoice line items are built from the sign-up form (lesson type, player
@@ -26,10 +37,10 @@ import {
 // page, which shows the invoice status and a Pay-now button; the invoice email
 // is the fallback if the parent closes the tab.
 //
-// GROUP PRICING (confirmed by Sam 2026-09-21): $60 TOTAL for the hour — a
-// single $60 line item, quantity 1, never per player. The player count is
-// written into the line description + metadata so staff see the per-player
-// split without it being a separate charge.
+// PRICING (Sam, 2026-09-29) comes from src/data/lessons.ts: a private lesson
+// is one PRIVATE_LESSON_PRICE_USD line; a group is one line of
+// GROUP_LESSON_PRICE_PER_PLAYER_USD times the validated player count, with
+// the count in the line description + metadata so staff see what was billed.
 //
 // Fail-closed on STRIPE_SECRET_KEY: without it there is no invoice to create,
 // whatever the payload says. STRIPE_*_LESSON_PRICE_ID env vars are no longer
@@ -44,6 +55,13 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (invoiceLimiter.isRateLimited(getClientIp(req))) {
+    return NextResponse.json(
+      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam at 301-325-4731 and he'll get you in." },
+      { status: 429 },
+    );
   }
 
   // Fail closed on configuration BEFORE validating the form.
@@ -81,29 +99,29 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Group: the $60 total is one line item (quantity 1); the player count goes
-  // in the description + metadata for staff visibility.
+  // Group: one line item priced per player; the player count goes in the
+  // description + metadata for staff visibility.
   const groupPlayers =
     data.lessonType === "group" ? Number(data.groupPlayers) || null : null;
+  const totalUsd = lessonTotalUsd(product.type, groupPlayers ?? undefined);
   const lineDescription =
     data.lessonType === "group"
-      ? `Group lesson — ${data.childFirstName} (${groupPlayers} players, $${LESSON_PRICE_USD} total split between the players)`
-      : `Private lesson — ${data.childFirstName} ($${LESSON_PRICE_USD}/hr)`;
+      ? `Group lesson — ${invoiceSafeName(data.childFirstName)} (${groupPlayers} players × $${GROUP_LESSON_PRICE_PER_PLAYER_USD})`
+      : `Private lesson — ${invoiceSafeName(data.childFirstName)} ($${PRIVATE_LESSON_PRICE_USD}/hr)`;
 
-  const submissionId =
-    typeof body.submissionId === "string" && body.submissionId.length > 0
-      ? body.submissionId
-      : undefined;
+  // A retry carrying the same id replays this sign-up's invoice rather than
+  // sending a second one.
+  const submissionId = parseSubmissionId(body.submissionId);
 
-  let invoice;
+  let result: SignupInvoiceResult;
   try {
-    invoice = await createAndSendSignupInvoice({
+    result = await createAndSendSignupInvoice({
       customerEmail: data.email,
-      customerName: data.parentName,
+      customerName: invoiceSafeName(data.parentName, ""),
       items: [
         {
           description: lineDescription,
-          amountCents: LESSON_PRICE_USD * 100,
+          amountCents: totalUsd * 100,
           quantity: 1,
         },
       ],
@@ -112,8 +130,8 @@ export async function POST(req: NextRequest) {
         lesson_type: product.type,
         lesson_title: product.title,
         lesson_slug: product.slug,
-        // Group-lesson player count: the $60/hour total is split this many
-        // ways. Private lessons omit it (single player).
+        // Group-lesson player count: the line is priced per player. Private
+        // lessons omit it (single player).
         group_players: groupPlayers != null ? String(groupPlayers) : "",
         parent_name: data.parentName,
         parent_email: data.email,
@@ -149,15 +167,24 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     );
   }
+  const { invoice, alreadySent } = result;
 
-  // Both admin inboxes get an "invoice sent" heads-up. notifyInvoiceSent
-  // never throws, so this can't fail a signup whose invoice already went out.
-  await notifyAdminInvoiceSent(
-    invoice,
-    product,
-    data,
-    product.type === "group" ? groupPlayers : null,
-  );
+  // Both admin inboxes get an "invoice sent" heads-up — once per invoice, so
+  // not on a retry. notifyInvoiceSent never throws, so this can't fail a
+  // signup whose invoice already went out.
+  if (!alreadySent) {
+    await notifyAdminInvoiceSent(
+      invoice,
+      product,
+      data,
+      product.type === "group" ? groupPlayers : null,
+      totalUsd,
+    );
+  } else {
+    console.info(
+      `[checkout-lesson] retry of a sign-up whose invoice ${invoice.id} already went out — not announcing it again`,
+    );
+  }
 
   return NextResponse.json({
     invoiceId: invoice.id,
@@ -175,10 +202,10 @@ async function notifyAdminInvoiceSent(
     childFirstName: string;
   },
   groupPlayers: number | null,
+  totalUsd: number,
 ): Promise<void> {
   // Fire-and-forget: notifyInvoiceSent never throws, so a Resend hiccup
   // can't fail a signup whose invoice is already emailed.
-  const { notifyInvoiceSent } = await import("@/lib/signup-admin-notify");
   await notifyInvoiceSent({
     kind: "lesson",
     headline: `${product.title} invoice sent`,
@@ -186,12 +213,12 @@ async function notifyAdminInvoiceSent(
     parentEmail: data.email,
     parentPhone: data.phone,
     childFirstName: data.childFirstName,
-    amountUsd: (LESSON_PRICE_USD).toFixed(2),
+    amountUsd: totalUsd.toFixed(2),
     invoiceId: invoice.id,
     hostedUrl: invoice.hosted_invoice_url ?? null,
     dueDate: "7 days",
     details: [
-      `${product.title}${groupPlayers != null ? ` — ${groupPlayers} players (split $${(LESSON_PRICE_USD / groupPlayers).toFixed(2)} each)` : ""}`,
+      `${product.title}${groupPlayers != null ? ` — ${groupPlayers} players × $${GROUP_LESSON_PRICE_PER_PLAYER_USD}` : ""}`,
     ],
   });
 }

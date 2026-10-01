@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import MvfJuniorTournamentForm from "@/components/MvfJuniorTournamentForm";
 import {
+  COURTS_TEXT,
   GUARANTEED_GAMES_TEXT,
   MEDALS_TEXT,
+  MVF_JUNIOR_TOURNAMENT_ADDRESS,
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
   MVF_JUNIOR_TOURNAMENT_DIVISIONS,
   MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA,
@@ -16,9 +18,10 @@ import {
 } from "@/data/mvf-junior-tournament-2026";
 
 // The MVF Junior Tournament registration page — NGA-sold on the NGA site
-// (invoice-based checkout, Sam 2026-09-22), run at Apple Ridge Courts in
-// Montgomery Village. Revenue splits 80/20 NGA/MVF (metadata-tracked,
-// remitted manually).
+// (invoice-based checkout, Sam 2026-09-22), run in Montgomery Village. The
+// venue, address and court line all come from the tournament data module, so
+// a venue move is a one-file change there. Revenue splits 80/20 NGA/MVF
+// (metadata-tracked, remitted manually).
 //
 // INDEXED, deliberately — the opposite call from /monday-girls. This is a
 // public tournament at a public commercial facility: Montgomery Village
@@ -27,7 +30,7 @@ import {
 
 export const metadata: Metadata = {
   title: `Junior Pickleball Tournament — ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}`,
-  description: `Next Gen Pickleball Academy's ${MVF_JUNIOR_TOURNAMENT_TITLE} at ${MVF_JUNIOR_TOURNAMENT_VENUE} in ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}. Rotating partner round robin, ${GUARANTEED_GAMES_TEXT.toLowerCase()} ${MEDALS_TEXT.toLowerCase()} $${RESIDENT_PRICE_USD} resident / $${NONRESIDENT_PRICE_USD} non-resident.`,
+  description: `Next Gen Pickleball Academy's ${MVF_JUNIOR_TOURNAMENT_TITLE} at ${MVF_JUNIOR_TOURNAMENT_VENUE} in ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}. Rotating partner round robin, ${GUARANTEED_GAMES_TEXT.toLowerCase()} ${MEDALS_TEXT} $${RESIDENT_PRICE_USD} resident / $${NONRESIDENT_PRICE_USD} non-resident.`,
   alternates: { canonical: "https://nextgenpbacademy.com/mvf-junior-tournament" },
 };
 
@@ -44,8 +47,8 @@ export default function MvfJuniorTournamentPage() {
         </h1>
         <p className="text-ngpa-white/80 text-lg mt-4">
           A one-day junior tournament: rotating partner round robin,{" "}
-          {GUARANTEED_GAMES_TEXT.toLowerCase()}{" "}
-          {MEDALS_TEXT.toLowerCase()} Coached by Next Gen Pickleball Academy.
+          {GUARANTEED_GAMES_TEXT.toLowerCase()} {MEDALS_TEXT} Coached by Next
+          Gen Pickleball Academy.
         </p>
       </section>
 
@@ -94,7 +97,10 @@ export default function MvfJuniorTournamentPage() {
               {MVF_JUNIOR_TOURNAMENT_VENUE}
             </p>
             <p className="text-ngpa-white/70 text-sm">
-              {MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA} · {RAIN_OR_SHINE_TEXT}
+              {MVF_JUNIOR_TOURNAMENT_ADDRESS}
+            </p>
+            <p className="text-ngpa-white/70 text-sm mt-2">
+              {COURTS_TEXT} {RAIN_OR_SHINE_TEXT}
             </p>
           </div>
           <div className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate/60">

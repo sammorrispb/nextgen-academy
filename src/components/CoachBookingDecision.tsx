@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BOOKING_TIME_OPTIONS } from "@/lib/lesson-booking-token";
+import { BOOKING_TIME_OPTIONS } from "@/data/lesson-booking-times";
 
 interface SlotOption {
   date: string;

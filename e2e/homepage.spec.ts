@@ -3,11 +3,11 @@ import { test, expect } from "@playwright/test";
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {
-  test("has primary Book a Free 30-Minute Evaluation CTA linking to the booking flow", async ({ page }) => {
+  test("has primary Text for a Free 30-Minute Evaluation CTA linking to SMS", async ({ page }) => {
     await page.goto("/");
-    const btn = page.locator("section").first().getByRole("link", { name: /Book a Free 30-Minute Evaluation/ });
+    const btn = page.locator("section").first().getByRole("link", { name: /Text for a Free 30-Minute Evaluation/ });
     await expect(btn).toBeVisible();
-    await expect(btn).toHaveAttribute("href", "/free-evaluation/book");
+    await expect(btn).toHaveAttribute("href", "sms:+13013254731");
   });
 
   test("has secondary schedule link", async ({ page }) => {
@@ -179,7 +179,7 @@ test.describe("Level Cards", () => {
 
   test("non-yellow cards have Get Started links", async ({ page }) => {
     await page.goto("/");
-    const getStartedLinks = page.locator('#levels article a[href="/free-evaluation/book"]');
+    const getStartedLinks = page.locator('#levels article a[href="sms:+13013254731"]');
     // Red, Orange, Green = 3 cards with Get Started
     await expect(getStartedLinks).toHaveCount(3);
   });
@@ -356,7 +356,7 @@ test.describe("Sticky Mobile CTA", () => {
     await page.goto("/");
     const sticky = page.locator(".fixed.bottom-0");
     await expect(sticky).toBeVisible();
-    await expect(sticky.getByText("Free Evaluation")).toBeVisible();
+    await expect(sticky.getByText("Text for an Evaluation")).toBeVisible();
   });
 
   test("hidden on desktop @desktop", async ({ page }, testInfo) => {

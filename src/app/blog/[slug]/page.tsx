@@ -1,3 +1,4 @@
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -133,10 +134,10 @@ export default async function BlogPostPage({
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <Link
-                href="/free-evaluation"
+                href={EVALUATION_SMS_URL}
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
               >
-                Book a Free Evaluation
+                Text for a Free Evaluation
               </Link>
               <Link
                 href="/schedule"

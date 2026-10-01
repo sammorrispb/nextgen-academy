@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import InlineWaiverStep from "@/components/InlineWaiverStep";
+import { submissionKeyFor } from "@/lib/submission-key";
 import {
   MONDAY_GIRLS_SEASON_GROUPS,
   mondayGirlsSeasonSeats,
@@ -66,6 +67,8 @@ export default function MondayGirlsDropinForm({ spotsTaken }: Props) {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
   const [waiverNeeded, setWaiverNeeded] = useState(false);
+  // Submission keys issued this page load, by form content — see startCheckout.
+  const submissionKeys = useRef(new Map<string, string>());
 
   const spotsLeft =
     typeof spotsTaken === "number"
@@ -111,9 +114,14 @@ export default function MondayGirlsDropinForm({ spotsTaken }: Props) {
       const res = await fetch("/api/checkout-monday-girls-dropin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // submissionId becomes the Stripe idempotency key — a double-tap or a
-        // retried request can't create two invoices.
-        body: JSON.stringify({ ...form, submissionId: crypto.randomUUID() }),
+        // submissionId becomes the Stripe idempotency key. The same content
+        // resends the same id — a retry after a dropped connection, or the
+        // resubmit after the waiver step, gets the invoice that already went
+        // out instead of a second one; any edit starts a new submission.
+        body: JSON.stringify({
+          ...form,
+          submissionId: submissionKeyFor(submissionKeys.current, form),
+        }),
       });
       if (res.status === 503) {
         setStatus("closed");

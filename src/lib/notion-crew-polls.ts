@@ -183,39 +183,6 @@ export async function fetchPollResponses(
   return data.results.map(pageToResponse);
 }
 
-export async function findResponseByEmail(
-  pollId: string,
-  email: string,
-): Promise<PollResponse | null> {
-  const notionKey = process.env.NOTION_API_KEY;
-  const db = process.env.NOTION_POLL_RESPONSES_DB_ID;
-  if (!notionKey || !db) return null;
-
-  const res = await fetch(`${NOTION_API}/databases/${db}/query`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": NOTION_VERSION,
-    },
-    body: JSON.stringify({
-      filter: {
-        and: [
-          { property: "Poll", relation: { contains: pollId } },
-          { property: "Parent Email", email: { equals: email } },
-        ],
-      },
-      page_size: 1,
-    }),
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data = (await res.json()) as { results: any[] };
-  if (data.results.length === 0) return null;
-  return pageToResponse(data.results[0]);
-}
-
 export interface UpsertPollResponseInput {
   pollId: string;
   parentName: string;
@@ -228,16 +195,52 @@ export interface UpsertPollResponseInput {
   note: string;
 }
 
+// Records a vote. The FIRST response from an address stands: the public vote
+// form is unauthenticated, and updating by email let anyone who knew a parent's
+// address replace that family's vote and child details (security review
+// 2026-09-28, M4). A change goes through Coach Sam. When Notion can't say
+// whether the address already voted, nothing is written. Pinned by
+// e2e/invariant-crew-poll-no-overwrite.spec.ts.
 export async function upsertPollResponse(
   input: UpsertPollResponseInput,
-): Promise<{ ok: boolean; pageId?: string; error?: string }> {
+): Promise<{
+  ok: boolean;
+  pageId?: string;
+  error?: string;
+  alreadyRecorded?: boolean;
+  lookupFailed?: boolean;
+}> {
   const notionKey = process.env.NOTION_API_KEY;
   const db = process.env.NOTION_POLL_RESPONSES_DB_ID;
   if (!notionKey || !db) {
     return { ok: false, error: "NOTION_POLL_RESPONSES_DB_ID not configured" };
   }
 
-  const existing = await findResponseByEmail(input.pollId, input.email);
+  const lookup = await fetch(`${NOTION_API}/databases/${db}/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notionKey}`,
+      "Content-Type": "application/json",
+      "Notion-Version": NOTION_VERSION,
+    },
+    body: JSON.stringify({
+      filter: {
+        and: [
+          { property: "Poll", relation: { contains: input.pollId } },
+          { property: "Parent Email", email: { equals: input.email } },
+        ],
+      },
+      page_size: 1,
+    }),
+    cache: "no-store",
+  }).catch(() => null);
+  if (!lookup?.ok) {
+    return { ok: false, lookupFailed: true, error: `Notion lookup failed (${lookup?.status ?? "network"})` };
+  }
+  const found = (await lookup.json()) as { results?: Array<{ id: string }> };
+  if (found.results?.length) {
+    return { ok: false, alreadyRecorded: true, pageId: found.results[0].id };
+  }
   const title = `${input.parentName} — ${input.vote}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -255,23 +258,6 @@ export async function upsertPollResponse(
   };
   if (input.phone) {
     properties["Parent Phone"] = { phone_number: input.phone };
-  }
-
-  if (existing) {
-    const res = await fetch(`${NOTION_API}/pages/${existing.id}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${notionKey}`,
-        "Content-Type": "application/json",
-        "Notion-Version": NOTION_VERSION,
-      },
-      body: JSON.stringify({ properties }),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      return { ok: false, error: `Notion update failed (${res.status}): ${text}` };
-    }
-    return { ok: true, pageId: existing.id };
   }
 
   const res = await fetch(`${NOTION_API}/pages`, {

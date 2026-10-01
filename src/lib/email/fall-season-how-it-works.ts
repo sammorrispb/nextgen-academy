@@ -166,9 +166,9 @@ export function fallSeasonHowItWorksHtml(
     </div>
 
     <p style="margin:24px 0 0 0;color:${c.text};font-size:14px;line-height:1.6;">
-      <strong>If it rains.</strong> We make the call by noon and email you either way &mdash; never guess from the sky. A washed-out Sunday moves to ${escape(
+      <strong>If it rains.</strong> We make the call two hours before your group starts &mdash; 11:00 AM for Green Ball, 12:30 PM for Yellow Ball &mdash; and post it in your group&rsquo;s WhatsApp and at nextgenpbacademy.com/fall. If we cancel, we email you too, so never guess from the sky. A washed-out Sunday moves to ${escape(
         rainDates.join(" or "),
-      )}.
+      )}, whichever is next open.
     </p>
 
     <p style="margin:16px 0 0 0;color:${c.text};font-size:14px;line-height:1.6;">
@@ -252,9 +252,9 @@ export function fallSeasonHowItWorksText(
     `Directions: ${directions}`,
     "",
     `IF IT RAINS`,
-    `We make the call by noon and email you either way — never guess from the sky. A washed-out Sunday moves to ${rainDates.join(
+    `We make the call two hours before your group starts — 11:00 AM for Green Ball, 12:30 PM for Yellow Ball — and post it in your group's WhatsApp and at nextgenpbacademy.com/fall. If we cancel, we email you too, so never guess from the sky. A washed-out Sunday moves to ${rainDates.join(
       " or ",
-    )}.`,
+    )}, whichever is next open.`,
     "",
     `ONE ASK`,
     `Tell me anything I should know about ${childFirst} before week one — a friend they'd love to be paired with, something they're nervous about, an injury, anything. Just reply to this email. It genuinely changes how I run their first Sunday.`,

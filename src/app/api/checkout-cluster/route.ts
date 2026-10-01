@@ -21,6 +21,7 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { siteOrigin } from "@/lib/site-origin";
 
 // Cluster season checkout — DOUBLE-gated so it ships dark:
 //   1. Per-cluster launch gates (coach + venue confirmed in
@@ -108,10 +109,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com";
+  const origin = siteOrigin();
 
   const stripe = getStripe();
   const checkout = await stripe.checkout.sessions.create({

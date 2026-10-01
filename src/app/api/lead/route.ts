@@ -12,6 +12,7 @@ import { Resend } from "resend";
 import { normalizeKids, validateLeadForm } from "@/lib/validate-lead";
 import type { Kid, LeadFormData } from "@/lib/validate-lead";
 import { site } from "@/data/site";
+import { escapeHtml } from "@/lib/html";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
 import { c, s } from "@/lib/email/brand";
@@ -280,7 +281,7 @@ export async function POST(request: NextRequest) {
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
     <tr style="${s.tableRow}">
       <td style="${s.tableLabelWide}">Parent Name</td>
-      <td style="${s.tableValue}">${body.parentName}</td>
+      <td style="${s.tableValue}">${escapeHtml(body.parentName)}</td>
     </tr>
     <tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Contact</td>
@@ -318,7 +319,7 @@ export async function POST(request: NextRequest) {
       formatAttribution(body)
         ? `<tr style="${s.tableRow}">
       <td style="${s.tableLabel} vertical-align: top;">Attribution</td>
-      <td style="${s.tableValue} font-size: 12px; word-break: break-all;">${formatAttribution(body)}</td>
+      <td style="${s.tableValue} font-size: 12px; word-break: break-all;">${escapeHtml(formatAttribution(body))}</td>
     </tr>`
         : ""
     }
@@ -326,7 +327,7 @@ export async function POST(request: NextRequest) {
   <div style="${s.actionCallout}">
     <p style="${s.actionLabel}">ACTION NEEDED</p>
     <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
-      Reach out to ${body.parentName} within 24 hours to discuss placement for ${kids.length === 1 ? `their ${kids[0].age}-year-old` : `${kids.length} kids`}.
+      Reach out to ${escapeHtml(body.parentName)} within 24 hours to discuss placement for ${kids.length === 1 ? `their ${kids[0].age}-year-old` : `${kids.length} kids`}.
     </p>
   </div>
 </div>`;

@@ -1,5 +1,6 @@
 "use client";
 
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import Link from "next/link";
 import Image from "next/image";
 import { site } from "@/data/site";
@@ -55,10 +56,10 @@ export default function Footer() {
               {site.boilerplate25}
             </p>
             <Link
-              href="/free-evaluation/book"
+              href={EVALUATION_SMS_URL}
               className="mt-6 inline-flex items-center gap-2 text-ngpa-teal hover:text-ngpa-teal-bright font-bold text-sm transition-colors"
             >
-              Book a Free Evaluation
+              Text for a Free Evaluation
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -78,7 +79,7 @@ export default function Footer() {
               <li><Link href="/crew" className="hover:text-ngpa-teal transition-colors">Find Your Kid&rsquo;s Crew</Link></li>
               <li><Link href="/league" className="hover:text-ngpa-teal transition-colors">Youth Leagues</Link></li>
               <li><Link href="/montgomery-village-youth-pickleball" className="hover:text-ngpa-teal transition-colors">MVF Classes</Link></li>
-              <li><Link href="/free-evaluation/book" className="hover:text-ngpa-teal transition-colors">Get Started</Link></li>
+              <li><Link href={EVALUATION_SMS_URL} className="hover:text-ngpa-teal transition-colors">Get Started</Link></li>
               <li><a href="#about" className="hover:text-ngpa-teal transition-colors">About Us</a></li>
               <li><a href="#faq" className="hover:text-ngpa-teal transition-colors">FAQ</a></li>
             </ul>

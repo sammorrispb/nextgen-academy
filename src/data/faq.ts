@@ -1,3 +1,8 @@
+import { EVALUATION_SMS_URL } from "./scheduling";
+import {
+  GROUP_LESSON_PRICE_PER_PLAYER_USD,
+  PRIVATE_LESSON_PRICE_USD,
+} from "./lessons";
 import { CAMP_OPTIONS } from "./camps";
 import { FALL_SEASON_PRICE_USD } from "./fall-season-2026";
 import { PICKLPARK_LEAGUES } from "./picklpark-leagues-2026";
@@ -27,7 +32,7 @@ const FREDERICK_LEAGUES_LINE = PICKLPARK_LEAGUES.map(
  * priced by The Pickl Park) and private lessons there. No free evaluation is
  * offered at a Frederick venue — e2e/frederick-page.spec.ts.
  */
-const FREDERICK_FAQ_ANSWER = `Yes. Next Gen coaches a six-week Saturday youth league at The Pickl Park, an indoor pickleball club in Frederick, MD, which sets the age band: ${FREDERICK_LEAGUES_LINE}. Registration and payment go through The Pickl Park, not this site. Private lessons in Frederick run at The Pickl Park too — email or text Coach Sam and we'll set up a time.`;
+const FREDERICK_FAQ_ANSWER = `Yes. Next Gen coaches a six-week Saturday youth league at The Pickl Park, an indoor pickleball club in Frederick, MD, which sets the age band: ${FREDERICK_LEAGUES_LINE}. Registration and payment go through The Pickl Park, not this site. Private lessons in Frederick run at The Pickl Park too — request a time on our Lessons page, and Coach Sam confirms the time and court before sending an invoice.`;
 
 export const faq: FaqItem[] = [
   {
@@ -38,17 +43,17 @@ export const faq: FaqItem[] = [
   {
     question: "My child can't rally yet — can they still join?",
     answer:
-      "Yes. Our Red Ball court is built exactly for kids who are new to the game — a foam-ball group where they learn paddle control, footwork, and the rally from day one. Prefer to fast-track with 1:1 coaching first? Private lessons are available too. Schedule a free 30-minute evaluation and we'll lay out a plan.",
+      "Yes. Our Red Ball court is built exactly for kids who are new to the game — a foam-ball group where they learn paddle control, footwork, and the rally from day one. Prefer to fast-track with 1:1 coaching first? Private lessons are available too. Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation and a plan for your child.",
   },
   {
     question: "Does my child need experience?",
     answer:
-      "No. Group sessions run at every level — including Red Ball for kids brand-new to the court and Orange Ball for kids still building the rally. We place your child by skill so they're with peers at their level. Want to fast-track? Private lessons are available too. Schedule a free evaluation and we'll tell you which path fits.",
+      "No. Group sessions run at every level — including Red Ball for kids brand-new to the court and Orange Ball for kids still building the rally. We place your child by skill so they're with peers at their level. Want to fast-track? Private lessons are available too. Text Coach Sam at 301-325-4731 to arrange a free evaluation and find the path that fits.",
   },
   {
     question: "How do I sign up?",
     answer:
-      "Fill out the form on this page and we'll reach out within 24 hours to help place your child in the right group — or schedule a private lesson if that's the right starting point. You can also email nextgenacademypb@gmail.com or text Sam at 301-325-4731.",
+      "Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation. For private, semi-private, or small-group lessons, choose available times on our Lessons page. Coach Sam confirms the time and court before sending your invoice.",
   },
   {
     question: "What should my child bring?",
@@ -63,7 +68,8 @@ export const faq: FaqItem[] = [
   {
     question: "How do free evaluations work?",
     answer:
-      "Fill out the form below or email us at nextgenacademypb@gmail.com to schedule a 30-minute evaluation. Our coaches will assess your child’s current level and place them on the right court — Red, Orange, Green, or Yellow Ball — with private lessons available if you'd like to fast-track. There’s no cost and no commitment.",
+      "Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation. Share the days and area that work for your family; you’ll agree on the time and court by text. Your coach watches your child play and recommends the right Red, Orange, Green, or Yellow Ball court, with private lessons available too. There’s no cost and no commitment.",
+    cta: { label: "Text to schedule a free evaluation", href: EVALUATION_SMS_URL },
   },
   {
     question: "How much do youth pickleball lessons cost at Next Gen?",
@@ -72,7 +78,7 @@ export const faq: FaqItem[] = [
     // so "how much" gets a concrete answer. The DROP-IN figure is never printed
     // (Sam, 2026-09-08) — e2e/invariant-dropin-price-not-quoted.spec.ts. Every
     // figure here is derived from its data file, never typed.
-    answer: `Start with the free 30-minute evaluation — it places your child on the right Red, Orange, Green, or Yellow Ball court and costs nothing. After that, group classes are drop-in, one hour at a time: no subscription and no commitment, and the rate is shown at checkout before you pay. Six-week season blocks are $${FALL_SEASON_PRICE_USD} per player, paid up front, and summer camp is $${CAMP_DAY_PRICE} a morning or $${CAMP_WEEK_PRICE} for the full week. The Pickl Park sets and shows the price for the Saturday leagues we coach in Frederick, and MVF classes are priced on MVF's own registration portal. Private-lesson rates come with your child's placement after the evaluation. Next Gen registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund.`,
+    answer: `Start with the free 30-minute evaluation — it places your child on the right Red, Orange, Green, or Yellow Ball court and costs nothing. After that, group classes are drop-in, one hour at a time: no subscription and no commitment, and the rate is shown at checkout before you pay. Six-week season blocks are $${FALL_SEASON_PRICE_USD} per player, paid up front, and summer camp is $${CAMP_DAY_PRICE} a morning or $${CAMP_WEEK_PRICE} for the full week. The Pickl Park sets and shows the price for the Saturday leagues we coach in Frederick, and MVF classes are priced on MVF's own registration portal. Private lessons are $${PRIVATE_LESSON_PRICE_USD} for the hour, and semi-private and small-group lessons are $${GROUP_LESSON_PRICE_PER_PLAYER_USD} per player for the hour. Request a time first; Coach Sam confirms before sending an invoice. Next Gen registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund.`,
   },
   {
     question: "What’s your refund policy?",
@@ -93,12 +99,13 @@ export const faq: FaqItem[] = [
   {
     question: "Do you offer private pickleball lessons for kids?",
     answer:
-      "Yes — and they’re the right starting point for any child who can’t rally yet. 1:1 coaching builds the rally, footwork, and consistency a child needs before joining a group. Head Coach Sam Morris is a former physical education teacher and Co-Founder of Next Gen Academy; Co-Founder Amine Lahlou is a former professional tennis player. Email nextgenacademypb@gmail.com or call 301-325-4731 to schedule.",
+      "Yes. Private lessons give your child focused coaching at any level, from learning to rally through tournament preparation. Semi-private and small-group lessons are available too. Co-Founder Sam Morris is a former physical education teacher; Co-Founder Amine Lahlou is a former professional tennis player. Choose up to three available times; Coach Sam confirms the time and court before sending your invoice.",
+    cta: { label: "Request a lesson time", href: "/lessons/book" },
   },
   {
     question: "Can my child join mid-season?",
     answer:
-      "Yes. We accept new players throughout the season. Start with a free 30-minute evaluation and our coaches will place your child into the current session that fits their level and schedule — at any ball color — with a private-lesson option if you'd like to fast-track.",
+      "Yes. We accept new players throughout the season. Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation. Your coach will help you find the current session that fits your child’s level and schedule — at any ball color — with a private-lesson option if you'd like to fast-track.",
   },
   {
     question: "Which Montgomery County towns do you serve?",
@@ -112,7 +119,7 @@ export const faq: FaqItem[] = [
   {
     question: "Do you offer lessons for adults?",
     answer:
-      "Next Gen is youth-only (ages 6–16). For adults, Head Coach Sam Morris offers private lessons separately at sammorrispb.com — start with a free 30-minute skill evaluation, no commitment. Many of our NGA parents pick up the paddle alongside their kids.",
+      "Next Gen is youth-only (ages 6–16). For adults, Coach Sam offers private lessons separately through sammorrispb.com. Choose available times on his lesson scheduling page; Sam confirms the time before sending your invoice. Many of our NGA parents pick up the paddle alongside their kids.",
   },
 ];
 

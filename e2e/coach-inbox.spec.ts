@@ -306,7 +306,15 @@ test.describe("F2 — shipWindowBounds is THE cutoff math the cron queries with"
     expect(buildDraftsQueryFilter(b.cutoff, b.todayEt)).toEqual({
       and: [
         { property: "Status", select: { equals: "Approved" } },
-        { property: "Drafted At", date: { on_or_after: "2026-06-25" } },
+        { property: "Drafted At", date: { on_or_before: "2026-07-02" } },
+        { or: [
+          { property: "Send On", date: { equals: "2026-07-02" } },
+          { property: "Send On", date: { is_empty: true } },
+        ] },
+        { or: [
+          { property: "Send On", date: { equals: "2026-07-02" } },
+          { property: "Drafted At", date: { on_or_after: "2026-06-25" } },
+        ] },
         {
           or: [
             { property: "Expires At", date: { is_empty: true } },

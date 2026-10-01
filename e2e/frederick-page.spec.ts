@@ -79,7 +79,7 @@ test.describe("Frederick landing page copy", () => {
     expect(cta.href).toBe("#leagues");
     expect(pageSrc).toContain('id="leagues"');
     // Everywhere else keeps the primary conversion.
-    expect(stickyCtaFor("/").label).toBe("Free Evaluation");
+    expect(stickyCtaFor("/").label).toBe("Text for an Evaluation");
     expect(stickyCtaFor("/youth-pickleball-frederick/").href).toBe("#leagues");
   });
 

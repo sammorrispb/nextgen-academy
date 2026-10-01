@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { createAndSendSignupInvoice } from "@/lib/stripe-invoices";
+import { createAndSendSignupInvoice, type SignupInvoiceResult } from "@/lib/stripe-invoices";
+import { parseSubmissionId } from "@/lib/submission-key";
 import {
   MVF_JUNIOR_TOURNAMENT_DATE_ISO,
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
@@ -33,6 +34,21 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { invoiceSafeName } from "@/lib/invoice-text";
+import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
+import { Resend } from "resend";
+import { notifyInvoiceSent } from "@/lib/signup-admin-notify";
+import { syncMvfRegistrationToLinkDink } from "@/lib/linkdink-roster-sync";
+import {
+  mvfTournamentSignupConfirmationHtml,
+  mvfTournamentSignupConfirmationSubject,
+  mvfTournamentSignupConfirmationText,
+} from "@/lib/email/mvf-tournament-signup-confirmation";
+
+// Per IP (best-effort, in-memory): each request can make NGA's Stripe account
+// email an invoice to the address typed in (security review 2026-09-28, H2).
+const invoiceLimiter = createRateLimiter({ limit: 20 });
+
 
 // MVF Junior Tournament sign-up — INVOICE-BASED, mirroring the lessons,
 // Monday Girls drop-in, and Winter League checkouts. The $50/$60 entry fee
@@ -58,6 +74,13 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (invoiceLimiter.isRateLimited(getClientIp(req))) {
+    return NextResponse.json(
+      { error: "Too many sign-ups from this connection. Please try again in a bit, or text Coach Sam at 301-325-4731 and he'll get you in." },
+      { status: 429 },
+    );
   }
 
   // Fail closed on configuration BEFORE validating the form.
@@ -125,19 +148,18 @@ export async function POST(req: NextRequest) {
   const priceUsd = resolveTournamentPriceUsd(data.resident === true);
   const { ngaShareUsd, mvfShareUsd } = splitTournamentRevenueUsd(priceUsd);
 
-  const submissionId =
-    typeof body.submissionId === "string" && body.submissionId.length > 0
-      ? body.submissionId
-      : undefined;
+  // The form resends the same id for a retry of the same content, so a retry
+  // replays this sign-up's invoice rather than sending a second one.
+  const submissionId = parseSubmissionId(body.submissionId);
 
-  let invoice;
+  let result: SignupInvoiceResult;
   try {
-    invoice = await createAndSendSignupInvoice({
+    result = await createAndSendSignupInvoice({
       customerEmail: data.email,
-      customerName: data.parentName,
+      customerName: invoiceSafeName(data.parentName, ""),
       items: [
         {
-          description: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${data.childFirstName} ${data.childLastName} (${data.resident ? "Resident" : "Non-resident"})`,
+          description: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${invoiceSafeName(data.childFirstName + " " + data.childLastName)} (${data.resident ? "Resident" : "Non-resident"})`,
           amountCents: priceUsd * 100,
           quantity: 1,
         },
@@ -171,7 +193,7 @@ export async function POST(req: NextRequest) {
         sms_consent: data.smsConsent ? "true" : "false",
         sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "",
       },
-      memo: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${data.childFirstName} ${data.childLastName}`,
+      memo: `${MVF_JUNIOR_TOURNAMENT_TITLE} — ${division.label} — ${invoiceSafeName(data.childFirstName + " " + data.childLastName)}`,
       footer: `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} Bring a refillable water bottle and court shoes — we have loaner paddles.`,
       // A week to pay keeps the roster real.
       daysUntilDue: 7,
@@ -189,10 +211,18 @@ export async function POST(req: NextRequest) {
       { status: 502 },
     );
   }
+  const { invoice, alreadySent } = result;
+  if (alreadySent) {
+    console.info(
+      `[checkout-mvf-junior-tournament] retry of a sign-up whose invoice ${invoice.id} already went out — not announcing it again`,
+    );
+  }
 
   // Roster row now, Paid=false — the Stripe webhook flips it on payment. A
   // failed write here is loud but can't fail a signup whose invoice already
-  // went out; the webhook backfills the row on payment if it finds none.
+  // went out; the webhook backfills the row on payment if it finds none. A
+  // retry gets the same invoice back, and the write finds that invoice's row
+  // rather than adding a second.
   const rowResult = await createMvfTournamentRegistration({
     parentName: data.parentName,
     parentEmail: data.email,
@@ -216,10 +246,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Both admin inboxes get an "invoice sent" heads-up. notifyInvoiceSent
-  // never throws, so this can't fail a signup whose invoice already went out.
-  await import("@/lib/signup-admin-notify").then(({ notifyInvoiceSent }) =>
-    notifyInvoiceSent({
+  // Both admin inboxes get an "invoice sent" heads-up — once per invoice, so
+  // not on a retry. notifyInvoiceSent never throws, so this can't fail a
+  // signup whose invoice already went out.
+  if (!alreadySent) {
+    await notifyInvoiceSent({
       kind: "mvf-junior-tournament",
       headline: `MVF Junior Tournament invoice sent`,
       parentName: data.parentName,
@@ -235,72 +266,69 @@ export async function POST(req: NextRequest) {
         `Event: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} — ${MVF_JUNIOR_TOURNAMENT_VENUE}`,
         `Entry: $${priceUsd.toFixed(2)} (${data.resident ? "MV resident" : "non-resident"}) — NGA $${ngaShareUsd} / MVF $${mvfShareUsd}`,
       ],
-    }),
-  );
+    });
+  }
 
   // MVF tournament: push the registrant onto the Link & Dink popup roster so
   // registration numbers show in real time and day-of tooling has the player.
   // Never throws — a sync miss is logged for hand retry; Notion stays source
   // of truth and the L&D endpoint is idempotent.
-  await import("@/lib/linkdink-roster-sync").then(({ syncMvfRegistrationToLinkDink }) =>
-    syncMvfRegistrationToLinkDink({
-      division: division.division,
-      childFirstName: data.childFirstName,
-      childLastName: data.childLastName,
-      parentEmail: data.email,
-      parentPhone: data.phone,
-    }),
-  );
+  await syncMvfRegistrationToLinkDink({
+    division: division.division,
+    childFirstName: data.childFirstName,
+    childLastName: data.childLastName,
+    parentEmail: data.email,
+    parentPhone: data.phone,
+  });
 
   // Branded NGA signup confirmation to the parent — sent at registration
   // (BEFORE payment), distinct from the webhook's post-payment "You're in".
-  // Single primary CTA: the hosted pay link. Failures are logged, never
-  // thrown — the invoice already went out and the success page works.
-  try {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (
-      apiKey &&
-      invoice.hosted_invoice_url &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
-    ) {
-      const { Resend } = await import("resend");
-      const {
-        mvfTournamentSignupConfirmationSubject,
-        mvfTournamentSignupConfirmationText,
-        mvfTournamentSignupConfirmationHtml,
-      } = await import("@/lib/email/mvf-tournament-signup-confirmation");
-      const parentFirst = data.parentName.split(/\s+/)[0] || "there";
-      const emailInput = {
-        parentFirst,
-        childFirst: data.childFirstName || "your player",
-        divisionLabel: division.label,
-        amountUsd: priceUsd.toFixed(2),
-        residencyLabel: data.resident ? "MV resident" : "non-resident",
-        payUrl: invoice.hosted_invoice_url,
-      };
-      const { error } = await new Resend(apiKey).emails.send({
-        from: "Next Gen PB Academy <noreply@nextgenpbacademy.com>",
-        to: data.email,
-        bcc: "nextgenacademypb@gmail.com",
-        replyTo: "nextgenacademypb@gmail.com",
-        subject: mvfTournamentSignupConfirmationSubject({
-          childFirst: emailInput.childFirst,
-        }),
-        html: mvfTournamentSignupConfirmationHtml(emailInput),
-        text: mvfTournamentSignupConfirmationText(emailInput),
-      });
-      if (error) {
-        console.error(
-          "[checkout-mvf-junior-tournament] signup confirmation email rejected",
-          error,
-        );
+  // Single primary CTA: the hosted pay link. Once per invoice, so not on a
+  // retry. Failures are logged, never thrown — the invoice already went out
+  // and the success page works.
+  if (!alreadySent) {
+    try {
+      const apiKey = process.env.RESEND_API_KEY;
+      if (
+        apiKey &&
+        invoice.hosted_invoice_url &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)
+      ) {
+        // Sent BEFORE payment to the address typed in: the names must not be
+        // able to carry a link (the plain-text part and subject aren't HTML).
+        const parentFirst = invoiceSafeName(data.parentName.split(/\s+/)[0], "there");
+        const emailInput = {
+          parentFirst,
+          childFirst: invoiceSafeName(data.childFirstName),
+          divisionLabel: division.label,
+          amountUsd: priceUsd.toFixed(2),
+          residencyLabel: data.resident ? "MV resident" : "non-resident",
+          payUrl: invoice.hosted_invoice_url,
+        };
+        const { error } = await new Resend(apiKey).emails.send({
+          from: "Next Gen PB Academy <noreply@nextgenpbacademy.com>",
+          to: data.email,
+          bcc: "nextgenacademypb@gmail.com",
+          replyTo: "nextgenacademypb@gmail.com",
+          subject: mvfTournamentSignupConfirmationSubject({
+            childFirst: emailInput.childFirst,
+          }),
+          html: mvfTournamentSignupConfirmationHtml(emailInput),
+          text: mvfTournamentSignupConfirmationText(emailInput),
+        });
+        if (error) {
+          console.error(
+            "[checkout-mvf-junior-tournament] signup confirmation email rejected",
+            error,
+          );
+        }
       }
+    } catch (err) {
+      console.error(
+        "[checkout-mvf-junior-tournament] signup confirmation email failed",
+        err,
+      );
     }
-  } catch (err) {
-    console.error(
-      "[checkout-mvf-junior-tournament] signup confirmation email failed",
-      err,
-    );
   }
 
   return NextResponse.json({

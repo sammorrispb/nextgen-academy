@@ -218,7 +218,10 @@ test.describe("how-it-works — the season primer", () => {
 
   test("promises a rain decision rather than telling parents to guess", () => {
     expect(text).toContain("Sunday, November 1");
-    expect(text.toLowerCase()).toContain("by noon");
+    // Two hours before each group starts (Sam, 2026-09-26) — not "by noon".
+    expect(text.toLowerCase()).toContain("two hours before your group starts");
+    expect(text).toContain("11:00 AM for Green Ball, 12:30 PM for Yellow Ball");
+    expect(text.toLowerCase()).not.toContain("by noon");
   });
 });
 

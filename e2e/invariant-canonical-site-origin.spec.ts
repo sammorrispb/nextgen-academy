@@ -1,0 +1,252 @@
+import { test, expect } from "@playwright/test";
+import { NextRequest } from "next/server";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
+import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
+
+// Per-call origin resolution and route gates let hooks isolate these values.
+const TOUCHED_ENV = ["RESEND_API_KEY", "ADMIN_ALLOWLIST", "COACH_ALLOWED_EMAILS",
+  "COACH_SIGNING_SECRET", "NEXT_PUBLIC_SITE_URL", "TWILIO_ACCOUNT_SID",
+  "TWILIO_AUTH_TOKEN", "VERCEL_ENV", "VERCEL_URL"] as const;
+const savedEnv = Object.fromEntries(TOUCHED_ENV.map((k) => [k, process.env[k]]));
+
+import { POST as adminRequestLink } from "../src/app/api/admin/request-link/route";
+import { POST as coachRequestLink } from "../src/app/api/coach/request-link/route";
+import { siteOrigin } from "../src/lib/site-origin";
+
+// Security review 2026-09-28, H1 + M1: emailed sign-in links and Stripe
+// return URLs were built from the request's Origin header. An attacker could
+// make NGA's real sender email Sam a sign-in link to their own host; one click
+// leaked a token worth a 30-day admin cookie. Every link we mint must come
+// from server configuration, never from the request.
+const CANONICAL = "https://nextgenpbacademy.com";
+const EVIL_HEADERS = {
+  origin: "https://nextgenpbacademy.com.evil.example",
+  host: "evil.example",
+  "x-forwarded-host": "evil.example",
+  referer: "https://evil.example/login",
+};
+
+let ip = 0;
+function linkReq(path: string, email: string, fixedIp?: string): NextRequest {
+  ip += 1;
+  return new NextRequest(`https://evil.example${path}`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+    headers: {
+      "content-type": "application/json",
+      "x-forwarded-for": fixedIp ?? `10.8.${Math.floor(ip / 250)}.${ip % 250}`,
+      ...EVIL_HEADERS,
+    },
+  });
+}
+
+const stub = new FetchStub();
+test.beforeEach(() => {
+  for (const key of TOUCHED_ENV) delete process.env[key];
+  Object.assign(process.env, { RESEND_API_KEY: "re_test_origin", ADMIN_ALLOWLIST: "admin-origin@example.com",
+    COACH_ALLOWED_EMAILS: "coach-origin@example.com", COACH_SIGNING_SECRET: "origin-test-signing-secret-0123456789" });
+  stub.reset();
+  stub.on("api.resend.com", { id: "email_test" }).install();
+});
+test.afterEach(() => stub.uninstall());
+test.afterAll(() => {
+  for (const key of TOUCHED_ENV) {
+    if (savedEnv[key] === undefined) delete process.env[key]; else process.env[key] = savedEnv[key];
+  }
+});
+
+function sent(): Array<{ to: string | string[]; subject: string; text?: string }> {
+  return stub.callsTo("api.resend.com").map((c: RecordedFetch) => JSON.parse(c.body));
+}
+
+test.describe("siteOrigin() — server configuration only", () => {
+  const cases: Array<[string, string | undefined, string]> = [
+    ["unset → canonical", undefined, CANONICAL],
+    ["empty string → canonical", "", CANONICAL],
+    ["whitespace → canonical", "   ", CANONICAL],
+    ["not a URL → canonical", "not a url", CANONICAL],
+    ["plain http on a real host → canonical", "http://nextgenpbacademy.com", CANONICAL],
+    ["https value is used", "https://www.nextgenpbacademy.com", "https://www.nextgenpbacademy.com"],
+    ["trailing slash is dropped", "https://nextgenpbacademy.com/", CANONICAL],
+    ["a path is reduced to the origin", "https://nextgenpbacademy.com/some/path?x=1", CANONICAL],
+  ];
+  const envKeys = ["NEXT_PUBLIC_SITE_URL", "VERCEL_ENV", "VERCEL_URL"] as const;
+  function withEnv(env: Partial<Record<(typeof envKeys)[number], string>>, fn: () => void) {
+    const prev = Object.fromEntries(envKeys.map((k) => [k, process.env[k]]));
+    try {
+      for (const k of envKeys) {
+        if (env[k] === undefined) delete process.env[k];
+        else process.env[k] = env[k];
+      }
+      fn();
+    } finally {
+      for (const k of envKeys) {
+        if (prev[k] === undefined) delete process.env[k];
+        else process.env[k] = prev[k];
+      }
+    }
+  }
+  test("a Vercel preview uses its own platform-set URL", () => {
+    withEnv({ VERCEL_ENV: "preview", VERCEL_URL: "nga-git-x.vercel.app" }, () =>
+      expect(siteOrigin()).toBe("https://nga-git-x.vercel.app"),
+    );
+  });
+  test("production ignores VERCEL_URL; preview without VERCEL_URL → canonical", () => {
+    withEnv({ VERCEL_ENV: "production", VERCEL_URL: "nga-abc.vercel.app" }, () =>
+      expect(siteOrigin()).toBe(CANONICAL),
+    );
+    withEnv({ VERCEL_ENV: "preview" }, () => expect(siteOrigin()).toBe(CANONICAL));
+  });
+  for (const [name, value, expected] of cases) {
+    test(name, () => {
+      const prev = process.env.NEXT_PUBLIC_SITE_URL;
+      try {
+        if (value === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+        else process.env.NEXT_PUBLIC_SITE_URL = value;
+        expect(siteOrigin()).toBe(expected);
+      } finally {
+        if (prev === undefined) delete process.env.NEXT_PUBLIC_SITE_URL;
+        else process.env.NEXT_PUBLIC_SITE_URL = prev;
+      }
+    });
+  }
+});
+
+test.describe("magic-link routes ignore every request-supplied host", () => {
+  for (const [label, handler, path, email, verifyPath] of [
+    ["admin", adminRequestLink, "/api/admin/request-link", "admin-origin@example.com", "/admin/auth/verify?token="],
+    ["coach", coachRequestLink, "/api/coach/request-link", "coach-origin@example.com", "/coach/auth/verify?token="],
+  ] as const) {
+    test(`${label}: the emailed link starts with the canonical origin`, async () => {
+      const res = await handler(linkReq(path, email));
+      expect(res.status).toBe(200);
+      const mails = sent();
+      expect(mails).toHaveLength(1);
+      const text = mails[0].text ?? "";
+      expect(text).toContain(`${CANONICAL}${verifyPath}`);
+      expect(text).not.toContain("evil.example");
+    });
+
+    test(`${label}: per-IP limit — the 11th request in an hour sends nothing`, async () => {
+      const fixed = `10.77.${label === "admin" ? 1 : 2}.1`;
+      for (let i = 0; i < 10; i++) {
+        const ok = await handler(linkReq(path, email, fixed));
+        expect(ok.status).toBe(200);
+      }
+      expect(sent()).toHaveLength(10);
+      const limited = await handler(linkReq(path, email, fixed));
+      expect(limited.status).toBe(429);
+      expect(sent()).toHaveLength(10);
+      // A different IP is unaffected — the limit is per IP, never per email,
+      // so nobody can lock Sam out by spamming his address.
+      const other = await handler(linkReq(path, email));
+      expect(other.status).toBe(200);
+      expect(sent()).toHaveLength(11);
+    });
+
+    test(`${label}: a failed send still errors AND alerts`, async () => {
+      stub.reset();
+      stub
+        .onDynamic("api.resend.com", (call) =>
+          call.body.includes("[cron-alert]")
+            ? { status: 200, json: { id: "alert_ok" } }
+            : { status: 500, json: { name: "application_error", message: "down" } },
+        )
+        .install();
+      const res = await handler(linkReq(path, email));
+      expect(res.status).toBe(502);
+      const alert = sent().find((m) => m.subject.includes("[cron-alert]"));
+      expect(alert, "Sam must learn the sign-in email failed").toBeTruthy();
+      expect(alert!.subject).toContain(`${label}-request-link`);
+      expect(JSON.stringify(alert)).not.toContain(email);
+    });
+  }
+});
+
+// ── Source guard: no link or redirect may be built from request data ───────
+const SRC = join(__dirname, "..", "src");
+const REQUEST_ORIGIN_PATTERNS: RegExp[] = [
+  /\.get\(\s*["'`](origin|host|x-forwarded-host|x-forwarded-proto|forwarded|referer)["'`]\s*\)/i,
+  /\bnextUrl\.(origin|host|hostname|href)\b/,
+  /new\s+URL\(\s*(req|request)\.url\s*\)\.(origin|host|hostname)\b/,
+  /new\s+URL\([^)]*,\s*(req|request)\.url\s*\)/,
+];
+// A line-based tripwire, not a proof — it catches the shapes a hurried fix
+// reaches for. Reviewed exceptions. checkout-fall is rewritten on the unmerged branch
+// feat/admin-prorated-fall-registration (which also adds admin/fall-registration);
+// that branch swaps to siteOrigin() when it lands — remove both entries then.
+const ALLOWLIST = new Set([
+  "src/app/api/checkout-fall/route.ts",
+  "src/app/api/admin/fall-registration/route.ts",
+]);
+
+// This read compares an Origin to trusted server configuration for CSRF; it
+// builds no URL. Only this exact comparison may bypass the link-origin scanner.
+const CSRF_COMPARE_FILE = "src/app/api/admin/mvf-roster-sync/route.ts";
+const CSRF_COMPARE_LINE = 'if (req.headers.get("origin") !== siteOrigin()) return json(403, { ok: false, error: "bad_origin" });';
+
+function findRequestOriginReads(source: string): string[] {
+  return source
+    .split("\n")
+    .filter((line) => REQUEST_ORIGIN_PATTERNS.some((re) => re.test(line)))
+    .map((l) => l.trim());
+}
+
+function walk(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) walk(p, out);
+    else if (/\.(ts|tsx)$/.test(name)) out.push(p);
+  }
+  return out;
+}
+
+test.describe("source guard — request-derived origins", () => {
+  test("the scanner catches every known shape (self-test)", () => {
+    const bad = [
+      `const o = req.headers.get("origin") ?? x;`,
+      `const h = req.headers; const o = h.get('Origin');`,
+      "const host = (await headers()).get(`x-forwarded-host`);",
+      `const r = request.headers.get("referer");`,
+      `const base = req.nextUrl.origin;`,
+      `const base = new URL(request.url).origin;`,
+      `const f = req.headers.get("forwarded");`,
+      `const u = new URL("/admin", req.url);`,
+    ];
+    for (const line of bad) expect(findRequestOriginReads(line), line).toHaveLength(1);
+    const fine = [
+      `const url = req.nextUrl.clone(); url.pathname = "/admin";`,
+      `const dry = new URL(req.url).searchParams.get("dryRun");`,
+      `const origin = siteOrigin();`,
+    ];
+    for (const line of fine) expect(findRequestOriginReads(line), line).toHaveLength(0);
+  });
+
+  test("no file under src/ builds a URL from request headers or the request URL's host", () => {
+    const offenders: string[] = [];
+    for (const file of walk(SRC)) {
+      const rel = relative(join(__dirname, ".."), file);
+      if (ALLOWLIST.has(rel)) continue;
+      const hits = findRequestOriginReads(readFileSync(file, "utf8"));
+      for (const h of hits) {
+        if (rel === CSRF_COMPARE_FILE && h === CSRF_COMPARE_LINE) continue;
+        offenders.push(`${rel}: ${h}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("every allowlist entry still needs its exemption (stale entries fail)", () => {
+    const root = join(__dirname, "..");
+    for (const rel of ALLOWLIST) {
+      let source: string;
+      try {
+        source = readFileSync(join(root, rel), "utf8");
+      } catch {
+        continue; // lives on an unmerged branch; checked once it lands
+      }
+      expect(findRequestOriginReads(source), `${rel} is clean — drop it from ALLOWLIST`).not.toHaveLength(0);
+    }
+  });
+});

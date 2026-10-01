@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 import { buildDraftsQueryFilter } from "../src/lib/notion-newsletter-drafts";
 
 // Pure unit test (no network) for the Notion query filter that guards the
-// weekly newsletter's "From Coach Sam" lead block: only Approved rows inside
-// the 7-day Drafted At window whose Expires At hasn't passed should ship.
+// weekly newsletter's "From Coach Sam" lead block: Approved, non-future rows
+// due today or unscheduled inside the freshness window, with a live expiry.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function findCondition(and: any[], property: string, key: string): any {
   return and.find((c) => c?.property === property && c?.date?.[key] !== undefined);
@@ -23,18 +23,24 @@ test.describe("buildDraftsQueryFilter", () => {
     });
   });
 
-  test("AND includes Drafted At on_or_after the cutoff", () => {
-    const drafted = findCondition(filter.and, "Drafted At", "on_or_after");
-    expect(drafted).toEqual({
-      property: "Drafted At",
-      date: { on_or_after: "2026-06-11" },
+  test("scheduled or fresh branch keeps the age cutoff only on unscheduled rows", () => {
+    expect(filter.and).toContainEqual({ or: [
+      { property: "Send On", date: { equals: "2026-06-18" } },
+      { property: "Send On", date: { is_empty: true } },
+    ] });
+    expect(filter.and).toContainEqual({ or: [
+      { property: "Send On", date: { equals: "2026-06-18" } },
+      { property: "Drafted At", date: { on_or_after: "2026-06-11" } },
+    ] });
+    expect(findCondition(filter.and, "Drafted At", "on_or_before")).toEqual({
+      property: "Drafted At", date: { on_or_before: "2026-06-18" },
     });
   });
 
   test("AND includes an OR with both Expires At branches (empty + on_or_after today)", () => {
     const orClause = filter.and.find(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (c: any) => Array.isArray(c?.or),
+      (c: any) => c?.or?.some((branch: any) => branch.property === "Expires At"),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ) as { or: any[] } | undefined;
     expect(orClause).toBeTruthy();

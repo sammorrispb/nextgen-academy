@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { site } from "@/data/site";
 import { inferCity } from "@/lib/venue-lookup";
+import { escapeHtml } from "@/lib/html";
 
 /**
  * Triggered by a Notion automation when a new session row is created in the
@@ -164,7 +165,7 @@ function notifyHtml(parentName: string, body: ExtractedSession): string {
   <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 8px;">
     A new session just opened near you.
   </h1>
-  <p style="font-size: 15px; line-height: 1.6;">Hi ${parentName},</p>
+  <p style="font-size: 15px; line-height: 1.6;">Hi ${escapeHtml(parentName)},</p>
   <p style="font-size: 15px; line-height: 1.6;">
     You're on the Next Gen waitlist and a session just posted that matches your area. Here are the details:
   </p>

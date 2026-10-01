@@ -7,6 +7,7 @@ import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { isFirstTimeParent } from "@/lib/notion-player-lookup";
 import { site } from "@/data/site";
+import { escapeHtml } from "@/lib/html";
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -87,6 +88,18 @@ export async function POST(request: NextRequest) {
 
   const isFirstTimer = await isFirstTimeParent(email);
 
+  // Escaped copies for the HTML bodies: the parent email goes to whatever
+  // address was submitted, so typed text must never become markup.
+  const e = {
+    parentName: escapeHtml(parentName),
+    parentFirst: escapeHtml(parentName.split(" ")[0]),
+    childName: escapeHtml(childName),
+    childFirst: escapeHtml(childName.split(" ")[0]),
+    email: escapeHtml(email),
+    phone: escapeHtml(phone),
+    notes: escapeHtml(notes),
+  };
+
   const adminHtml = `
 <div style="${s.wrapper}">
   <h1 style="${s.headingYellow} margin-bottom: 24px;">
@@ -95,25 +108,25 @@ export async function POST(request: NextRequest) {
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
     <tr style="${s.tableRow}">
       <td style="${s.tableLabelWide}">Parent</td>
-      <td style="${s.tableValue}">${parentName}</td>
+      <td style="${s.tableValue}">${e.parentName}</td>
     </tr>
     <tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Player</td>
-      <td style="${s.tableValue}">${childName} (age ${age})</td>
+      <td style="${s.tableValue}">${e.childName} (age ${age})</td>
     </tr>
     <tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Email</td>
-      <td style="padding: 10px 8px;"><a href="mailto:${email}" style="${s.link}">${email}</a></td>
+      <td style="padding: 10px 8px;"><a href="mailto:${e.email}" style="${s.link}">${e.email}</a></td>
     </tr>
     <tr style="${s.tableRow}">
       <td style="${s.tableLabel}">Phone</td>
-      <td style="padding: 10px 8px;"><a href="tel:${phone}" style="${s.link}">${phone}</a></td>
+      <td style="padding: 10px 8px;"><a href="tel:${e.phone}" style="${s.link}">${e.phone}</a></td>
     </tr>
     ${
       notes
         ? `<tr style="${s.tableRow}">
       <td style="${s.tableLabel} vertical-align: top;">Notes</td>
-      <td style="${s.tableValue} white-space: pre-wrap;">${notes}</td>
+      <td style="${s.tableValue} white-space: pre-wrap;">${e.notes}</td>
     </tr>`
         : ""
     }
@@ -121,7 +134,7 @@ export async function POST(request: NextRequest) {
   <div style="${s.actionCalloutYellow}">
     <p style="${s.actionLabelYellow}">ACTION NEEDED</p>
     <p style="margin: 8px 0 0; font-size: 13px; color: ${c.text};">
-      Reach out to ${parentName} within 24 hours to set up the eval for ${childName}.
+      Reach out to ${e.parentName} within 24 hours to set up the eval for ${e.childName}.
     </p>
   </div>
 </div>`;
@@ -129,11 +142,11 @@ export async function POST(request: NextRequest) {
   const parentHtml = `
 <div style="${s.wrapper}">
   <h1 style="${s.headingYellow} margin-bottom: 8px;">
-    Got it, ${parentName.split(" ")[0]}.
+    Got it, ${e.parentFirst}.
   </h1>
   <p style="font-size: 15px; line-height: 1.6;">
     Thanks for the Yellow Ball inquiry. A coach will reach out within 24 hours
-    to set up ${childName.split(" ")[0]}&rsquo;s eval.
+    to set up ${e.childFirst}&rsquo;s eval.
   </p>
   <div style="${s.card}">
     <p style="margin: 0 0 4px; font-size: 13px; color: ${c.muted}; text-transform: uppercase; letter-spacing: 1px;">About Yellow Ball</p>

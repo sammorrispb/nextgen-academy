@@ -10,6 +10,7 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { siteOrigin } from "@/lib/site-origin";
 
 // Season enrollment checkout — full-pay only, ENV-GATED. When the season's
 // Stripe price env var is unset (the default until the P0 launch gate clears),
@@ -76,10 +77,7 @@ export async function POST(req: NextRequest) {
 
   const band = findBand(season.band);
 
-  const origin =
-    req.headers.get("origin") ??
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    "https://nextgenpbacademy.com";
+  const origin = siteOrigin();
 
   const stripe = getStripe();
   const checkout = await stripe.checkout.sessions.create({

@@ -125,14 +125,14 @@ test.describe("/clusters/[area] sub-pages", () => {
       await expect(cta).toHaveAttribute("href", `/crew?cluster=${cluster.slug}`);
     });
 
-    test(`${cluster.slug}: shows the /free-evaluation fallback for not-yet-group-ready families`, async ({
+    test(`${cluster.slug}: shows the text-to-schedule evaluation fallback for not-yet-group-ready families`, async ({
       page,
     }) => {
       await page.goto(`/clusters/${cluster.slug}`);
       const fallback = page.getByTestId("eval-fallback");
       await expect(fallback).toBeVisible();
       const evalLink = fallback.getByRole("link", { name: /free evaluation/i });
-      await expect(evalLink).toHaveAttribute("href", "/free-evaluation");
+      await expect(evalLink).toHaveAttribute("href", "sms:+13013254731");
     });
 
     test(`${cluster.slug}: CTA meets 48×48 min tap target (mobile WCAG 2.5.5)`, async ({

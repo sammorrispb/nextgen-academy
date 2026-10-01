@@ -23,6 +23,7 @@
  * Status. And no PII may ride an alert body — refs are Notion page IDs only.
  */
 import { test, expect } from "@playwright/test";
+import { mock } from "node:test";
 import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 
@@ -31,6 +32,7 @@ process.env.CRON_SECRET = "test-cron-secret";
 process.env.NOTION_API_KEY = "ntn_test";
 process.env.NOTION_SESSIONS_DB_ID = "sessions-db";
 process.env.NOTION_NEWSLETTER_DB_ID = "subs-db";
+process.env.NOTION_PLAYER_CRM_DB_ID = "crm-db";
 process.env.NOTION_NEWS_DB_ID = "news-db";
 process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID = "drafts-db";
 process.env.RESEND_API_KEY = "re_test";
@@ -46,7 +48,7 @@ const ALLOWED_HOSTS = ["api.notion.com", "api.resend.com"];
 
 // A parent on the list. Neither this address nor the child's name may ever
 // appear in an alert body.
-const PARENT_EMAIL = "parent@example.com";
+const PARENT_EMAIL = "parent@example.org";
 const PARENT_NAME = "Dana Whitfield";
 // Free-text operator title — the exact field that could carry a family name,
 // which is why the alert refs are page IDs and never the `Week` title.
@@ -118,16 +120,19 @@ function wire(opts: {
   stub.on(/databases\/sessions-db\/query/, { results: [] });
   stub.on(/databases\/news-db\/query/, { results: [] });
   stub.on(/databases\/subs-db\/query/, {
+    has_more: false,
     results: [
       {
         id: "sub-1",
         properties: {
           "Parent Name": { title: [{ plain_text: PARENT_NAME }] },
           Email: { email: PARENT_EMAIL },
+          Status: { select: { name: "Active" } },
         },
       },
     ],
   });
+  stub.on(/databases\/crm-db\/query/, { results: [], has_more: false });
   stub.on("api.resend.com", { id: "email-1" });
   // Any other Notion write (e.g. the Sent At stamp) succeeds quietly.
   stub.on("api.notion.com", { ok: true });
@@ -146,6 +151,142 @@ test.beforeEach(() => {
   stub.install();
 });
 test.afterEach(() => stub.uninstall());
+
+test("October 1 cron sends the winter subject and first lead to parent and archive", async () => {
+  const winterId = "3ebfa3ac-27dc-8167-8030-e58c8c7bbe8e";
+  mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-01T22:00:00Z") });
+  try {
+    wire({
+      drafts: [draftRow("earlier-lead"), draftRow(winterId)],
+      blocks: {
+        "earlier-lead": bodyBlocks("Another approved announcement."),
+        [winterId]: bodyBlocks("Your winter options are still being finalized."),
+      },
+    });
+    expect((await GET(req("test-cron-secret"))).status).toBe(200);
+    const messages = stub.callsTo("api.resend.com").map(call => JSON.parse(call.body));
+    expect(messages).toHaveLength(2);
+    for (const message of messages) {
+      expect(message.subject).toContain("Your player's winter pickleball options");
+      for (const body of [message.html, message.text]) {
+        expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Another approved announcement"));
+        expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Fall Session II"));
+        expect(body).not.toContain("Winter league interest — Montgomery Village and Frederick");
+      }
+    }
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+for (const issue of [
+  { date: "2026-10-01", id: "3ebfa3ac-27dc-813f-b2f2-c0b5beb68332", subject: "Your player's winter pickleball options",
+    lead: "Where will your player play this winter?", winterSuppressed: true },
+  { date: "2026-10-08", id: "3ebfa3ac-27dc-8192-be55-f3feaaea8244", subject: "A game-day goal for your player: October 24",
+    lead: "Give your player a game-day goal", winterSuppressed: false },
+]) {
+  test(`${issue.date} scheduled cron sends the reviewed lead first once with automatic sections intact`, async () => {
+    mock.timers.enable({ apis: ["Date"], now: new Date(`${issue.date}T22:00:00Z`) });
+    try {
+      wire({
+        drafts: [draftRow("earlier-lead"), { ...draftRow(issue.id), properties: {
+          ...draftRow(issue.id).properties,
+          "Drafted At": { date: { start: "2026-09-30" } },
+          "Send On": { date: { start: issue.date } },
+          "Expires At": { date: { start: issue.date } },
+        } }],
+        blocks: {
+          "earlier-lead": bodyBlocks("Another approved announcement."),
+          [issue.id]: bodyBlocks(`${issue.lead}. MVF Junior Tournament: October 24, 4–7 PM ET. $50 MV resident / $60 non-resident. At least four games per player.`),
+        },
+      });
+      expect((await GET(req("test-cron-secret"))).status).toBe(200);
+      const messages = stub.callsTo("api.resend.com").map(call => JSON.parse(call.body));
+      expect(messages).toHaveLength(2);
+      for (const message of messages) {
+        expect(message.subject).toContain(issue.subject);
+        for (const body of [message.html, message.text]) {
+          expect(body.split(issue.lead)).toHaveLength(2);
+          expect(body.split("At least four games per player.")).toHaveLength(2);
+          expect(body.indexOf(issue.lead)).toBeLessThan(body.indexOf("Another approved announcement"));
+          expect(body.indexOf(issue.lead)).toBeLessThan(body.indexOf("Fall Session II"));
+          expect(body).not.toContain("Montgomery Village junior tournament");
+          expect(body.includes("Winter league interest — Montgomery Village and Frederick")).toBe(!issue.winterSuppressed);
+          expect(body).toContain("/book/private-lesson");
+          expect(body).toContain("Unsubscribe"); expect(body).toContain("chat.whatsapp.com");
+        }
+      }
+      const stamps = stub.calls.filter(call => call.method === "PATCH" && call.url.includes(issue.id));
+      expect(stamps).toHaveLength(1);
+      expect(stamps[0].body).toContain('"Sent At"');
+      expect(stamps[0].body).not.toContain('"Status"');
+      expect(stamps[0].body).not.toContain('"Drafted At"');
+    } finally { mock.timers.reset(); }
+  });
+}
+
+test("an unreadable October 8 campaign row cannot select its subject or suppress the automatic tournament", async () => {
+  const id = "3ebfa3ac-27dc-8192-be55-f3feaaea8244";
+  mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-08T22:00:00Z") });
+  try {
+    wire({ drafts: [{ ...draftRow(id), properties: { ...draftRow(id).properties,
+      "Drafted At": { date: { start: "2026-09-30" } }, "Send On": { date: { start: "2026-10-08" } },
+      "Expires At": { date: { start: "2026-10-08" } },
+    } }], blocks: { [id]: null } });
+    expect((await GET(req("test-cron-secret"))).status).toBe(500);
+    const messages = stub.callsTo("api.resend.com").filter(call => !call.body.includes("[cron-alert]")).map(call => JSON.parse(call.body));
+    expect(messages).toHaveLength(2);
+    for (const message of messages) {
+      expect(message.subject).not.toContain("A game-day goal for your player");
+      for (const body of [message.html, message.text]) expect(body).toContain("Montgomery Village junior tournament");
+    }
+    expect(alertBodies()[0]).toContain("newsletter_draft_unreadable");
+  } finally { mock.timers.reset(); }
+});
+
+test("the cron keeps the actual fall makeup visible after the regular season ends", async () => {
+  const savedOpen = process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN;
+  const savedCallsDb = process.env.NOTION_FALL_CALLS_DB_ID;
+  process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN = "true";
+  process.env.NOTION_FALL_CALLS_DB_ID = "fall-calls-db";
+  mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-29T22:00:00Z") });
+  try {
+    stub.on(/databases\/fall-calls-db\/query/, {
+      has_more: false,
+      results: [
+        { id: "rainout", properties: {
+          Date: { title: [{ plain_text: "2026-09-27" }] },
+          Green: { select: { name: "Cancelled" } },
+          Yellow: { select: { name: "Cancelled" } },
+        } },
+        { id: "makeup", properties: {
+          Date: { title: [{ plain_text: "2026-11-01" }] },
+          CUPF: { select: { name: "Booked" } },
+        } },
+      ],
+    });
+    wire();
+    expect((await GET(req("test-cron-secret"))).status).toBe(200);
+    expect(stub.callsTo(/databases\/fall-calls-db\/query/)).toHaveLength(1);
+    const messages = stub.callsTo("api.resend.com").map(call => JSON.parse(call.body));
+    expect(messages).toHaveLength(2);
+    for (const message of messages) {
+      for (const body of [message.html, message.text]) {
+        expect(body).toContain("1 Sunday remaining");
+        expect(body).toContain("Nov 1");
+        expect(body).toContain("makeup for Sun, Sep 27");
+        expect(body).not.toContain("$225 for all six weeks");
+        expect(body).not.toContain("Court booking confirmation is pending");
+      }
+    }
+  } finally {
+    mock.timers.reset();
+    if (savedOpen === undefined) delete process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN;
+    else process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN = savedOpen;
+    if (savedCallsDb === undefined) delete process.env.NOTION_FALL_CALLS_DB_ID;
+    else process.env.NOTION_FALL_CALLS_DB_ID = savedCallsDb;
+  }
+});
 
 test.describe("Bearer gate fails closed", () => {
   test("no Authorization → 401 and zero downstream calls", async () => {
