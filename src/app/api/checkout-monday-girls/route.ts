@@ -24,6 +24,7 @@ import {
   isDuplicateMondayGirlsRegistration,
   type MondayGirlsRegistrationData,
 } from "@/lib/validate-monday-girls-registration";
+import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
 import { fetchMondayGirlsRegistrationKeys } from "@/lib/notion-monday-girls-registrations";
 import {
   MONDAY_GIRLS_ROSTER_DB_ENV_VAR,
@@ -62,6 +63,14 @@ export async function POST(req: NextRequest) {
   }
 
   const data = body as MondayGirlsRegistrationData;
+
+  // Correct parent-entered email domain typos (e.g. gmail.fom → gmail.com)
+  // so the invoice, confirmation, and CRM row use a deliverable address.
+  // The local part is never altered; unrecognized domains pass through.
+  if (hadEmailTypo(data.email)) {
+    console.log("[checkout-monday-girls] corrected parent email domain typo");
+  }
+  data.email = normalizeEmailTypos(data.email);
   const option = findMondayGirlsSeasonGroup(data.group);
   if (!option) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });

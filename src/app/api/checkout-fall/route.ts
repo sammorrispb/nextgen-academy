@@ -14,6 +14,7 @@ import {
   isDuplicateFallRegistration,
   type FallRegistrationData,
 } from "@/lib/validate-fall-registration";
+import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
 import { fetchFallRegistrationKeys } from "@/lib/notion-fall-registrations";
 import {
   hasWaiverOnFile,
@@ -44,6 +45,14 @@ export async function POST(req: NextRequest) {
   }
 
   const data = body as FallRegistrationData;
+
+  // Correct parent-entered email domain typos (e.g. gmail.fom → gmail.com)
+  // so the invoice, confirmation, and CRM row use a deliverable address.
+  // The local part is never altered; unrecognized domains pass through.
+  if (hadEmailTypo(data.email)) {
+    console.log("[checkout-fall] corrected parent email domain typo");
+  }
+  data.email = normalizeEmailTypos(data.email);
   const option = findFallSeasonGroup(data.group);
   if (!option) {
     return NextResponse.json({ error: "Group not found" }, { status: 404 });
