@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { REGISTRATION_WINDOW_DAYS } from "../src/data/schedule";
 
 test.describe("Reserve modal — mobile QA", () => {
   test("opens and renders both consent checkboxes within viewport", async ({
@@ -6,11 +7,14 @@ test.describe("Reserve modal — mobile QA", () => {
   }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile", "mobile-only smoke");
 
-    await page.goto("/schedule");
+    // The real SessionCard/ReserveButton runs on a page injected only into
+    // the runner's temporary workspace. Freeze the browser clock before load.
+    await page.clock.setFixedTime(new Date("2026-10-02T12:00:00Z"));
+    await page.goto("/browser-test-fixture/reservation");
 
-    // Pick the first Reserve button on the page that's actually enabled.
+    // The fixed sample session is inside its registration window.
     const reserve = page
-      .getByRole("button", { name: /Reserve · \$40/ })
+      .getByRole("button", { name: "Reserve", exact: true })
       .first();
     await expect(reserve).toBeVisible();
     await reserve.click();
@@ -23,6 +27,7 @@ test.describe("Reserve modal — mobile QA", () => {
     // Display-consent checkbox + its disclosure
     const displayConsent = dialog.locator('input[name="displayConsent"]');
     await expect(displayConsent).toBeVisible();
+    await expect(displayConsent).not.toBeChecked();
     await expect(
       dialog.getByText(/Show my child.{1,3}s first name/i),
     ).toBeVisible();
@@ -30,6 +35,7 @@ test.describe("Reserve modal — mobile QA", () => {
     // SMS consent checkbox + the TCPA disclosure
     const smsConsent = dialog.locator('input[name="smsConsent"]');
     await expect(smsConsent).toBeVisible();
+    await expect(smsConsent).not.toBeChecked();
     await expect(
       dialog.getByText(/I agree to receive text messages from Next Gen/i),
     ).toBeVisible();
@@ -51,7 +57,7 @@ test.describe("Reserve modal — mobile QA", () => {
 
     // Scroll the dialog interior to the bottom to verify reachability of
     // the SMS-consent checkbox and the sticky Continue-to-payment footer.
-    const scrollContainer = dialog.locator("> div");
+    const scrollContainer = dialog;
     await scrollContainer.evaluate((el) => {
       el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
     });
@@ -86,4 +92,18 @@ test.describe("Reserve modal — mobile QA", () => {
       expect(r.y + r.height).toBeLessThanOrEqual(812);
     }
   });
+});
+
+
+test.describe("Reservation fixture uses real availability behavior", () => {
+  for (const [state, label] of [["full", "Full"], ["cancelled", "Cancelled"], ["outside-window", `Opens ${REGISTRATION_WINDOW_DAYS} days out`]]) {
+    test(`${state} sessions cannot open checkout`, async ({ page }) => {
+      await page.clock.setFixedTime(new Date("2026-10-02T12:00:00Z"));
+      await page.goto(`/browser-test-fixture/reservation?state=${state}`);
+      const reserve = page.getByRole("button", { name: label, exact: true });
+      await expect(reserve).toBeVisible();
+      await expect(reserve).toBeDisabled();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+    });
+  }
 });

@@ -59,16 +59,25 @@ test.describe("/clusters index", () => {
     expect(body).toContain("https://nextgenpbacademy.com/clusters</loc>");
   });
 
-  test("is linked from the global Navbar (desktop direct, mobile via hamburger)", async ({
+  test("local guides reach clusters while the primary navigation stays focused", async ({
     page,
   }, testInfo) => {
     await page.goto("/");
     if (testInfo.project.name === "mobile") {
       await page.getByRole("button", { name: /toggle menu/i }).click();
     }
-    const navLink = page.locator("nav").getByRole("link", { name: "Clusters" });
-    await expect(navLink.first()).toBeVisible();
-    await expect(navLink.first()).toHaveAttribute("href", "/clusters");
+    const nav = page.locator("nav");
+    for (const label of ["Start Here", "Lessons", "Leagues", "MVF Classes", "Schedule", "About"]) {
+      await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+    }
+    await expect(nav.getByRole("link", { name: "Clusters", exact: true })).toHaveCount(0);
+
+    await page.goto("/youth-pickleball-bethesda");
+    const link = page.getByTestId("cluster-callout-link");
+    const cluster = CLUSTERS.find((item) => item.slug === "down-county")!;
+    await expect(link).toHaveAttribute("href", `/clusters/${cluster.slug}`);
+    await link.click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(cluster.name);
   });
 });
 

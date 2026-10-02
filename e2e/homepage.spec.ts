@@ -463,10 +463,11 @@ test.describe("Redirects", () => {
     { from: "/contact", to: "/#contact" },
     { from: "/free-trial", to: "/free-evaluation" },
   ]) {
-    test(`${from} redirects to ${to}`, async ({ page }) => {
+    test(`${from} redirects to ${to}`, async ({ page, baseURL }) => {
       const response = await page.goto(from, { waitUntil: "domcontentloaded" });
-      // Should end up at the homepage (redirects include hash)
-      expect(page.url()).toContain("localhost:3000/");
+      // Check both the destination and fragment on whichever isolated server
+      // the configuration provides; a redirect to the wrong section must fail.
+      await expect(page).toHaveURL(new URL(to, baseURL).href);
       expect(response?.status()).toBeLessThan(400);
     });
   }
