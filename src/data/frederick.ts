@@ -3,9 +3,9 @@
 // every claim (e2e/frederick-page.spec.ts).
 //
 // HONESTY RULES — the reason this page is hand-rolled, not CityLanding:
-//   • Only what NGA runs in Frederick: the two Saturday leagues at The Pickl
+//   • Only what NGA runs in Frederick: the listed Saturday league at The Pickl
 //     Park (registered and priced by The Pickl Park) and private lessons there.
-//   • Never the 6–16 ladder. The Frederick leagues are ages 8–13 and 10+.
+//   • Never the 6–16 ladder. Each Frederick league sets its own ages.
 //   • No free evaluation at a Frederick venue — on this page's copy, its FAQ
 //     (including shared entries), its contact block, or the sticky mobile CTA
 //     (src/lib/sticky-cta.ts). Frederick families reach Coach Sam directly.
@@ -33,7 +33,8 @@ export const FREDERICK_PAGE = {
   description: `Indoor Saturday youth pickleball league in ${PICKLPARK_PUBLIC_AREA}, coached by Next Gen at ${PICKLPARK_VENUE_SHORT}: ${PICKLPARK_LEAGUES.map((l) => `${l.title} (${l.ageLabel.toLowerCase()})`).join(" and ")}.`,
   eyebrow: `Frederick County, MD · Saturdays at ${PICKLPARK_VENUE_SHORT}`,
   h1: "Youth pickleball in Frederick, MD.",
-  intro: `Next Gen Pickleball Academy coaches youth leagues on Saturdays at ${PICKLPARK_VENUE_SHORT}, an indoor pickleball club in Frederick. One group runs on Saturdays, with age bands set by The Pickl Park: ${LEAGUES_SENTENCE}. Your kid gets the same coaching we run in Montgomery County — small skill-based groups and plenty of reps every session — on cushioned indoor courts, so the weather never cancels a Saturday.`,
+  leaguesHeading: `${PICKLPARK_LEAGUES.length} Saturday youth ${PICKLPARK_LEAGUES.length === 1 ? "league" : "leagues"} at ${PICKLPARK_VENUE_SHORT}.`,
+  intro: `Your player can join Saturday youth pickleball at ${PICKLPARK_VENUE_SHORT}, an indoor club in Frederick. The Pickl Park sets each group's ages: ${LEAGUES_SENTENCE}. Next Gen coaches the court, with plenty of reps and game play on cushioned indoor courts. Check the listing for current registration and season dates.`,
   whereWePlay: `Every Frederick session runs at ${PICKLPARK_VENUE_SHORT}. The Pickl Park runs registration and payment for the league, so you sign up on their site and Coach Sam and the Next Gen staff run the court. ${PICKLPARK_LEAGUE_PLACEMENT_NOTE}`,
   privateLessonsNote:
     "Private lessons run at The Pickl Park in Frederick too. Email or text Coach Sam and we'll set up a time.",

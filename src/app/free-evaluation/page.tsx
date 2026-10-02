@@ -9,7 +9,7 @@ import { areaServedJsonLd, breadcrumbJsonLd, orgRef, SITE_URL } from "@/lib/seo"
 
 const PAGE_TITLE = "Free Youth Pickleball Evaluation — Montgomery County, MD";
 const PAGE_DESCRIPTION =
-  "Text Coach Sam to schedule a free 30-min pickleball evaluation for your child (ages 6–16) in Montgomery County, MD. Meet a coach, get a placement. No cost, no commitment.";
+  "Text Coach Sam for a free 30-minute pickleball evaluation for kids ages 6–16 in Montgomery County, MD. Find your player's level. No cost or commitment.";
 const SHARE_DESCRIPTION =
   "Youth pickleball coaching for kids ages 6–16 in Montgomery County, MD. Your first 30 minutes are on us.";
 

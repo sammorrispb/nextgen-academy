@@ -245,7 +245,7 @@ export const blogPosts: BlogPost[] = [
     sections: [
       {
         paragraphs: [
-          `Next Gen Pickleball Academy coaches two Saturday youth leagues indoors at The Pickl Park in Frederick, ${PICKLPARK_SEASON_LABEL}. The YMCA of Frederick County and the City of Frederick's recreation department also list pickleball programs, so check their current schedules for youth times.`,
+          `Next Gen Pickleball Academy coaches ${PICKLPARK_LEAGUES.length} Saturday youth ${PICKLPARK_LEAGUES.length === 1 ? "league" : "leagues"} indoors at The Pickl Park in Frederick, ${PICKLPARK_SEASON_LABEL}. The YMCA of Frederick County and the City of Frederick's recreation department also list pickleball programs, so check their current schedules for youth times.`,
         ],
       },
       {

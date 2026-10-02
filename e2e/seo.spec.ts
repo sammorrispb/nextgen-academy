@@ -130,7 +130,7 @@ const ROUTES: RouteSpec[] = [
   {
     path: "/picklpark",
     titleContains: /Frederick, MD/,
-    h1Contains: /leagues in Frederick/i,
+    h1Contains: /youth pickleball in Frederick/i,
   },
   {
     path: "/levels",

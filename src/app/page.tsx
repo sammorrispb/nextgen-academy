@@ -136,7 +136,7 @@ export default async function Home() {
           <SectionHeading
             eyebrow="The Pathway"
             title="We don't just teach pickleball. We develop athletes."
-            subtitle="Four ball colors — Red, Orange, Green, and Yellow — each with its own group court, guiding athletes from first paddle touch to tournament play. Private lessons available at every level. Placed by skill, never age alone."
+            subtitle="Four ball colors — Red, Orange, Green, and Yellow — guide athletes from first paddle touch to tournament play. Private lessons are available at every level; each group program lists its ages and levels. Placement starts with skill and follows the program's eligibility."
           />
           <BallPathway />
           <LevelGrid />

@@ -32,24 +32,27 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-8 sm:mb-10">
           <p className="font-heading text-xs font-bold text-ngpa-teal uppercase tracking-[0.2em] mb-3">
-            This week
+            Drop-ins
           </p>
           <h2
             id="upcoming-sessions-heading"
             className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight"
           >
-            Find a session near you &mdash; across Montgomery County Public Schools.
+            Find a drop-in near you &mdash; across Montgomery County Public Schools.
           </h2>
           <p className="mt-3 text-base sm:text-lg text-ngpa-white/70 max-w-2xl mx-auto">
-            Sessions rotate by demand &mdash; closer to more zip codes than a
-            single fixed venue.
+            These are single-session drop-in listings. Check each one for its
+            date, level and venue. Looking for regular games or a partner class?{" "}
+            <Link href="/league" className="font-bold text-ngpa-teal underline hover:text-ngpa-teal-bright">
+              See leagues and seasons
+            </Link>.
           </p>
         </div>
 
         {upcoming.length === 0 ? (
           <div className="max-w-xl mx-auto">
             <EmptyStateWaitlist
-              heading="No sessions open this week."
+              heading="No drop-in sessions are listed right now."
               source="home_upcoming_empty"
             />
             <OpenNowOffers />

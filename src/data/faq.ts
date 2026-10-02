@@ -38,22 +38,22 @@ export const faq: FaqItem[] = [
   {
     question: "What ages do you accept?",
     answer:
-      "We coach kids ages 6–16. Group sessions run at every ball color — Red Ball (pre-rally), Orange Ball (building), Green Ball (10+), and Yellow Ball (12+, tournament track) — each on its own court. Private lessons are available at any level for kids who want to fast-track with 1:1 coaching.",
+      "We coach kids ages 6–16 across the Red, Orange, Green and Yellow Ball pathway. Each program listing gives its ages and levels; partner classes can have a narrower age range. Your child's skills help us find the right fit within that program's eligibility. Private lessons are available at any level for extra 1:1 coaching.",
   },
   {
     question: "My child can't rally yet — can they still join?",
     answer:
-      "Yes. Our Red Ball court is built exactly for kids who are new to the game — a foam-ball group where they learn paddle control, footwork, and the rally from day one. Prefer to fast-track with 1:1 coaching first? Private lessons are available too. Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation and a plan for your child.",
+      "Yes. Red Ball is the first step for kids learning paddle control, footwork and the rally. Group options depend on the current program listings; private lessons are available too. Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation and find a starting point for your child.",
   },
   {
     question: "Does my child need experience?",
     answer:
-      "No. Group sessions run at every level — including Red Ball for kids brand-new to the court and Orange Ball for kids still building the rally. We place your child by skill so they're with peers at their level. Want to fast-track? Private lessons are available too. Text Coach Sam at 301-325-4731 to arrange a free evaluation and find the path that fits.",
+      "No. Red Ball starts with kids brand-new to the court, and Orange Ball builds the rally. A free evaluation helps us recommend a current program that fits your child's skills and age. Check each listing for the levels it serves; private lessons are available at any level. Text Coach Sam at 301-325-4731 and we'll help you get started.",
   },
   {
     question: "How do I sign up?",
     answer:
-      "Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation. For private, semi-private, or small-group lessons, choose available times on our Lessons page. Coach Sam confirms the time and court before sending your invoice.",
+      "Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation. For leagues, seasons and partner classes, follow the program's registration link and check its dates, ages and levels. For private, semi-private or small-group lessons, choose available times on our Lessons page. Coach Sam confirms the time and court before sending your invoice.",
   },
   {
     question: "What should my child bring?",
@@ -78,12 +78,12 @@ export const faq: FaqItem[] = [
     // so "how much" gets a concrete answer. The DROP-IN figure is never printed
     // (Sam, 2026-09-08) — e2e/invariant-dropin-price-not-quoted.spec.ts. Every
     // figure here is derived from its data file, never typed.
-    answer: `Start with the free 30-minute evaluation — it places your child on the right Red, Orange, Green, or Yellow Ball court and costs nothing. After that, group classes are drop-in, one hour at a time: no subscription and no commitment, and the rate is shown at checkout before you pay. Six-week season blocks are $${FALL_SEASON_PRICE_USD} per player, paid up front, and summer camp is $${CAMP_DAY_PRICE} a morning or $${CAMP_WEEK_PRICE} for the full week. The Pickl Park sets and shows the price for the Saturday leagues we coach in Frederick, and MVF classes are priced on MVF's own registration portal. Private lessons are $${PRIVATE_LESSON_PRICE_USD} for the hour, and semi-private and small-group lessons are $${GROUP_LESSON_PRICE_PER_PLAYER_USD} per player for the hour. Request a time first; Coach Sam confirms before sending an invoice. Next Gen registrations are non-refundable unless we cancel — if we call off a session for weather or any other reason, you get an automatic full refund.`,
+    answer: `Start with a free 30-minute evaluation to find your child's level and a program that fits. Drop-in sessions are single bookings when listed, with the rate shown at checkout before you pay. Six-week season blocks are $${FALL_SEASON_PRICE_USD} per player, paid up front, and summer camp is $${CAMP_DAY_PRICE} a morning or $${CAMP_WEEK_PRICE} for the full week. The Pickl Park sets and shows the price for the Saturday league we coach in Frederick, and MVF classes are priced on MVF's own registration portal. Private lessons are $${PRIVATE_LESSON_PRICE_USD} for the hour, and semi-private and small-group lessons are $${GROUP_LESSON_PRICE_PER_PLAYER_USD} per player for the hour. Request a lesson time first; Coach Sam confirms before sending an invoice. Check each program's cancellation terms before you register.`,
   },
   {
     question: "What’s your refund policy?",
     answer:
-      "If we cancel a session — for weather, a venue issue, or low enrollment — you get an automatic full refund to your original payment method, no action needed. Our sessions are outdoors, so we watch the forecast for every date and call off any session that isn’t safe to play. Outside of an NGA cancellation, registrations are non-refundable: please register only when you’re confident your child can attend, since we can’t offer credits or transfers for missed sessions. The free 30-minute evaluation is always free and never charged.",
+      "Terms depend on the program. If NGA cancels a drop-in, you get an automatic full refund to your original payment method. Fall season registration is a full-season commitment: a rained-out Sunday moves to a rain date, and sessions we cancel without making them up are refunded. Registrations are non-refundable if you withdraw or miss a session. The Pickl Park and MVF handle their own registration terms; check the program listing before paying. The free 30-minute evaluation is always free and never charged.",
   },
   {
     question: "Is pickleball safe for kids?",
@@ -93,7 +93,7 @@ export const faq: FaqItem[] = [
   {
     question: "What’s the difference between Red, Orange, Green, and Yellow Ball?",
     answer:
-      "Each color follows USA Pickleball’s youth progression — placement is by skill, not age — and each runs as its own group court. Red Ball (pre-rally) builds paddle control, footwork, and sustained back-and-forth on a foam ball. Orange Ball layers in rules mastery and full-court movement. Green Ball (10+) adds shot selection, court positioning, and doubles teamwork. Yellow Ball (12+) is our coach-curated competitive track — small groups of 3–5 athletes with custom scheduling and focused tournament prep. Private lessons are available at any level for kids who want to fast-track with 1:1 coaching. Every child is placed during a free evaluation, never on age alone.",
+      "Each color follows USA Pickleball's youth progression. Red Ball (pre-rally) builds paddle control, footwork and sustained back-and-forth on a foam ball. Orange Ball layers in rules mastery and full-court movement. Green Ball (10+) adds shot selection, court positioning and doubles teamwork. Yellow Ball (12+) is our coach-curated competitive track, with focused tournament prep. These describe the pathway; each program listing gives its eligible ages, levels and group size. Private lessons are available at any level. A free evaluation helps us place your child by skill within the program's age requirements.",
     cta: { label: "See the four levels in detail", href: "#levels" },
   },
   {
@@ -105,7 +105,7 @@ export const faq: FaqItem[] = [
   {
     question: "Can my child join mid-season?",
     answer:
-      "Yes. We accept new players throughout the season. Text Coach Sam at 301-325-4731 to arrange a free 30-minute evaluation. Your coach will help you find the current session that fits your child’s level and schedule — at any ball color — with a private-lesson option if you'd like to fast-track.",
+      "It depends on the program's availability, ages and levels. Text Coach Sam at 301-325-4731 and we'll check the current options with you. Fall season registration covers the full season, paid up front; if the full block doesn't work, ask about the sub list. Private lessons or a free evaluation can help your player get started while you look for a group that fits.",
   },
   {
     question: "Which Montgomery County towns do you serve?",

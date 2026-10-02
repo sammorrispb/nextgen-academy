@@ -1,5 +1,6 @@
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import TrackedCTA from "@/components/TrackedCTA";
+import Link from "next/link";
 
 interface Step {
   number: string;
@@ -15,19 +16,22 @@ const steps: Step[] = [
       <>
         30 minutes on court. Your coach watches your child play, then places
         them at the right ball color &mdash; Red, Orange, Green, or Yellow &mdash;
-        each with its own group court. Private lessons available to fast-track
-        any level.
+        then recommends a program that fits their skills, age and your
+        schedule. Private lessons are available at any level.
       </>
     ),
   },
   {
     number: "2",
-    title: "Drop in to sessions",
+    title: "Choose your program",
     body: (
       <>
-        <span className="font-bold text-ngpa-white">One-hour sessions, drop-in
-        only</span>. Come when it fits your week &mdash; no contracts, no
-        monthly fees.
+        Try a single drop-in when one is listed, or join a season paid up front
+        for a regular group. Partner classes have their own dates, ages and
+        registration. Each listing explains what you&rsquo;re signing up for.{" "}
+        <Link href="/league" className="font-bold text-ngpa-teal underline hover:text-ngpa-teal-bright">
+          See leagues and seasons
+        </Link>.
       </>
     ),
   },

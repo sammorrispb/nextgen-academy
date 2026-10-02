@@ -32,6 +32,7 @@ interface CityLandingProps {
    * Answers must stay truthful when the season changes — point to /schedule
    * for anything time-sensitive. */
   cityFaq?: { question: string; answer: string }[];
+  programLink?: { label: string; href: string };
   /** Extra "nearby" links beyond the MoCo neighbor ladder — e.g. the Frederick
    * page from Germantown, which sits between the two venues. */
   extraNearby?: { label: string; href: string }[];
@@ -85,6 +86,7 @@ export default function CityLanding({
   intro,
   whereWePlay,
   cityFaq = [],
+  programLink,
   extraNearby = [],
 }: CityLandingProps) {
   const pageFaq = [...cityFaq, ...localFaq];
@@ -205,6 +207,11 @@ export default function CityLanding({
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8 max-w-2xl">
             {whereWePlay}
           </p>
+          {programLink && (
+            <Link href={programLink.href} className="inline-flex items-center min-h-[48px] font-bold text-ngpa-teal underline hover:text-ngpa-teal-bright mb-4">
+              {programLink.label}
+            </Link>
+          )}
           <p className="text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
             Sessions run on reserved Montgomery County Public Schools courts and
             the venue lineup changes seasonally. Check the{" "}
@@ -279,10 +286,10 @@ export default function CityLanding({
             We follow USA Pickleball&rsquo;s official youth progression &mdash;
             a proven system of color-coded balls with reduced bounce that
             meet a child where they are. Every child is placed by skill during a free
-            evaluation, not age alone. Group sessions welcome all four levels
-            &mdash; Red, Orange, Green, and Yellow &mdash; each on its own
-            court, with private lessons available at any level for kids who
-            want to fast-track with 1:1 coaching.
+            evaluation, not age alone. The pathway includes Red, Orange, Green
+            and Yellow Ball. Each program lists its ages and levels; check the
+            listing for a group that fits. Private lessons are available at any
+            level for kids who want extra 1:1 coaching.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
