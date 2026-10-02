@@ -46,6 +46,17 @@ const pageSrc = readFileSync(
   .replace(/^\s*\/\/.*$/gm, "");
 
 test.describe("Frederick landing page copy", () => {
+  test("the heading and introduction describe the actual listed league count", () => {
+    expect(FREDERICK_PAGE).toHaveProperty("leaguesHeading",
+      `${PICKLPARK_LEAGUES.length} Saturday youth ${PICKLPARK_LEAGUES.length === 1 ? "league" : "leagues"} at The Pickl Park.`,
+    );
+    expect(FREDERICK_PAGE.intro).not.toMatch(/two|10\+/i);
+    for (const league of PICKLPARK_LEAGUES) {
+      expect(FREDERICK_PAGE.intro).toContain(league.title);
+      expect(FREDERICK_PAGE.intro.toLowerCase()).toContain(league.ageLabel.toLowerCase());
+    }
+  });
+
   test("never promises the full 6–16 ladder", () => {
     expect(copy).not.toMatch(/6\s*[–-]\s*16/);
     expect(copy).not.toMatch(/\bages?\s+6\b/i);

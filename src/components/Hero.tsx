@@ -48,10 +48,10 @@ export default function Hero() {
             </h1>
 
             <p className="mt-7 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-              Small-group sessions at every level &mdash; Red, Orange, Green,
-              and Yellow Ball &mdash; with private lessons to fast-track anyone
-              who wants them. A clear pathway to tournament play across
-              Montgomery County, MD.
+              A clear Red, Orange, Green and Yellow Ball pathway, from first
+              rally to tournament play. Choose private lessons, a league or a
+              partner class &mdash; each program lists the ages and levels it
+              serves across Montgomery County, MD.
             </p>
 
             <p className="mt-5 text-base sm:text-lg text-ngpa-white/95 leading-relaxed max-w-xl">

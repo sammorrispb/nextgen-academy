@@ -10,7 +10,6 @@ import {
 import {
   PICKLPARK_SATURDAYS,
   PICKLPARK_SEASON_LABEL,
-  PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
 import {
   picklParkLeaguesOpen,
@@ -107,7 +106,7 @@ export default function FrederickPage() {
               href="#leagues"
               className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-xl shadow-ngpa-teal/20"
             >
-              See the Saturday leagues
+              See Saturday youth pickleball
             </a>
             <Link
               href="/picklpark"
@@ -126,7 +125,7 @@ export default function FrederickPage() {
             What runs in Frederick
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Two Saturday youth leagues at {PICKLPARK_VENUE_SHORT}.
+            {FREDERICK_PAGE.leaguesHeading}
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
             {FREDERICK_PAGE.whereWePlay}

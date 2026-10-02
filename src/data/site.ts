@@ -2,7 +2,7 @@ export const site = {
   name: "Next Gen Pickleball Academy",
   tagline: "Better than yesterday—together.",
   description:
-    "Structured pickleball coaching for kids ages 6–16 in Montgomery County, MD. Group sessions run a court per level — Red, Orange, Green, Yellow — with private lessons at any level.",
+    "Youth pickleball coaching for kids ages 6–16 in Montgomery County, MD. Lessons, leagues and classes; each program lists its ages, levels and format.",
   email: "nextgenacademypb@gmail.com",
   phone: "301-325-4731",
   instagram: "https://www.instagram.com/nextgenpickleballacademy",
@@ -19,7 +19,7 @@ export const site = {
   whatsappLinkAndDink:
     "https://chat.whatsapp.com/LaRjBQT8O5p5aJS5vSAk0i?s=cl&p=i&mlu=2",
   boilerplate25:
-    "Junior pickleball academy for kids ages 6–16 in Montgomery County, MD — group sessions with a court for every level, plus private lessons at any level.",
+    "Junior pickleball academy for kids ages 6–16 in Montgomery County, MD. Lessons, leagues and classes — each program lists its ages and levels.",
   boilerplate50:
-    "Next Gen is a junior pickleball academy for kids ages 6–16 in Montgomery County, MD. Group sessions run a court per level — Red, Orange, Green, and Yellow all welcome — with private lessons at any level, and a clear pathway from first paddle touch to tournament-ready play. We partner with parents through clear communication and EASE values — Ethics, Attitude, Skills, Excellence.",
+    "Next Gen coaches kids ages 6–16 in Montgomery County, MD, along the Red, Orange, Green and Yellow Ball pathway. Choose lessons, leagues and partner classes; each program lists its ages, levels and format. We work with parents through clear communication and EASE values — Ethics, Attitude, Skills, Excellence — so your player grows with purpose.",
 } as const;

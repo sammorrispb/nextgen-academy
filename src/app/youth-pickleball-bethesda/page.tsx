@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import CityLanding from "@/components/CityLanding";
+import { FALL_SEASON_LABEL, FALL_VENUE_SHORT } from "@/data/fall-2026";
+import { FALL_SEASON_GROUPS } from "@/data/fall-season-2026";
+
+const GROUPS = FALL_SEASON_GROUPS.map((group) => group.label).join(" and ");
 
 const TITLE = "Youth Pickleball in Bethesda, MD — Next Gen Academy";
 const DESCRIPTION =
@@ -29,13 +33,14 @@ export default function BethesdaPage() {
     <CityLanding
       city="Bethesda"
       slug="youth-pickleball-bethesda"
-      intro="Bethesda is one of our home bases: this season’s Sunday-afternoon group sessions run at Walter Johnson High School on Rock Spring Drive, with a court for every level — Red, Orange, Green, and Yellow. Kids 6–16 from Bethesda and Chevy Chase start with a free 30-minute evaluation, then drop in at the level that fits — no subscription, no long-term commitment."
-      whereWePlay="Walter Johnson HS is the closest regular venue for most Bethesda families, and we've also coached Bethesda kids at Westland Middle School in past seasons. We’ve also run Saturday sessions at Earle B. Wood Middle School in Rockville in past seasons — check the schedule page to see what’s on this week. Same format everywhere: one court per level, four players per court."
+      intro={`Bethesda's fall 2026 program is a six-Sunday season at ${FALL_VENUE_SHORT}, ${FALL_SEASON_LABEL}, for ${GROUPS}. Registration covers the full season, paid up front. New to pickleball or looking for Red or Orange Ball? Start with a free 30-minute evaluation or a private lesson, and we'll help you find a program that fits your player.`}
+      whereWePlay={`${FALL_VENUE_SHORT} on Rock Spring Drive hosts the 2026 fall season. We've also coached at Westland Middle School and Earle B. Wood Middle School in past seasons. Check fall season details for current availability and the drop-in schedule for separately listed single sessions; ages, levels and group sizes depend on the program.`}
+      programLink={{ label: "Fall season details", href: "/fall" }}
       cityFaq={[
         {
           question: "Where do Bethesda kids play with Next Gen?",
           answer:
-            "This season's Sunday group sessions run at Walter Johnson High School (6400 Rock Spring Dr) right in Bethesda, and we’ve run Saturday sessions at Earle B. Wood Middle School in Rockville in past seasons. Venues can shift season to season, so check the schedule page for this week’s exact slots.",
+            `${FALL_VENUE_SHORT} (6400 Rock Spring Dr) hosts the six-Sunday fall 2026 season for ${GROUPS}, ${FALL_SEASON_LABEL}. This is a season registration, not a weekly drop-in. See /fall for its current status. Private lessons and free evaluations are arranged with Coach Sam; the /schedule page lists any separate drop-in sessions.`,
         },
       ]}
     />

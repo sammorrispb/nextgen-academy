@@ -21,14 +21,59 @@ test.describe("Hero", () => {
 // ─── How It Works (PR 1) ──────────────────────────
 
 test.describe("How It Works", () => {
-  test("shows 3 steps with pricing in step 2", async ({ page }) => {
+  test("shows 3 steps distinguishing evaluations, drop-ins and seasons", async ({ page }) => {
     await page.goto("/");
     const section = page.locator("#how-it-works");
     await expect(section).toBeVisible();
     await expect(section.getByRole("heading", { name: "Free evaluation" })).toBeVisible();
-    await expect(section.getByRole("heading", { name: "Drop in to sessions" })).toBeVisible();
+    await expect(section.getByRole("heading", { name: "Choose your program" })).toBeVisible();
     await expect(section.getByRole("heading", { name: "Move up the pathway" })).toBeVisible();
-    await expect(section.getByText("$20 per 1-hour session")).toBeVisible();
+    await expect(section).toContainText(/drop-in/i);
+    await expect(section).toContainText(/paid up front/i);
+    await expect(section.getByRole("link", { name: /see leagues and seasons/i })).toHaveAttribute("href", "/league");
+    await expect(section).not.toContainText(/drop-in only/i);
+  });
+});
+
+test.describe("program discovery consistency", () => {
+  test("the drop-in feed does not imply other programs are closed", async ({ page }) => {
+    await page.goto("/");
+    const strip = page.getByRole("region", { name: /Montgomery County Public Schools/ });
+    await expect(strip).toContainText(/drop-in/i);
+    await expect(strip.getByRole("link", { name: /see leagues and seasons/i })).toHaveAttribute("href", "/league");
+    await expect(strip).not.toContainText("No sessions open this week.");
+    const heading = strip.getByRole("heading", { name: "No drop-in sessions are listed right now." });
+    if (await heading.count()) await expect(heading).toBeVisible();
+  });
+
+  test("Bethesda describes the actual Green and Yellow season and offers other on-ramps", async ({ page }) => {
+    await page.goto("/youth-pickleball-bethesda");
+    const intro = page.locator("h1").locator("..");
+    await expect(intro).toContainText("Green Ball");
+    await expect(intro).toContainText("Yellow Ball");
+    await expect(intro).toContainText(/paid up front/i);
+    await expect(intro).not.toContainText(/court for every level|then drop in/i);
+    await expect(page.getByRole("link", { name: "Fall season details", exact: true })).toHaveAttribute("href", "/fall");
+    await expect(page.locator("body")).toContainText(/each program.*ages and levels/i);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test("Frederick heading agrees with its single ages 8–13 league card", async ({ page }) => {
+    await page.goto("/youth-pickleball-frederick");
+    const leagues = page.locator("#leagues");
+    await expect(leagues.getByRole("heading", { level: 2 })).toHaveText("1 Saturday youth league at The Pickl Park.");
+    await expect(leagues.locator("article")).toHaveCount(1);
+    await expect(leagues).toContainText("Ages 8–13");
+    await expect(leagues).not.toContainText(/Two Saturday|Youth League 3:/i);
+    const partnerListing = leagues.getByRole("link", { name: /Register with The Pickl Park|See the listing at The Pickl Park/ });
+    if (await partnerListing.count()) {
+      await expect(partnerListing).toHaveAttribute(
+        "href", "https://thepicklpark.podplay.app/community/events/01a07d03-9f72-744f-a80c-6284f8f60fd5",
+      );
+    } else {
+      await expect(leagues.getByRole("link", { name: "This season has finished — get the next one by email" })).toHaveAttribute("href", "/newsletter");
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 });
 
@@ -374,10 +419,10 @@ test.describe("Nav links", () => {
     if (testInfo.project.name !== "desktop") test.skip();
     await page.goto("/");
     const nav = page.locator("nav");
-    await expect(nav.getByRole("link", { name: "Programs" })).toHaveAttribute("href", "#levels");
+    await expect(nav.getByRole("link", { name: "Start Here" })).toHaveAttribute("href", "#start");
+    await expect(nav.getByRole("link", { name: "Leagues", exact: true })).toHaveAttribute("href", "/league");
     await expect(nav.getByRole("link", { name: "Schedule" })).toHaveAttribute("href", "/schedule");
     await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("href", "#about");
-    await expect(nav.getByRole("link", { name: "FAQ" })).toHaveAttribute("href", "#faq");
   });
 
   test("mobile navbar shows links when hamburger is tapped @mobile", async ({ page }, testInfo) => {
@@ -386,7 +431,8 @@ test.describe("Nav links", () => {
     // Open hamburger menu
     await page.getByLabel("Toggle menu").click();
     const menu = page.locator("#mobile-menu");
-    await expect(menu.getByRole("link", { name: "Programs" })).toHaveAttribute("href", "#levels");
+    await expect(menu.getByRole("link", { name: "Start Here" })).toHaveAttribute("href", "#start");
+    await expect(menu.getByRole("link", { name: "Leagues", exact: true })).toHaveAttribute("href", "/league");
     await expect(menu.getByRole("link", { name: "Schedule" })).toHaveAttribute("href", "/schedule");
   });
 
@@ -403,7 +449,7 @@ test.describe("Nav links", () => {
     if (testInfo.project.name !== "desktop") test.skip();
     await page.goto("/schedule");
     const nav = page.locator("nav");
-    await expect(nav.getByRole("link", { name: "Programs" })).toHaveAttribute("href", "/#levels");
+    await expect(nav.getByRole("link", { name: "Start Here" })).toHaveAttribute("href", "/#start");
   });
 });
 
