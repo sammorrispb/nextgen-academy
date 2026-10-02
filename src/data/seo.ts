@@ -18,7 +18,7 @@ export const seo = {
   montgomeryCounty: {
     title: "Youth Pickleball in Montgomery County, MD — Ages 6–16",
     description:
-      "Structured youth pickleball coaching for kids ages 6–16 across Montgomery County, MD — Bethesda, Rockville, Potomac, Gaithersburg, Chevy Chase, and beyond.",
+      "Youth pickleball for ages 6–16 in Montgomery County. Compare Bethesda seasons, Montgomery Village classes and private lessons; confirm your program's venue.",
   },
   mvf: {
     title: "MVF Youth Pickleball in Montgomery Village, MD — Ages 8–16",
