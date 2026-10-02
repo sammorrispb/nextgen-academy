@@ -42,7 +42,9 @@ export const MVF_JUNIOR_TOURNAMENT_KIND = "mvf-junior-tournament";
 export const MVF_JUNIOR_TOURNAMENT_TITLE = "MVF Junior Tournament";
 export const MVF_JUNIOR_TOURNAMENT_DATE_LABEL = "Saturday, October 24, 2026";
 export const MVF_JUNIOR_TOURNAMENT_DATE_ISO = "2026-10-24";
-export const MVF_JUNIOR_TOURNAMENT_TIME_LABEL = "4:00–7:00 PM";
+export const MVF_JUNIOR_TOURNAMENT_START_TIME = "4:00 PM";
+export const MVF_JUNIOR_TOURNAMENT_END_TIME = "7:00 PM";
+export const MVF_JUNIOR_TOURNAMENT_TIME_LABEL = `${MVF_JUNIOR_TOURNAMENT_START_TIME.replace(/ PM$/, "")}–${MVF_JUNIOR_TOURNAMENT_END_TIME}`;
 export const MVF_JUNIOR_TOURNAMENT_VENUE = NORTH_CREEK.center;
 /** Street address for the "Where" lines — the page, the success page, every email. */
 export const MVF_JUNIOR_TOURNAMENT_ADDRESS = `${NORTH_CREEK.streetAddress}, ${NORTH_CREEK.locality}, ${NORTH_CREEK.region} ${NORTH_CREEK.postalCode}`;

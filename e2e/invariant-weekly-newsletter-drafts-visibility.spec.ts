@@ -27,21 +27,27 @@ import { mock } from "node:test";
 import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 
-// Env BEFORE importing the route.
-process.env.CRON_SECRET = "test-cron-secret";
-process.env.NOTION_API_KEY = "ntn_test";
-process.env.NOTION_SESSIONS_DB_ID = "sessions-db";
-process.env.NOTION_NEWSLETTER_DB_ID = "subs-db";
-process.env.NOTION_PLAYER_CRM_DB_ID = "crm-db";
-process.env.NOTION_NEWS_DB_ID = "news-db";
-process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID = "drafts-db";
-process.env.RESEND_API_KEY = "re_test";
-process.env.NGA_ADMIN_SECRET = "admin-secret";
-// Polls are optional; leaving the DB unset keeps the poll fetch off the wire.
-delete process.env.NOTION_CREW_POLLS_DB_ID;
-delete process.env.NOTION_POLL_RESPONSES_DB_ID;
-
 import { GET } from "../src/app/api/cron/weekly-newsletter/route";
+
+const TEST_ENV = {
+  CRON_SECRET: "test-cron-secret",
+  NOTION_API_KEY: "ntn_test",
+  NOTION_SESSIONS_DB_ID: "sessions-db",
+  NOTION_NEWSLETTER_DB_ID: "subs-db",
+  NOTION_PLAYER_CRM_DB_ID: "crm-db",
+  NOTION_NEWS_DB_ID: "news-db",
+  NOTION_NEWSLETTER_DRAFTS_DB_ID: "drafts-db",
+  RESEND_API_KEY: "re_test",
+  NGA_ADMIN_SECRET: "admin-secret",
+};
+const TOUCHED_ENV = [
+  ...Object.keys(TEST_ENV),
+  "NOTION_CREW_POLLS_DB_ID",
+  "NOTION_POLL_RESPONSES_DB_ID",
+  "NEXT_PUBLIC_FALL_REGISTRATION_OPEN",
+  "NOTION_FALL_CALLS_DB_ID",
+];
+const savedEnv = Object.fromEntries(TOUCHED_ENV.map(key => [key, process.env[key]]));
 
 const DRAFTS_DB = /databases\/drafts-db\/query/;
 const ALLOWED_HOSTS = ["api.notion.com", "api.resend.com"];
@@ -147,10 +153,32 @@ function alertBodies(): string[] {
 }
 
 test.beforeEach(() => {
+  Object.assign(process.env, TEST_ENV);
+  // Polls are optional; keep their fetches outside this fixture.
+  delete process.env.NOTION_CREW_POLLS_DB_ID;
+  delete process.env.NOTION_POLL_RESPONSES_DB_ID;
+  delete process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN;
+  delete process.env.NOTION_FALL_CALLS_DB_ID;
   stub.reset();
   stub.install();
 });
-test.afterEach(() => stub.uninstall());
+test.afterEach(() => {
+  stub.uninstall();
+  mock.timers.reset();
+});
+test.afterAll(() => {
+  for (const key of TOUCHED_ENV) {
+    const value = savedEnv[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+});
+
+function freezeThursdaySendDay() {
+  // A one-subscriber audience has only Thursday's cohort. These invariants
+  // must exercise a send rather than depend on the machine's current weekday.
+  mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-01T22:00:00Z") });
+}
 
 test("October 1 cron sends the winter subject and first lead to parent and archive", async () => {
   const winterId = "3ebfa3ac-27dc-8167-8030-e58c8c7bbe8e";
@@ -289,6 +317,7 @@ test("the cron keeps the actual fall makeup visible after the regular season end
 });
 
 test.describe("Bearer gate fails closed", () => {
+  test.beforeEach(freezeThursdaySendDay);
   test("no Authorization → 401 and zero downstream calls", async () => {
     wire();
     const res = await GET(req(undefined));
@@ -305,6 +334,7 @@ test.describe("Bearer gate fails closed", () => {
 });
 
 test.describe("system failures stop reporting ok:true", () => {
+  test.beforeEach(freezeThursdaySendDay);
   test("a Notion drafts-query error surfaces its own signature and still ships the issue", async () => {
     wire({ draftsQueryStatus: 500 });
 
@@ -364,6 +394,7 @@ test.describe("system failures stop reporting ok:true", () => {
 });
 
 test.describe("the stranded detector", () => {
+  test.beforeEach(freezeThursdaySendDay);
   test("ARCHIVE STAYS QUIET: ordinary Approved rows with no Expires At never alert", async () => {
     // Models the real prod state on 2026-08-05: rows stay Approved forever
     // after shipping, so a predicate without the Expires At leg would flag all
@@ -415,6 +446,7 @@ test.describe("the stranded detector", () => {
 });
 
 test.describe("alert hygiene", () => {
+  test.beforeEach(freezeThursdaySendDay);
   test("the alert says the newsletter WAS sent — this cron is not idempotent", async () => {
     // A red dashboard on a run whose emails already went out invites a re-run,
     // and a re-run re-sends the whole issue to every Active subscriber.
@@ -456,6 +488,7 @@ test.describe("alert hygiene", () => {
 });
 
 test.describe("the approval gate does not move", () => {
+  test.beforeEach(freezeThursdaySendDay);
   test("the cron never writes a draft Status", async () => {
     wire({
       drafts: [draftRow("draft-ok")],
