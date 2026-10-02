@@ -68,6 +68,35 @@ const SITE_ORIGIN =
 // How far ahead "this week" reaches — covers the coming weekend plus a peek.
 const WINDOW_DAYS = 9;
 
+// ---- Resend daily-quota staggering -----------------------------------------
+// The Resend free tier allows 100 emails/day per team, SHARED with every
+// transactional sender (invoices, waivers, reminders, cron alerts). The
+// newsletter alone (109 subscribers on 2026-10-01, and growing) blows past
+// that in a single run — the 2026-10-01 issue tripped Resend's 80% and 100%
+// quota warnings mid-send. So the audience is split into deterministic
+// cohorts and one cohort goes out per day, starting Thursday 6pm ET
+// (vercel.json schedules Thu–Sun). Each cohort stays under
+// NEWSLETTER_DAILY_SEND_BUDGET, leaving headroom for transactional mail the
+// same day. Tune the budget (not the schedule) as the list grows: raising it
+// toward 100 eats transactional headroom; lowering it adds send days.
+// Cohorts are contiguous slices of the email-sorted audience, so every cohort
+// is guaranteed ≤ budget and every subscriber gets exactly one issue per
+// week (as long as the list doesn't change mid-week — a subscribe/unsubscribe
+// between send days can shift a boundary subscriber by one cohort).
+const NEWSLETTER_DAILY_SEND_BUDGET = 60;
+
+/** 0=Sunday … 6=Saturday, in America/New_York. */
+function etWeekday(date: Date = new Date()): number {
+  const day = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+  }).format(date);
+  const map: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  };
+  return map[day] ?? date.getDay();
+}
+
 function isoEtPlusDays(days: number, now: Date = new Date()): string {
   const d = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
   const parts = new Intl.DateTimeFormat("en-CA", {
@@ -301,6 +330,45 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   const tip = pickWeeklyTip();
   const todayIso = isoEtPlusDays(0);
   const weekEndIso = isoEtPlusDays(WINDOW_DAYS);
+
+  const audience = await syncNewsletterAudience();
+  const subscribers = audience.subscribers;
+
+  // One cohort per send day: Thu=0, Fri=1, Sat=2, Sun=3 (ET). Days past the
+  // last cohort are no-ops — the schedule covers Thu–Sun so the list can grow
+  // into more cohorts without a config change.
+  const cohortCount = Math.max(
+    1,
+    Math.ceil(subscribers.length / NEWSLETTER_DAILY_SEND_BUDGET),
+  );
+  const dayOffset = (etWeekday() - 4 + 7) % 7;
+  const cohortIndex = dayOffset < cohortCount ? dayOffset : -1;
+  if (cohortIndex < 0) {
+    console.log(
+      `[cron/weekly-newsletter] no cohort scheduled for day offset ${dayOffset} ` +
+        `(${cohortCount} cohorts, ${subscribers.length} subscribers) — nothing sent`,
+    );
+    return {
+      attempted: 0,
+      succeeded: 0,
+      failures: [],
+      body: {
+        subscribers: subscribers.length,
+        cohort_count: cohortCount,
+        day_offset: dayOffset,
+        note: "no cohort scheduled today; nothing sent",
+      },
+    };
+  }
+  const isLastCohort = cohortIndex === cohortCount - 1;
+  // Contiguous slices of the email-sorted audience: deterministic, and every
+  // cohort is guaranteed ≤ NEWSLETTER_DAILY_SEND_BUDGET.
+  const cohortSubscribers = [...subscribers]
+    .sort((a, b) => a.email.localeCompare(b.email))
+    .filter(
+      (_, i) => Math.floor(i / NEWSLETTER_DAILY_SEND_BUDGET) === cohortIndex,
+    );
+
   const allSessions = await fetchUpcomingSessions();
   // "This week" — Open sessions inside the 9-day window.
   const sessions = groupSessions(
@@ -386,10 +454,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     0,
   );
 
-  const audience = await syncNewsletterAudience();
-  const subscribers = audience.subscribers;
   // First-party click attribution: tag this week's send so /api/analytics can
-  // separate newsletter-driven traffic from organic. One campaign per issue.
+  // separate newsletter-driven traffic from organic. One campaign per issue
+  // (cohorts sent on different days get different dates — fine for attribution).
   const utmCampaign = `weekly-${new Date().toISOString().slice(0, 10)}`;
   const programs = newsletterPrograms(todayIso, SITE_ORIGIN, utmCampaign);
   const scheduleUrl = appendUtm(`${SITE_ORIGIN}/schedule`, "schedule", utmCampaign);
@@ -420,7 +487,7 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   if (!resend) {
     console.warn("[cron/weekly-newsletter] RESEND_API_KEY missing — nothing sent");
     return {
-      attempted: subscribers.length,
+      attempted: cohortSubscribers.length,
       succeeded: 0,
       failures: [{ signature: "resend_not_configured" }],
       body: { error: "RESEND_API_KEY missing", subscribers: subscribers.length },
@@ -465,8 +532,8 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   let sent = 0;
   let failed = 0;
   // Throttle to stay under Resend's 5 req/sec limit (~3.3/sec).
-  for (let i = 0; i < subscribers.length; i++) {
-    const sub = subscribers[i];
+  for (let i = 0; i < cohortSubscribers.length; i++) {
+    const sub = cohortSubscribers[i];
     if (i > 0) await new Promise((res) => setTimeout(res, 300));
     const parentFirst = (sub.parentName || "").split(/\s+/)[0] || "there";
     const token = signUnsubscribeToken(sub.email);
@@ -521,8 +588,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   }
 
   // QA / archive copy to the admin inbox so Sam sees exactly what went out.
-  // Uses a no-op unsubscribe link (admin isn't a subscriber row).
-  try {
+  // One per issue (first send day only), not one per cohort. Uses a no-op
+  // unsubscribe link (admin isn't a subscriber row).
+  if (dayOffset === 0) {
+    try {
     const adminInput = {
       parentFirst: "Coach",
       editorial,
@@ -552,8 +621,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       replyTo: REPLY_TO,
       // Lead-row count rides the subject so "the From Coach Sam block was
       // empty this week" is visible at a glance in the one email Sam already
-      // opens every Thursday — no dashboard, no query.
-      subject: `[NGA newsletter sent · ${sent} recipients · lead ${newsletterDrafts.length} rows] ${subject}`,
+      // opens every Thursday — no dashboard, no query. Cohort fraction tells
+      // him which send days are still to come.
+      subject: `[NGA newsletter ${cohortIndex + 1}/${cohortCount} sent · ${sent} recipients · lead ${newsletterDrafts.length} rows] ${subject}`,
       html: weeklyNewsletterHtml(adminInput),
       text: weeklyNewsletterText(adminInput),
     });
@@ -565,12 +635,15 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       detail: err instanceof Error ? err.constructor.name : typeof err,
     });
   }
+  }
 
   // Flip the rows we actually included to Used so they don't reappear in
-  // next week's issue. Only fire on a successful send — failed broadcasts
-  // leave the queue intact so the next run can retry the same items.
+  // next week's issue. Only fire after the LAST cohort of the issue has gone
+  // out — flipping earlier would give later cohorts a different issue than
+  // the first. Failed broadcasts leave the queue intact so the next run can
+  // retry the same items.
   let newsMarkedUsed = 0;
-  if (sent > 0) {
+  if (isLastCohort && sent > 0) {
     for (const row of newsRows) {
       // A false return = the Used flip didn't stick → the same news item
       // repeats in next week's issue. Surface it instead of dropping it.
@@ -666,13 +739,18 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     crm_dd_derived: audience.ddDerived,
     crm_test: audience.test,
     crm_invalid: audience.invalid,
+    cohort: cohortIndex + 1,
+    cohort_count: cohortCount,
+    cohort_subscribers: cohortSubscribers.length,
+    day_offset: dayOffset,
+    is_last_cohort: isLastCohort,
     sent,
     failed,
     tip: tip.title,
   };
   console.log("[cron/weekly-newsletter]", JSON.stringify(summary));
   return {
-    attempted: subscribers.length,
+    attempted: cohortSubscribers.length,
     succeeded: sent,
     failures,
     body: summary,
