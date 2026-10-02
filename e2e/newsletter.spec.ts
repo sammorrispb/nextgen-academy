@@ -18,12 +18,17 @@ test.describe("Newsletter page", () => {
     ).toBeVisible();
   });
 
-  test("does not quote any hard prices (teased, not quoted)", async ({
+  test("newsletter signup stays free independently of event announcements", async ({
     page,
   }) => {
     await page.goto("/newsletter");
-    const body = await page.locator("body").innerText();
-    expect(body).not.toMatch(/\$\d/);
+    const offer = page.locator("main");
+    await expect(offer).toContainText("Free Newsletter");
+    await expect(offer.getByRole("button", { name: "Join the Free Newsletter" })).toBeVisible();
+    expect(await offer.innerText()).not.toMatch(/\$\d/);
+    // A priced tournament banner outside the newsletter offer is legitimate.
+    const banner = page.getByRole("link", { name: /MVF Junior Tournament/ }).first();
+    await expect(banner).toHaveAttribute("href", "/mvf-junior-tournament");
   });
 });
 
