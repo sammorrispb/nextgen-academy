@@ -63,7 +63,7 @@ export const faq: FaqItem[] = [
   {
     question: "Where are you located?",
     answer:
-      "We coach across Montgomery County Public Schools. Sessions rotate weekly based on court availability — common areas include Rockville, North Bethesda, Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Gaithersburg, Derwood, and Aspen Hill. The /schedule page shows this week's confirmed venues; email or text us if you don't see one near you. On Saturdays we also coach youth leagues at The Pickl Park, an indoor pickleball club in Frederick, MD.",
+      "Your child's court depends on the program. Check the Bethesda season at /fall and MVF classes in Montgomery Village at /montgomery-village-youth-pickleball for their listed venues, dates and availability. The /schedule page lists separate drop-ins when available. For a Montgomery County free evaluation or a private lesson, Coach Sam confirms the time and court with you. Frederick programs and private lessons are at The Pickl Park; see /youth-pickleball-frederick for its options and eligibility.",
   },
   {
     question: "How do free evaluations work?",
@@ -110,7 +110,7 @@ export const faq: FaqItem[] = [
   {
     question: "Which Montgomery County towns do you serve?",
     answer:
-      "We serve families across Bethesda, Potomac, Chevy Chase, Kensington, Silver Spring, Rockville, North Bethesda, Gaithersburg, Derwood, Aspen Hill, and most of the DMV. Sessions rotate seasonally between Montgomery County courts — reach out for the current location. Frederick County families: our Saturday youth leagues run at The Pickl Park in Frederick.",
+      "Families across Montgomery County can explore our programs, including Bethesda seasons and MVF classes in Montgomery Village. Your home town may be different from the program's venue: check each listing for dates, ages, levels and registration details. For evaluations or private lessons, share the area and days that work for you; Coach Sam confirms the time and court. Our county guide links to local information for Bethesda, North Bethesda, Rockville, Potomac, Gaithersburg, Germantown, Silver Spring and Olney. Frederick families can see the separate guide to The Pickl Park.",
   },
   {
     question: "Do you run anything in Frederick County?",
