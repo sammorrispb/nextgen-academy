@@ -24,6 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${base}/schools`, changeFrequency: "monthly", priority: 0.85 },
     { url: `${base}/montgomery-county-youth-pickleball`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${base}/montgomery-village-youth-pickleball`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${base}/mvf-junior-tournament`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/schedule`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${base}/levels`, changeFrequency: "monthly", priority: 0.75 },
     { url: `${base}/fall`, changeFrequency: "weekly", priority: 0.8 },

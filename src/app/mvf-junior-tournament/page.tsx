@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import JsonLd from "@/components/JsonLd";
 import MvfJuniorTournamentForm from "@/components/MvfJuniorTournamentForm";
+import { mvfTournamentJsonLd } from "@/lib/mvf-tournament-jsonld";
 import {
   COURTS_TEXT,
   GUARANTEED_GAMES_TEXT,
@@ -37,6 +39,7 @@ export const metadata: Metadata = {
 export default function MvfJuniorTournamentPage() {
   return (
     <main className="bg-ngpa-navy min-h-screen">
+      <JsonLd data={mvfTournamentJsonLd()} />
       {/* Hero */}
       <section className="px-5 sm:px-8 pt-16 pb-10 max-w-3xl mx-auto">
         <p className="font-heading text-sm font-bold uppercase tracking-widest text-ngpa-teal-bright">

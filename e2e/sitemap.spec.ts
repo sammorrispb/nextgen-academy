@@ -24,6 +24,7 @@ test.describe("sitemap", () => {
       "/levels",
       "/youth-pickleball-frederick",
       "/montgomery-county-youth-pickleball",
+      "/mvf-junior-tournament",
     ]) {
       expect(urls, path).toContain(`${BASE}${path}`);
     }
@@ -46,5 +47,6 @@ test.describe("sitemap", () => {
   test("URLs are unique and no signed-link surface leaks in", () => {
     expect(new Set(urls).size).toBe(urls.length);
     for (const u of urls) expect(u).not.toContain("standings");
+    expect(urls).not.toContain(`${BASE}/mvf-junior-tournament/success`);
   });
 });
