@@ -1,5 +1,5 @@
 // Shared SEO helpers used across pages so JSON-LD stays consistent.
-// Keeps the address + areaServed list in ONE place — change here, every page
+// Keeps academy identity + areaServed in ONE place — change here, every page
 // (homepage, location landers, etc.) picks it up.
 
 import type { BlogPost } from "@/data/blog";
@@ -8,7 +8,7 @@ export const SITE_URL = "https://nextgenpbacademy.com" as const;
 
 /**
  * MoCo cities the academy actively serves. Order matters — used as
- * `areaServed` in LocalBusiness / SportsActivityLocation schema.
+ * `areaServed` in organization and coaching-service schema.
  */
 export const SERVICE_AREAS = [
   "Bethesda",
@@ -109,19 +109,11 @@ export function cityPageForCity(city: ServiceCity) {
   return CITY_LANDING_PAGES.find((p) => p.city === city);
 }
 
-/** PostalAddress used everywhere — county-level, no street (sessions rotate). */
-export const NGA_POSTAL_ADDRESS = {
-  "@type": "PostalAddress",
-  addressLocality: "Montgomery County",
-  addressRegion: "MD",
-  addressCountry: "US",
-} as const;
-
 /**
  * ─── Entity graph (AEO audit, 2026-09-13) ─────────────────────────────────
  * ONE organization node, emitted in the root layout by organizationJsonLd(),
  * carrying @id #organization. Every other node (SportsEvent.organizer,
- * Course.provider, LocalBusiness.parentOrganization, BlogPosting.publisher,
+ * Course.provider, Service.provider, BlogPosting.publisher,
  * Person.worksFor) points at it through orgRef(). Refs are typed AND named on
  * purpose: the org and Person nodes do not appear on every page, so a bare
  * { "@id" } would lose its label for any reader that doesn't stitch pages.
@@ -144,8 +136,6 @@ export const ORG_SAME_AS = [
   "https://www.instagram.com/nextgenpickleballacademy",
   "https://www.facebook.com/profile.php?id=61579009749341",
   "https://maps.google.com/?cid=13747039329786027007",
-  "https://www.sammorrispb.com",
-  "https://www.linkanddink.com",
 ];
 
 export const PERSON_IDS = {
@@ -191,14 +181,13 @@ export function areaServedJsonLd() {
 }
 
 /**
- * The one organization node — root layout only. Typed as both a
- * SportsOrganization (what NGA is) and a SportsActivityLocation (the repo
- * convention for the layout node, and what local readers look for).
+ * The academy is an organization, not a physical venue. Actual event locations
+ * retain their own verified venue data on their SportsEvent nodes.
  */
 export function organizationJsonLd() {
   return {
     "@context": "https://schema.org",
-    "@type": ["SportsOrganization", "SportsActivityLocation"],
+    "@type": "SportsOrganization",
     "@id": ORG_ID,
     name: ORG_NAME,
     alternateName: ORG_ALTERNATE_NAMES,
@@ -208,7 +197,6 @@ export function organizationJsonLd() {
     logo: `${SITE_URL}/images/og-image.png`,
     telephone: "301-325-4731",
     email: "nextgenacademypb@gmail.com",
-    address: NGA_POSTAL_ADDRESS,
     sameAs: ORG_SAME_AS,
     areaServed: areaServedJsonLd(),
     founder: [personRef("Sam Morris"), personRef("Amine Lahlou")],
@@ -235,11 +223,10 @@ export function breadcrumbJsonLd(items: BreadcrumbItem[]) {
 }
 
 /**
- * LocalBusiness JSON-LD for a city landing page. `city` becomes the primary
- * `areaServed`; the full service-area list is appended so cross-city search
- * still resolves to one academy.
+ * A city guide describes coaching coverage, not a separate academy branch.
+ * Primary city plus the wider service area still resolve to one provider.
  */
-export function localBusinessJsonLd({
+export function cityServiceJsonLd({
   city,
   url,
   description,
@@ -250,13 +237,12 @@ export function localBusinessJsonLd({
 }) {
   return {
     "@context": "https://schema.org",
-    "@type": ["LocalBusiness", "SportsActivityLocation"],
-    name: `Next Gen Pickleball Academy — ${city}`,
+    "@type": "Service",
+    "@id": `${url}#service`,
+    name: `Youth pickleball coaching in ${city}`,
+    serviceType: "Youth pickleball coaching",
     description,
     url,
-    telephone: "301-325-4731",
-    email: "nextgenacademypb@gmail.com",
-    address: NGA_POSTAL_ADDRESS,
     areaServed: [
       { "@type": "City", name: city },
       ...SERVICE_AREAS.filter((c) => c !== city).map((c) => ({
@@ -265,18 +251,17 @@ export function localBusinessJsonLd({
       })),
       { "@type": "AdministrativeArea", name: "Montgomery County, MD" },
     ],
-    parentOrganization: orgRef(),
+    provider: orgRef(),
   };
 }
 
 /**
- * LocalBusiness JSON-LD for an OUT-OF-COUNTY landing page. Address stays
- * county-level (same convention as NGA_POSTAL_ADDRESS — no street, because the
- * business isn't the venue; the Pickl Park street address lives on its
- * SportsEvent nodes). areaServed runs county → city → the named nearby towns →
+ * Coaching Service for an OUT-OF-COUNTY guide. The business is not the venue;
+ * the Pickl Park street address stays on its SportsEvent nodes.
+ * areaServed runs county → city → the named nearby towns →
  * the MoCo towns between the two venues → Montgomery County.
  */
-export function extendedAreaLocalBusinessJsonLd({
+export function extendedAreaServiceJsonLd({
   area,
   url,
   description,
@@ -287,18 +272,12 @@ export function extendedAreaLocalBusinessJsonLd({
 }) {
   return {
     "@context": "https://schema.org",
-    "@type": ["LocalBusiness", "SportsActivityLocation"],
-    name: `${ORG_NAME} — ${area.city}`,
+    "@type": "Service",
+    "@id": `${url}#service`,
+    name: `Youth pickleball coaching in ${area.city}`,
+    serviceType: "Youth pickleball coaching",
     description,
     url,
-    telephone: "301-325-4731",
-    email: "nextgenacademypb@gmail.com",
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: area.county.replace(/, MD$/, ""),
-      addressRegion: "MD",
-      addressCountry: "US",
-    },
     areaServed: [
       { "@type": "AdministrativeArea", name: area.county },
       { "@type": "City", name: area.city },
@@ -307,7 +286,7 @@ export function extendedAreaLocalBusinessJsonLd({
       ...area.crossLinkCities.map((c) => ({ "@type": "City" as const, name: c })),
       { "@type": "AdministrativeArea", name: "Montgomery County, MD" },
     ],
-    parentOrganization: orgRef(),
+    provider: orgRef(),
   };
 }
 

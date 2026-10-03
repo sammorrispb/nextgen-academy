@@ -20,7 +20,7 @@ import {
   SITE_URL,
   breadcrumbJsonLd,
   cityPageForCity,
-  extendedAreaLocalBusinessJsonLd,
+  extendedAreaServiceJsonLd,
 } from "@/lib/seo";
 
 // NGA's first out-of-county landing page (AEO audit, 2026-09-13). Hand-rolled
@@ -70,7 +70,7 @@ export default function FrederickPage() {
         ])}
       />
       <JsonLd
-        data={extendedAreaLocalBusinessJsonLd({
+        data={extendedAreaServiceJsonLd({
           area: AREA,
           url: URL,
           description: FREDERICK_PAGE.description,
