@@ -20,6 +20,7 @@ let captured: RequestInit[] = [];
 let row: ReturnType<typeof registration>;
 let results: ReturnType<typeof registration>[];
 let hasMore = false;
+let adminCookie: string;
 
 function registration(division = "10U") {
   return { id: "22222222-3333-4444-5555-666666666666", archived: false,
@@ -35,7 +36,7 @@ function registration(division = "10U") {
       Allergies: { rich_text: [{ plain_text: "DO_NOT_SEND" }] },
     } };
 }
-function request(body: unknown, cookie = createAdminSessionValue("admin@example.com"), requestOrigin = origin) {
+function request(body: unknown, cookie = adminCookie, requestOrigin = origin) {
   return new NextRequest(`${origin}/api/admin/mvf-roster-sync`, { method: "POST",
     headers: { "content-type": "application/json", origin: requestOrigin,
       cookie: `nga_admin=${cookie}`, authorization: "Bearer ops-test" },
@@ -56,6 +57,8 @@ test.beforeEach(() => {
   Object.assign(process.env, { COACH_SIGNING_SECRET: "signing-test", ADMIN_ALLOWLIST: "admin@example.com",
     NOTION_API_KEY: "notion-test", NOTION_MVF_TOURNAMENT_REGS_DB_ID: DB,
     NGA_SYNC_SECRET: "sync-test", VERCEL_ENV: "production", SESSION_OPS_SECRET: "ops-test" });
+  // A browser keeps one cookie; minting per request changes the preview-bound session.
+  adminCookie = createAdminSessionValue("admin@example.com");
   captured = []; hasMore = false; row = registration(); results = [row];
   stub.reset(); stub.install();
   const stubFetch = globalThis.fetch;
@@ -160,7 +163,7 @@ for (const fault of ["missing", "duplicate", "pagination", "wrong database", "wr
     expect(stub.callsTo("linkanddink")).toHaveLength(0);
   });
 }
-for (const fault of ["tampered", "other invoice", "changed source", "other session", "expired"]) {
+for (const fault of ["tampered", "other invoice", "changed source", "other session", "renewed session", "expired"]) {
   test(`preview receipt rejects ${fault} without upstream write`, async () => {
     let token = await preview(); const oldNow = Date.now;
     let invoiceId = INVOICE; let cookie: string | undefined;
@@ -168,6 +171,10 @@ for (const fault of ["tampered", "other invoice", "changed source", "other sessi
     if (fault === "other invoice") { invoiceId = "in_other"; row.properties["Stripe Invoice ID"].rich_text[0].plain_text = invoiceId; }
     if (fault === "changed source") row.properties["Child First Name"].rich_text[0].plain_text = "Different";
     if (fault === "other session") { process.env.ADMIN_ALLOWLIST += ",second@example.com"; cookie = createAdminSessionValue("second@example.com"); }
+    if (fault === "renewed session") {
+      Date.now = () => oldNow() + 2_000;
+      cookie = createAdminSessionValue("admin@example.com");
+    }
     if (fault === "expired") Date.now = () => oldNow() + 11 * 60_000;
     try { expect((await call({ invoiceId, action: "replay", previewToken: token }, cookie)).response.status).toBe(409); }
     finally { Date.now = oldNow; }
@@ -180,10 +187,22 @@ test("a repeat replay delegates idempotency to the same protected endpoint", asy
   stub.on("linkanddink", (c: RecordedFetch) => JSON.parse(c.body).dry_run
     ? { ok: true, dryRun: true, action: "would_add", eventSlug: "mvf-junior-tournament-10u-2026-10-24-4" }
     : { ok: true, alreadyOnRoster: writes++ > 0, rsvpId: "same-rsvp", eventSlug: "mvf-junior-tournament-10u-2026-10-24-4" });
-  const token = await preview();
-  expect((await call({ invoiceId: INVOICE, action: "replay", previewToken: token })).json.outcome).toBe("added");
-  expect((await call({ invoiceId: INVOICE, action: "replay", previewToken: token })).json.outcome).toBe("already_on_roster");
-  expect(stub.callsTo("linkanddink")[1].body).toBe(stub.callsTo("linkanddink")[2].body);
+  const realNow = Date.now;
+  const startedAt = realNow();
+  Date.now = () => startedAt;
+  try {
+    const token = await preview();
+    const first = await call({ invoiceId: INVOICE, action: "replay", previewToken: token });
+    expect(first.response.status).toBe(200);
+    expect(first.json.outcome).toBe("added");
+    Date.now = () => startedAt + 2_000;
+    const repeat = await call({ invoiceId: INVOICE, action: "replay", previewToken: token });
+    expect(repeat.response.status).toBe(200);
+    expect(repeat.json.outcome).toBe("already_on_roster");
+    expect(stub.callsTo("linkanddink")[1].body).toBe(stub.callsTo("linkanddink")[2].body);
+  } finally {
+    Date.now = realNow;
+  }
 });
 for (const phase of ["preview", "replay"]) {
   test(`${phase} rejects upstream eligibility failure without echo or false success`, async () => {
