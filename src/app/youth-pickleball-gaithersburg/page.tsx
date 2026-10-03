@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import CityLanding from "@/components/CityLanding";
+import { MVF_AGE_MIN, MVF_AGE_MAX, NORTH_CREEK } from "@/data/mvf";
 
 const TITLE = "Youth Pickleball in Gaithersburg, MD — Next Gen Academy";
 const DESCRIPTION =
-  "Youth pickleball for kids ages 6–16 in Gaithersburg, MD. Free 30-min evaluations, small-group sessions, and private lessons from Next Gen Academy.";
+  `Youth pickleball for Gaithersburg families. Explore MVF classes in Montgomery Village (ages ${MVF_AGE_MIN}–${MVF_AGE_MAX}), evaluations and lessons. MVF handles class registration.`;
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -27,15 +28,13 @@ export default function GaithersburgPage() {
     <CityLanding
       city="Gaithersburg"
       slug="youth-pickleball-gaithersburg"
-      intro="Gaithersburg is home turf for our summer camps — this year's June and July camp weeks ran at Gaithersburg High School — and our fall MVF classes run next door in Montgomery Village. This season’s weekly group sessions for kids 6–16 run Sunday afternoons at Walter Johnson HS in Bethesda; we’ve also run Saturday sessions at Earle B. Wood MS in Rockville in past seasons. Start with a free 30-minute evaluation."
-      whereWePlay="We've coached Gaithersburg kids at Ridgeview Middle School in past seasons, run summer camp weeks at Gaithersburg High School, and teach fall MVF classes next door in Montgomery Village — the Aug 27 intro at Apple Ridge, then both fall sessions at North Creek. The current weekend sessions run at Wood MS (Saturdays) and Walter Johnson HS (Sundays) — one court per level, four players per court."
-      cityFaq={[
-        {
-          question: "Do you run anything in Gaithersburg itself?",
-          answer:
-            "Yes — our summer camp weeks run at Gaithersburg High School, and our fall MVF classes run in Montgomery Village next door (Apple Ridge for the intro, North Creek for both fall sessions). The weekly weekend group sessions currently run in Rockville (Saturdays) and Bethesda (Sundays) — the schedule page has the current lineup.",
-        },
-      ]}
+      intro={`Gaithersburg families can explore MVF partner classes in Montgomery Village for ages ${MVF_AGE_MIN}–${MVF_AGE_MAX}. The fall classes list ${NORTH_CREEK.name}; you register and pay through MVF, choosing the session and skill bracket that fits. NGA's academy serves ages 6–16, with free evaluations and private lessons available as other starting points.`}
+      whereWePlay={`${NORTH_CREEK.name} at ${NORTH_CREEK.center} is in ${NORTH_CREEK.locality}, rather than Gaithersburg. Confirm the class venue with MVF before heading out: Watkins Mill is a contingency if court work moves a class. Our 2026 summer camps at Gaithersburg High School ran earlier this year, and Ridgeview Middle School hosted sessions in past seasons. Those are history, not a promise of current camp or weekly availability. Coach Sam confirms evaluation and lesson courts.`}
+      programLink={{ label: "MVF class details and registration", href: "/montgomery-village-youth-pickleball" }}
+      cityFaq={[{
+        question: "Which programs can Gaithersburg families explore now?",
+        answer: `See /montgomery-village-youth-pickleball for MVF classes, ages ${MVF_AGE_MIN}–${MVF_AGE_MAX}, at ${NORTH_CREEK.name} in ${NORTH_CREEK.locality}. MVF handles registration and payment; confirm the listed venue and available session with MVF. Gaithersburg High School camps and Ridgeview sessions are past programs. Evaluations or private lessons are arranged with Coach Sam.`,
+      }]}
     />
   );
 }

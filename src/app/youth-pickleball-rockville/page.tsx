@@ -3,7 +3,7 @@ import CityLanding from "@/components/CityLanding";
 
 const TITLE = "Youth Pickleball in Rockville, MD — Next Gen Academy";
 const DESCRIPTION =
-  "Youth pickleball for kids ages 6–16 in Rockville, MD. Free 30-min evaluations, small-group sessions, and private lessons from Next Gen Academy.";
+  "Youth pickleball for Rockville families. Explore Montgomery County programs, evaluations and lessons. Each listing gives its venue, ages and levels.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -27,15 +27,13 @@ export default function RockvillePage() {
     <CityLanding
       city="Rockville"
       slug="youth-pickleball-rockville"
-      intro="Rockville has been Saturday home base in past seasons: Earle B. Wood Middle School on Bauer Drive has hosted Saturday group sessions, with a court each for Red, Orange, Green, and Yellow Ball. Kids 6–16 start with a free 30-minute evaluation — we place by skill, every level is welcome, and you pay per session with no subscription."
-      whereWePlay="Beyond the Wood MS Saturdays, Rockville families have trained with us at Redland Middle School near Derwood in past seasons, and our August back-to-school camp runs at Wood MS too. Sunday afternoons run at Walter Johnson HS in Bethesda if that end of the weekend fits your family better."
-      cityFaq={[
-        {
-          question: "Where in Rockville do sessions run?",
-          answer:
-            "Saturday group sessions have run at Earle B. Wood Middle School (14615 Bauer Dr, Rockville) in past seasons, and the August back-to-school camp ran there as well. This season, Sundays run at Walter Johnson HS in Bethesda. Venues can change seasonally — the schedule page always has the current lineup.",
-        },
-      ]}
+      intro={"Rockville families can compare the county's listed seasons and partner classes, or start with a free 30-minute evaluation or private lesson. NGA's academy serves ages 6–16; each program has its own ages, skill levels, venue and registration terms. Earle B. Wood Middle School hosted Saturday sessions in past seasons, rather than an ongoing weekly offer on this page."}
+      whereWePlay={"We coached past seasons at Earle B. Wood Middle School in Rockville and Redland Middle School near Derwood. The 2026 back-to-school camp at Wood has finished. For listed county options, compare the Green and Yellow Ball season at Walter Johnson High School in Bethesda with MVF classes in Montgomery Village. Use the county guide for program status and booking details. Coach Sam confirms the court for evaluations and private lessons."}
+      programLink={{ label: "Compare county programs", href: "/montgomery-county-youth-pickleball#programs" }}
+      cityFaq={[{
+        question: "Do past Wood sessions mean Rockville registration is open?",
+        answer: "No. Earle B. Wood Middle School's Saturday sessions and 2026 back-to-school camp are past programs. The county guide lists season and partner-class options with their own venues, ages, levels and registration terms. Coach Sam confirms the time and court for an evaluation or private lesson; /schedule lists any separate single-session drop-ins.",
+      }]}
     />
   );
 }
