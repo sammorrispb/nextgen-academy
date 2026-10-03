@@ -10,7 +10,7 @@ import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import TrackedCTA from "@/components/TrackedCTA";
 import {
   breadcrumbJsonLd,
-  localBusinessJsonLd,
+  cityServiceJsonLd,
   cityPageForCity,
   CITY_NEIGHBORS,
   SITE_URL,
@@ -112,7 +112,7 @@ export default function CityLanding({
       />
 
       <JsonLd
-        data={localBusinessJsonLd({
+        data={cityServiceJsonLd({
           city,
           url,
           description,

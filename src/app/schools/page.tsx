@@ -8,7 +8,7 @@ import {
   areaServedJsonLd,
   breadcrumbJsonLd,
   courseJsonLd,
-  NGA_POSTAL_ADDRESS,
+  orgRef,
   SITE_URL,
 } from "@/lib/seo";
 
@@ -240,16 +240,9 @@ export default function SchoolsPage() {
         data={{
           "@context": "https://schema.org",
           "@type": "Service",
+          "@id": `${SITE_URL}/schools#service`,
           serviceType: "Group Pickleball Instruction",
-          provider: {
-            "@type": "SportsActivityLocation",
-            name: site.name,
-            url: site.website,
-            telephone: site.phone,
-            email: site.email,
-            address: NGA_POSTAL_ADDRESS,
-            areaServed: areaServedJsonLd(),
-          },
+          provider: orgRef(),
           audience: [
             { "@type": "EducationalAudience", educationalRole: "K-12 school" },
             { "@type": "Audience", audienceType: "Recreation center" },

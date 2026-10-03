@@ -8,7 +8,7 @@ import { PICKLPARK_LEAGUES } from "../src/data/picklpark-leagues-2026";
 import {
   EXTENDED_AREA_LANDING_PAGES,
   EXTENDED_SERVICE_AREAS,
-  extendedAreaLocalBusinessJsonLd,
+  extendedAreaServiceJsonLd,
 } from "../src/lib/seo";
 
 /**
@@ -115,9 +115,9 @@ test.describe("Frederick landing page copy", () => {
     });
   });
 
-  test("LocalBusiness areaServed names Frederick County towns and the MoCo bridge", () => {
+  test("Frederick service names its coverage and academy provider without inventing a branch", () => {
     const area = EXTENDED_SERVICE_AREAS[0];
-    const ld = extendedAreaLocalBusinessJsonLd({
+    const ld = extendedAreaServiceJsonLd({
       area,
       url: "https://nextgenpbacademy.com/youth-pickleball-frederick",
       description: FREDERICK_PAGE.description,
@@ -126,6 +126,10 @@ test.describe("Frederick landing page copy", () => {
     for (const n of ["Frederick", "Frederick County, MD", "Germantown", ...area.nearbyTowns]) {
       expect(names, n).toContain(n);
     }
-    expect(JSON.stringify(ld.address)).toContain("Frederick County");
+    expect(ld["@type"]).toBe("Service");
+    expect(ld).toHaveProperty("@id", "https://nextgenpbacademy.com/youth-pickleball-frederick#service");
+    expect(ld).toHaveProperty("provider.@id", "https://nextgenpbacademy.com/#organization");
+    expect(ld).not.toHaveProperty("address");
+    expect(ld).not.toHaveProperty("parentOrganization");
   });
 });
