@@ -182,6 +182,25 @@ function flatten(node: unknown, acc: unknown[] = []): unknown[] {
   return acc;
 }
 
+test("ball pathway cards describe levels without creating undated events", async ({ page }) => {
+  await page.goto("/");
+  const cards = page.locator("article[data-age-min][data-age-max]");
+  await expect(cards).toHaveCount(4);
+  for (const label of ["Red Ball", "Orange Ball", "Green Ball", "Yellow Ball"]) {
+    const card = cards.filter({ has: page.getByRole("heading", { name: label, exact: true }) });
+    await expect(card).toBeVisible();
+    await expect(card.locator("[itemprop]")).toHaveCount(0);
+    expect(await card.getAttribute("itemtype")).toBeNull();
+    expect(await card.getAttribute("itemscope")).toBeNull();
+    await expect(card.getByRole("link")).toHaveCount(1);
+    if (label === "Yellow Ball") {
+      await expect(card.getByRole("link", { name: "Request an eval" })).toHaveAttribute("href", "/yellowball/inquiry");
+    } else {
+      await expect(card.getByRole("link", { name: "Get Started" })).toHaveAttribute("href", "sms:+13013254731");
+    }
+  }
+});
+
 test.describe("SEO foundations — per-route", () => {
   for (const route of ROUTES) {
     test.describe(route.path, () => {

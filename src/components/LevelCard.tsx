@@ -11,8 +11,6 @@ export default function LevelCard({ level }: LevelCardProps) {
   return (
     <article
       className="group relative bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl p-6 sm:p-7 border border-ngpa-slate/60 shadow-xl shadow-black/20 hover:border-ngpa-teal/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-      itemScope
-      itemType="https://schema.org/SportsEvent"
       data-age-min={level.ages.replace("+", "")}
       data-age-max="16"
     >
@@ -60,13 +58,11 @@ export default function LevelCard({ level }: LevelCardProps) {
         {/* Title */}
         <h3
           className="font-heading text-2xl font-black text-ngpa-white mb-1 tracking-tight"
-          itemProp="name"
         >
           {level.label}
         </h3>
         <p
           className="font-medium text-base text-ngpa-white/95 mb-2"
-          itemProp="description"
         >
           {level.focus}
         </p>
