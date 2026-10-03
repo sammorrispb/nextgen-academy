@@ -58,7 +58,7 @@ export const faq: FaqItem[] = [
   {
     question: "What should my child bring?",
     answer:
-      "Comfortable athletic clothing, court shoes (non-marking soles), and a water bottle. We provide paddles and balls for all sessions.",
+      "Comfortable athletic clothing, court shoes (non-marking soles), and a water bottle. Check your program listing for equipment details, or ask Coach Sam what your child needs before attending.",
   },
   {
     question: "Where are you located?",
@@ -88,12 +88,12 @@ export const faq: FaqItem[] = [
   {
     question: "Is pickleball safe for kids?",
     answer:
-      "Yes. Pickleball is one of the safest racket sports for children: the court is smaller than tennis, the paddle is lightweight, and the ball moves at lower speeds than a tennis ball. USA Pickleball’s official youth progression uses color-coded balls (Red, Orange, Green, Yellow) with reduced bounce and compression so kids learn proper technique before the game speeds up. Our coaches are trained in youth-appropriate drills, warmups, and game formats.",
+      "Your child's session should fit their age and skill level. NGA coaches use youth-appropriate drills, warm-ups and game formats. Check the program listing for its group size and equipment details. If you're unsure which starting point fits, ask Coach Sam about your child's program options.",
   },
   {
     question: "What’s the difference between Red, Orange, Green, and Yellow Ball?",
     answer:
-      "Each color follows USA Pickleball's youth progression. Red Ball (pre-rally) builds paddle control, footwork and sustained back-and-forth on a foam ball. Orange Ball layers in rules mastery and full-court movement. Green Ball (10+) adds shot selection, court positioning and doubles teamwork. Yellow Ball (12+) is our coach-curated competitive track, with focused tournament prep. These describe the pathway; each program listing gives its eligible ages, levels and group size. Private lessons are available at any level. A free evaluation helps us place your child by skill within the program's age requirements.",
+      "Your child's next step follows NGA's Red, Orange, Green and Yellow Ball pathway. Red Ball builds paddle control, footwork and a sustained back-and-forth rally. Orange Ball adds rules and full-court movement. Green Ball adds shot selection, positioning and teamwork. Yellow Ball is the coach-curated tournament track. Each program listing gives its ages, levels and group size; a free evaluation helps us recommend a next step within those requirements. Private lessons are available at any level.",
     cta: { label: "See the four levels in detail", href: "#levels" },
   },
   {

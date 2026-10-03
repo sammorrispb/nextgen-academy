@@ -272,11 +272,11 @@ export default function MontgomeryCountyPage() {
             The Red &rarr; Yellow Ball pathway.
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            We follow USA Pickleball&rsquo;s official youth progression — a proven
-            system of color-coded balls with reduced bounce and compression. Every
-            child&rsquo;s skills help us recommend a next step during a free
-            evaluation. These colors describe the pathway; each program listing
-            gives its eligible ages, levels and group size.
+            Your child progresses through NGA&rsquo;s Red, Orange, Green and
+            Yellow Ball pathway as their skills develop. A free evaluation helps
+            us recommend a next step within the program&rsquo;s age requirements.
+            Check each listing for its available levels, group size and current
+            dates. Private lessons are available at any level.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

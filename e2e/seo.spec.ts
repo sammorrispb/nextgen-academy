@@ -496,3 +496,43 @@ test.describe("City pages — visible H1 + clickable Free Evaluation CTA", () =>
     });
   }
 });
+
+// Editorial accuracy on the actual built pages, alongside normal SEO checks.
+test.describe("Public editorial accuracy", () => {
+  const slugs = ["is-pickleball-safe-for-kids", "youth-pickleball-ball-colors-explained", "where-kids-play-pickleball-montgomery-county", "first-pickleball-session-what-to-expect", "best-age-to-start-pickleball", "indoor-youth-pickleball-near-frederick-md", "pickleball-vs-tennis-for-a-7-year-old"];
+  for (const slug of slugs) {
+    test(`${slug}: accurate visible text, metadata and article schema`, async ({ page }) => {
+      await page.goto(`/blog/${slug}`);
+      const article = page.locator("article");
+      await expect(article).not.toContainText(/safest racket sports|USA Pickleball.{0,30}(?:official|youth progression)|Every Next Gen player starts|before any group session|paddles and balls for every session/i);
+      await expect(article).toContainText(/program.*(?:age|eligib)|listing.*(?:age|eligib)/i);
+      await expect(article.getByRole("link", { name: "Book a Free Evaluation", exact: true })).toBeVisible();
+      const description = await page.locator('meta[name="description"]').getAttribute("content");
+      const schemas = await page.locator('script[type="application/ld+json"]').evaluateAll(nodes => nodes.map(n => JSON.parse(n.textContent || "{}")));
+      const post = schemas.find(n => n["@type"] === "BlogPosting");
+      expect(post.description).toBe(description);
+      expect(post.url).toContain(`/blog/${slug}`);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    });
+  }
+  for (const route of ["/montgomery-county-youth-pickleball", "/youth-pickleball-north-bethesda"]) {
+    test(`${route}: pathway and FAQ agree with NGA scope`, async ({ page }) => {
+      await page.goto(route);
+      await expect(page.locator("main")).not.toContainText(/official youth progression|safest racket sports/);
+      const schemas = await page.locator('script[type="application/ld+json"]').evaluateAll(nodes => nodes.map(n => JSON.parse(n.textContent || "{}")));
+      const answers = schemas.find(n => n["@type"] === "FAQPage").mainEntity;
+      expect(answers.find((n: { name: string }) => n.name === "Is pickleball safe for kids?").acceptedAnswer.text).toContain("group size and equipment");
+    });
+  }
+  test("home safety FAQ matches its JSON-LD answer", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Is pickleball safe for kids?", exact: true }).click();
+    const button = page.getByRole("button", { name: "Is pickleball safe for kids?", exact: true });
+    const answer = page.locator(`#${await button.getAttribute("aria-controls")}`);
+    await expect(answer).toBeVisible();
+    await expect(answer).toContainText("group size and equipment");
+    const schemas = await page.locator('script[type="application/ld+json"]').evaluateAll(nodes => nodes.map(n => JSON.parse(n.textContent || "{}")));
+    const safety = schemas.find(n => n["@type"] === "FAQPage").mainEntity.find((n: { name: string }) => n.name === "Is pickleball safe for kids?").acceptedAnswer.text;
+    await expect(answer).toContainText(safety);
+  });
+});
