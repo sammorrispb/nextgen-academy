@@ -12,6 +12,11 @@
 // sites on 2026-09-13 and deliberately names no times: families check those
 // schedules directly.
 
+import { FALL_SEASON_LABEL, FALL_VENUE_SHORT } from "./fall-2026";
+import { FALL_SEASON_GROUPS } from "./fall-season-2026";
+import { MVF_AGE_MIN, MVF_AGE_MAX, NORTH_CREEK } from "./mvf";
+
+
 import {
   PICKLPARK_LEAGUES,
   PICKLPARK_LEAGUE_PLACEMENT_NOTE,
@@ -21,6 +26,8 @@ import {
   PICKLPARK_SEASON_LABEL,
   PICKLPARK_SEASON_WEEKS,
 } from "./picklpark-2026";
+
+const FALL_GROUPS = FALL_SEASON_GROUPS.map((group) => group.label).join(" and ");
 
 const PICKLPARK_LEAGUE_LINES = PICKLPARK_LEAGUES.map(
   (l) => `${l.title} (${l.ageLabel.toLowerCase()}, Saturdays ${l.timeLabel}): ${l.blurb}`,
@@ -51,26 +58,26 @@ export const blogPosts: BlogPost[] = [
     title: "Is Pickleball Safe for Kids? A MoCo Coach's Answer",
     headline: "Is pickleball safe for kids? A coach's honest answer.",
     description:
-      "Why pickleball is one of the safest racket sports for kids 6–16 — smaller courts, lighter paddles, slower balls, and USA Pickleball's youth progression.",
+      "How to choose an age- and skill-appropriate pickleball program for your child, what NGA's pathway means, and which session details to check.",
     datePublished: "2026-07-25",
     sections: [
       {
         paragraphs: [
-          "It's the question we hear most from parents who've just watched their first pickleball rally: is this actually safe for my kid? Short answer — yes, and it's one of the safest racket sports a child can pick up.",
-          "The court is roughly a third the size of a tennis court, so kids aren't sprinting long distances or overreaching for balls. The paddle is lightweight — far easier on small wrists and shoulders than a tennis racket. And the ball itself is a perforated plastic ball that moves at lower speeds than a tennis ball, which means more time to react and fewer hard impacts.",
+          "Your child's session should fit their age and skill level. At NGA, youth-appropriate drills, warm-ups and game formats are part of how we coach. Start by checking the actual session your child would join and asking about the details that matter for your family.",
+          "Look beyond the sport's name. Check the actual session's ages, skill levels, group size and equipment. NGA serves ages 6–16, but partner classes and seasons can serve a narrower range. Your child's skills help us recommend a next step within those requirements.",
         ],
       },
       {
-        heading: "The youth ball progression is a safety system too",
+        heading: "A pathway that fits your player's skills",
         paragraphs: [
-          "USA Pickleball's official youth progression uses color-coded balls — Red, Orange, Green, Yellow — with reduced bounce and compression at the early stages. A Red Ball player is learning on a foam ball: soft, slow, and forgiving while paddle control and footwork develop. The game only speeds up as the child's technique is ready for it. That's the same principle behind graduated equipment in youth tennis and coach-pitch baseball — the sport meets the kid where they are.",
-          "At Next Gen we add our own layer on top: every group court is capped at four players so coaches see every rep, sessions start with age-appropriate warmups, and each ball color runs on its own court so a brand-new 7-year-old is never sharing space with a tournament-track 14-year-old's drives.",
+          "NGA's pathway is Red, Orange, Green and Yellow Ball. Red Ball uses a foam ball while players work on paddle control, footwork and a sustained rally. Orange adds rules and movement; Green adds shot selection and teamwork; Yellow is our coach-curated tournament track. These describe the skills we develop. Check the listing for the levels a current group serves.",
+          "Check your program's group size and format before registering. A season, a partner class and a private lesson are different offers. If you aren't sure which setting fits, a free 30-minute evaluation can help a coach recommend a starting point; private lessons are another option.",
         ],
       },
       {
         heading: "What parents can do",
         paragraphs: [
-          "Send your child in comfortable athletic clothing and court shoes with non-marking soles, plus a water bottle — we provide the paddles and balls. And if you're not sure your child is ready for group play, that's exactly what the free 30-minute evaluation is for: a coach watches your child play and recommends the right starting point, whether that's the Red Ball court or a few 1:1 lessons first.",
+          "Bring comfortable athletic clothing, court shoes with non-marking soles and water. Check the listing for equipment details, or ask Coach Sam what your child needs. Before leaving home, confirm the venue, time and registration with the program's booking owner. A clear plan lets your child focus on learning once they reach the court.",
         ],
       },
     ],
@@ -80,42 +87,42 @@ export const blogPosts: BlogPost[] = [
     title: "Red, Orange, Green, Yellow: Youth Pickleball Levels",
     headline: "Red, Orange, Green, Yellow — the youth ball colors, explained.",
     description:
-      "What the color-coded youth progression means, how kids move from Red Ball to the Yellow Ball tournament track, and why placement is by skill, not age.",
+      "NGA's Red, Orange, Green and Yellow Ball pathway explained for parents, with skill placement inside each program's age and level requirements.",
     datePublished: "2026-07-25",
     sections: [
       {
         paragraphs: [
-          "If you've seen our schedule, you've seen the colors: Red, Orange, Green, Yellow. They're not team names — they're USA Pickleball's official youth progression, a ladder of color-coded balls that lets a child learn real technique before the game speeds up. Here's what each step actually means, in plain parent terms.",
+          "Red, Orange, Green and Yellow Ball describe NGA's pathway. They help you understand the skills your child is developing, rather than assign a team name. The academy serves ages 6–16; each current program lists the ages and levels it accepts. Here's what the four steps mean in parent terms.",
         ],
       },
       {
-        heading: "Red Ball — pre-rally (ages 6+)",
+        heading: "Red Ball — building the rally",
         paragraphs: [
-          "The starting court, built for kids brand-new to the game. Red Ball sessions use a foam ball — slow and forgiving — while kids build paddle control, footwork, and their first sustained back-and-forth. No experience needed; this court exists precisely for kids who can't rally yet.",
+          "The starting point for players brand-new to the game. Red Ball work uses a foam ball while kids build paddle control, footwork and their first sustained back-and-forth rally. No pickleball experience is needed to begin learning; current group availability and eligibility still come from the listing.",
         ],
       },
       {
-        heading: "Orange Ball — building (ages 6+)",
+        heading: "Orange Ball — building consistency",
         paragraphs: [
           "The bridge level. Kids here can rally and are layering in rules mastery, consistency, and full-court movement. It's where the game starts looking like the game.",
         ],
       },
       {
-        heading: "Green Ball — strategy (ages 10+)",
+        heading: "Green Ball — strategy and teamwork",
         paragraphs: [
           "Strategy meets competition: shot selection, court positioning, and doubles teamwork. Partnerships start to form at this level, and kids begin thinking a shot ahead.",
         ],
       },
       {
-        heading: "Yellow Ball — the tournament track (ages 12+)",
+        heading: "Yellow Ball — the tournament track",
         paragraphs: [
-          "Our coach-curated competitive track: small groups of 3–5 athletes, custom scheduling around tournaments, and focused prep. Yellow Ball is invite-only — interest goes through our inquiry form, and coaches extend invitations based on readiness.",
+          "Our coach-curated competitive track focuses on tournament preparation. The Yellow Ball inquiry form is how you share interest; coaches extend invitations based on readiness. Check the actual offer for its dates, age requirements and group size rather than assume a particular schedule or number of players.",
         ],
       },
       {
         heading: "How placement works",
         paragraphs: [
-          "Placement is by skill, never age alone. Every child starts with a free 30-minute evaluation where a coach watches them play and places them on the right court. Every level is a step on one ladder, not a ceiling — and private lessons are available at any color for kids who want to fast-track with 1:1 reps.",
+          "A free 30-minute evaluation can help a coach recommend a next step by skill, within the program's age requirements. It is an option when you're unsure where to start, rather than a prerequisite for every partner enrollment. Private lessons are available at any color. Follow the current program's registration link and requirements before booking a group.",
         ],
       },
     ],
@@ -125,34 +132,36 @@ export const blogPosts: BlogPost[] = [
     title: "Where Kids Play Pickleball in Montgomery County, MD",
     headline: "Where kids can play pickleball in Montgomery County.",
     description:
-      "A parent's guide to youth pickleball in MoCo — Next Gen's weekend session venues, summer camps, fall classes, and where to find public courts for family play.",
+      "Youth pickleball options for Montgomery County families: Bethesda seasons, MVF partner classes, past camps and public courts for family play.",
     datePublished: "2026-07-25",
     sections: [
       {
         paragraphs: [
-          "Montgomery County has quietly become a great place for a kid to learn pickleball — school courts, public parks, and structured youth coaching all within a short drive. Here's the current lay of the land from where we stand.",
+          "Montgomery County families can compare seasons, partner classes, private lessons and separately listed single-session drop-ins. Your home town can differ from the program's venue. Check the current listing for dates, ages, levels and registration before making a plan.",
         ],
       },
       {
-        heading: "Structured weekly sessions",
+        heading: "Seasons and separately listed drop-ins",
         paragraphs: [
-          "Next Gen's group sessions run on weekend evenings at reserved Montgomery County Public Schools courts — this season that's Earle B. Wood Middle School in Rockville on Saturdays and Walter Johnson High School in Bethesda on Sundays, with a court for every ball color and four players per court. Venues shift season to season, so the schedule page always has the current lineup.",
+          `The 2026 fall season at ${FALL_VENUE_SHORT} in Bethesda is for ${FALL_GROUPS}, ${FALL_SEASON_LABEL}. Registration covers the full season, paid up front. Check /fall for current status and terms; the drop-in schedule lists separate single-session offers when available. Earle B. Wood Middle School Saturday sessions are past programs, not the current season.`,
         ],
       },
       {
-        heading: "Camps and classes",
+        heading: "Partner classes and past camps",
         paragraphs: [
-          "Our summer camp weeks run at Gaithersburg High School, with an August back-to-school camp at Wood MS in Rockville the week before school starts. In the fall, our MVF classes run in Montgomery Village — the intro class at Apple Ridge, then both six-week Thursday sessions at North Creek. All of it starts the same way: a free 30-minute evaluation.",
+          `MVF partner classes in Montgomery Village serve ages ${MVF_AGE_MIN}–${MVF_AGE_MAX}; fall listings name ${NORTH_CREEK.name}. You register and pay through MVF, choosing the session and bracket you want. Confirm the venue with MVF before attending because a class can move if court renovations begin. Our 2026 summer camps at Gaithersburg High School and back-to-school camp at Wood ran earlier this year; they are past programs. A free NGA evaluation is available for placement questions, rather than required for every partner enrollment.`,
         ],
       },
       {
         heading: "Public courts for family play",
         paragraphs: [
-          "One of the best things you can do between sessions is simply play with your kid. Montgomery County has dozens of public courts — dedicated and shared — across Rockville, Silver Spring, Gaithersburg, Wheaton, and beyond. Our sister community Link & Dink maintains an interactive map of every public pickleball court in the county, with court counts and lights for evening play. Grab a paddle, find a court near you, and let your child show you what they've learned.",
+          "Playing with your child between sessions is another way to enjoy the game together. Link & Dink's court map can help you explore courts, but confirm the venue's access, hours and current conditions before heading out. Once you have confirmed a place to play, let your child show you the skills they have been working on.",
         ],
       },
     ],
     links: [
+      { label: "Bethesda fall season details", href: "/fall" },
+      { label: "MVF class details and registration", href: "/montgomery-village-youth-pickleball" },
       {
         label: "Link & Dink's Montgomery County court map",
         href: "/map",
@@ -165,37 +174,37 @@ export const blogPosts: BlogPost[] = [
     title: "Your Kid's First Pickleball Session: What to Expect",
     headline: "Your kid's first session: what to expect, what to bring.",
     description:
-      "How a child's first Next Gen pickleball session works — the free evaluation, what to bring, how placement happens, and what the first hour on court looks like.",
+      "Plan your child's first NGA session: optional evaluation, program eligibility, equipment, duration, registration and cancellation details to check.",
     datePublished: "2026-07-25",
     sections: [
       {
         paragraphs: [
-          "First sessions come with first-session nerves — for kids and parents alike. Here's exactly how it works at Next Gen, so everyone walks on court knowing what's coming.",
+          "First sessions come with first-session nerves — for kids and parents alike. Your plan starts with the program you choose: its ages, levels, venue and format. NGA's academy serves ages 6–16, while each listing sets its own eligibility. Here's what to check before your child walks on court.",
         ],
       },
       {
-        heading: "Step one: the free evaluation",
+        heading: "When an evaluation can help",
         paragraphs: [
-          "Before any group session, every child gets a free 30-minute evaluation with a coach. The coach watches your child play — no drills to memorize, no test to pass — and recommends a starting court: Red, Orange, Green, or Yellow Ball. Placement is by skill, not age, so your child lands with peers at their level. There's no cost and no commitment.",
+          "A free 30-minute evaluation is an option when you're unsure where your child should start. A coach watches them play and recommends a next step along NGA's Red, Orange, Green and Yellow Ball pathway, within the program's age requirements. The evaluation has no cost and no commitment; partner programs follow their own enrollment requirements.",
         ],
       },
       {
         heading: "What to bring",
         paragraphs: [
-          "Comfortable athletic clothing, court shoes with non-marking soles, and a water bottle. That's it — we provide paddles and balls for every session. No need to buy equipment before your child knows they love the game.",
+          "Bring comfortable athletic clothing, court shoes with non-marking soles and a water bottle. Check the program listing for equipment details, or ask Coach Sam what your child needs before attending. Confirm the court and start time with the registration owner rather than rely on the venue of an earlier session.",
         ],
       },
       {
-        heading: "What the first hour looks like",
+        heading: "What the session involves",
         paragraphs: [
-          "Group sessions run one hour on a court capped at four players, so every kid gets constant reps — not line-standing. Expect an age-appropriate warmup, skill work built around their ball color, and plenty of actual play. Our coaching philosophy is a growth mindset: kids develop through effort, encouragement, and getting another rep, never through labels.",
-          "Sessions are one hour, drop-in — no subscription, no season commitment. You register for the slots that fit your family's week, the price is shown at checkout before you pay, and if we ever cancel a session for weather, you get an automatic full refund.",
+          "Your listing gives the session length and group size. NGA coaching uses youth-appropriate warm-ups, skill work and play, with cues that fit the player's starting point. Our coaching philosophy is a growth mindset: purposeful reps and encouragement help your child work on the next skill. The program listing gives the format for your session.",
+          "Before you register, check the program's dates, length, group size and payment terms. A drop-in is one session; a season is a block of sessions paid up front. Partner programs use their own registration and cancellation terms. The listing tells you which offer you're choosing and who handles registration.",
         ],
       },
       {
         heading: "Ready when you are",
         paragraphs: [
-          "Book the free evaluation, meet a coach, and see how your child takes to it. Most kids are rallying — and grinning — sooner than their parents expect.",
+          "If you want help choosing a starting point, book a free evaluation or request a private lesson. Share the area and days that work for your family; Coach Sam confirms the time and court. If you've already chosen a program, follow its listing's registration steps.",
         ],
       },
     ],
@@ -205,19 +214,19 @@ export const blogPosts: BlogPost[] = [
     title: "What's the Best Age to Start Pickleball? A Coach's Take",
     headline: "What's the best age for a kid to start pickleball?",
     description:
-      "A youth coach's answer: most kids are ready for group pickleball around 6, placement is by skill not age, and Red Ball is built for kids who can't rally yet.",
+      "NGA serves ages 6–16. Learn how your child's skills and each program's eligibility shape their starting point, with evaluations and private lessons available.",
     datePublished: "2026-09-13",
     sections: [
       {
         paragraphs: [
-          "Most kids are ready to start group pickleball around age 6 — that's where our Red Ball court begins. The better question isn't age, though: it's whether your child is ready for a group, and the Red Ball court is built for kids who can't rally yet.",
+          "NGA's academy serves kids ages 6–16. Within that range, your child's skills and the actual program's age requirements both matter. Red Ball work is built for players learning their first rally. For a group, check that your child meets the listing's age and level requirements.",
         ],
       },
       {
         heading: "Why we start at 6",
         paragraphs: [
-          "Our Red Ball court starts at 6 because the format is built for young players: small groups, short coaching cues, and a soft foam ball with less bounce, so a child has time to react and learn real technique before the game speeds up.",
-          "We coach kids 6 through 16, and every age range has a place to start. Red and Orange Ball are open from 6, Green Ball from 10, and the Yellow Ball tournament track from 12.",
+          "Six is the academy's minimum age. Our Red Ball work uses a foam ball and short coaching cues while players develop paddle control, footwork and the rally. Check a current listing's eligibility and group size before choosing a class; partner programs can set a higher minimum age.",
+          "Red, Orange, Green and Yellow Ball describe the NGA pathway, rather than a universal registration rule. Your child can work on the skills that fit their game through an eligible current program or a private lesson. A free evaluation is available when you want a coach's recommendation.",
         ],
       },
       {
@@ -230,7 +239,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Is it ever too late?",
         paragraphs: [
-          "No. Placement is by skill, never age alone, so a 12-year-old who has never held a paddle starts on the court that fits their game, not their birthday — and moves up as fast as their game grows. That's what the free 30-minute evaluation is for: a coach watches your child play and tells you where they fit.",
+          "A 12-year-old who's new to pickleball can still begin with the skills that fit their game. Skill placement respects the program's age requirements, so look for a listing that serves your player or ask about a private lesson. A free 30-minute evaluation can help a coach recommend the next step without assuming a particular group is available.",
         ],
       },
     ],
@@ -240,7 +249,7 @@ export const blogPosts: BlogPost[] = [
     title: "Indoor Youth Pickleball Near Frederick, MD: A Guide",
     headline: "Indoor youth pickleball near Frederick, MD.",
     description:
-      "Where kids can play indoor pickleball near Frederick, MD — the Saturday youth leagues Next Gen coaches at The Pickl Park, and other programs worth checking.",
+      `Indoor pickleball near Frederick: the Saturday youth ${PICKLPARK_LEAGUES.length === 1 ? "league" : "leagues"} NGA coaches at The Pickl Park. Check each listing's ages and registration.`,
     datePublished: "2026-09-13",
     sections: [
       {
@@ -249,9 +258,9 @@ export const blogPosts: BlogPost[] = [
         ],
       },
       {
-        heading: "The Saturday leagues at The Pickl Park",
+        heading: `The Saturday ${PICKLPARK_LEAGUES.length === 1 ? "league" : "leagues"} at The Pickl Park`,
         paragraphs: [
-          `The Pickl Park is an indoor pickleball club in Frederick, and Next Gen coaches ${PICKLPARK_SEASON_WEEKS}-week youth leagues there. ${PICKLPARK_INDOOR_NOTE}`,
+          `The Pickl Park is an indoor pickleball club in Frederick, and Next Gen coaches ${PICKLPARK_LEAGUES.length} ${PICKLPARK_SEASON_WEEKS}-week youth ${PICKLPARK_LEAGUES.length === 1 ? "league" : "leagues"} there. ${PICKLPARK_INDOOR_NOTE}`,
           ...PICKLPARK_LEAGUE_LINES,
           `${PICKLPARK_LEAGUE_PLACEMENT_NOTE} Registration and payment go through The Pickl Park, not Next Gen — the Frederick page on our site links straight to each league's listing.`,
         ],
@@ -266,13 +275,13 @@ export const blogPosts: BlogPost[] = [
         heading: "Other places to look",
         paragraphs: [
           "The YMCA of Frederick County runs pickleball at its downtown Frederick location, and the City of Frederick's recreation department lists pickleball classes and indoor play. Both set their own schedules, ages, and prices, so check with them directly — we don't run programs at either.",
-          "Coming from upper Montgomery County? Our Montgomery County sessions and seasons are a short drive down I-270.",
+          "Coming from Montgomery County? Compare the actual venue, program ages and levels, dates and registration terms before choosing between county options and Frederick. An evaluation can help with placement questions, but the free NGA evaluation is offered in Montgomery County, rather than at a Frederick venue.",
         ],
       },
     ],
     links: [
       { label: "Youth pickleball in Frederick, MD", href: "/youth-pickleball-frederick" },
-      { label: "The Pickl Park Saturday leagues", href: "/picklpark" },
+      { label: `The Pickl Park Saturday ${PICKLPARK_LEAGUES.length === 1 ? "league" : "leagues"}`, href: "/picklpark" },
     ],
   },
   {
@@ -280,25 +289,25 @@ export const blogPosts: BlogPost[] = [
     title: "Pickleball vs. Tennis for a 7-Year-Old: Which First?",
     headline: "Pickleball or tennis for a 7-year-old? A coach's take.",
     description:
-      "Why pickleball is often the easier first racket sport for a young child — smaller court, lighter paddle, slower ball — and how its skills carry into tennis.",
+      "Choosing pickleball or tennis for your child: consider their interests, current skills and available programs, with NGA's youth pathway explained.",
     datePublished: "2026-09-13",
     sections: [
       {
         paragraphs: [
-          "For most 7-year-olds, pickleball is the easier first racket sport: the court is smaller, the paddle is lighter, and the ball is slower, so kids get to real rallies sooner. It isn't either-or, though — the hand-eye coordination, footwork, and court sense a child builds in pickleball carry straight into tennis.",
+          "For your seven-year-old, start with their interest in the game and a program that fits their age and skills. NGA serves ages 6–16, but each current listing sets its own eligibility. Pickleball and tennis both give a child ways to work on hand-eye coordination, footwork and court awareness. Compare the actual coaching options and let your child's interests help you choose a starting point.",
         ],
       },
       {
-        heading: "Why pickleball clicks faster for young kids",
+        heading: "Find a starting point your child enjoys",
         paragraphs: [
-          "A pickleball court is roughly a third the size of a tennis court, so a young player isn't sprinting long distances or overreaching. The paddle is lightweight, which is easier on small wrists and shoulders. And the perforated plastic ball moves slower than a tennis ball, which buys a child more time to react.",
-          "Early success matters at 7. When a kid can keep a rally going in their first few sessions, they want to come back — and coming back is how skills compound.",
+          "At NGA, a player learning the rally can start with Red Ball work on paddle control and footwork. Orange Ball builds consistency and rules; Green Ball adds strategy and teamwork. These descriptions explain the pathway, while the listing tells you which group is available and whether your child is eligible.",
+          "Ask which parts of the game your child enjoys and what they'd like to try next. A coach can recommend a focus from watching them play. A free evaluation or private lesson is available when you want help finding that starting point. Your coach can explain the next skill to work on and how to practice it.",
         ],
       },
       {
-        heading: "Both sports meet kids where they are",
+        heading: "NGA's youth pathway",
         paragraphs: [
-          "Youth tennis and youth pickleball use the same idea: graduated equipment. In pickleball, USA Pickleball's youth progression runs Red, Orange, Green, Yellow, with softer, lower-bounce balls at the early stages so technique comes before speed. A 7-year-old would typically start on our Red or Orange Ball court, depending on whether they can rally yet.",
+          "NGA's Red, Orange, Green and Yellow Ball pathway describes how we develop skills. Red Ball uses a foam ball while players learn the rally. Skill placement follows the actual program's age requirements. To find a group for your seven-year-old, compare eligible current listings or ask Coach Sam about a lesson. Check the listing for ages, levels, equipment and group size.",
         ],
       },
       {

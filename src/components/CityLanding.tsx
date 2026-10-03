@@ -284,13 +284,11 @@ export default function CityLanding({
             The Red &rarr; Yellow Ball pathway.
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            We follow USA Pickleball&rsquo;s official youth progression &mdash;
-            a proven system of color-coded balls with reduced bounce that
-            meet a child where they are. Every child is placed by skill during a free
-            evaluation, not age alone. The pathway includes Red, Orange, Green
-            and Yellow Ball. Each program lists its ages and levels; check the
-            listing for a group that fits. Private lessons are available at any
-            level for kids who want extra 1:1 coaching.
+            Your child progresses through NGA&rsquo;s Red, Orange, Green and
+            Yellow Ball pathway as their skills develop. A free evaluation helps
+            us recommend a next step within the program&rsquo;s age requirements.
+            Check each listing for its available levels, group size and current
+            dates. Private lessons are available at any level.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

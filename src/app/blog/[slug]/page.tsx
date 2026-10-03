@@ -129,15 +129,16 @@ export default async function BlogPostPage({
               Ready to see it in person?
             </h2>
             <p className="text-base text-ngpa-white/75 mb-6 max-w-md mx-auto">
-              Every Next Gen player starts with a free 30-minute evaluation —
-              no cost, no commitment, ages 6&ndash;16.
+              Not sure where your child should start? Book a free 30-minute
+              evaluation in Montgomery County for ages 6&ndash;16. A coach can recommend a next step
+              that fits their skills and the program&rsquo;s age requirements.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <Link
                 href={EVALUATION_SMS_URL}
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
               >
-                Text for a Free Evaluation
+                Book a Free Evaluation
               </Link>
               <Link
                 href="/schedule"
