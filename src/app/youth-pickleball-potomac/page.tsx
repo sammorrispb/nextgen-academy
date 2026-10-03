@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import CityLanding from "@/components/CityLanding";
+import { FALL_SEASON_LABEL, FALL_VENUE_SHORT } from "@/data/fall-2026";
+import { FALL_SEASON_GROUPS } from "@/data/fall-season-2026";
+
+const GROUPS = FALL_SEASON_GROUPS.map((group) => group.label).join(" and ");
 
 const TITLE = "Youth Pickleball in Potomac, MD — Next Gen Academy";
 const DESCRIPTION =
-  "Youth pickleball for kids ages 6–16 in Potomac, MD. Free 30-min evaluations, small-group sessions, and private lessons from Next Gen Academy.";
+  "Youth pickleball for Potomac families. Compare Bethesda seasons, evaluations and lessons. Check each program's ages, levels and registration.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -27,15 +31,13 @@ export default function PotomacPage() {
     <CityLanding
       city="Potomac"
       slug="youth-pickleball-potomac"
-      intro="Most Potomac families join our Sunday-afternoon group sessions at Walter Johnson High School — on Rock Spring Drive near the Montgomery Mall area — where every level from Red to Yellow gets its own court. Kids 6–16 start with a free 30-minute evaluation, then drop in session by session with no subscription or commitment."
-      whereWePlay="Walter Johnson HS is the closest regular venue from Potomac; We’ve run Saturday sessions at Earle B. Wood Middle School in Rockville in past seasons. Summer camp weeks run in Gaithersburg, and if your child wants 1:1 work before joining a group, ask about private lessons at your evaluation — we'll figure out what works for your family."
-      cityFaq={[
-        {
-          question: "What's the closest venue to Potomac?",
-          answer:
-            "Walter Johnson High School (6400 Rock Spring Dr, Bethesda), near the Montgomery Mall area, hosts this season’s Sunday-afternoon sessions and is the closest regular venue for most Potomac families. We’ve run Saturdays at Earle B. Wood MS in Rockville in past seasons — check the schedule page for current slots.",
-        },
-      ]}
+      intro={`For Potomac families, the 2026 fall season at ${FALL_VENUE_SHORT} in Bethesda is for ${GROUPS}. Registration covers the full season, paid up front. New players or families looking for Red or Orange Ball can start with a free 30-minute evaluation or a private lesson; each program lists its ages and levels.`}
+      whereWePlay={`${FALL_VENUE_SHORT} (6400 Rock Spring Dr, Bethesda) hosts the ${FALL_SEASON_LABEL} season. Earlier Earle B. Wood Middle School sessions and Gaithersburg summer camps are past programs. Check the fall listing for current availability and the schedule for separately listed drop-ins. Coach Sam confirms the court for evaluations and private lessons.`}
+      programLink={{ label: "Fall season details", href: "/fall" }}
+      cityFaq={[{
+        question: "Where can Potomac families join a season?",
+        answer: `The 2026 fall season at ${FALL_VENUE_SHORT} is in Bethesda, for ${GROUPS}, ${FALL_SEASON_LABEL}. It is a full season, paid up front, rather than weekly drop-in registration. Check /fall for current availability and terms. Coach Sam confirms the time and court for evaluations or private lessons.`,
+      }]}
     />
   );
 }

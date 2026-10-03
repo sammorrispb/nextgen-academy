@@ -3,7 +3,7 @@ import CityLanding from "@/components/CityLanding";
 
 const TITLE = "Youth Pickleball in Silver Spring, MD — Next Gen Academy";
 const DESCRIPTION =
-  "Youth pickleball for kids ages 6–16 in Silver Spring, MD. Free 30-min evaluations, small-group sessions, and private lessons from Next Gen Academy.";
+  "Youth pickleball for Silver Spring families. Explore county programs, evaluations and lessons. Each listing gives its venue, ages and levels.";
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -27,15 +27,13 @@ export default function SilverSpringPage() {
     <CityLanding
       city="Silver Spring"
       slug="youth-pickleball-silver-spring"
-      intro="Silver Spring families have trained with us at Odessa Shannon Middle School in past seasons. This season’s group sessions for kids 6–16 run Sunday afternoons at Walter Johnson High School in Bethesda; Earle B. Wood Middle School in Rockville — an easy ride up Layhill or Norbeck from north Silver Spring — has hosted Saturday sessions in past seasons. Start with a free 30-minute evaluation."
-      whereWePlay="From most of Silver Spring, Wood MS on Bauer Drive is the closer weekend venue; down-county families may find the Bethesda Sundays easier. We've run Silver Spring evenings before — if your family wants sessions back on this side of the county, the crew-interest form is how that happens."
-      cityFaq={[
-        {
-          question: "Have you run sessions in Silver Spring?",
-          answer:
-            "Yes — past seasons included weekly evenings at Odessa Shannon Middle School in Silver Spring. This season’s group sessions run at Walter Johnson HS in Bethesda (Earle B. Wood MS in Rockville has hosted Saturday sessions in past seasons); check the schedule page for current slots, and use the crew-interest form if you'd like Silver Spring sessions back.",
-        },
-      ]}
+      intro={"Silver Spring families have trained with us at Odessa Shannon Middle School in past seasons. To choose an option now, compare the county's listed programs or start with a free 30-minute evaluation or private lesson. NGA's academy serves ages 6–16; program listings set their own eligibility and registration terms."}
+      whereWePlay={"Odessa Shannon Middle School evenings and Earle B. Wood Middle School Saturday sessions are past programs. The county guide links to the Green and Yellow Ball season at Walter Johnson High School in Bethesda and MVF classes in Montgomery Village. Check each program's dates, ages, levels and registration owner. Coach Sam confirms the court for evaluations and private lessons. The crew-interest form records interest in a future Silver Spring program."}
+      programLink={{ label: "Compare county programs", href: "/montgomery-county-youth-pickleball#programs" }}
+      cityFaq={[{
+        question: "Have you run sessions in Silver Spring?",
+        answer: "Yes. Odessa Shannon Middle School hosted sessions in past seasons. For listed options now, compare the county programs and their actual venues rather than assume those school sessions are still running. Use the crew-interest form for a future Silver Spring program, or arrange an evaluation or private lesson with Coach Sam, who confirms the court.",
+      }]}
     />
   );
 }

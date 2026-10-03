@@ -91,7 +91,7 @@ export default function CityLanding({
 }: CityLandingProps) {
   const pageFaq = [...cityFaq, ...localFaq];
   const url = `${SITE_URL}/${slug}`;
-  const description = `Youth pickleball coaching for kids ages 6–16 in ${city}, MD — and across Montgomery County. Free evaluations, small-group sessions, and private lessons with Next Gen Pickleball Academy.`;
+  const description = `Youth pickleball coaching for ${city} families and across Montgomery County. Academy ages 6–16; each program lists its venue, ages, levels and registration details.`;
   const cluster = getClusterForCity(city);
   const clusterClasses = cluster ? CLUSTER_ACCENT_CLASSES[cluster.slug] : null;
   const neighborPages = (CITY_NEIGHBORS[city] ?? [])
@@ -213,8 +213,8 @@ export default function CityLanding({
             </Link>
           )}
           <p className="text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
-            Sessions run on reserved Montgomery County Public Schools courts and
-            the venue lineup changes seasonally. Check the{" "}
+            Each program listing names its venue, ages, levels and registration
+            details. Seasons and partner classes have their own terms. Check the{" "}
             <Link
               href="/schedule"
               className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
@@ -248,21 +248,22 @@ export default function CityLanding({
                   {cluster.name}
                 </span>
                 <span className="rounded-full border border-ngpa-lime/40 px-3 py-1 text-xs font-semibold text-ngpa-lime">
-                  Coming Fall 2026
+                  Interest list
                 </span>
               </div>
               <h2 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white tracking-tight mb-3">
-                {city} families train with the {cluster.name}.
+                Interested in a {cluster.name} program?
               </h2>
               <p className="text-base sm:text-lg text-ngpa-white/85 leading-relaxed mb-5 max-w-2xl">
-                {cluster.blurb}
+                Join the interest list for a proposed {cluster.region} program.
+                Courts, dates, ages and levels will be confirmed before registration opens.
               </p>
               <Link
                 href={`/clusters/${cluster.slug}`}
                 data-testid="cluster-callout-link"
                 className={`inline-flex items-center gap-2 font-bold ${clusterClasses.link} ${clusterClasses.linkHover} underline-offset-4 hover:underline transition-colors`}
               >
-                See what {cluster.name} families get →
+                Explore the {cluster.name} interest list →
               </Link>
             </div>
           </div>

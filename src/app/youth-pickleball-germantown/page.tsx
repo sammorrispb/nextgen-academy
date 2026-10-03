@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import CityLanding from "@/components/CityLanding";
+import { MVF_AGE_MIN, MVF_AGE_MAX, NORTH_CREEK } from "@/data/mvf";
 
 const TITLE = "Youth Pickleball in Germantown, MD — Next Gen Academy";
 const DESCRIPTION =
-  "Youth pickleball for kids ages 6–16 in Germantown, MD. Free 30-min evaluations, small-group sessions, and private lessons from Next Gen Academy.";
+  `Youth pickleball for Germantown families. Explore MVF classes in Montgomery Village (ages ${MVF_AGE_MIN}–${MVF_AGE_MAX}), evaluations and lessons. Check each program's eligibility.`;
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -27,18 +28,14 @@ export default function GermantownPage() {
     <CityLanding
       city="Germantown"
       slug="youth-pickleball-germantown"
-      intro="Germantown kids 6–16 train with us at venues a straight shot down I-270 — Sunday afternoons at Walter Johnson High School in Bethesda (Saturday sessions at Earle B. Wood Middle School in Rockville in past seasons) — plus summer camp weeks in nearby Gaithersburg. Start with a free 30-minute evaluation and we'll find the slot that fits your drive."
-      whereWePlay="The closest options from Germantown are usually the Gaithersburg summer camps and the fall MVF classes in Montgomery Village (Apple Ridge for the intro, North Creek for both fall sessions); the weekly group sessions run down-county on Sunday afternoons. Venue lineups change seasonally based on where families are — if enough Germantown families want a closer crew, tell us on the crew-interest form."
-      extraNearby={[
-        { label: "Youth pickleball in Frederick", href: "/youth-pickleball-frederick" },
-      ]}
-      cityFaq={[
-        {
-          question: "Is there anything closer to Germantown?",
-          answer:
-            "The Gaithersburg camp weeks and the Montgomery Village fall classes are the closest programs today; weekly group sessions currently run down-county on Sunday afternoons in Bethesda. If your family wants a Germantown-side crew, the Find Your Kid's Crew form is exactly how new venues get started.",
-        },
-      ]}
+      intro={`Germantown families can explore MVF classes in Montgomery Village for ages ${MVF_AGE_MIN}–${MVF_AGE_MAX}, with separate activities by session and skill bracket. You register and pay through MVF. NGA's academy serves ages 6–16; a free 30-minute evaluation or private lesson can help your player find a suitable starting point.`}
+      whereWePlay={`The fall MVF listings name ${NORTH_CREEK.name} at ${NORTH_CREEK.center} in ${NORTH_CREEK.locality}. Confirm the venue with MVF before attending; Watkins Mill is a contingency if court work moves a class. Bethesda's 2026 Green and Yellow Ball season is another county option, with full-season terms on /fall. Gaithersburg summer camps ran earlier in 2026. Coach Sam confirms evaluation and lesson courts. Share your interest in a future Germantown-area program through the crew-interest form.`}
+      programLink={{ label: "MVF class details and registration", href: "/montgomery-village-youth-pickleball" }}
+      extraNearby={[{ label: "Youth pickleball in Frederick", href: "/youth-pickleball-frederick" }]}
+      cityFaq={[{
+        question: "What can Germantown families compare?",
+        answer: `Compare MVF classes at ${NORTH_CREEK.name} in ${NORTH_CREEK.locality}, ages ${MVF_AGE_MIN}–${MVF_AGE_MAX}, with the Bethesda season and the separate Frederick guide. MVF handles registration and payment; confirm its class venue and availability with MVF. The crew-interest form records interest in future programs; it does not register your child for an operating Germantown team.`,
+      }]}
     />
   );
 }
