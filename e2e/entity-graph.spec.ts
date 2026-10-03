@@ -6,12 +6,13 @@ import { sportsEventJsonLd } from "../src/lib/sports-event-jsonld";
 import { blogPosts } from "../src/data/blog";
 import {
   EXTENDED_SERVICE_AREAS,
+  CITY_LANDING_PAGES,
   ORG_ID,
   PERSON_IDS,
   blogPostingJsonLd,
   courseJsonLd,
-  extendedAreaLocalBusinessJsonLd,
-  localBusinessJsonLd,
+  extendedAreaServiceJsonLd,
+  cityServiceJsonLd,
   organizationJsonLd,
 } from "../src/lib/seo";
 
@@ -61,15 +62,24 @@ function makeSession(): NgaSession {
 }
 
 test.describe("entity graph", () => {
-  test("the org node has a stable @id, both types, and the known profiles", () => {
+  test("the academy has one stable organization identity without a facility claim", () => {
     expect(ORG_ID).toBe("https://nextgenpbacademy.com/#organization");
     const org = organizationJsonLd() as Record<string, unknown>;
     expect(org["@id"]).toBe(ORG_ID);
-    expect(org["@type"]).toEqual(["SportsOrganization", "SportsActivityLocation"]);
+    expect(org["@type"]).toBe("SportsOrganization");
+    expect(org).not.toHaveProperty("address");
+    expect(org).not.toHaveProperty("geo");
     expect(org.alternateName).toEqual(["Next Gen PB Academy", "NGA"]);
     const sameAs = org.sameAs as string[];
     expect(sameAs).toContain("https://www.instagram.com/nextgenpickleballacademy");
     expect(sameAs).toContain("https://www.facebook.com/profile.php?id=61579009749341");
+    expect(sameAs).toContain("https://maps.google.com/?cid=13747039329786027007");
+    expect(sameAs).not.toContain("https://www.sammorrispb.com");
+    expect(sameAs).not.toContain("https://www.linkanddink.com");
+    expect(org.founder).toEqual([
+      { "@type": "Person", "@id": PERSON_IDS["Sam Morris"], name: "Sam Morris" },
+      { "@type": "Person", "@id": PERSON_IDS["Amine Lahlou"], name: "Amine Lahlou" },
+    ]);
     const areas = (org.areaServed as { name: string }[]).map((a) => a.name);
     for (const n of ["Montgomery County, MD", "North Bethesda", "Germantown", "Frederick County, MD"]) {
       expect(areas, n).toContain(n);
@@ -83,17 +93,36 @@ test.describe("entity graph", () => {
     );
     expectOrgRef((sportsEventJsonLd(makeSession()) as { organizer: Ref }).organizer, "event.organizer");
     expectOrgRef(
-      (localBusinessJsonLd({ city: "Rockville", url: "u", description: "d" }) as { parentOrganization: Ref }).parentOrganization,
-      "city.parentOrganization",
+      (cityServiceJsonLd({ city: "Rockville", url: "u", description: "d" }) as { provider: Ref }).provider,
+      "city.provider",
     );
     expectOrgRef(
-      (extendedAreaLocalBusinessJsonLd({ area: EXTENDED_SERVICE_AREAS[0], url: "u", description: "d" }) as { parentOrganization: Ref }).parentOrganization,
-      "frederick.parentOrganization",
+      (extendedAreaServiceJsonLd({ area: EXTENDED_SERVICE_AREAS[0], url: "u", description: "d" }) as { provider: Ref }).provider,
+      "frederick.provider",
     );
     const posting = blogPostingJsonLd(blogPosts[0]) as { publisher: Ref; author: Ref };
     expectOrgRef(posting.publisher, "blog.publisher");
     expect(posting.author["@id"]).toBe(PERSON_IDS["Sam Morris"]);
     expect(posting.author.name).toBe("Sam Morris");
+  });
+
+  test("every city guide describes an academy service, not a separate branch", () => {
+    for (const { city, slug } of CITY_LANDING_PAGES) {
+      const url = `https://nextgenpbacademy.com/${slug}`;
+      const service = cityServiceJsonLd({ city, url, description: "" });
+      expect(service["@type"]).toBe("Service");
+      expect(service).toHaveProperty("@id", `${url}#service`);
+      expect(service.url).toBe(url);
+      expect(service.description).toBe("");
+      expect(service.areaServed).toContainEqual({ "@type": "City", name: city });
+      expect(service).not.toHaveProperty("address");
+      expect(service).not.toHaveProperty("geo");
+      expect(service).not.toHaveProperty("parentOrganization");
+    }
+    const event = sportsEventJsonLd(makeSession());
+    expect(event.location.name).toBe("Earle B. Wood Middle School");
+    expect(event.location.address.addressLocality).toBe("Montgomery County");
+    expect(event.offers.url).toBe("https://nextgenpbacademy.com/schedule");
   });
 
   test("no anonymous NGA organization copy survives outside the seo lib", () => {

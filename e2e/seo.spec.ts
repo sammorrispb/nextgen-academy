@@ -11,7 +11,7 @@
  *
  * Per the 2026-05-24 SEO sweep brief: the 4 new city pages additionally
  * assert the city name + "pickleball" appear in the H1, and that the
- * LocalBusiness JSON-LD lists the city in areaServed.
+ * Service JSON-LD lists the city in areaServed.
  */
 import { test, expect, type Page } from "@playwright/test";
 
@@ -21,7 +21,7 @@ interface RouteSpec {
   titleContains?: RegExp;
   /** If set, asserts the H1 text includes this. */
   h1Contains?: RegExp;
-  /** City to look for in the LocalBusiness JSON-LD `areaServed` array. */
+  /** City to look for in the Service JSON-LD `areaServed` array. */
   cityInAreaServed?: string;
 }
 
@@ -287,20 +287,29 @@ test.describe("SEO foundations — per-route", () => {
       });
 
       if (route.cityInAreaServed) {
-        test(`LocalBusiness JSON-LD lists ${route.cityInAreaServed} in areaServed`, async ({
+        test(`Service JSON-LD lists ${route.cityInAreaServed} in areaServed`, async ({
           page,
         }) => {
           await page.goto(route.path);
           const blocks = await getAllJsonLd(page);
-          // Find a LocalBusiness-typed block on this page (city landers
-          // render one via localBusinessJsonLd()).
-          const localBiz = blocks.find((block) => {
+          // Find a Service-typed block on this page (city landers
+          // render one via cityServiceJsonLd()).
+          const service = blocks.find((block) => {
             const types = (block as { "@type"?: string | string[] })["@type"];
             const typeArr = Array.isArray(types) ? types : [types];
-            return typeArr.includes("LocalBusiness");
+            return typeArr.includes("Service");
           });
-          expect(localBiz, "LocalBusiness JSON-LD block").toBeTruthy();
-          const areaServed = (localBiz as { areaServed?: unknown[] })
+          expect(service, "Service JSON-LD block").toBeTruthy();
+          expect(service).toHaveProperty("@id", `${absoluteUrl(route.path)}#service`);
+          expect(service).toHaveProperty("provider.@id", "https://nextgenpbacademy.com/#organization");
+          expect(service).not.toHaveProperty("address");
+          expect(service).not.toHaveProperty("geo");
+          const branches = flatten(blocks).filter((node) => {
+            const type = (node as { "@type"?: string | string[] })["@type"];
+            return (Array.isArray(type) ? type : [type]).some((t) => t === "LocalBusiness" || t === "SportsActivityLocation");
+          });
+          expect(branches, "No invented academy branch").toEqual([]);
+          const areaServed = (service as { areaServed?: unknown[] })
             .areaServed;
           expect(Array.isArray(areaServed)).toBe(true);
           const cities = flatten(areaServed)
@@ -314,6 +323,23 @@ test.describe("SEO foundations — per-route", () => {
 });
 
 test.describe("SEO foundations — site-wide", () => {
+  test("schools services and courses use the academy as provider, preserving partner intake", async ({ page }) => {
+    await page.goto("/schools");
+    const blocks = await getAllJsonLd(page);
+    const offerings = blocks.filter((block) => ["Service", "Course"].includes((block as { "@type": string })["@type"]));
+    expect(offerings).toHaveLength(5);
+    for (const offering of offerings) {
+      expect(offering).toHaveProperty("provider.@id", "https://nextgenpbacademy.com/#organization");
+      expect(offering).toHaveProperty("provider.@type", "SportsOrganization");
+      expect(offering).not.toHaveProperty("provider.address");
+    }
+    const org = blocks.find((block) => (block as { "@id"?: string })["@id"] === "https://nextgenpbacademy.com/#organization");
+    expect(org).toHaveProperty("@type", "SportsOrganization");
+    expect(org).not.toHaveProperty("address");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Bring real pickleball coaching");
+    await expect(page.getByRole("button", { name: /request|quote|send/i }).first()).toBeVisible();
+  });
+
   test("sitemap.xml is reachable and lists every route under test", async ({
     request,
   }) => {
