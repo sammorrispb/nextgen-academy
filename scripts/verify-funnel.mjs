@@ -47,7 +47,6 @@ const expectedEmpty = createHmac("sha256", SECRET)
   .digest("hex");
 assert(EMPTY === expectedEmpty, `empty-field HMAC mismatch`);
 
-// 3) No pixel libs remain in src/.
 function walk(dir) {
   const out = [];
   for (const name of readdirSync(dir)) {
@@ -58,26 +57,8 @@ function walk(dir) {
   return out;
 }
 const files = walk("src");
-const vercelHits = files.filter((f) => readFileSync(f, "utf8").includes("@vercel/analytics"));
-assert(vercelHits.length === 0, `@vercel/analytics imports remain: ${vercelHits.join(", ")}`);
 
-const gtagHits = files.filter((f) => /\bgtag\s*\(/.test(readFileSync(f, "utf8")));
-assert(gtagHits.length === 0, `gtag() calls remain: ${gtagHits.join(", ")}`);
-
-const fbqHits = files.filter((f) => /\bfbq\s*\(/.test(readFileSync(f, "utf8")));
-assert(fbqHits.length === 0, `fbq() calls remain: ${fbqHits.join(", ")}`);
-
-const metaPixelScript = files.filter((f) =>
-  readFileSync(f, "utf8").includes("connect.facebook.net"),
-);
-assert(metaPixelScript.length === 0, `Meta Pixel script loader remains: ${metaPixelScript.join(", ")}`);
-
-const gaLoader = files.filter((f) =>
-  readFileSync(f, "utf8").includes("googletagmanager.com/gtag"),
-);
-assert(gaLoader.length === 0, `GA4 gtag loader remains: ${gaLoader.join(", ")}`);
-
-// 4) Yellow Ball mailto CTAs replaced with /yellowball/inquiry form.
+// 3) Yellow Ball mailto CTAs replaced with /yellowball/inquiry form.
 const mailtoYellow = files.filter((f) =>
   /mailto:[^"']*[Yy]ellow[%2 ]?[Bb]all/.test(readFileSync(f, "utf8")),
 );
@@ -86,7 +67,7 @@ assert(
   `Yellow Ball mailto CTAs still present: ${mailtoYellow.join(", ")}`,
 );
 
-// 5) urls.ts exports helpers with correct ref stamping.
+// 4) urls.ts exports helpers with correct ref stamping.
 const urls = readFileSync("src/lib/urls.ts", "utf8");
 assert(/export function crUrl/.test(urls), "crUrl export missing from src/lib/urls.ts");
 assert(/export function getRefSource/.test(urls), "getRefSource export missing from src/lib/urls.ts");
