@@ -234,88 +234,75 @@ export function trackEvent<K extends keyof AnalyticsEventMap>(
 ): void {
   if (typeof window === "undefined") return;
 
-  try {
-    const visitorId = getOrCreateVisitorId();
-    const utm = getUtm();
-    const page = window.location ? window.location.pathname : undefined;
+  // Callers are typed, but runtime inputs must not become arbitrary provider
+  // event names (or accidentally expand the third-party field contract).
+  if (!MIRRORED_EVENTS.has(name) || !props || typeof props !== "object" || Array.isArray(props)) return;
 
+  try {
+    let visitorId: string;
+    try {
+      visitorId = getOrCreateVisitorId();
+    } catch {
+      // Blocked/malformed cookies must not prevent transport. This id is
+      // request-local; no persistence is claimed when cookies are unavailable.
+      visitorId = generateVisitorId();
+    }
     const body = JSON.stringify({
       event_name: name,
-      props: {
-        ...props,
-        visitor_id: visitorId,
-        business: BUSINESS,
-        ...utm,
-      },
-      page,
+      props: { ...props, visitor_id: visitorId, business: BUSINESS, ...getUtm() },
+      page: window.location ? window.location.pathname : undefined,
     });
 
-    if (
-      typeof navigator !== "undefined" &&
-      typeof navigator.sendBeacon === "function"
-    ) {
+    let accepted = false;
+    if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
       try {
-        const blob = new Blob([body], { type: "application/json" });
-        const ok = navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
-        if (ok) return;
+        accepted = navigator.sendBeacon(ANALYTICS_ENDPOINT, new Blob([body], { type: "application/json" }));
       } catch {
-        // fall through to fetch
+        // Fall through to the single fetch fallback.
       }
     }
-
-    void fetch(ANALYTICS_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-      keepalive: true,
-    }).catch(() => {
-      /* swallow — analytics must never break the page */
-    });
-
-    mirrorToThirdParty(name, { ...props, page });
+    if (!accepted) {
+      void fetch(ANALYTICS_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        keepalive: true,
+      }).catch(() => { /* analytics must never break the page */ });
+    }
   } catch {
-    /* swallow — analytics must never break the page */
+    /* First-party failure must not suppress the independent safe mirrors. */
   }
+  mirrorToThirdParty(name);
 }
 
-/**
- * Mirror conversion events to GA4 + Meta Pixel when those tags are loaded.
- * The tags themselves are ENV-GATED in <Analytics />; this is a no-op until
- * they exist. Mapping is deliberately coarse:
- *  - page_view        → gtag page_view / fbq PageView
- *  - *_submitted      → gtag generate_lead / fbq Lead
- *  - everything else  → gtag custom event / fbq trackCustom
- */
-function mirrorToThirdParty(
-  name: string,
-  props: Record<string, unknown>,
-): void {
+// Explicit event identifiers only. Do not derive provider parameters from
+// caller props: labels, interests, URLs and nested fields can contain PII.
+const MIRRORED_EVENTS = new Set<keyof AnalyticsEventMap>([
+  "page_view", "cta_click", "lead_form", "lead_form_started", "lead_form_submitted",
+  "yellowball_lead_submitted", "waitlist_submitted", "newsletter_signup_started",
+  "newsletter_signup_submitted", "eval_book_started", "eval_book_submitted",
+  "crew_interest_started", "crew_interest_submitted", "fall_interest_started",
+  "fall_interest_submitted", "league_interest_started", "league_interest_submitted",
+  "external_link", "scroll_depth", "free_trial_rsvp",
+]);
+
+/** Optional, coarse conversion mirrors; loading/enabling tags stays in Analytics. */
+function mirrorToThirdParty(name: keyof AnalyticsEventMap): void {
+  if (typeof window === "undefined") return;
+  // Analytics owns provider page views. YellowBallInquiryForm emits both the
+  // canonical lead and this legacy alias; retain both in OB, count one lead here.
+  if (name === "page_view" || name === "yellowball_lead_submitted") return;
+  const isLead = name.endsWith("_submitted");
   try {
-    if (typeof window === "undefined") return;
-    const w = window as unknown as {
-      gtag?: (...args: unknown[]) => void;
-      fbq?: (...args: unknown[]) => void;
-    };
-
-    if (name === "page_view") {
-      // PageView is handled by <Analytics /> on route change; skip the double.
-      return;
+    if (typeof window.gtag === "function") {
+      window.gtag("event", isLead ? "generate_lead" : name, { content_name: name });
     }
-
-    const isLead = /_submitted$/.test(name);
-    if (typeof w.gtag === "function") {
-      w.gtag("event", isLead ? "generate_lead" : name, {
-        ...props,
-        // Strip PII-ish free text before it leaves for Google.
-        parent_name: undefined,
-      });
-    }
-    if (typeof w.fbq === "function") {
-      if (isLead) {
-        w.fbq("track", "Lead", { content_name: name });
-      } else {
-        w.fbq("trackCustom", name, props);
-      }
+  } catch {
+    /* Google failure must not suppress Meta or interrupt navigation. */
+  }
+  try {
+    if (typeof window.fbq === "function") {
+      window.fbq(isLead ? "track" : "trackCustom", isLead ? "Lead" : name, { content_name: name });
     }
   } catch {
     /* analytics must never break the page */
