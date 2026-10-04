@@ -65,7 +65,7 @@ test.describe("public MVF tournament discovery", () => {
 
   test("describes the public divisions and references NGA's existing organization", () => {
     const event = mvfTournamentJsonLd();
-    expect(event.description).toContain("10U (Age 10 and under)");
+    expect(event.description).toContain("10U (Ages 6–10)");
     expect(event.description).toContain("14U (Ages 11–14)");
     expect(event.description).toContain("Minimum 4 guaranteed games.");
     expect(event.description).toContain("Medals for the winners of each division.");

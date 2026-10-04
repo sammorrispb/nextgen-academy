@@ -180,3 +180,76 @@ test.describe("low-enrollment policy", () => {
     );
   });
 });
+
+// A real calendar DOB must fit the selected division on the event day.
+// These synthetic boundaries also exercise the validator called by checkout.
+test.describe("event-day DOB eligibility boundaries", () => {
+  const cases = [
+    ["10u", "2015-10-24", false],
+    ["10u", "2015-10-25", true],
+    ["10u", "2020-10-24", true],
+    ["10u", "2020-10-25", false],
+    ["14u", "2011-10-24", false],
+    ["14u", "2011-10-25", true],
+    ["14u", "2015-10-24", true],
+    ["14u", "2015-10-25", false],
+    ["10u", "2020-02-29", true],
+    ["14u", "2012-02-29", true],
+    ["10u", "2019-02-29", false],
+    ["14u", "2013-02-29", false],
+    ["10u", "2020-02-30", false],
+    ["14u", "2012-02-30", false],
+    ["10u", "2017-04-31", false],
+    ["14u", "2013-04-31", false],
+    ["10u", "2018-00-15", false],
+    ["14u", "2013-13-01", false],
+    ["10u", "2018-01-00", false],
+    ["14u", "2013-01-32", false],
+    ["10u", "2026-10-24", false],
+    ["10u", "2026-10-25", false],
+    ["10u", "2027-01-01", false],
+    ["14u", "2027-01-01", false],
+    ["10u", "", false],
+    ["14u", "not-a-date", false],
+    ["10u", "2020-2-29", false],
+    ["14u", "2012-02-29T00:00:00Z", false],
+  ] as const;
+
+  for (const [division, dob, eligible] of cases) {
+    test(`${division} DOB ${dob || "empty"} is ${eligible ? "eligible" : "rejected"}`, () => {
+      expect(isDobEligibleForDivision(division, dob)).toBe(eligible);
+      const errors = validateMvfJuniorTournament(validForm({ division, childDob: dob }));
+      if (eligible) expect(errors).toEqual({});
+      else expect(errors.childDob).toBeTruthy();
+    });
+  }
+
+  for (const division of ["18u", "", "10U"]) {
+    test(`unrecognized division ${division || "empty"} fails closed`, () => {
+      expect(isDobEligibleForDivision(division as "10u", "2013-06-01")).toBe(false);
+      expect(validateMvfJuniorTournament(validForm({ division, childDob: "2013-06-01" })).division).toBeTruthy();
+    });
+  }
+
+  for (const dob of [null, 42, { date: "2017-03-15" }]) {
+    test(`non-string DOB ${JSON.stringify(dob)} is rejected without throwing`, () => {
+      expect(isDobEligibleForDivision("10u", dob as unknown as string)).toBe(false);
+      expect(validateMvfJuniorTournament(validForm({ childDob: dob as unknown as string })).childDob).toBeTruthy();
+    });
+  }
+
+  test("a missing DOB is required even with a valid division", () => {
+    expect(validateMvfJuniorTournament({ ...validForm(), childDob: undefined }).childDob).toBeTruthy();
+  });
+
+  test("10U rejection explains the approved minimum and event-day age", () => {
+    expect(validateMvfJuniorTournament(validForm({ childDob: "2020-10-25" })).childDob)
+      .toBe("10U is for players ages 6–10 as of October 24, 2026");
+  });
+
+  test("public 10U guidance names the same age range", () => {
+    const division = MVF_JUNIOR_TOURNAMENT_DIVISIONS.find((d) => d.division === "10u")!;
+    expect(division.ageLabel).toBe("Ages 6–10");
+    expect(division.blurb).toContain("ages 6–10 as of October 24, 2026");
+  });
+});

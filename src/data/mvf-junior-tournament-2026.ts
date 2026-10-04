@@ -26,7 +26,7 @@
 // The Link & Dink event shells for the two divisions carry their own venue in
 // ld.events (community-os) — a venue change there is a separate edit.
 //
-// Divisions: 10U (age 10 and under as of Oct 24, 2026) and 14U (ages 11–14
+// Divisions: 10U (ages 6–10 as of Oct 24, 2026) and 14U (ages 11–14
 // as of Oct 24, 2026). Min 6 players per division to run, max 12.
 //
 // PRICING SET BY SAM 2026-09-22: $50 Montgomery Village resident, $60
@@ -73,9 +73,8 @@ export const COURTS_TEXT = "3 dedicated pickleball courts with lights.";
 export const MVF_JUNIOR_TOURNAMENT_WHERE_LINE = `${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_ADDRESS} — ${COURTS_TEXT}`;
 
 /**
- * What happens when a division draws fewer than 6 players. Sam has not
- * decided yet (2026-09-22) — this constant is the single place the final
- * policy lands; nothing renders a fallback in its place.
+ * What happens when a division draws fewer than 6 players.
+ * Sam confirmed this merge policy on 2026-10-04.
  */
 export const LOW_ENROLLMENT_POLICY_TEXT = "If either division doesn't reach the 6-player minimum, both divisions will be merged into a single division.";
 
@@ -83,6 +82,8 @@ export interface MvfTournamentDivision {
   division: "10u" | "14u";
   label: string;
   ageLabel: string;
+  minAge: number;
+  maxAge: number;
   blurb: string;
 }
 
@@ -90,14 +91,18 @@ export const MVF_JUNIOR_TOURNAMENT_DIVISIONS: readonly MvfTournamentDivision[] =
   {
     division: "10u",
     label: "10U",
-    ageLabel: "Age 10 and under",
+    ageLabel: "Ages 6–10",
+    minAge: 6,
+    maxAge: 10,
     blurb:
-      "Rotating partner round robin for players 10 and under as of October 24, 2026.",
+      "Rotating partner round robin for players ages 6–10 as of October 24, 2026.",
   },
   {
     division: "14u",
     label: "14U",
     ageLabel: "Ages 11–14",
+    minAge: 11,
+    maxAge: 14,
     blurb:
       "Rotating partner round robin for players ages 11–14 as of October 24, 2026.",
   },
@@ -109,23 +114,35 @@ export function findMvfTournamentDivision(
   return MVF_JUNIOR_TOURNAMENT_DIVISIONS.find((d) => d.division === division);
 }
 
-/**
- * Is this birthdate eligible for the division? Age is taken as of the event
- * date (2026-10-24), not "today" — a player who turns 11 on October 25 still
- * plays 10U.
- *
- * 10U: born after 2015-10-24 (10 or under on event day).
- * 14U: born after 2011-10-24 and on/before 2015-10-24 (11–14 on event day).
- */
+/** A date input must name an actual calendar day, not a normalized overflow. */
+export function isCalendarDob(dobIso: string): boolean {
+  if (typeof dobIso !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dobIso)) return false;
+  const date = new Date(`${dobIso}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === dobIso;
+}
+
+/** Inclusive DOB limits shared by the form and server; age is on event day. */
+export function getMvfTournamentDobBounds(
+  division: string,
+): { min: string; max: string } | undefined {
+  const selected = findMvfTournamentDivision(division);
+  if (!selected) return undefined;
+  const event = new Date(`${MVF_JUNIOR_TOURNAMENT_DATE_ISO}T00:00:00Z`);
+  const min = new Date(event);
+  min.setUTCFullYear(event.getUTCFullYear() - selected.maxAge - 1);
+  min.setUTCDate(min.getUTCDate() + 1);
+  const max = new Date(event);
+  max.setUTCFullYear(event.getUTCFullYear() - selected.minAge);
+  return { min: min.toISOString().slice(0, 10), max: max.toISOString().slice(0, 10) };
+}
+
+/** Reject invalid dates/divisions; never use today's date or local timezone. */
 export function isDobEligibleForDivision(
   division: "10u" | "14u",
   dobIso: string,
 ): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dobIso)) return false;
-  const TEN_U_CUTOFF = "2015-10-24";
-  const FOURTEEN_U_CUTOFF = "2011-10-24";
-  if (division === "10u") return dobIso > TEN_U_CUTOFF;
-  return dobIso > FOURTEEN_U_CUTOFF && dobIso <= TEN_U_CUTOFF;
+  const bounds = getMvfTournamentDobBounds(division);
+  return !!bounds && isCalendarDob(dobIso) && dobIso >= bounds.min && dobIso <= bounds.max;
 }
 
 /** Resolve the per-player price server-side from the resident flag. */

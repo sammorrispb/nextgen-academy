@@ -8,6 +8,7 @@
 import {
   findMvfTournamentDivision,
   isDobEligibleForDivision,
+  isCalendarDob,
 } from "@/data/mvf-junior-tournament-2026";
 
 export interface MvfJuniorTournamentData {
@@ -35,7 +36,6 @@ export type MvfJuniorTournamentErrors = Partial<
 >;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const DOB_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function validateMvfJuniorTournament(
   data: Partial<MvfJuniorTournamentData>,
@@ -66,14 +66,15 @@ export function validateMvfJuniorTournament(
   if (!data.childLastName?.trim()) {
     errors.childLastName = "Child last name is required";
   }
-  if (!data.childDob?.trim()) {
+  const childDob = typeof data.childDob === "string" ? data.childDob.trim() : "";
+  if (data.childDob == null || (typeof data.childDob === "string" && !childDob)) {
     errors.childDob = "Child's date of birth is required";
-  } else if (!DOB_RE.test(data.childDob.trim())) {
-    errors.childDob = "Enter the birthdate as YYYY-MM-DD";
-  } else if (division && !isDobEligibleForDivision(division.division, data.childDob.trim())) {
+  } else if (!isCalendarDob(childDob)) {
+    errors.childDob = "Enter a valid birthdate as YYYY-MM-DD";
+  } else if (division && !isDobEligibleForDivision(division.division, childDob)) {
     errors.childDob =
       division.division === "10u"
-        ? "10U is for players 10 and under as of October 24, 2026"
+        ? "10U is for players ages 6–10 as of October 24, 2026"
         : "14U is for players ages 11–14 as of October 24, 2026";
   }
   if (!data.emergencyName?.trim()) {
