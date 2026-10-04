@@ -64,7 +64,8 @@ const VENUES: Record<string, Venue> = {
   "walter johnson": {
     tennisCourts: 6, // → 12 pickleball → 48 cap
     confirmCount: true,
-    tip: "From Rockledge Dr, pull into the main school lot — the tennis courts are on the east side by the softball field, a short walk across the lot. Skip the West Parking Garage and medical lots across Rockledge Dr; those aren't the school's.",
+    // Sam confirmed the east-side parking location by the tennis courts, Oct 4, 2026.
+    tip: "Park in the school lot on the east side, by the tennis courts.",
     note: "Fall 2026 season venue as of 2026-08-27 (Sundays, Sept 20 – Oct 25, 1–4 PM), moved here when Wood MS became unavailable. NGA reserves ONE of the 6 school tennis courts per session via CUPF — two pickleball courts, 8 players a group — so the seat count did NOT change with the move. Room to grow to 3 courts under the half-rule (6 pickleball, 24 a group): change `FALL_TENNIS_COURTS_PER_SESSION` in `fall-2026.ts` and the seats follow. Also hosts the Sunday-evening weekly drop-ins, so the parking tip here is road-tested rather than satellite-derived.",
   },
   sherwood: {
