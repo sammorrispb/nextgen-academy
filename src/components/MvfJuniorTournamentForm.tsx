@@ -5,6 +5,7 @@ import InlineWaiverStep from "@/components/InlineWaiverStep";
 import { submissionKeyFor } from "@/lib/submission-key";
 import {
   GUARANTEED_GAMES_TEXT,
+  getMvfTournamentDobBounds,
   MEDALS_TEXT,
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
   MVF_JUNIOR_TOURNAMENT_DIVISIONS,
@@ -56,6 +57,7 @@ export default function MvfJuniorTournamentForm() {
   const [waiverNeeded, setWaiverNeeded] = useState(false);
   // Submission keys issued this page load, by form content — see startCheckout.
   const submissionKeys = useRef(new Map<string, string>());
+  const dobBounds = getMvfTournamentDobBounds(form.division);
 
   function update<K extends keyof MvfJuniorTournamentData>(
     field: K,
@@ -361,7 +363,8 @@ export default function MvfJuniorTournamentForm() {
             <input
               id="mt-childDob"
               type="date"
-              max="2026-10-24"
+              min={dobBounds?.min}
+              max={dobBounds?.max}
               className={inputClass}
               value={form.childDob}
               onChange={(e) => update("childDob", e.target.value)}
