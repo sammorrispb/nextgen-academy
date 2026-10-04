@@ -5,6 +5,7 @@ import { mvfTournamentJsonLd } from "@/lib/mvf-tournament-jsonld";
 import {
   COURTS_TEXT,
   GUARANTEED_GAMES_TEXT,
+  LOW_ENROLLMENT_POLICY_TEXT,
   MEDALS_TEXT,
   MVF_JUNIOR_TOURNAMENT_ADDRESS,
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
@@ -76,6 +77,9 @@ export default function MvfJuniorTournamentPage() {
             </div>
           ))}
         </div>
+        <p className="text-ngpa-white/70 mt-4">
+          {LOW_ENROLLMENT_POLICY_TEXT}
+        </p>
       </section>
 
       {/* At a glance */}
@@ -90,6 +94,9 @@ export default function MvfJuniorTournamentPage() {
             </p>
             <p className="text-ngpa-white/70 text-sm">
               {MVF_JUNIOR_TOURNAMENT_TIME_LABEL}
+            </p>
+            <p className="text-ngpa-white/70 mt-2">
+              Check-in: 3:30 PM ET.
             </p>
           </div>
           <div className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate/60">
