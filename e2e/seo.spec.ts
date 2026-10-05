@@ -26,6 +26,8 @@ interface RouteSpec {
 }
 
 const ROUTES: RouteSpec[] = [
+  { path: "/blog/walter-johnson-youth-pickleball-fall-2026", titleContains: /Walter Johnson/, h1Contains: /Walter Johnson/ },
+  { path: "/blog/mvf-junior-tournament-october-24-2026", titleContains: /October 24/, h1Contains: /October 24/ },
   {
     path: "/",
     titleContains: /Next Gen PB Academy/,
@@ -153,6 +155,54 @@ const ROUTES: RouteSpec[] = [
     h1Contains: /tennis/i,
   },
 ];
+
+test.describe("parent guide publication", () => {
+  const guides = [
+    { slug: "walter-johnson-youth-pickleball-fall-2026", destination: "/fall", label: "See current Bethesda season details", facts: ["Green Ball", "Yellow Ball", "$225", "paid up front", "east side", "not six remaining Sundays"] },
+    { slug: "mvf-junior-tournament-october-24-2026", destination: "/mvf-junior-tournament", label: "See current tournament details and registration", facts: ["10U: ages 6–10", "14U: ages 11–14", "3:30 PM ET", "20125 Arrowhead", "divisions will be merged", "not proof of a paid spot"] },
+  ];
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/*", async (route) => {
+      if (route.request().method() !== "GET") return route.abort();
+      await route.continue();
+    });
+  });
+  for (const guide of guides) {
+    test(`${guide.slug}: readable article with current program link and article schema`, async ({ page }) => {
+      const response = await page.goto(`/blog/${guide.slug}`);
+      expect(response?.status()).toBe(200);
+      const article = page.locator("article");
+      for (const fact of guide.facts) await expect(article).toContainText(fact);
+      const link = article.getByRole("link", { name: guide.label, exact: true });
+      await expect(link).toHaveAttribute("href", guide.destination);
+      await link.focus();
+      await expect(link).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(new RegExp(`${guide.destination}$`));
+      await page.goto(`/blog/${guide.slug}`);
+      const blocks = await getAllJsonLd(page);
+      expect(blocks.filter((block) => (block as { "@type"?: string })["@type"] === "BlogPosting")).toHaveLength(1);
+      expect(blocks.some((block) => (block as { "@type"?: string })["@type"] === "BreadcrumbList")).toBe(true);
+      expect(flatten(blocks).some((node) => ["SportsEvent", "FAQPage"].includes((node as { "@type": string })["@type"]))).toBe(false);
+    });
+    for (const width of [375, 414, 1280]) {
+      test(`${guide.slug}: readable at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(`/blog/${guide.slug}`);
+        await expect(page.locator("article h1")).toBeVisible();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+      });
+    }
+    test(`${guide.slug}: discoverable from the public blog`, async ({ page }) => {
+      await page.goto("/blog");
+      await expect(page.locator(`a[href="/blog/${guide.slug}"]`)).toBeVisible();
+    });
+  }
+  test("unknown parent guides return 404", async ({ page }) => {
+    const response = await page.goto("/blog/nonexistent-parent-guide");
+    expect(response?.status()).toBe(404);
+  });
+});
 
 /**
  * Resolve a `/path` to its absolute production URL — needed for the canonical /

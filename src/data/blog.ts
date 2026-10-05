@@ -12,10 +12,20 @@
 // sites on 2026-09-13 and deliberately names no times: families check those
 // schedules directly.
 
-import { FALL_SEASON_LABEL, FALL_VENUE_SHORT } from "./fall-2026";
-import { FALL_SEASON_GROUPS } from "./fall-season-2026";
+import { FALL_RAIN_DATES, FALL_SEASON_LABEL, FALL_SEASON_WEEKS, FALL_VENUE, FALL_VENUE_SHORT, FALL_WEATHER_CALL_LEAD_HOURS } from "./fall-2026";
+import { FALL_SEASON_GROUPS, FALL_SEASON_PRICE_USD } from "./fall-season-2026";
 import { MVF_AGE_MIN, MVF_AGE_MAX, NORTH_CREEK } from "./mvf";
-
+import { levels } from "./levels";
+import { getParkingTip } from "./venue-parking";
+import { formatLongDate } from "../lib/format-date";
+import {
+  COURTS_TEXT, GUARANTEED_GAMES_TEXT, LOW_ENROLLMENT_POLICY_TEXT, MEDALS_TEXT,
+  MVF_JUNIOR_TOURNAMENT_ADDRESS, MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
+  MVF_JUNIOR_TOURNAMENT_DIVISIONS, MVF_JUNIOR_TOURNAMENT_DIVISION_MIN,
+  MVF_JUNIOR_TOURNAMENT_DIVISION_MAX, MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
+  MVF_JUNIOR_TOURNAMENT_VENUE, NONRESIDENT_PRICE_USD, NO_REFUNDS_TEXT,
+  RAIN_OR_SHINE_TEXT, RESIDENT_PRICE_USD,
+} from "./mvf-junior-tournament-2026";
 
 import {
   PICKLPARK_LEAGUES,
@@ -53,6 +63,118 @@ export interface BlogPost {
 }
 
 export const blogPosts: BlogPost[] = [
+  {
+    slug: "walter-johnson-youth-pickleball-fall-2026",
+    title: "Walter Johnson Youth Pickleball: Parent Guide",
+    headline: "Walter Johnson youth pickleball: your fall season guide",
+    description: "Plan for NGA's Bethesda youth season: Green and Yellow groups, full-season price, east-side parking, session format and current weather updates.",
+    datePublished: "2026-10-05",
+    sections: [
+      {
+        paragraphs: [
+          `Your player's Fall 2026 Bethesda program is a ${FALL_SEASON_WEEKS}-Sunday season at ${FALL_VENUE}. Each Green or Yellow Ball group gets 90 minutes of coached practice, then rotating-partner games. It is a season commitment, not a one-hour drop-in.`,
+          "This guide explains the season plan. Use the current Bethesda season page linked below for cancellations, makeup dates, group availability and registration terms before heading to the court or paying.",
+        ],
+      },
+      {
+        heading: "Choose a group that fits your player",
+        paragraphs: [
+          ...FALL_SEASON_GROUPS.map((group) => `${group.label}: ${group.timeLabel} ET; listed age ${levels.find((level) => level.key === group.group.toLowerCase())!.ages}.${group.group === "Yellow" ? " Yellow is coach-curated and invite-only." : " Green develops shot selection, court positioning and doubles teamwork."}`),
+          "NGA serves ages 6–16 through Red, Orange, Green and Yellow Ball. That academy-wide pathway does not make every group open to every age or level. This season lists Green and Yellow; ask Coach Sam to confirm placement rather than choosing a group only for its time. An evaluation or private lesson can help a newer player find an appropriate starting point.",
+        ],
+      },
+      {
+        heading: "Season dates and payment",
+        paragraphs: [
+          `The original schedule was six Sundays, ${FALL_SEASON_LABEL}. These are not six remaining Sundays. Held makeup dates are ${FALL_RAIN_DATES.map(formatLongDate).join(" and ")}, 2026; they replace cancelled sessions rather than add two extra paid sessions. Check the current season record for cancellations and makeup assignments.`,
+          `The $${FALL_SEASON_PRICE_USD} full-season commitment is paid up front. This is the full-season price, not a late-start quote. If you are joining after the season starts, confirm the current group, remaining sessions, space and late-start payment terms with Coach Sam before paying.`,
+          "Joining the substitute list is not a confirmed spot. Separate drop-ins and substitute opportunities have their own availability. Text Coach Sam at 301-325-4731 if you need help choosing the next step.",
+        ],
+      },
+      {
+        heading: "What your player practices",
+        paragraphs: [
+          "The season plan moves from coached practice into games with changing partners. Green builds fundamentals and teamwork; Yellow works on patterns for competitive play. You do not need to bring a fixed doubles partner.",
+          "On the ride home, ask one small question: What felt easier today? What did you try with a new partner? Recognizing a specific effort helps your player see progress alongside the score. Better than yesterday—together.",
+        ],
+      },
+      {
+        heading: "Before leaving home",
+        paragraphs: [
+          `${getParkingTip(FALL_VENUE)?.tip} Check the program email for meeting and pickup instructions; agree on the handoff with your coach.`,
+          "Pack court shoes and water, plus your player's paddle if they have one. If you need to borrow equipment, confirm availability with Coach Sam beforehand.",
+          `Weather calls are made ${FALL_WEATHER_CALL_LEAD_HOURS} hours before each group's start. Check the current season record, your group WhatsApp and cancellation email before travelling. Review the current season's weather, makeup and refund terms on the Bethesda season page.`,
+        ],
+      },
+      {
+        heading: "Quick answers for parents",
+        paragraphs: [
+          "Can a new player join this group? Start with an evaluation or placement conversation. This season lists Green and Yellow; Red and Orange have their own appropriate program options.",
+          "Is every Sunday a drop-in? No. This listing is a season commitment. Check separately listed drop-ins or substitute opportunities for their own availability.",
+          "Is a makeup date an extra paid session? No. It is held to replace a cancelled date. The current season record shows which date it replaces.",
+        ],
+      },
+    ],
+    links: [
+      { label: "See current Bethesda season details", href: "/fall" },
+      { label: "See the ball-level pathway", href: "/levels" },
+    ],
+  },
+  {
+    slug: "mvf-junior-tournament-october-24-2026",
+    title: "October 24 MVF Junior Pickleball: Parent Guide",
+    headline: "October 24 MVF junior pickleball: your family's guide",
+    description: "Plan for NGA's October 24 Montgomery Village junior tournament: event-day ages, rotating partners, fees, 3:30 PM check-in and invoice payment.",
+    datePublished: "2026-10-05",
+    sections: [
+      {
+        paragraphs: [
+          `Your player's MVF Junior Tournament is scheduled for ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} ET, at ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_ADDRESS}. Next Gen Pickleball Academy coaches the event.`,
+          `${COURTS_TEXT} Use the North Creek address for your trip; Montgomery Village Foundation's Apple Ridge headquarters is a different location. Check the current tournament page for details and registration status.`,
+        ],
+      },
+      {
+        heading: "Choose your player's age division",
+        paragraphs: [
+          `Your player's age on October 24, 2026 determines the division: ${MVF_JUNIOR_TOURNAMENT_DIVISIONS.map((division) => `${division.label}: ${division.ageLabel.toLowerCase()}`).join("; ")}. Turning 11 on October 25 still places a player in 10U; turning 11 on October 24 places them in 14U.`,
+          "NGA serves ages 6–16, but this tournament stops at age 14. A 15- or 16-year-old cannot enter 14U. An age division is not a Red, Orange, Green or Yellow skill placement. If you are unsure whether your player's game experience fits, text Coach Sam at 301-325-4731 before paying.",
+          `Each division has a ${MVF_JUNIOR_TOURNAMENT_DIVISION_MIN}-player minimum and a ${MVF_JUNIOR_TOURNAMENT_DIVISION_MAX}-player cap. ${LOW_ENROLLMENT_POLICY_TEXT}`,
+        ],
+      },
+      {
+        heading: "What rotating partners means",
+        paragraphs: [
+          `Players register individually and change partners during the round robin: games against different opponents. You do not need to register a fixed doubles team. ${GUARANTEED_GAMES_TEXT} ${MEDALS_TEXT}`,
+          "Give your player one simple goal: communicate with each new partner, recover after a mistake or notice one skill they are using more consistently. That is a useful way to recognize progress alongside the results. Better than yesterday—together.",
+        ],
+      },
+      {
+        heading: "Entry fees and invoice payment",
+        paragraphs: [
+          `Entry is $${RESIDENT_PRICE_USD} per player for Montgomery Village residents and $${NONRESIDENT_PRICE_USD} per player for non-residents. Select the residency option that applies to your player's registration.`,
+          "Start on the official tournament page, choose a division and complete the parent registration form. NGA emails an invoice; pay that invoice online to lock your player's spot. Submitting the form or receiving an invoice is not proof of a paid spot. Keep your payment confirmation.",
+          "If the email does not arrive, check spam, then contact Coach Sam before creating a second registration. Availability can change; check the current registration page rather than assuming a division still has room.",
+        ],
+      },
+      {
+        heading: "Before leaving home",
+        paragraphs: [
+          `Check in at 3:30 PM ET at ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_ADDRESS}. Check your event email for the meeting point and any updated instructions.`,
+          "Bring a refillable water bottle and court shoes. Pack your player's paddle if they have one. If you need to borrow one, confirm availability with Coach Sam beforehand.",
+          `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} Read these posted terms before paying. If conditions raise a question, contact NGA and follow the organizer's current instructions.`,
+        ],
+      },
+      {
+        heading: "Quick answers for parents",
+        paragraphs: [
+          "Do we need a doubles partner? No. Players register individually and rotate partners.",
+          "Is this the Thursday MVF class? No. This is a one-day Saturday tournament. Use this event's registration page and venue instructions.",
+          "What if a division has fewer than six players? The divisions will be merged. Check the organizer's current instructions for the resulting format.",
+        ],
+      },
+    ],
+    links: [{ label: "See current tournament details and registration", href: "/mvf-junior-tournament" }],
+  },
   {
     slug: "is-pickleball-safe-for-kids",
     title: "Is Pickleball Safe for Kids? A MoCo Coach's Answer",

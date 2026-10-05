@@ -5,6 +5,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-10-05 — Publish source-backed Walter Johnson and MVF parent guides
+
+- **Situation:** Parents needed practical guides for the Walter Johnson Fall 2026 season and October 24 MVF junior tournament. The reviewed Notion drafts distinguish academy ages from listing eligibility, group membership from availability, and submitting an invoice form from paying it. Sam approved both guide publication scopes.
+- **Decision:** Add the guides to the existing blog registry, retaining the current renderer, metadata, BlogPosting/Breadcrumb schema and derived sitemap. Program data supplies venues, times, ages, prices and policies. Current program pages own changing availability, makeup assignments and registration status; the season article labels the original schedule and full-season price explicitly.
+- **Risk:** A dated guide can outlive registration. The tournament CTA points to current details; no remaining-seat count, loaner stock, pickup supervision, revised merged format, firsthand result or media permission is invented. Recheck the guides after the original season end, tournament and makeups. No payment, auth, private child-data or broadcast behavior changes.
+- **Change:** Two articles in `src/data/blog.ts`, pure program-discovery checks and rendered SEO/navigation/mobile coverage. Confirmed east-side parking and 3:30 PM ET check-in are retained. Mutation checks challenge payment confirmation, check-in, age divisions, registration ownership, season/drop-in format and parking. Sam's “Continue” approved the additional editorial-test update: original URLs/dates remain protected while new articles are allowed; duplicate slugs still fail.
+
 ## 2026-09-30 — Pure specs set env in hooks and restore it; "env before import" is retired
 
 - **Situation:** `skills/add-invariant-test.md` step 3 said to set env at the top of a spec, before the import, and that "each spec file gets its own worker." Throwaway probes on Playwright 1.59.1 (run on 2026-09-28, then deleted) showed all of that was wrong for `npm run test:pure`:

@@ -37,8 +37,9 @@ for(const post of blogPosts){
   });
 }
 test('article URLs and original publication dates remain stable',()=>{
-  expect(blogPosts.map(p=>[p.slug,p.datePublished])).toEqual([
-    ['is-pickleball-safe-for-kids','2026-07-25'],['youth-pickleball-ball-colors-explained','2026-07-25'],['where-kids-play-pickleball-montgomery-county','2026-07-25'],['first-pickleball-session-what-to-expect','2026-07-25'],['best-age-to-start-pickleball','2026-09-13'],['indoor-youth-pickleball-near-frederick-md','2026-09-13'],['pickleball-vs-tennis-for-a-7-year-old','2026-09-13']]);
+  expect(blogPosts.map(p=>[p.slug,p.datePublished])).toEqual(expect.arrayContaining([
+    ['is-pickleball-safe-for-kids','2026-07-25'],['youth-pickleball-ball-colors-explained','2026-07-25'],['where-kids-play-pickleball-montgomery-county','2026-07-25'],['first-pickleball-session-what-to-expect','2026-07-25'],['best-age-to-start-pickleball','2026-09-13'],['indoor-youth-pickleball-near-frederick-md','2026-09-13'],['pickleball-vs-tennis-for-a-7-year-old','2026-09-13']]));
+  expect(new Set(blogPosts.map(p=>p.slug)).size).toBe(blogPosts.length);
 });
 test('county article names actual eligibility, booking owners, past camps and current-status links',async()=>{
   const post=findBlogPost('where-kids-play-pickleball-montgomery-county')!;const t=post.sections.flatMap(s=>s.paragraphs).join(' ');
