@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { faq } from "../src/data/faq";
 import { site } from "../src/data/site";
-import { blogPosts } from "../src/data/blog";
+import { blogPosts, findBlogPost } from "../src/data/blog";
 import { PICKLPARK_LEAGUES } from "../src/data/picklpark-leagues-2026";
 import { FALL_SEASON_PRICE_USD } from "../src/data/fall-season-2026";
 
@@ -65,5 +65,60 @@ test.describe("public program discovery copy", () => {
       expect(copy.toLowerCase()).toContain(league.ageLabel.toLowerCase());
     }
     expect(copy).toMatch(/registration and payment go through The Pickl Park/i);
+  });
+});
+
+test.describe("parent guides", () => {
+  test("Walter Johnson explains the actual season without promising a late-start seat", () => {
+    const post = findBlogPost("walter-johnson-youth-pickleball-fall-2026");
+    expect(post).toBeDefined();
+    const copy = post!.sections.flatMap((section) => section.paragraphs).join(" ");
+    expect(copy).toMatch(/Green Ball.*10\+/);
+    expect(copy).toMatch(/Yellow Ball.*12\+/);
+    expect(copy).toMatch(/invite-only/);
+    expect(copy).toMatch(/6–16/);
+    expect(copy).toContain(`$${FALL_SEASON_PRICE_USD}`);
+    expect(copy).toMatch(/full-season.*paid up front/);
+    expect(copy).toMatch(/not.*one-hour drop-in/i);
+    expect(copy).toMatch(/original schedule/i);
+    expect(copy).toMatch(/not six remaining Sundays/i);
+    expect(copy).toMatch(/current.*makeup/i);
+    expect(copy).toMatch(/late-start.*terms/i);
+    expect(copy).toMatch(/substitute list.*not.*confirmed spot/i);
+    expect(copy).toMatch(/east side.*tennis courts/i);
+    expect(copy).not.toMatch(/last spot|filling up|all four levels welcome|loaners guaranteed/i);
+    expect(post!.links).toEqual(expect.arrayContaining([
+      expect.objectContaining({ href: "/fall" }),
+      expect.objectContaining({ href: "/levels" }),
+    ]));
+  });
+
+  test("MVF separates event-day eligibility, check-in and paid registration", () => {
+    const post = findBlogPost("mvf-junior-tournament-october-24-2026");
+    expect(post).toBeDefined();
+    const copy = post!.sections.flatMap((section) => section.paragraphs).join(" ");
+    expect(copy).toMatch(/10U.*ages 6–10/);
+    expect(copy).toMatch(/14U.*ages 11–14/);
+    expect(copy).toMatch(/age on October 24/);
+    expect(copy).toMatch(/Turning 11 on October 25.*10U/);
+    expect(copy).toMatch(/turning 11 on October 24.*14U/);
+    expect(copy).toMatch(/15- or 16-year-old.*cannot enter 14U/);
+    expect(copy).toMatch(/3:30 PM ET/);
+    expect(copy).toContain("20125 Arrowhead");
+    expect(copy).toMatch(/\$50.*residents.*\$60.*non-residents/);
+    expect(copy).toMatch(/6-player minimum.*12-player cap/);
+    expect(copy).toMatch(/divisions will be merged/);
+    expect(copy).toMatch(/Submitting the form.*not.*paid/i);
+    expect(copy).toMatch(/pay.*invoice.*lock.*spot/i);
+    expect(copy).toMatch(/No refunds.*Rain or shine.*No rain date/);
+    expect(copy).not.toMatch(/3:45|\btent\b|\bbanner\b|register now|upcoming/i);
+    expect(post!.links).toContainEqual({
+      label: "See current tournament details and registration", href: "/mvf-junior-tournament",
+    });
+  });
+
+  test("unknown articles do not resolve to either guide", () => {
+    expect(findBlogPost("")).toBeUndefined();
+    expect(findBlogPost("nonexistent-parent-guide")).toBeUndefined();
   });
 });
