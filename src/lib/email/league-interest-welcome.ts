@@ -1,5 +1,6 @@
 import { c, s } from "./brand";
 import { signatureExtrasHtml, signatureExtrasText } from "./signature";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 interface LeagueInterestWelcomeInput {
   parentFirst: string;
@@ -41,10 +42,9 @@ export function leagueInterestWelcomeHtml(
     <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">You're on the list</p>
     <h1 style="${s.heading} margin:0 0 16px 0;">${escape(childFirst)} is on the ${escape(bandLabel)} interest list, ${escape(parentFirst)}.</h1>
     <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">
-      Thanks for raising your hand. The Next Gen league is a fixed-roster,
-      8-session season &mdash; same kids every week, real growth you can actually
-      see. It&rsquo;s the structured next step up from drop-ins, built around one
-      idea: <strong style="color:${c.text};">better than yesterday, together.</strong>
+      Thanks for sharing what works for your family. Future league and winter
+      details are still being confirmed. Joining the interest list does not
+      reserve a spot, register your child or take a payment.
     </p>
 
     <div style="${s.card}">
@@ -54,13 +54,16 @@ export function leagueInterestWelcomeHtml(
 
     <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">What happens next</h2>
     <ul style="margin:0;padding-left:18px;color:${c.text};line-height:1.7;">
-      <li>We&rsquo;re lining up venues, days, and the coach roster for the ${escape(bandLabel)} division now.</li>
-      <li>The moment a season near you is confirmed, you&rsquo;ll be first to hear &mdash; with the start date, the weekly slot, and how to enroll.</li>
-      <li>Every season tracks ${escape(childFirst)}&rsquo;s own progress &mdash; touches, skills unlocked, personal bests. No leaderboards, just your kid vs. yesterday.</li>
+      <li>We&rsquo;re using your preferences to plan future options.</li>
+      <li>We&rsquo;ll email the confirmed dates, format, price and registration owner before registration opens.</li>
+      <li>Our coaching focuses on ${escape(childFirst)}&rsquo;s own progress &mdash; touches, skills and personal bests.</li>
     </ul>
+    <p style="margin:20px 0;color:${c.text};line-height:1.55;">
+      ${escape(NGA_REFUND_POLICY_TEXT)} ${escape(EXISTING_AGREEMENTS_POLICY_TEXT)}
+    </p>
 
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Want to play before the season starts?</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Want to play while details are confirmed?</p>
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">
         ${escape(childFirst)} can drop in on any open session in the meantime &mdash; a great way to get a first touch on the court while we build the league.
       </p>
@@ -97,17 +100,19 @@ export function leagueInterestWelcomeText(
   return [
     `${childFirst} is on the ${bandLabel} interest list, ${parentFirst}.`,
     "",
-    `Thanks for raising your hand. The Next Gen league is a fixed-roster, 8-session season — same kids every week, real growth you can actually see. It's the structured next step up from drop-ins, built around one idea: better than yesterday, together.`,
+    `Thanks for sharing what works for your family. Future league and winter details are still being confirmed. Joining the interest list does not reserve a spot, register your child or take a payment.`,
     "",
     `What you told us:`,
     interestSummary,
     "",
     `What happens next:`,
-    `- We're lining up venues, days, and the coach roster for the ${bandLabel} division now.`,
-    `- The moment a season near you is confirmed, you'll be first to hear — with the start date, the weekly slot, and how to enroll.`,
-    `- Every season tracks ${childFirst}'s own progress — touches, skills unlocked, personal bests. No leaderboards, just your kid vs. yesterday.`,
+    `- We're using your preferences to plan future options.`,
+    `- We'll email the confirmed dates, format, price and registration owner before registration opens.`,
+    `- Our coaching focuses on ${childFirst}'s own progress — touches, skills and personal bests.`,
     "",
-    `Want to play before the season starts? ${childFirst} can drop in on any open session in the meantime.`,
+    `${NGA_REFUND_POLICY_TEXT} ${EXISTING_AGREEMENTS_POLICY_TEXT}`,
+    "",
+    `Want to play while details are confirmed? ${childFirst} can drop in on any open session in the meantime.`,
     "",
     `See open sessions: ${scheduleUrl}`,
     "",

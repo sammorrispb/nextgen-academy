@@ -26,6 +26,14 @@ The new terms are prospective. Existing registrations and confirmed lessons keep
 
 ## Sources and verification
 
+### League interest continuation after PR #408
+
+The public `/league` interest view and its HTML/plain-text welcome message no longer promise a fixed roster, eight sessions, priority enrollment or a $25/10-business-day cancellation rule for unconfirmed future/winter programs. The page uses the shared NGA case-by-case refund text and preserves existing supplied agreements and host terms. Its AI-readable listing also identifies future programs as interest only. Current program cards, dates and registration owners are unchanged; actual host-specific indoor facts remain scoped to their programs.
+
+The eight-session source is the historical blueprint and `src/data/leagues.ts` seeded Fall pilot, whose exact venue is still empty. `docs/youth-pickleball-league-launch-readiness.md` identifies unresolved launch and winter venue requirements. This is not evidence for a confirmed winter offer. Age bands on the interest page are planning references, and age alone does not assign a skill level.
+
+The existing `NEXT_PUBLIC_LEAGUE_ENROLLMENT_OPEN` branch, pilot data, price gate, checkout and refund behavior are preserved. Its historical format and cancellation text remain behind the currently closed enrollment gate; they must be reviewed with confirmed dates, venue, price, ownership and prospective agreement versioning before that gate is activated. Keeping that branch does not verify a winter format or authorize its launch. No new refund transaction, fee, enrollment flag or existing agreement is changed.
+
 Sam's October 6 continuation settles the refund basis and lesson fee. The verified WJ guide (published October 5) is [the Fall season parent guide](https://app.notion.com/p/3edfa3ac27dc8126a600d602eb1072ff); existing tournament terms are in [the October 24 guide](https://app.notion.com/p/3edfa3ac27dc815a84bff3173b622a6b). The parent task maintains [the verified program sheet](https://app.notion.com/p/3f1fa3ac27dc81d08a68c3e2536fad91) and native Notion templates.
 
 Tests cover prospective scope, the $50 amount, confirmed/request/earlier-agreement boundaries, legacy refund communication, the actual cancel-link behavior described in copy, rate disclosures and the original CRM status fixes. Verification uses synthetic inputs and a local built server with browser external traffic and submissions blocked. No checkout, form, email, production CRM write, card charge or refund is performed.
