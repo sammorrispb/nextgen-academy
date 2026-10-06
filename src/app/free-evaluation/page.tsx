@@ -174,39 +174,41 @@ export default function FreeEvaluationPage() {
       </section>
 
       {/* ─── Social proof ─────────────────────────── */}
-      <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
-        <div className="max-w-5xl mx-auto">
-          <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal text-center mb-3">
-            Parent Stories
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white text-center mb-12 tracking-tight">
-            What Next Gen parents are saying
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {topTestimonials.map((t) => (
-              <figure
-                key={t.attribution}
-                className="relative bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 overflow-hidden"
-              >
-                <span
-                  aria-hidden="true"
-                  className="absolute -top-2 left-4 text-7xl font-heading font-black text-ngpa-teal/30 leading-none select-none"
+      {topTestimonials.length > 0 && (
+        <section className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
+          <div className="max-w-5xl mx-auto">
+            <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal text-center mb-3">
+              Parent Stories
+            </p>
+            <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white text-center mb-12 tracking-tight">
+              What Next Gen parents are saying
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {topTestimonials.map((t) => (
+                <figure
+                  key={t.attribution}
+                  className="relative bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 overflow-hidden"
                 >
-                  &ldquo;
-                </span>
-                <blockquote className="relative z-10 pt-5">
-                  <p className="text-ngpa-white text-base sm:text-lg leading-relaxed">
-                    {t.quote}
-                  </p>
-                  <figcaption className="mt-5 pt-4 border-t border-ngpa-slate/50 text-sm text-ngpa-white/60">
-                    {t.attribution}
-                  </figcaption>
-                </blockquote>
-              </figure>
-            ))}
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-2 left-4 text-7xl font-heading font-black text-ngpa-teal/30 leading-none select-none"
+                  >
+                    &ldquo;
+                  </span>
+                  <blockquote className="relative z-10 pt-5">
+                    <p className="text-ngpa-white text-base sm:text-lg leading-relaxed">
+                      {t.quote}
+                    </p>
+                    <figcaption className="mt-5 pt-4 border-t border-ngpa-slate/50 text-sm text-ngpa-white/60">
+                      {t.attribution}
+                    </figcaption>
+                  </blockquote>
+                </figure>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ─── About strip ───────────────────────── */}
       <section className="relative bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10 overflow-hidden">
