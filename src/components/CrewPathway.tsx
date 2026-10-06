@@ -1,35 +1,33 @@
 import Link from "next/link";
 
 /**
- * "Crew Pathway" pitch — explains the 3-step funnel from one-off drop-in →
- * crew formation (via WhatsApp poll) → 4-week soft commit with auto-reserve.
+ * Crew matching is an inquiry. Availability, age-peer fit, dates and payment
+ * terms must be confirmed for the actual offer before a family commits.
  *
  * No price is quoted here. The drop-in rate came off every public surface on
  * 2026-09-08 (Sam) — parents see the amount on the Stripe checkout page — and
  * crew pricing stays qualitative until a real product exists.
  *
- * Routes parents to /schedule (the actionable entry — book the first
- * session). The poll link and 4-week commit are reached via WhatsApp shares
- * and the post-session email respectively, not from this section.
+ * Routes parents to current listings or the crew-interest form.
  */
 export default function CrewPathway() {
   const steps = [
     {
       n: "1",
-      label: "Book a drop-in",
-      body: "Try a single session — one hour, 4-player cap. No commitment — see if the format clicks for your kid.",
-      cta: { href: "/schedule", text: "See open sessions" },
+      label: "Find your starting point",
+      body: "See current programs or book a free evaluation. We look at your player's skills, age-peer fit and goals to recommend a starting point.",
+      cta: { href: "/schedule", text: "See current options" },
     },
     {
       n: "2",
-      label: "We form your crew",
-      body: "After your first session, Sam looks for 3 more kids at your level who can make the same day and court. When the crew is set, we text the group.",
-      cta: null,
+      label: "Share what works",
+      body: "Tell Coach Sam your preferred days, area and level. We review interest alongside current programs and available space to look for a good match.",
+      cta: { href: "/crew", text: "Share crew interest" },
     },
     {
       n: "3",
-      label: "Lock in 4 weeks",
-      body: "One tap to save a card and auto-reserve the same slot for the next 4 weeks — same time, same court, same crew. Skip any week and we refund automatically. Stop the auto-reserve any time.",
+      label: "Confirm the offer",
+      body: "When an option fits, confirm its dates, venue, format, price and cancellation terms before registering. Sending interest does not enroll your player or authorize a charge.",
       cta: null,
     },
   ];
@@ -73,12 +71,12 @@ export default function CrewPathway() {
             className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-ngpa-teal"
           />
           <div className="font-heading text-base sm:text-lg font-bold text-ngpa-white mb-1.5">
-            Why crews, not classes
+            Grow together
           </div>
           <p className="text-sm sm:text-base text-ngpa-white/70 leading-relaxed">
-            Same four kids every week. Consistency builds trust, trust builds
-            risk-taking, risk-taking is how skills actually compound. We&rsquo;d
-            rather grow slow with a tight crew than fill a room with strangers.
+            Shared reps and encouraging teammates help players build trust
+            and try new skills. Coach Sam looks for a group where your player
+            can make progress alongside peers.
           </p>
         </div>
       </div>

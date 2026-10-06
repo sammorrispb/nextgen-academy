@@ -10,9 +10,8 @@ import { FetchStub } from "./fixtures/fetch-stub";
 //   3. A bad level is rejected at the boundary with ZERO network calls.
 //   4. Missing player identity is rejected with ZERO network calls.
 
-process.env.NOTION_API_KEY = "ntn_test";
-process.env.NOTION_PLAYER_CRM_DB_ID = "player-crm-db";
-delete process.env.NOTION_DB_ID;
+const TOUCHED_ENV = ["NOTION_API_KEY", "NOTION_PLAYER_CRM_DB_ID", "NOTION_DB_ID"] as const;
+const savedEnv = Object.fromEntries(TOUCHED_ENV.map((key) => [key, process.env[key]]));
 
 import { setPlayerLevel } from "../src/lib/notion-player-bracket";
 
@@ -22,10 +21,19 @@ const EMAIL = "kathy@example.com";
 
 const stub = new FetchStub();
 test.beforeEach(() => {
+  process.env.NOTION_API_KEY = "ntn_test";
+  process.env.NOTION_PLAYER_CRM_DB_ID = "player-crm-db";
+  delete process.env.NOTION_DB_ID;
   stub.reset();
   stub.install();
 });
 test.afterEach(() => stub.uninstall());
+test.afterAll(() => {
+  for (const key of TOUCHED_ENV) {
+    if (savedEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = savedEnv[key];
+  }
+});
 
 function armExistingRow() {
   stub
@@ -34,6 +42,32 @@ function armExistingRow() {
 }
 
 test.describe("bracket write — egress + write scope", () => {
+  for (const level of ["Red", "Orange", "Green", "Yellow", null] as const) {
+    test(`a missing player row can record bracket ${level} without activation`, async () => {
+      stub.on("/databases/player-crm-db/query", { results: [] })
+        .on("/pages", { id: "synthetic-new-player" });
+      const res = await setPlayerLevel({ parentEmail: EMAIL, parentPhone: "", childFirstName: CHILD, level });
+      expect(res.ok).toBe(true);
+      const create = stub.calls.find((call) => call.method === "POST" && call.url.endsWith("/pages"));
+      expect(create).toBeTruthy();
+      const properties = JSON.parse(create!.body).properties;
+      expect(properties).not.toHaveProperty("Status");
+      expect(properties.Level).toEqual({ select: level ? { name: level } : null });
+      expect(stub.calls.every((call) => new URL(call.url).host === "api.notion.com")).toBe(true);
+    });
+  }
+
+  for (const status of ["Lead", "Trial", "Active", "Inactive", null]) {
+    test(`assigning a bracket preserves existing status ${status}`, async () => {
+      stub.on("/databases/player-crm-db/query", { results: [{ id: "player-1", properties: {
+        Status: { select: status ? { name: status } : null },
+      } }] }).on("/pages/player-1", { id: "player-1" });
+      expect((await setPlayerLevel({ parentEmail: EMAIL, parentPhone: "", childFirstName: CHILD, level: "Green" })).ok).toBe(true);
+      const patch = stub.calls.find((call) => call.method === "PATCH");
+      expect(Object.keys(JSON.parse(patch!.body).properties)).toEqual(["Level"]);
+    });
+  }
+
   test("assigns a level touching only Notion", async () => {
     armExistingRow();
     const res = await setPlayerLevel({

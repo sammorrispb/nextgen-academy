@@ -237,12 +237,12 @@ export async function setPlayerLevel(input: {
       return { ok: true, message: "Bracket saved", level: input.level ?? "" };
     }
 
-    // No player row yet — create a minimal one so the bracket sticks. Mirrors
-    // the shape syncPlayerFromDropIn creates, minus the transactional fields.
+    // No player row yet — record the coach's bracket without activation.
+    // A skill assessment is not enrollment or payment evidence. Omit Status,
+    // as the lesson inquiry path does; the paid registration sync owns it.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const properties: Record<string, any> = {
       "Player Name": { title: [{ text: { content: child } }] },
-      Status: { select: { name: "Active" } },
       Source: { select: { name: "Website" } },
       Audience: { select: { name: "Youth" } },
       Level: levelProp,

@@ -8,13 +8,12 @@ export default function RegistrationNotice() {
       </h3>
       <p className="text-base text-ngpa-white/80 leading-relaxed">
         <strong className="text-ngpa-white">
-          One-hour slots, drop-in only.
+          Check the specific program before registering.
         </strong>{" "}
-        No subscription, no commitment. Pick the session below
-        that fits your child&rsquo;s level and date. Courts stay small, so
-        reserve early. If we cancel a session
-        for weather, you get an automatic full refund — otherwise payments are
-        non-refundable. Questions? Email{" "}
+        Program pages list the dates, venue, age and level fit, format, and
+        registration route. For a drop-in listed below, check that session&rsquo;s
+        details. Follow the program&rsquo;s payment and confirmation steps;
+        refund and weather rules differ by program. Questions? Email{" "}
         <a
           href={`mailto:${site.email}`}
           className="text-ngpa-teal hover:text-ngpa-teal-bright transition-colors font-semibold underline-offset-4 hover:underline"

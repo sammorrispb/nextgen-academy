@@ -8,6 +8,7 @@ import CTABanner from "@/components/CTABanner";
 import CrewPathway from "@/components/CrewPathway";
 import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import RegistrationNotice from "@/components/RegistrationNotice";
+import ProgramPolicySummary from "@/components/ProgramPolicySummary";
 import SessionCard from "@/components/SessionCard";
 import SessionGroupCard from "@/components/SessionGroupCard";
 import JsonLd from "@/components/JsonLd";
@@ -169,8 +170,8 @@ export default async function SchedulePage() {
           </h2>
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Seasons, weekly classes, and free evaluations for kids 6&ndash;16 at
-            every level &mdash; Red, Orange, Green, and Yellow Ball. Courts stay
-            small, so nobody stands in line.
+            every level &mdash; Red, Orange, Green, and Yellow Ball. Check each
+            program&rsquo;s age range, level fit and format.
           </p>
           <p className="mt-3 text-sm text-ngpa-white/60 leading-relaxed max-w-2xl">
             Not sure where your player fits? Start with a free evaluation
@@ -210,11 +211,12 @@ export default async function SchedulePage() {
                 {MVF_JUNIOR_TOURNAMENT_TIME_LABEL} &middot; 10U &amp; 14U
                 divisions &middot; rotating-partner round robin &middot; $
                 {RESIDENT_PRICE_USD} MV resident / ${NONRESIDENT_PRICE_USD}{" "}
-                non-resident. Register and pay here on the NGA site.
+                non-resident. Register here; pay the invoice to lock your
+                player&rsquo;s spot.
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              Register &rarr;
+              See tournament details &rarr;
             </span>
           </Link>
         </div>
@@ -304,15 +306,15 @@ export default async function SchedulePage() {
           >
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal-bright">
-                Registration open &middot; Fall 2026
+                Thursday classes &middot; Fall 2026
               </p>
               <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
                 MVF Youth Pickleball in Montgomery Village
               </p>
               <p className="text-sm text-ngpa-muted mt-0.5">
-                Intro class Aug 27 at Apple Ridge + two six-week Thursday
-                sessions at North Creek, ages 8&ndash;16 &middot; register
-                through the Montgomery Village Foundation.
+                Thursday sessions at North Creek, ages 8&ndash;16 &middot;
+                confirm current classes, venue and registration through the
+                Montgomery Village Foundation.
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-teal text-ngpa-deep font-heading font-bold group-hover:bg-ngpa-teal-bright transition-colors min-h-[48px]">
@@ -327,8 +329,8 @@ export default async function SchedulePage() {
         <div className="max-w-3xl mx-auto">
           <SectionHeading
             eyebrow="Upcoming Sessions"
-            title="Pick a date and reserve your spot."
-            subtitle="One-hour drop-in slots. Courts stay small on purpose."
+            title={sessions.length > 0 ? "See current drop-in sessions." : "Explore current programs."}
+            subtitle="Dates, duration, venue and level fit are specific to each listing."
           />
 
           <RegistrationNotice />
@@ -383,6 +385,15 @@ export default async function SchedulePage() {
         </div>
       </section>
 
+      <section className="bg-ngpa-deep py-12 px-4 sm:px-6 lg:px-10">
+        <div className="max-w-3xl mx-auto text-ngpa-white/80 leading-relaxed">
+          <h2 className="font-heading text-2xl font-black text-ngpa-white mb-5">
+            Registration, weather and refunds by program
+          </h2>
+          <ProgramPolicySummary />
+        </div>
+      </section>
+
       {/* ─── Crew Pathway pitch ─────────────────── */}
       <section
         id="crew"
@@ -391,8 +402,8 @@ export default async function SchedulePage() {
         <div className="max-w-5xl mx-auto">
           <SectionHeading
             eyebrow="The Crew Pathway"
-            title="From drop-in to your own 4-week crew."
-            subtitle="Most parents start with one drop-in. After that we find your kid a crew of 3 others at the same level — same court, same time, every week."
+            title="Find a group where your player can grow."
+            subtitle="Share your player's level, goals and availability. Coach Sam helps you explore current programs and possible crew matches."
           />
           <CrewPathway />
         </div>
@@ -410,4 +421,3 @@ export default async function SchedulePage() {
     </>
   );
 }
-

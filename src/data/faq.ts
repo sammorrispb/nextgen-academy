@@ -83,7 +83,8 @@ export const faq: FaqItem[] = [
   {
     question: "What’s your refund policy?",
     answer:
-      "Terms depend on the program. If NGA cancels a drop-in, you get an automatic full refund to your original payment method. Fall season registration is a full-season commitment: a rained-out Sunday moves to a rain date, and sessions we cancel without making them up are refunded. Registrations are non-refundable if you withdraw or miss a session. The Pickl Park and MVF handle their own registration terms; check the program listing before paying. The free 30-minute evaluation is always free and never charged.",
+      "Terms depend on the program. Under the current Walter Johnson fall season terms, parent withdrawals are non-refundable; a weather cancellation moves to the next open make-up date for that group, and NGA refunds NGA-cancelled sessions it cannot make up. The October 24 MVF Junior Tournament has no refunds and runs rain or shine with no rain date. MVF classes and The Pickl Park use their host's registration and cancellation terms. For lessons, drop-ins and crews, check the specific offer and payment terms before paying. Existing registrations retain the terms provided when you registered and any later agreed changes. The free 30-minute evaluation is always free and never charged.",
+    cta: { label: "See program-specific terms", href: "/terms" },
   },
   {
     question: "Is pickleball safe for kids?",

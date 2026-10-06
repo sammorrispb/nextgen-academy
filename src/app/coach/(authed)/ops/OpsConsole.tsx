@@ -18,6 +18,7 @@ import {
   type OpsActionResult,
 } from "./actions";
 import type { FallSurveyVariant } from "@/lib/email/fall-survey";
+import OpsSendSummary from "@/components/OpsSendSummary";
 
 const inputClass =
   "w-full px-3 py-2 rounded-lg bg-ngpa-deep border border-ngpa-slate/60 text-ngpa-white text-sm placeholder:text-ngpa-white/30 focus:outline-none focus:border-ngpa-teal";
@@ -158,12 +159,7 @@ function OpsCard({
   }
 
   const failedEmails = failedEmailsOf(lastSend);
-  const sentSummary =
-    lastSend === null
-      ? null
-      : typeof lastSend.sent === "number"
-        ? `Sent ${lastSend.sent}, failed ${lastSend.failed ?? 0}.`
-        : `Sent to ${String(lastSend.sent_to ?? "recipient")}.`;
+  const crmUpdateFailed = lastSend?.notion_updated === false;
 
   const liveDisabledTitle = !isAdmin
     ? "Live sends are admin-only — previews are open to every coach."
@@ -270,21 +266,15 @@ function OpsCard({
         <p className="mt-4 text-sm font-bold text-ngpa-red">{error}</p>
       )}
 
-      {sentSummary && (
+      {lastSend && (
         <div
           className={`mt-4 rounded-xl border p-4 ${
-            failedEmails.length
+            failedEmails.length || crmUpdateFailed
               ? "border-ngpa-red/50 bg-ngpa-red/10"
               : "border-ngpa-skill-green/50 bg-ngpa-skill-green/10"
           }`}
         >
-          <p
-            className={`text-sm font-bold ${
-              failedEmails.length ? "text-ngpa-red" : "text-ngpa-skill-green"
-            }`}
-          >
-            {sentSummary} Run a fresh preview before sending again.
-          </p>
+          <OpsSendSummary body={lastSend} hasFailedEmails={failedEmails.length > 0} />
           {failedEmails.length > 0 && (
             <div className="mt-3">
               <p className="text-xs font-bold uppercase tracking-wider text-ngpa-white/60 mb-1.5">
@@ -516,7 +506,7 @@ export default function OpsConsole({ isAdmin }: { isAdmin: boolean }) {
 
       <OpsCard
         title="Post-eval follow-up"
-        description="Sends one parent the next-steps email for their child's evaluation (level card + live session list) and stamps Level, Status and Next Action on the CRM row. Player ID is the Notion page ID from the family profile."
+        description="Sends one parent the next-steps email for their child's evaluation (level card + live session list) and stamps Level and Next Action on the CRM row. Enrollment status is preserved. Player ID is the Notion page ID from the family profile."
         opName="post-eval follow-up"
         params={{ playerId, level, observations }}
         paramsUi={

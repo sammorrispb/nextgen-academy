@@ -3,7 +3,7 @@
  * src/app/api/post-eval-followup/route.ts (Phase 2b of the admin-reduction
  * roadmap) so the secret-gated curl route and the /coach/ops server action run
  * the IDENTICAL flow: fetch player → live session lines for the level → build
- * the branded email → send to the PARENT → stamp Level/Status/Next Action on
+ * the branded email → send to the PARENT → stamp Level/Next Action on
  * the CRM row. Mirrors eval-confirmation-send.ts (one lib, two callers);
  * e2e/invariant-ops-trigger-parity.spec.ts pins route === core.
  *
@@ -55,7 +55,7 @@ async function updatePlayer(
     ? `Post-eval email sent ${today}. **Send private-lesson quote within 24h** (use pricing guide).`
     : `Post-eval email sent ${today}. Awaiting registration.`;
 
-  await fetch(`${NOTION_API}/pages/${playerId}`, {
+  const response = await fetch(`${NOTION_API}/pages/${playerId}`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${notionKey}`,
@@ -65,7 +65,8 @@ async function updatePlayer(
     body: JSON.stringify({
       properties: {
         Level: { select: { name: level } },
-        Status: { select: { name: "Active" } },
+        // Evaluation advice is not enrollment or proof of payment. Preserve
+        // the existing Status; the registration flow owns activation.
         "Last Contact Date": { date: { start: today } },
         "Next Action": {
           rich_text: [{ text: { content: nextAction } }],
@@ -73,6 +74,10 @@ async function updatePlayer(
       },
     }),
   });
+  if (!response.ok) {
+    console.error("[post-eval-followup] email sent; CRM update rejected", response.status);
+  }
+  return response.ok;
 }
 
 /**
@@ -213,7 +218,14 @@ export async function runPostEvalFollowup(
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    await updatePlayer(body.playerId, process.env.NOTION_API_KEY!, body.level, today);
+    // Delivery has succeeded. A CRM rejection or network failure must not
+    // return a retryable send failure and invite a duplicate parent email.
+    let notionUpdated = false;
+    try {
+      notionUpdated = await updatePlayer(body.playerId, process.env.NOTION_API_KEY!, body.level, today);
+    } catch {
+      console.error("[post-eval-followup] email sent; CRM update unavailable");
+    }
 
     return {
       status: 200,
@@ -222,7 +234,7 @@ export async function runPostEvalFollowup(
         sent_to: parentEmail,
         level: body.level,
         sessions_listed: sessionLines.length,
-        notion_updated: true,
+        notion_updated: notionUpdated,
       },
     };
   } catch (err) {
