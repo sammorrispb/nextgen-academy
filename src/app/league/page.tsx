@@ -8,6 +8,7 @@ import { LEAGUE_BANDS, LEAGUE_SEASONS } from "@/data/leagues";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 import { buildLeagueHubCards } from "@/lib/league-hub";
 import { picklParkTodayET } from "@/lib/picklpark-registration-window";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 // Dark go-live gate. The enrollment UI (season form + "Enroll" CTAs) only
 // appears when NEXT_PUBLIC_LEAGUE_ENROLLMENT_OPEN === "true". Two independent
@@ -25,7 +26,7 @@ const FORM_ANCHOR = ENROLLMENT_OPEN ? "enroll" : "interest";
 
 // /league is the youth-leagues landing page (AEO audit, 2026-09-13): the leagues and
 // seasons Next Gen coaches right now, each with who takes registration, then
-// the planned fixed-roster Next Gen league and its interest list. It used to
+// the future Next Gen league and its interest list. It used to
 // describe only the planned league while carrying Course schema, so answer
 // engines read an enrollable product that doesn't exist.
 const TITLE = "Youth Pickleball Leagues & Seasons — MoCo & Frederick, MD";
@@ -75,8 +76,10 @@ const BAND_ACCENT: Record<
 
 const HOW_IT_WORKS = [
   {
-    title: "Same crew, every week",
-    body: "A fixed roster of 8 sessions across 9–10 weeks (weather make-ups built in). The same kids show up each week, so chemistry — and skills — actually compound.",
+    title: ENROLLMENT_OPEN ? "Same crew, every week" : "Confirm the program details",
+    body: ENROLLMENT_OPEN
+      ? "A fixed roster of 8 sessions across 9–10 weeks (weather make-ups built in). The same kids show up each week, so chemistry — and skills — actually compound."
+      : "Dates, venue, host, session count and format for future programs are still being confirmed. We will share the details before registration opens.",
   },
   {
     title: "Built on EASE",
@@ -153,11 +156,18 @@ export default function LeaguePage() {
               <p className="mt-6 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
                 Your kid can join a Next Gen&ndash;coached league or season in
                 Montgomery County or Frederick right now &mdash; each one below
-                says who takes registration. We&rsquo;re also building the Next
-                Gen league: the same crew every week for eight sessions, grouped
-                by age, leveling up Red &rarr; Orange &rarr; Green &rarr; Yellow.
-                Tell us your kid&rsquo;s age group and you&rsquo;ll be first to
-                enroll.
+                says who takes registration.{" "}
+                {ENROLLMENT_OPEN ? (
+                  <>We&rsquo;re also building the Next Gen league: the same crew
+                    every week for eight sessions, grouped by age, leveling up
+                    Red &rarr; Orange &rarr; Green &rarr; Yellow. Tell us your
+                    kid&rsquo;s age group and you&rsquo;ll be first to enroll.</>
+                ) : (
+                  <>Winter details and host arrangements are still being confirmed.
+                    Share your child&rsquo;s age, level and availability to hear
+                    about future options. Joining the interest list does not
+                    reserve a spot, register your child or take a payment.</>
+                )}
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
@@ -165,7 +175,7 @@ export default function LeaguePage() {
                   href={`#${FORM_ANCHOR}`}
                   className="inline-flex items-center justify-center gap-2 px-7 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors shadow-xl shadow-ngpa-teal/20 min-h-[48px]"
                 >
-                  {ENROLLMENT_OPEN ? "Enroll for the season" : "Save your spot"}
+                  {ENROLLMENT_OPEN ? "Enroll for the season" : "Join the interest list"}
                   <svg
                     className="w-4 h-4"
                     fill="none"
@@ -192,7 +202,7 @@ export default function LeaguePage() {
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                  8 sessions / season
+                  {ENROLLMENT_OPEN ? "8 sessions / season" : "Dates and format to be confirmed"}
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
@@ -230,12 +240,12 @@ export default function LeaguePage() {
                         Get on the league list
                       </p>
                       <p className="text-ngpa-white/65 text-sm mt-1.5">
-                        No commitment &mdash; this just tells us which divisions
-                        to open first. We&rsquo;ll email you when a season near
-                        you is set.
+                        No commitment &mdash; this tells us what works for your
+                        family. Dates, format, price and cancellation terms will
+                        be confirmed before registration opens.
                       </p>
                     </div>
-                    <LeagueInterestForm source="Web" />
+                    <LeagueInterestForm source="Web" submitLabel="Join the interest list →" />
                   </>
                 )}
               </div>
@@ -337,9 +347,15 @@ export default function LeaguePage() {
               Structured enough to grow. Fun enough to come back.
             </h2>
             <p className="text-lg text-ngpa-white/75 leading-relaxed">
-              A league is the next step up from a drop-in: same kids, same court,
-              a coach running every session against a clear objective. Here&rsquo;s
-              what that looks like.
+              {ENROLLMENT_OPEN ? (
+                <>A league is the next step up from a drop-in: same kids, same court,
+                  a coach running every session against a clear objective.
+                  Here&rsquo;s what that looks like.</>
+              ) : (
+                <>Our coaching follows these principles. The activities and
+                  group arrangements for a future league will be confirmed
+                  with its program details.</>
+              )}
             </p>
           </div>
 
@@ -364,14 +380,21 @@ export default function LeaguePage() {
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl">
             <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-              Age divisions
+              {ENROLLMENT_OPEN ? "Age divisions" : "Age and level interests"}
             </p>
             <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-              Kids play with their own age &mdash; and their own level.
+              {ENROLLMENT_OPEN ? <>Kids play with their own age &mdash; and their own level.</> : "Tell us where your player is now."}
             </h2>
             <p className="text-lg text-ngpa-white/75 leading-relaxed">
-              Four age bands, each playing the ball color that fits. A child
-              plays the division their age fits; moving up is by coach approval.
+              {ENROLLMENT_OPEN ? (
+                <>Four age bands, each playing the ball color that fits. A child
+                  plays the division their age fits; moving up is by coach approval.</>
+              ) : (
+                <>These age bands are planning references for the interest list.
+                  Final groups and eligibility will be confirmed for each program.
+                  A child&rsquo;s age does not automatically set their skill level;
+                  placement follows coach evaluation.</>
+              )}
             </p>
           </div>
 
@@ -409,8 +432,7 @@ export default function LeaguePage() {
           </div>
 
           <p className="mt-8 text-sm text-ngpa-white/60 max-w-2xl">
-            The 16U Yellow division is the feeder into our invite-only Yellow Ball
-            tournament track &mdash;{" "}
+            {ENROLLMENT_OPEN ? "The 16U Yellow division is the feeder into our invite-only Yellow Ball tournament track" : "Interested in the invite-only Yellow Ball tournament track?"}{" "}
             <Link
               href="/yellowball/inquiry"
               className="text-ngpa-teal font-semibold hover:text-ngpa-teal-bright underline-offset-4 hover:underline"
@@ -505,11 +527,12 @@ export default function LeaguePage() {
       <section className="relative bg-ngpa-black py-16 sm:py-20 px-4 sm:px-6 lg:px-10">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs sm:text-sm font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-            Season terms
+            {ENROLLMENT_OPEN ? "Season terms" : "Before a future program opens"}
           </p>
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-6 tracking-tight">
-            Fair, weatherproofed, no surprises.
+            {ENROLLMENT_OPEN ? "Fair, weatherproofed, no surprises." : "Review the confirmed details before committing."}
           </h2>
+          {ENROLLMENT_OPEN ? (
           <ul className="space-y-4 text-ngpa-white/80">
             <li className="flex items-start gap-3">
               <span aria-hidden="true" className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-ngpa-teal" />
@@ -547,6 +570,21 @@ export default function LeaguePage() {
               </span>
             </li>
           </ul>
+          ) : (
+            <div className="space-y-4 text-ngpa-white/80 leading-relaxed">
+              <p>
+                Winter details and host arrangements are still being confirmed.
+                This is an interest list; registration is not open. Dates, venue,
+                format, price, equipment and waiver requirements, and cancellation
+                terms will be confirmed before registration opens.
+              </p>
+              <p>{NGA_REFUND_POLICY_TEXT}</p>
+              <p>{EXISTING_AGREEMENTS_POLICY_TEXT}</p>
+              <Link href="/terms" className="text-ngpa-teal font-semibold underline underline-offset-4 hover:text-ngpa-teal-bright">
+                Read the program terms
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
@@ -558,11 +596,16 @@ export default function LeaguePage() {
         />
         <div className="relative max-w-3xl mx-auto text-center">
           <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            Help us open your kid&rsquo;s division first.
+            {ENROLLMENT_OPEN ? <>Help us open your kid&rsquo;s division first.</> : "Share what works for your family."}
           </h2>
           <p className="text-lg text-ngpa-white/75 leading-relaxed mb-8">
-            The more families who raise their hand for a division, the sooner we
-            run it. Two minutes now puts you at the front of the line.
+            {ENROLLMENT_OPEN ? (
+              <>The more families who raise their hand for a division, the sooner
+                we run it. Two minutes now puts you at the front of the line.</>
+            ) : (
+              <>Your interest helps us plan. We&rsquo;ll share the dates, venue,
+                format, price and registration owner when they are confirmed.</>
+            )}
           </p>
           <a
             href={`#${FORM_ANCHOR}`}

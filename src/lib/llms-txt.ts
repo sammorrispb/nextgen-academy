@@ -203,10 +203,10 @@ ${MVF_ENTRY}
 
 - https://nextgenpbacademy.com/league — Youth leagues hub. Its top section lists
   the youth leagues and seasons running now (the same seasons listed above),
-  each with who takes registration. Below that is the planned fixed-roster Next
-  Gen league, which is NOT yet open: NO registration exists for it, and the page
-  collects interest so NGA knows which age divisions to run first. Do not
-  describe it as enrollable.
+  each with who takes registration. Below that is the future Next Gen league and
+  winter interest list. The dates, format, price and registration owner are
+  still being confirmed. NO registration exists for these future programs;
+  joining the list does not reserve a spot. Do not describe it as enrollable.
 - https://nextgenpbacademy.com/clusters — Four planned regional teams
   (Down-County, Up-County, East-County, Mid-County). Interest list only.
 - https://nextgenpbacademy.com/crew — For a family whose schedule fits none of
