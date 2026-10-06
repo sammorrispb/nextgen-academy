@@ -277,12 +277,39 @@ test.describe("EASE section", () => {
 });
 
 test.describe("Testimonials", () => {
-  test("shows 3 testimonials", async ({ page }) => {
-    await page.goto("/");
-    const section = page.locator("#testimonials");
-    const quotes = section.locator("blockquote");
-    await expect(quotes).toHaveCount(3);
-  });
+  const routes = [
+    "/",
+    "/free-evaluation",
+    "/montgomery-county-youth-pickleball",
+    "/youth-pickleball-bethesda",
+    "/youth-pickleball-north-bethesda",
+    "/youth-pickleball-rockville",
+    "/youth-pickleball-potomac",
+    "/youth-pickleball-gaithersburg",
+    "/youth-pickleball-germantown",
+    "/youth-pickleball-silver-spring",
+    "/youth-pickleball-olney",
+  ];
+
+  for (const route of routes) {
+    test(`${route} withholds unverified quotes and keeps evaluation discovery`, async ({ page }) => {
+      const response = await page.goto(route);
+      expect(response?.status()).toBe(200);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expect(page.locator("blockquote")).toHaveCount(0);
+      await expect(page.locator("#testimonials")).toHaveCount(0);
+      await expect(page.getByRole("heading", {
+        name: /What (Next Gen|MoCo|Montgomery County) (families|parents) (say|are saying)/,
+      })).toHaveCount(0);
+      await expect(page.getByText("Parent Stories", { exact: true })).toHaveCount(0);
+      const evaluation = page.getByRole("link", { name: /Text.*(Evaluation|schedule)/i }).first();
+      await expect(evaluation).toBeVisible();
+      await expect(evaluation).toHaveAttribute("href", "sms:+13013254731");
+      const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
+      expect(new URL(canonical!).pathname).toBe(route);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    });
+  }
 });
 
 test.describe("Coaches / About", () => {

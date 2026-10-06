@@ -23,6 +23,7 @@ import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
 import { faq } from "@/data/faq";
 import { seo } from "@/data/seo";
+import { testimonials } from "@/data/testimonials";
 import { familySiteUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import {
@@ -201,30 +202,32 @@ export default async function Home() {
       </section>
 
       {/* ─── Testimonials ────────────────────────── */}
-      <section
-        id="testimonials"
-        className="relative isolate overflow-hidden bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20"
-      >
-        <div aria-hidden="true" className="absolute inset-0 -z-10">
-          <Image
-            src="/images/outdoor-action-shot.jpeg"
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover object-center opacity-[0.10]"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-ngpa-navy via-ngpa-navy/92 to-ngpa-navy" />
-        </div>
-        <div className="relative max-w-7xl mx-auto">
-          <SectionHeading
-            eyebrow="Parent Stories"
-            title="What Next Gen families say."
-            subtitle="Real feedback from the parents who trust us with their kids."
-            centered
-          />
-          <TestimonialsSection />
-        </div>
-      </section>
+      {testimonials.length > 0 && (
+        <section
+          id="testimonials"
+          className="relative isolate overflow-hidden bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20"
+        >
+          <div aria-hidden="true" className="absolute inset-0 -z-10">
+            <Image
+              src="/images/outdoor-action-shot.jpeg"
+              alt=""
+              fill
+              sizes="100vw"
+              className="object-cover object-center opacity-[0.10]"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-ngpa-navy via-ngpa-navy/92 to-ngpa-navy" />
+          </div>
+          <div className="relative max-w-7xl mx-auto">
+            <SectionHeading
+              eyebrow="Parent Stories"
+              title="What Next Gen families say."
+              subtitle="Real feedback from the parents who trust us with their kids."
+              centered
+            />
+            <TestimonialsSection />
+          </div>
+        </section>
+      )}
 
       {/* ─── About / Coaches ─────────────────────── */}
       <section

@@ -5,6 +5,18 @@ Append-only. One entry per consequential decision, newest first. Format:
 
 ---
 
+## 2026-10-06 — Withhold parent quotes pending source and publication verification
+
+**Situation** — Three shared parent quotes had no verified original-source or website-use permission records available during the SEO audit. Missing evidence does not establish that the quotes are false. Sam approved the six-source-file withholding and empty-section repair on October 6.
+
+**Decision** — Empty the public testimonial list and hide each entire quote section while the list is empty. Restore only exact, source-verified wording with documented website-use permission. Preserve the existing program, price and booking copy.
+
+**Risk** — Removing quote cards could leave empty headings or interrupt page discovery. Prior quotes remain in git history; a verified replacement can use the existing renderers.
+
+**Change** — Updated the shared data, standalone renderer, homepage, county hub, free-evaluation page and shared city renderer. Replaced the old three-quote assertion with browser checks across all 11 affected routes, including evaluation links, canonical URLs and horizontal overflow in both viewport projects. The new homepage check failed against the original three quotes before implementation. No provider, roster or database changes.
+
+**Validation** — 2,630 pure tests and 877 browser tests passed; 19 existing browser cases were skipped. All 22 affected-route checks passed across desktop and mobile. Typecheck, production build under UTC with external service requests blocked, and lint passed (two existing warnings in unchanged form components). Six desktop/mobile section-transition screenshots were inspected. The first lint attempt raced a transient test-results directory; rerunning after the suites completed passed. Final copy review uses the current `BRAND_GUIDELINES.md`; no replacement praise or changed program/booking strings were introduced.
+
 ## 2026-10-06 — Security triage: PII out of a public repo, NGA_ADMIN_SECRET out of URLs
 
 - **Situation:** A security audit flagged that this repo is **public** and that this log quoted an earlier roster leak word for word (parent emails and children's first names). A full sweep found much more: real parent names, emails and phone numbers, children's first names, and family surnames in about 20 log entries, ~15 e2e fixtures, `scripts/discount-checkout.mjs`, three `src/lib` comments, `src/data/monday-girls-2026.ts` and `CLAUDE.md`. Separately, 13 operator routes read `NGA_ADMIN_SECRET` only from `?secret=`, which lands it in Vercel request logs and shell history. The audit also said GA4 was banned. That ban had been lifted deliberately in #395, but `DESIGN.md` still stated it.

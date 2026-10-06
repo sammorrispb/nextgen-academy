@@ -1,6 +1,8 @@
 import { testimonials } from "@/data/testimonials";
 
 export default function TestimonialsSection() {
+  if (testimonials.length === 0) return null;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
       {testimonials.map((t, i) => (
