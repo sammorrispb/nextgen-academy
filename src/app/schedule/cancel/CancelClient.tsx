@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { selfCancelAction } from "./actions";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 interface Props {
   token: string;
@@ -71,9 +72,11 @@ export default function CancelClient({
 
       <div className="rounded-xl bg-ngpa-deep/60 border border-ngpa-slate/40 px-4 py-3 mb-6">
         <p className="text-sm text-ngpa-white/85 leading-relaxed">
-          <strong className="text-ngpa-white">Your payment isn&rsquo;t refundable</strong>{" "}
-          (per our drop-in policy), but cancelling now opens the seat for another
-          player.
+          Cancelling here opens the seat for another player; it does not issue a refund.
+          Contact Coach Sam to request a refund under your agreed terms.
+        </p>
+        <p className="mt-3 text-sm text-ngpa-white/85 leading-relaxed">{NGA_REFUND_POLICY_TEXT} {EXISTING_AGREEMENTS_POLICY_TEXT}{" "}
+          <Link href="/terms" className="text-ngpa-teal underline underline-offset-4">Read the program terms</Link>.
         </p>
       </div>
 

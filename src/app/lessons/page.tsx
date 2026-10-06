@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import LessonPolicyNotice from "@/components/LessonPolicyNotice";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import {
   GROUP_LESSON_PRICE_PER_PLAYER_USD,
@@ -102,6 +103,7 @@ export default function LessonsPage() {
               player for the hour. A parent or guardian must have the NGA waiver
               on file before the lesson is confirmed.
             </p>
+            <LessonPolicyNotice />
             <Link
               href="/lessons/book"
               className="mt-6 inline-flex items-center justify-center px-8 py-4 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[52px]"

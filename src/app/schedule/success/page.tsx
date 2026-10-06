@@ -5,6 +5,7 @@ import { getStripe } from "@/lib/stripe";
 import { fetchSessionById } from "@/lib/notion-sessions";
 import { fillGoal } from "@/lib/fill-meter";
 import FillMeter from "@/components/FillMeter";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 export const metadata: Metadata = {
   title: "Drop-in Confirmed",
@@ -129,10 +130,12 @@ export default async function ScheduleSuccessPage({ searchParams }: PageProps) {
 
         <div className="mt-6 text-sm text-ngpa-muted leading-relaxed max-w-md mx-auto">
           <p>
-            A confirmation email is on its way. If we cancel for weather, you
-            get an automatic full refund; otherwise drop-in payments are
-            non-refundable. Bring water, court shoes, and a paddle if you
+            A confirmation email is on its way. In this drop-in flow,
+            NGA-cancelled sessions receive an automatic full refund. Bring water, court shoes, and a paddle if you
             have one — we have loaners if you don&rsquo;t.
+          </p>
+          <p className="mt-3">{NGA_REFUND_POLICY_TEXT} {EXISTING_AGREEMENTS_POLICY_TEXT}{" "}
+            <Link href="/terms" className="text-ngpa-teal underline underline-offset-4">Read the program terms</Link>.
           </p>
         </div>
 

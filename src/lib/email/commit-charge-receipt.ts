@@ -1,5 +1,6 @@
 import { c, s } from "./brand";
 import { signatureExtrasHtml, signatureExtrasText } from "./signature";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 interface CommitChargeReceiptInput {
   parentFirst: string;
@@ -56,7 +57,7 @@ export function commitChargeReceiptHtml(input: CommitChargeReceiptInput): string
     <div style="${s.actionCallout}">
       <p style="${s.actionLabel}">Can&rsquo;t make this one?</p>
       <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
-        Skip this week and we&rsquo;ll refund the $${amountUsd.toFixed(0)}. Your spot in the crew stays put for the remaining weeks.
+        The cancellation link frees this week&rsquo;s seat; it does not issue a refund. Reply to Coach Sam to request a refund under your agreed terms. ${escape(NGA_REFUND_POLICY_TEXT)} ${escape(EXISTING_AGREEMENTS_POLICY_TEXT)}
       </p>
       <p style="margin:14px 0 0 0;">
         <a href="${cancelUrl}" style="${s.link}font-weight:700;text-decoration:none;">Skip this week &rarr;</a>
@@ -90,7 +91,8 @@ export function commitChargeReceiptText(input: CommitChargeReceiptInput): string
     "",
     `We charged $${input.amountUsd.toFixed(0)} to the card ending in ${input.cardLast4}.`,
     "",
-    `Can't make it? Skip this week and we'll refund: ${input.cancelUrl}`,
+    `Can't make it? The cancellation link frees this week's seat; it does not issue a refund: ${input.cancelUrl}`,
+    `Reply to Coach Sam to request a refund under your agreed terms. ${NGA_REFUND_POLICY_TEXT} ${EXISTING_AGREEMENTS_POLICY_TEXT}`,
     "",
     `Manage your 4-week commit: ${input.manageUrl}`,
     "",

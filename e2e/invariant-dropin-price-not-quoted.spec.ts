@@ -175,6 +175,7 @@ test.describe("drop-in price is not quoted on parent-facing surfaces", () => {
       expect(body).toMatch(/4242/);
     }
     expect(commitConfirmationHtml(commit)).toMatch(/only on weeks/i);
-    expect(commitConfirmationText(commit)).toMatch(/skip any week/i);
+    expect(commitConfirmationText(commit)).toMatch(/Coach Sam.*skip a week/i);
+    expect(commitConfirmationText(commit)).not.toMatch(/refund automatically/i);
   });
 });

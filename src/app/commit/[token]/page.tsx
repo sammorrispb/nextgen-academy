@@ -75,8 +75,8 @@ export default async function CommitPage({ params }: PageProps) {
             Same time, same court, same crew. We&rsquo;ll auto-reserve {payload.childFirstName}&rsquo;s
             spot each week and charge your card the standard drop-in rate &mdash; the
             same one you paid for the first session &mdash; only when their seat
-            actually opens. Skip any week with one tap &mdash; we&rsquo;ll refund
-            automatically.
+            actually opens. Contact Coach Sam if you need to skip a week or stop
+            the auto-reserve. Refund requests follow the terms shown below.
           </p>
         </div>
       </section>

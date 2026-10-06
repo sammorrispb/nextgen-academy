@@ -80,8 +80,8 @@ export default function TermsPage() {
               <li>
                 We coach to our EASE values — Ethics, Attitude, Skills,
                 Excellence. Bullying, unsafe play, or disrespect toward
-                coaches, players, or families can mean removal from a program
-                without refund.
+                coaches, players, or families can mean removal from a program.
+                Refund requests follow the applicable terms described above.
               </li>
               <li>
                 Parents are partners, not spectators: please keep sideline

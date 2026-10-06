@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FALL_WEATHER_CALL_POLICY } from "@/lib/fall-calls";
 import { MVF_JUNIOR_TOURNAMENT_DATE_LABEL, NO_REFUNDS_TEXT, RAIN_OR_SHINE_TEXT } from "@/data/mvf-junior-tournament-2026";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, LESSON_NO_SHOW_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 // Scope verified policies to the program that sold them. Sources confirmed
 // 2026-10-06: published Oct 5 WJ guide (Notion 3edfa3ac27dc8126a600d602eb1072ff)
@@ -11,12 +12,12 @@ export default function ProgramPolicySummary() {
     {
       title: "Walter Johnson Sunday season · Fall 2026",
       href: "/fall",
-      detail: `Parent withdrawals are non-refundable under the current season terms. ${FALL_WEATHER_CALL_POLICY} All times are Eastern. Check the fall page and your season WhatsApp group; cancelled groups also receive an email. A weather cancellation moves to the next open make-up date for that group. NGA refunds NGA-cancelled sessions it cannot make up.`,
+      detail: `For existing registrations, the supplied season terms make parent withdrawals non-refundable and provide a refund for NGA-cancelled sessions NGA cannot make up. ${FALL_WEATHER_CALL_POLICY} All times are Eastern. Check the fall page and your season WhatsApp group; cancelled groups also receive an email. A weather cancellation moves to the next open make-up date for that group. New NGA-controlled offers using these terms follow the case-by-case refund review above.`,
     },
     {
       title: `MVF Junior Tournament · ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}`,
       href: "/mvf-junior-tournament",
-      detail: `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} NGA sends an invoice after registration; payment locks the spot. The Walter Johnson make-up policy does not apply to this tournament.`,
+      detail: `For existing registrations, the supplied tournament terms state: ${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} NGA sends an invoice after registration; payment locks the spot. The Walter Johnson make-up policy does not apply to this tournament. New NGA-controlled offers using these terms follow the case-by-case refund review above.`,
     },
     {
       title: "MVF Thursday classes",
@@ -31,7 +32,7 @@ export default function ProgramPolicySummary() {
     {
       title: "Private and group lessons",
       href: "/lessons",
-      detail: "Submitting a lesson request proposes a time; it does not reserve a lesson or charge you. Coach Sam confirms the time and court before sending an invoice. Confirm the cancellation and rescheduling terms before paying.",
+      detail: `Submitting a lesson request proposes a time; it does not reserve a lesson or charge you. Coach Sam confirms the time and court before sending an invoice. ${LESSON_NO_SHOW_POLICY_TEXT} Confirm the cancellation and rescheduling terms before paying.`,
     },
     {
       title: "Winter programs",
@@ -42,12 +43,8 @@ export default function ProgramPolicySummary() {
 
   return (
     <div className="space-y-5">
-      <p>
-        Each program has its own registration, weather and refund rules. For an
-        existing registration, keep the terms provided when you registered and
-        any later changes agreed with NGA or the host. This summary does not
-        replace those terms.
-      </p>
+      <p>{NGA_REFUND_POLICY_TEXT}</p>
+      <p>{EXISTING_AGREEMENTS_POLICY_TEXT} This summary does not replace those terms.</p>
       <ul className="space-y-5">
         {policies.map((policy) => (
           <li key={policy.href}>
@@ -59,10 +56,10 @@ export default function ProgramPolicySummary() {
         ))}
       </ul>
       <p>
-        Drop-ins, crews and camps: review the terms disclosed for the specific
-        listing, offer and checkout before paying. Those terms apply to that
-        purchase; this summary does not replace them. Contact Coach Sam if a
-        rule is missing or unclear.
+        Drop-ins, crews and camps: new NGA-controlled offers using these terms
+        follow the case-by-case refund review above. Review the specific listing,
+        offer and checkout before paying. Contact Coach Sam if a rule is missing,
+        unclear or conflicts with this summary.
       </p>
     </div>
   );
