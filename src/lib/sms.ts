@@ -178,7 +178,7 @@ export function cancelConfirmationSms(args: {
   const refundLine =
     args.status === "Refunded"
       ? `Full refund issued, back on your card in 5-10 days.`
-      : `Seat is open for the next family. Drop-ins are non-refundable, but thanks for calling it early.`;
+      : `Seat is open for the next family. Reply to Sam to request a refund under your agreed terms.`;
   const body = [
     `${args.childFirst}'s ${args.sessionTitle} (${args.sessionDateShort}) is cancelled. ${refundLine}`,
     `Next: ${args.scheduleUrl}`,

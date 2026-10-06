@@ -6,6 +6,7 @@ import { site } from "@/data/site";
 import { getStripe } from "@/lib/stripe";
 import { formatLongDate } from "@/lib/format-date";
 import LessonBookingForm from "@/components/LessonBookingForm";
+import LessonPolicyNotice from "@/components/LessonPolicyNotice";
 
 export const metadata: Metadata = {
   title: "Pick Your Lesson Time",
@@ -44,6 +45,7 @@ export default async function LessonBookPage({ searchParams }: PageProps) {
           for your player. Share the days that work for your family and your
           preferred area. We’ll confirm the time and court by text.
         </p>
+        <LessonPolicyNotice />
         <a
           href={`sms:+1${site.phone.replace(/\D/g, "")}`}
           className="mt-6 inline-flex min-h-[48px] items-center justify-center rounded-full bg-ngpa-teal px-6 py-3 font-bold text-ngpa-deep hover:bg-ngpa-teal-bright transition-colors"

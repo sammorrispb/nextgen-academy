@@ -6,6 +6,7 @@ import {
 import { CAMP_OPTIONS } from "./camps";
 import { FALL_SEASON_PRICE_USD } from "./fall-season-2026";
 import { PICKLPARK_LEAGUES } from "./picklpark-leagues-2026";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, LESSON_NO_SHOW_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "./program-policies";
 
 export interface FaqItem {
   question: string;
@@ -83,7 +84,13 @@ export const faq: FaqItem[] = [
   {
     question: "What’s your refund policy?",
     answer:
-      "Terms depend on the program. If NGA cancels a drop-in, you get an automatic full refund to your original payment method. Fall season registration is a full-season commitment: a rained-out Sunday moves to a rain date, and sessions we cancel without making them up are refunded. Registrations are non-refundable if you withdraw or miss a session. The Pickl Park and MVF handle their own registration terms; check the program listing before paying. The free 30-minute evaluation is always free and never charged.",
+      `${NGA_REFUND_POLICY_TEXT} ${EXISTING_AGREEMENTS_POLICY_TEXT} For existing Walter Johnson fall season registrations, the supplied terms make parent withdrawals non-refundable, move weather cancellations to the next open make-up date and provide refunds for NGA-cancelled sessions NGA cannot make up. For existing October 24 MVF Junior Tournament registrations, the supplied terms state no refunds, rain or shine and no rain date. MVF classes and The Pickl Park use their host's registration and cancellation terms. Check the specific offer and payment terms before paying, and ask Coach Sam about conflicting copy. The free 30-minute evaluation is always free and never charged.`,
+    cta: { label: "See program-specific terms", href: "/terms" },
+  },
+  {
+    question: "What happens if we miss a confirmed lesson?",
+    answer: `${LESSON_NO_SHOW_POLICY_TEXT} ${NGA_REFUND_POLICY_TEXT} ${EXISTING_AGREEMENTS_POLICY_TEXT} Contact Coach Sam if you need to cancel or reschedule.`,
+    cta: { label: "See lesson details and terms", href: "/lessons" },
   },
   {
     question: "Is pickleball safe for kids?",

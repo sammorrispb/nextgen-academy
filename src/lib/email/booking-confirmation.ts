@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 import { fillLabel } from "@/lib/fill-meter";
 import { signatureExtrasHtml } from "./signature";
 
@@ -23,12 +24,7 @@ export interface ConfirmationInput {
   cancelUrl?: string;
   /** Post-signup fill count (their spot included). Omit if the count is unknown. */
   fill?: ConfirmationFill | null;
-  /**
-   * /newsletter URL for the "Bring a friend" referral block. Routes through the
-   * newsletter on purpose: the 50%-off payout only fires for subscribers, so
-   * promising it to a non-subscriber would be a discount that never lands.
-   * Omit to hide the block entirely.
-   */
+  /** Omit to hide the newsletter updates block. */
   newsletterUrl?: string;
 }
 
@@ -51,14 +47,14 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
 
   const directions = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(sessionLocation)}`;
 
-  const referralBlock = newsletterUrl
+  const newsletterBlock = newsletterUrl
     ? `
     <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Bring a friend</p>
+      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Weekly updates</p>
       <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">
-        Loved it? Join our free weekly newsletter and you&rsquo;ll get a personal invite link. When a friend signs up through it and plays their first session, you both get <strong>50% off</strong> your next drop-in.
+        Join our free weekly newsletter for current program dates and coaching updates.
       </p>
-      <p style="margin:0;"><a href="${newsletterUrl}" style="${s.link}font-weight:700;text-decoration:none;">Join the newsletter &amp; grab your link &rarr;</a></p>
+      <p style="margin:0;"><a href="${newsletterUrl}" style="${s.link}font-weight:700;text-decoration:none;">Join the newsletter &rarr;</a></p>
     </div>`
     : "";
 
@@ -119,8 +115,8 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
       <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
         ${
           cancelUrl
-            ? `If something comes up, <a href="${cancelUrl}" style="${s.link}font-weight:700;">cancel your reservation</a> so the next player can grab the seat. Drop-ins are non-refundable, but the swap helps the whole community.`
-            : `If something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a> so we can open the seat. Drop-ins are non-refundable, but the swap helps the whole community.`
+            ? `If something comes up, <a href="${cancelUrl}" style="${s.link}font-weight:700;">cancel your reservation</a> so the next player can grab the seat. Reply to Coach Sam to request a refund under your agreed terms. ${escape(NGA_REFUND_POLICY_TEXT)} ${escape(EXISTING_AGREEMENTS_POLICY_TEXT)}`
+            : `If something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a> so we can open the seat. Reply to Coach Sam to request a refund under your agreed terms. ${escape(NGA_REFUND_POLICY_TEXT)} ${escape(EXISTING_AGREEMENTS_POLICY_TEXT)}`
         }
       </p>
     </div>
@@ -130,7 +126,7 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
       <a href="${detailUrl}" style="${s.link}">View session details</a>
     </p>
 
-    ${referralBlock}
+    ${newsletterBlock}
 
 
     <div style="${s.footer}">
@@ -143,6 +139,13 @@ export function bookingConfirmationHtml(input: ConfirmationInput): string {
   </div>
 </body>
 </html>`;
+}
+
+export function bookingCancellationCopy(cancelUrl?: string): string {
+  const cancellation = cancelUrl
+    ? `If something comes up, cancel your reservation so the next player can grab the seat: ${cancelUrl}\nThe cancellation link frees the seat; it does not issue a refund.`
+    : "If something comes up, reply to this email or text 301-325-4731 so we can open the seat.";
+  return `${cancellation}\nReply to Coach Sam to request a refund under your agreed terms. ${NGA_REFUND_POLICY_TEXT} ${EXISTING_AGREEMENTS_POLICY_TEXT}`;
 }
 
 function escape(s: string): string {

@@ -1,4 +1,5 @@
 import type { DayWeather, WeatherRisk } from "@/lib/weather";
+import Link from "next/link";
 
 interface WeatherBarProps {
   /** Ordered, unique upcoming session dates (YYYY-MM-DD). */
@@ -53,20 +54,19 @@ export default function WeatherBar({ dates, weather }: WeatherBarProps) {
       </div>
 
       <p className="text-sm text-ngpa-white/70 leading-relaxed mb-4">
-        Our sessions are outdoors on Montgomery County courts. We track the
-        forecast for every session date and cancel only when conditions make play
-        unsafe.{" "}
-        <strong className="text-ngpa-white">
-          If we cancel a session for weather, you get an automatic full refund —
-          no action needed.
-        </strong>
+        This Montgomery County forecast helps you plan outdoor play; it is not
+        a final cancellation decision. Check your program&rsquo;s official
+        update before travelling. Make-up and refund rules follow the{" "}
+        <Link href="/terms" className="text-ngpa-teal-bright underline underline-offset-4">
+          policy for your specific program
+        </Link>.
       </p>
 
       {anyCancelRisk && (
         <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 mb-4 leading-relaxed">
           <strong>High rain risk on one or more dates below.</strong> Those
-          sessions may be cancelled — watch your email and texts. You&rsquo;ll be
-          refunded in full if we call it off.
+          sessions may be affected — check your program&rsquo;s official update
+          and the notifications sent to your family.
         </p>
       )}
 

@@ -194,8 +194,8 @@ export default async function Home() {
         <div className="relative max-w-7xl mx-auto">
           <SectionHeading
             eyebrow="The Crew Pathway"
-            title="From one drop-in to a 4-week crew."
-            subtitle="Try a single session. If it clicks, we build your kid a crew of 3 others at the same level — same court, same time, every week."
+            title="Find a group where your player can grow."
+            subtitle="Share your player's level, goals and availability. Coach Sam helps you explore current programs and possible crew matches."
           />
           <CrewPathway />
         </div>

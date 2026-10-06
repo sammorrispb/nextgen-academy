@@ -17,6 +17,7 @@ import { cancelFallByPaymentIntent } from "@/lib/cancel-fall";
 import { buildDropInIcs } from "@/lib/email/ics";
 import {
   bookingConfirmationHtml,
+  bookingCancellationCopy,
   type ConfirmationFill,
 } from "@/lib/email/booking-confirmation";
 import { fillGoal, fillBar, fillLabel } from "@/lib/fill-meter";
@@ -244,13 +245,11 @@ async function emailParent(
     `- Court shoes (no flat-soled sneakers)`,
     `- A paddle if you have one. We have loaners.`,
     "",
-    cancelUrl
-      ? `If something comes up, cancel your reservation so the next player can grab the seat: ${cancelUrl}\nDrop-ins are non-refundable, but the swap helps the whole community.`
-      : `If something comes up, reply to this email or text 301-325-4731 so we can open the seat. Drop-ins are non-refundable, but the swap helps the whole community.`,
+    bookingCancellationCopy(cancelUrl),
     "",
     `Session link: ${detailUrl}`,
     "",
-    `Bring a friend: join our free weekly newsletter and you'll get a personal invite link. When a friend signs up through it and plays their first session, you both get 50% off your next drop-in. Join & grab your link: ${SITE_ORIGIN}/newsletter`,
+    `Join our free weekly newsletter for current program dates and coaching updates: ${SITE_ORIGIN}/newsletter`,
     "",
     whatsappInviteText(),
     "",

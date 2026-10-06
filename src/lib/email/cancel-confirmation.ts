@@ -1,5 +1,6 @@
 import { c, s } from "./brand";
 import { signatureExtrasHtml, signatureExtrasText } from "./signature";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 /**
  * Per-row cancellation confirmation. Fires from cancelDropIn() so all four
@@ -12,7 +13,7 @@ import { signatureExtrasHtml, signatureExtrasText } from "./signature";
  *   - status === "Refunded" — parent gets their payment back (Stripe-initiated
  *     refund or admin-initiated). Copy leads with the refund cue.
  *   - status === "Cancelled" — parent self-cancel without refund.
- *     Drop-ins are non-refundable; copy leads with the community cue
+ *     No refund was issued by this cancellation; copy leads with the community cue
  *     ("seat is open for another player").
  */
 
@@ -80,9 +81,9 @@ export function cancelConfirmationHtml(input: CancelConfirmationInput): string {
             </p>
           </div>`
         : `<div style="${s.actionCallout}">
-            <p style="${s.actionLabel}">No refund &mdash; that&rsquo;s the drop-in deal</p>
+            <p style="${s.actionLabel}">No refund was issued by this cancellation</p>
             <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
-              Drop-ins are non-refundable by design (it&rsquo;s how we keep the cap and the price honest). Thanks for calling it early &mdash; your seat opens up for another family.
+              The cancellation freed your seat; it did not issue a refund. Reply to Coach Sam to request a refund under your agreed terms. ${escape(NGA_REFUND_POLICY_TEXT)} ${escape(EXISTING_AGREEMENTS_POLICY_TEXT)}
             </p>
           </div>`
     }
@@ -117,7 +118,7 @@ export function cancelConfirmationText(input: CancelConfirmationInput): string {
     "",
     isRefund
       ? `The reservation is off the books and your $${input.amountUsd} is on the way back. Issued to the card on file — Stripe usually has it on your statement in 5–10 business days.`
-      : `We've dropped the reservation so another family can grab the slot. Drop-ins are non-refundable by design (it's how we keep the cap and the price honest). Thanks for calling it early — your seat opens up for another family.`,
+      : `We've dropped the reservation so another family can grab the slot. No refund was issued by this cancellation. Reply to Coach Sam to request a refund under your agreed terms. ${NGA_REFUND_POLICY_TEXT} ${EXISTING_AGREEMENTS_POLICY_TEXT}`,
     "",
     `Was: ${input.sessionTitle}`,
     `${input.sessionDateLong} · ${input.sessionStart}`,

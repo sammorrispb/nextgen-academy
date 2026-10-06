@@ -1,6 +1,6 @@
 // Secret-gated curl/agent entry point for the post-eval follow-up. The whole
 // engine (player fetch, live session lines, branded email to the PARENT, CRM
-// Level/Status/Next-Action stamp) lives in src/lib/post-eval-followup-run.ts,
+// Level/Next-Action stamp, preserving Status) lives in src/lib/post-eval-followup-run.ts,
 // shared byte-for-byte with the /coach/ops server action — this route only
 // parses the request and gates the secret. `?dryRun=1` (additive) previews the
 // recipient + rendered email without sending or writing. Trigger parity is

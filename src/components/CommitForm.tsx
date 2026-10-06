@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 
 interface CommitFormProps {
   token: string;
@@ -115,8 +117,12 @@ export default function CommitForm({
       <p className="text-ngpa-white/55 text-xs text-center mt-4">
         We&rsquo;ll save your card on Stripe and only charge the standard
         drop-in rate &mdash; the same one you paid for {childFirstName}&rsquo;s
-        first session &mdash; on weeks {childFirstName} is reserved. Skip any
-        week and we refund automatically. Stop the auto-reserve any time.
+        first session &mdash; on weeks {childFirstName} is reserved.
+        Contact Coach Sam if you need to skip a week or stop the auto-reserve.
+      </p>
+      <p className="text-ngpa-white/55 text-xs text-center mt-3">
+        {NGA_REFUND_POLICY_TEXT} {EXISTING_AGREEMENTS_POLICY_TEXT}{" "}
+        <Link href="/terms" className="text-ngpa-teal underline underline-offset-4">Read the program terms</Link>.
       </p>
     </form>
   );

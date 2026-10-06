@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import InlineWaiverStep from "@/components/InlineWaiverStep";
 import type { NgaSession } from "@/lib/notion-sessions";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 import {
   validateRsvpForm,
   type RsvpFormData,
@@ -295,9 +297,12 @@ export default function ReserveButton({ session, fullWidth = false }: Props) {
                 <div className="px-5 py-4 border-t border-ngpa-slate/60 bg-ngpa-panel sm:rounded-b-2xl space-y-3">
                   <p className="text-xs text-ngpa-white/60 leading-relaxed">
                     You&rsquo;ll be redirected to Stripe, where the price for
-                    this 1-hour slot is shown before you pay. Non-refundable
-                    unless we cancel — if we call off a session for weather, you
-                    get an automatic full refund.
+                    this session is shown before you pay. {NGA_REFUND_POLICY_TEXT}
+                  </p>
+                  <p className="text-xs text-ngpa-white/60 leading-relaxed">
+                    In this drop-in flow, NGA-cancelled sessions receive an
+                    automatic full refund. {EXISTING_AGREEMENTS_POLICY_TEXT}{" "}
+                    <Link href="/terms" className="text-ngpa-teal underline underline-offset-4">Read the program terms</Link>.
                   </p>
                   <button
                     type="submit"

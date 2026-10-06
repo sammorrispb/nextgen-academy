@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { site } from "@/data/site";
+import ProgramPolicySummary from "@/components/ProgramPolicySummary";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -19,7 +20,7 @@ export default function TermsPage() {
           Terms of Service
         </h1>
         <p className="text-ngpa-white/60 text-sm mt-3">
-          Last updated September 21, 2026
+          Last updated October 6, 2026
         </p>
 
         <div className="mt-8 space-y-8 text-ngpa-white/80 leading-relaxed">
@@ -47,12 +48,15 @@ export default function TermsPage() {
                 and the one-time waiver before a child&rsquo;s first session.
               </li>
               <li>
-                Payment is due at registration and processed securely by
-                Stripe. Prices are listed on each program page.
+                Follow the registration and payment instructions for your
+                specific program. Some NGA programs use Stripe checkout;
+                others send an invoice. Partner classes use the host&rsquo;s
+                registration and payment system.
               </li>
               <li>
-                Spots are limited and held in registration order. A program
-                may sell out, in which case we keep a sub list.
+                An inquiry, evaluation, lesson request or unpaid invoice does
+                not confirm enrollment or payment. Check the program&rsquo;s
+                confirmation requirements before making plans.
               </li>
             </ul>
           </section>
@@ -61,31 +65,7 @@ export default function TermsPage() {
             <h2 className="font-heading text-xl font-black text-ngpa-white mb-3">
               Cancellations, weather, and refunds
             </h2>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>
-                <strong className="text-ngpa-white">Weather:</strong> most
-                sessions are outdoors. If we cancel for weather, we text you
-                before you leave the house and schedule a make-up. If no
-                make-up is possible, we credit or refund the missed session.
-              </li>
-              <li>
-                <strong className="text-ngpa-white">Lessons:</strong> reschedule
-                with at least 24 hours&rsquo; notice and there&rsquo;s no
-                charge. Inside 24 hours, the lesson is forfeited — the coach
-                held the court for you.
-              </li>
-              <li>
-                <strong className="text-ngpa-white">Programs:</strong> refund
-                terms are stated on each program&rsquo;s page. In general,
-                unused sessions are refundable before a season&rsquo;s midpoint
-                and credited after; we&rsquo;d rather find your child the
-                right fit than keep money for sessions they won&rsquo;t use.
-              </li>
-              <li>
-                If we cancel a program outright, you get a full refund for
-                sessions that didn&rsquo;t run.
-              </li>
-            </ul>
+            <ProgramPolicySummary />
           </section>
 
           <section>
@@ -100,8 +80,8 @@ export default function TermsPage() {
               <li>
                 We coach to our EASE values — Ethics, Attitude, Skills,
                 Excellence. Bullying, unsafe play, or disrespect toward
-                coaches, players, or families can mean removal from a program
-                without refund.
+                coaches, players, or families can mean removal from a program.
+                Refund requests follow the applicable terms described above.
               </li>
               <li>
                 Parents are partners, not spectators: please keep sideline
@@ -128,8 +108,9 @@ export default function TermsPage() {
             </h2>
             <p>
               We may update these terms as the academy grows; the version on
-              this page is the current one. Big changes get an email to
-              registered families.
+              this page is the current summary. Existing registrations retain
+              the terms supplied at registration and any later agreed changes.
+              Big changes get an email to registered families.
             </p>
           </section>
 

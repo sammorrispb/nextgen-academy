@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 import { signatureExtrasHtml, signatureExtrasText } from "./signature";
 
 interface ReminderInput {
@@ -70,8 +71,8 @@ export function bookingReminderHtml(input: ReminderInput): string {
       <p style="margin:6px 0 0 0;color:${c.text};font-size:14px;line-height:1.55;">
         ${
           cancelUrl
-            ? `If something comes up, <a href="${cancelUrl}" style="${s.link}font-weight:700;">cancel your reservation</a> so the next player can grab the seat. Drop-ins are non-refundable, but the swap helps the whole community.`
-            : `If something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a> so we can open the seat. Drop-ins are non-refundable, but the swap helps the whole community.`
+            ? `If something comes up, <a href="${cancelUrl}" style="${s.link}font-weight:700;">cancel your reservation</a> so the next player can grab the seat. Reply to Coach Sam to request a refund under your agreed terms. ${escape(NGA_REFUND_POLICY_TEXT)} ${escape(EXISTING_AGREEMENTS_POLICY_TEXT)}`
+            : `If something comes up, reply to this email or text Sam at <a href="tel:13013254731" style="${s.link}">301-325-4731</a> so we can open the seat. Reply to Coach Sam to request a refund under your agreed terms. ${escape(NGA_REFUND_POLICY_TEXT)} ${escape(EXISTING_AGREEMENTS_POLICY_TEXT)}`
         }
       </p>
     </div>
@@ -101,8 +102,9 @@ export function bookingReminderText(input: ReminderTextInput): string {
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(input.sessionLocation)}`;
 
   const cancelLine = input.cancelUrl
-    ? `If something comes up, cancel your reservation so the next player can grab the seat: ${input.cancelUrl}\nDrop-ins are non-refundable, but the swap helps the whole community.`
-    : `If something comes up, reply to this email or text 301-325-4731 so we can open the seat. Drop-ins are non-refundable, but the swap helps the whole community.`;
+    ? `If something comes up, cancel your reservation so the next player can grab the seat: ${input.cancelUrl}\nThe cancellation link frees the seat; it does not issue a refund.`
+    : `If something comes up, reply to this email or text 301-325-4731 so we can open the seat.`;
+  const refundLine = `Reply to Coach Sam to request a refund under your agreed terms. ${NGA_REFUND_POLICY_TEXT} ${EXISTING_AGREEMENTS_POLICY_TEXT}`;
 
   return [
     `Hi ${input.parentFirst},`,
@@ -122,6 +124,7 @@ export function bookingReminderText(input: ReminderTextInput): string {
     `- Paddle if you have one. We have loaners.`,
     "",
     cancelLine,
+    refundLine,
     "",
     `Session link: ${input.detailUrl}`,
     "",
