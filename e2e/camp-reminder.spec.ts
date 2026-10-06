@@ -140,7 +140,7 @@ test.describe("camp-reminder schedule helpers", () => {
   // upcomingCampForReminder's single-day match, this covers a whole window
   // (startDate - 7 days through the rain/makeup day) so a daily cron catches a
   // checkout completed after the one-shot Friday reminder already ran (the bug
-  // that dropped Logan/Louis from the june-29 roster on 2026-06-30) — including
+  // that dropped two campers from the june-29 roster on 2026-06-30) — including
   // a checkout completed on the makeup day itself.
   test("campsNeedingRosterSync includes a camp from a week before it starts through its makeup day", () => {
     // june-29: startDate 2026-06-29, endDate 2026-07-02, makeupDate 2026-07-03
@@ -208,16 +208,16 @@ test.describe("collectPaidCampSessions", () => {
       metadata: {
         kind: "camp",
         camp_slug: "june-29",
-        parent_name: " Smruti ",
+        parent_name: " Pat ",
         parent_phone: " 3015550100 ",
-        child_first_name: "Krishav ",
+        child_first_name: "Riley ",
       },
     } as unknown as Stripe.Checkout.Session;
 
     const { entries } = await collectPaidCampSessions("june-29", stub([session]));
     expect(entries).toHaveLength(1);
-    expect(entries[0].childFirstName).toBe("Krishav");
-    expect(entries[0].parentName).toBe("Smruti");
+    expect(entries[0].childFirstName).toBe("Riley");
+    expect(entries[0].parentName).toBe("Pat");
     expect(entries[0].parentEmail).toBe("parent@example.com");
     expect(entries[0].parentPhone).toBe("3015550100");
   });
@@ -247,7 +247,7 @@ test.describe("collectPaidCampSessions", () => {
       {
         id: "refunded",
         payment_status: "paid",
-        metadata: { kind: "camp", camp_slug: "july-20", child_first_name: "Bear" },
+        metadata: { kind: "camp", camp_slug: "july-20", child_first_name: "Refunded" },
         payment_intent: { latest_charge: { refunded: true } },
       },
     ] as unknown as Stripe.Checkout.Session[];

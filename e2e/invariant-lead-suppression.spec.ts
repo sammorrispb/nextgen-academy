@@ -93,7 +93,7 @@ test.describe("resolveFamilyBucket — suppression is per FAMILY, not per row", 
   });
 
   test("one DD row taints the family even alongside a clean Website row", () => {
-    // Real data: joegadler@ / markyuen@ / laurenwheelerporter@ each have a
+    // Real data: three families each have a
     // Website row AND a Google Sheet row.
     expect(bucket([row({ source: "Google Sheet" }), row()])).toBe("dd_derived");
   });

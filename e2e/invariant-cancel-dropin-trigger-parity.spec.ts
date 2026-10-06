@@ -23,10 +23,9 @@ import { POST } from "../src/app/api/cancel-registration/route";
 // engine was already shared; this is the missing trigger-parity pin (GAP-N2 in
 // docs/audits/ui-agent-parity-nga.md). Mirrors invariant-attendance/crew-confirm.
 //
-// NOTE: this route still authenticates via ?secret=NGA_ADMIN_SECRET in the QUERY
-// STRING (the anti-pattern the audit flags). The secret-gate block below pins
-// the current contract; GAP-N2's optional follow-up migrates it to a dedicated
-// Authorization: Bearer header, at which point these gate tests update.
+// NOTE: since 2026-10-06 the route takes NGA_ADMIN_SECRET as `Authorization:
+// Bearer` via authorizeAdminSecret; `?secret=` (used below) is a logged,
+// deprecated fallback pinned by invariant-admin-secret-auth.spec.ts.
 
 const CHECKOUT = "cs_cancel_probe";
 

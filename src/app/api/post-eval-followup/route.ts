@@ -6,7 +6,7 @@
 // recipient + rendered email without sending or writing. Trigger parity is
 // pinned by e2e/invariant-ops-trigger-parity.spec.ts.
 
-import { secretEquals } from "@/lib/secret-compare";
+import { authorizeAdminSecret } from "@/lib/admin-secret-auth";
 import { NextRequest, NextResponse } from "next/server";
 import {
   runPostEvalFollowup,
@@ -17,9 +17,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const secret = request.nextUrl.searchParams.get("secret");
-  const expected = process.env.NGA_ADMIN_SECRET;
-  if (!secretEquals(secret, expected)) {
+  if (!authorizeAdminSecret(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

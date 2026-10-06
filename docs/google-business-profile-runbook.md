@@ -62,7 +62,8 @@ don't stop at step 1.
    `"reviewUrl": "<link>"` in the POST body — it overrides the env var.)
 3. Dry-run, eyeball, send:
    ```bash
-   curl -X POST "https://nextgenpbacademy.com/api/camp-followup?secret=$NGA_ADMIN_SECRET" \
+   curl -X POST "https://nextgenpbacademy.com/api/camp-followup" \
+  -H "Authorization: Bearer $NGA_ADMIN_SECRET" \
      -H 'Content-Type: application/json' -d '{"dryRun": true}'
    ```
    Then re-run without `dryRun`. The discovery review's math: ~20 family

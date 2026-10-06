@@ -42,6 +42,18 @@ for (const r of routes) {
       expect(stub.calls.length).toBe(0);
     });
 
+    test("wrong Bearer header → 401 even with the right ?secret=, zero downstream calls", async () => {
+      const res = await r.handler(
+        new NextRequest(`http://localhost${r.path}?secret=test-admin-secret`, {
+          method: "POST",
+          body: JSON.stringify({ checkoutSessionId: "cs_x" }),
+          headers: { "content-type": "application/json", authorization: "Bearer wrong-secret" },
+        }),
+      );
+      expect(res.status).toBe(401);
+      expect(stub.calls.length).toBe(0);
+    });
+
     test("wrong secret → 401 before any downstream call", async () => {
       const res = await r.handler(req(r.path, "wrong-secret"));
       expect(res.status).toBe(401);

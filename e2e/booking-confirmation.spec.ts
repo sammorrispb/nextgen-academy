@@ -11,8 +11,8 @@ import {
 // stays off the minor-data egress surface.
 
 const base: ConfirmationInput = {
-  parentFirst: "Gloria",
-  childFirst: "Eliana",
+  parentFirst: "Pat",
+  childFirst: "Riley",
   sessionTitle: "Westland Wed · Green",
   sessionDateLong: "Wednesday, July 22, 2026",
   sessionStart: "6:30 PM",

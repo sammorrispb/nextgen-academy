@@ -171,7 +171,7 @@ export interface RecordPollResult {
   /**
    * The family's parent name as the CRM holds it, for greeting them in any
    * follow-up mail. Never derive a greeting from the email local-part — it
-   * renders "Thanks jeffwhitey" to a paying parent.
+   * renders "Thanks <email-local-part>" to a paying parent.
    */
   parentName: string | null;
 }

@@ -10,9 +10,10 @@ from the Notion CRMs + Open Brain (no pageview analytics exist — see §1).
 
 ## 1. Traffic reality: we are flying without pageview data
 
-- **NGA has zero traffic analytics by policy** — `verify-funnel.mjs` bans GA4, Meta
-  Pixel, and `@vercel/analytics`. That policy is sound (COPPA posture, no pixels),
-  but it means the only measurable "traffic" is funnel outcomes.
+- **NGA had zero traffic analytics by policy** when this review was written —
+  `verify-funnel.mjs` banned GA4, Meta Pixel, and `@vercel/analytics`, so the only
+  measurable "traffic" was funnel outcomes. (Superseded 2026-10-02, #395: GA4 and
+  the Meta Pixel now load from `Analytics.tsx`, env-gated.)
 - **Google Search Console is verified** (token in `src/app/layout.tsx`) but nothing
   in the operating routine reads it. GSC is privacy-clean (it's Google's own crawl
   data, no on-site pixel) and is currently the only window into impressions,

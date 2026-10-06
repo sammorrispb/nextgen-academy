@@ -38,7 +38,7 @@ Coupon mint + both parent emails are **not pinned** by any invariant. Idempotenc
 **Smallest fix (test-only):** `invariant-webhook-referral-idempotency.spec.ts` driving a redelivered referred-subscriber checkout, asserting coupons mint + emails send **exactly once**. Optionally hoist the flag-flip to a pre-mint reservation.
 
 ### GAP-N5 — post-eval-followup: comms + CRM write on query-string mega-secret `[part of intake row, slop-free]`
-Sends a parent email + PATCHes the Notion player row, gated by `?secret=NGA_ADMIN_SECRET` query string (Minor-PII Slop-Free Zone, "the 3 eval routes").
+Sends a parent email + PATCHes the Notion player row, gated by `NGA_ADMIN_SECRET` (`Authorization: Bearer` since 2026-10-06; the old query string is a logged, deprecated fallback) (Minor-PII Slop-Free Zone, "the 3 eval routes").
 **Smallest fix:** `Authorization: Bearer POST_EVAL_SECRET` header (dedicated secret).
 
 ### GAP-N6 — PII intake routes: 6 hand-rolled fan-outs, HIGH drift `[M, lower urgency]`

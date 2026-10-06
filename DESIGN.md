@@ -345,5 +345,4 @@ modifier (`btn-primary`, `card-program`). **Color-name classes are banned**
   is the bottom 20%.
 - Don't replicate the NEXT GEN logo letterforms in UI headings. The
   condensed-italic style is logo-only; UI headings are Montserrat Bold.
-- Don't add third-party analytics pixels (GA4, Meta Pixel, gtag, fbq).
-  Funnel tracking is first-party only.
+- Don't add third-party analytics outside `src/components/Analytics.tsx`. GA4 and the Meta Pixel load there only, each gated on its env ID (the earlier ban was lifted on purpose in #395, 2026-10-02). Funnel events still go first-party first; anything new routes through `funnelClient.ts`.

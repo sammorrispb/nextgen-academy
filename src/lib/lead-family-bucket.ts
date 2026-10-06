@@ -9,7 +9,7 @@ import { classifyLead, type LeadRow } from "./lead-segmentation";
  * family was mailed if ANY of its rows was clean, because off-limits rows were
  * skipped before the dedup map was populated. Two consequences, both bad:
  * an opt-out recorded on one row was ignored if another row looked clean, and
- * DD provenance leaked (joegadler@, markyuen@, laurenwheelerporter@ each carry
+ * DD provenance leaked (three real families each carry
  * a Website row next to a Google Sheet row).
  *
  * Precedence, strongest first:

@@ -64,7 +64,7 @@ export function classifyNotionFailure(status: number): "transient" | "permanent"
  * A deterministic rejection that names Source — the property doesn't exist on
  * that database, or its type drifted — must never cost us the row itself. This
  * has now bitten twice:
- *   - 2026-06-13 (the Landon incident): #174 shipped a Source write to the
+ *   - 2026-06-13 (the drop-in incident): #174 shipped a Source write to the
  *     drop-ins DB before the property existed, 400ing every create and leaving
  *     paid parents unregistered.
  *   - 2026-08-25: the same write on the waitlist DB, whose schema never gained

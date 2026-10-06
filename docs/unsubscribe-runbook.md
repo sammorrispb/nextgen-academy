@@ -78,7 +78,8 @@ Confirm the parent is no longer a recipient with a **dry run** (no email is
 sent — `dryRun` just returns the recipient list):
 
 ```bash
-curl -s -X POST "https://nextgenpbacademy.com/api/camp-outreach?secret=$NGA_ADMIN_SECRET" \
+curl -s -X POST "https://nextgenpbacademy.com/api/camp-outreach" \
+  -H "Authorization: Bearer $NGA_ADMIN_SECRET" \
   -H 'Content-Type: application/json' -d '{"dryRun": true}' | jq '.recipients[].email'
 # the quarantined parent's email should NOT appear; off_limits count goes up by 1
 ```

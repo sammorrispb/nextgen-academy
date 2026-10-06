@@ -25,7 +25,7 @@ const PARENT = "parent@enrichegress.test";
 
 // The fixture carries child data ON PURPOSE — the "must not forward"
 // assertions only mean something if there is something to forward.
-const CHILD = "Fabian";
+const CHILD = "Riley";
 
 function crmRow(overrides: Record<string, unknown> = {}) {
   return {

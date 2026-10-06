@@ -7,8 +7,8 @@ import {
 
 test.describe("suggestEmailCorrection", () => {
   test("fixes the gmail.fom typo from the Oct 1 bounce", () => {
-    expect(suggestEmailCorrection("harrington.ea@gmail.fom")).toBe(
-      "harrington.ea@gmail.com",
+    expect(suggestEmailCorrection("parent.name@gmail.fom")).toBe(
+      "parent.name@gmail.com",
     );
   });
 

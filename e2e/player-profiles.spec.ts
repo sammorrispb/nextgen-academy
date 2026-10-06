@@ -12,10 +12,10 @@ function row(over: Partial<DropInRegistration>): DropInRegistration {
   return {
     id: Math.random().toString(36).slice(2),
     url: "",
-    parentName: "Lauren Porter",
+    parentName: "Pat Parent",
     parentEmail: "lauren@example.com",
-    parentPhone: "2407801755",
-    childFirstName: "Preston",
+    parentPhone: "3015550177",
+    childFirstName: "Riley",
     childBirthYear: 2015,
     sessionTitle: "Walter Johnson HS — Early",
     sessionDate: "2026-05-23",
@@ -48,8 +48,8 @@ test.describe("parent key encode/decode", () => {
   });
 
   test("falls back to phone digits when no email", () => {
-    const k = encodeParentKey("", "(240) 780-1755");
-    expect(decodeParentKey(k)).toEqual({ email: "", phone: "2407801755" });
+    const k = encodeParentKey("", "(301) 555-0177");
+    expect(decodeParentKey(k)).toEqual({ email: "", phone: "3015550177" });
   });
 
   test("two contacts for the same parent collapse to the same key", () => {
@@ -68,19 +68,19 @@ test.describe("buildFamilyProfile", () => {
 
   test("groups multiple children under one family and tallies per child", () => {
     const rows = [
-      row({ childFirstName: "Preston", attendance: "Present" }),
-      row({ childFirstName: "Preston", sessionDate: "2026-05-16", attendance: "No-show" }),
+      row({ childFirstName: "Riley", attendance: "Present" }),
+      row({ childFirstName: "Riley", sessionDate: "2026-05-16", attendance: "No-show" }),
       row({ childFirstName: "Maya", childBirthYear: 2017, attendance: "Present" }),
     ];
     const p = buildFamilyProfile(rows, "k")!;
-    expect(p.children.map((c) => c.childFirstName).sort()).toEqual(["Maya", "Preston"]);
+    expect(p.children.map((c) => c.childFirstName).sort()).toEqual(["Maya", "Riley"]);
     expect(p.lifetimeRegistrations).toBe(3);
     expect(p.attended).toBe(2);
     expect(p.noShow).toBe(1);
 
-    const preston = p.children.find((c) => c.childFirstName === "Preston")!;
-    expect(preston.attended).toBe(1);
-    expect(preston.noShow).toBe(1);
+    const riley = p.children.find((c) => c.childFirstName === "Riley")!;
+    expect(riley.attended).toBe(1);
+    expect(riley.noShow).toBe(1);
   });
 
   test("payment totals exclude refunded rows from held, count them as refunded", () => {
@@ -112,22 +112,22 @@ test.describe("buildFamilyProfile", () => {
 test.describe("buildFamilyDirectory", () => {
   test("collapses rows into one entry per family, newest activity first", () => {
     const rows = [
-      row({ parentEmail: "a@b.com", childFirstName: "Preston", sessionDate: "2026-05-23" }),
+      row({ parentEmail: "a@b.com", childFirstName: "Riley", sessionDate: "2026-05-23" }),
       row({ parentEmail: "a@b.com", childFirstName: "Maya", sessionDate: "2026-05-16" }),
       row({ parentEmail: "c@d.com", parentName: "Other Parent", childFirstName: "Sam", sessionDate: "2026-05-30" }),
     ];
     const dir = buildFamilyDirectory(rows);
     expect(dir).toHaveLength(2);
     expect(dir[0].parentName).toBe("Other Parent"); // 5/30 is most recent
-    const porter = dir.find((d) => d.parentName === "Lauren Porter")!;
-    expect(porter.childNames.sort()).toEqual(["Maya", "Preston"]);
-    expect(porter.registrations).toBe(2);
+    const parentRow = dir.find((d) => d.parentName === "Pat Parent")!;
+    expect(parentRow.childNames.sort()).toEqual(["Maya", "Riley"]);
+    expect(parentRow.registrations).toBe(2);
   });
 
   test("carries child birth years, first-session, and last-attended dates", () => {
     const rows = [
-      row({ childFirstName: "Preston", childBirthYear: 2015, sessionDate: "2026-05-02", attendance: "Present" }),
-      row({ childFirstName: "Preston", childBirthYear: 2015, sessionDate: "2026-05-23", attendance: "No-show" }),
+      row({ childFirstName: "Riley", childBirthYear: 2015, sessionDate: "2026-05-02", attendance: "Present" }),
+      row({ childFirstName: "Riley", childBirthYear: 2015, sessionDate: "2026-05-23", attendance: "No-show" }),
       row({ childFirstName: "Maya", childBirthYear: 2017, sessionDate: "2026-05-16", attendance: "Present" }),
     ];
     const dir = buildFamilyDirectory(rows);
@@ -135,26 +135,26 @@ test.describe("buildFamilyDirectory", () => {
     const fam = dir[0];
     expect(fam.firstSessionDate).toBe("2026-05-02");
     expect(fam.lastSessionDate).toBe("2026-05-23");
-    // Latest Present date across the family (Preston 5/02, Maya 5/16) — the
+    // Latest Present date across the family (Riley 5/02, Maya 5/16) — the
     // 5/23 row was a No-show and must not count as attended.
     expect(fam.lastAttendedDate).toBe("2026-05-16");
     expect(
       fam.children.map((c) => `${c.name}:${c.birthYear}`).sort(),
-    ).toEqual(["Maya:2017", "Preston:2015"]);
+    ).toEqual(["Maya:2017", "Riley:2015"]);
   });
 });
 
 test.describe("toSearchIndex", () => {
   test("projects to key + parent + child names ONLY (no contact info leaks)", () => {
     const rows = [
-      row({ parentEmail: "kathy@example.com", parentPhone: "2404476826", childFirstName: "Ethan", childBirthYear: 2012 }),
+      row({ parentEmail: "kathy@example.com", parentPhone: "3015550188", childFirstName: "Ethan", childBirthYear: 2012 }),
     ];
     const index = toSearchIndex(buildFamilyDirectory(rows));
     expect(index).toHaveLength(1);
     expect(Object.keys(index[0]).sort()).toEqual(["childNames", "key", "parentName"]);
     const serialized = JSON.stringify(index);
     expect(serialized).not.toContain("kathy@example.com");
-    expect(serialized).not.toContain("2404476826");
+    expect(serialized).not.toContain("3015550188");
     expect(serialized).not.toContain("2012");
   });
 });
