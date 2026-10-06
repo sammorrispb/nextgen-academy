@@ -77,8 +77,8 @@ test.describe("isTestOrInternal", () => {
     expect(isTestOrInternal("Sam Morris", "sam.morris2131@gmail.com")).toBe(true);
   });
   test("passes real parents through", () => {
-    expect(isTestOrInternal("Jen Holmes", "jenholmes80@yahoo.com")).toBe(false);
-    expect(isTestOrInternal("Vivian Lee", "viviankimlee@yahoo.com")).toBe(false);
+    expect(isTestOrInternal("Jordan Parent", "jordan.parent@familymail.net")).toBe(false);
+    expect(isTestOrInternal("Alex Parent", "alex.parent@familymail.net")).toBe(false);
   });
 });
 

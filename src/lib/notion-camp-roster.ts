@@ -147,7 +147,7 @@ export async function collectPaidCampSessions(
         ? new Date(session.created * 1000).toISOString().slice(0, 10)
         : "";
       // Trim free-text parent/child fields — Stripe carries them verbatim from
-      // the checkout form, so a stray leading/trailing space ("Krishav ") would
+      // the checkout form, so a stray leading/trailing space ("Riley ") would
       // otherwise land in the roster + render in the greeting.
       entries.push({
         stripeSessionId: session.id,

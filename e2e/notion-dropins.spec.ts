@@ -25,7 +25,7 @@ test.describe("classifyNotionFailure", () => {
 });
 
 // Fail-soft on the optional `Source` attribution column. Regression guard for
-// the 2026-06-13 Landon incident: #174 shipped a Source write before the Notion
+// the 2026-06-13 drop-in incident: #174 shipped a Source write before the Notion
 // property existed, so every drop-in create 400'd and stranded paid parents
 // unregistered. The roster row (source of truth for reminders/check-in/refunds)
 // must survive a rejection that only concerns Source.

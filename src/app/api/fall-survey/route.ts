@@ -8,7 +8,7 @@
 // re-sends; use `only` to retry just the addresses that failed.
 
 import { NextRequest, NextResponse } from "next/server";
-import { secretEquals } from "@/lib/secret-compare";
+import { authorizeAdminSecret } from "@/lib/admin-secret-auth";
 import { runFallSurvey } from "@/lib/fall-survey-run";
 import type { FallSurveyVariant } from "@/lib/email/fall-survey";
 
@@ -16,8 +16,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
-  if (!secretEquals(secret, process.env.NGA_ADMIN_SECRET)) {
+  if (!authorizeAdminSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

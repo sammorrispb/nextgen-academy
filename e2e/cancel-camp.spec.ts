@@ -52,7 +52,7 @@ test.describe("pickRefundableCampSession", () => {
 test.describe("campCancellation template", () => {
   const base = {
     parentFirst: "Jamie",
-    childFirst: "Bear",
+    childFirst: "Riley",
     campTitle: "Summer Camp — Week 2",
     campWeek: "July 20 – July 23, 2026",
     optionLabel: "Full day",
@@ -61,7 +61,7 @@ test.describe("campCancellation template", () => {
 
   test("refund variant leads with the amount back", () => {
     const html = campCancellationHtml({ ...base, refundedUsd: "295.00" });
-    expect(html).toContain("Bear");
+    expect(html).toContain("Riley");
     expect(html).toContain("$295.00");
     expect(html).toContain("on the way back");
     const text = campCancellationText({ ...base, refundedUsd: "295.00" });

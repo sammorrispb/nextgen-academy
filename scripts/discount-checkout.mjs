@@ -33,10 +33,10 @@
 // Example:
 //   node scripts/discount-checkout.mjs \
 //     --session-id=35efa3ac27dc81168769d1b0590bfe29 \
-//     --parent-name="Franz Malitig" \
-//     --parent-email=franz.malitig@icloud.com \
+//     --parent-name="Pat Parent" \
+//     --parent-email=parent@example.com \
 //     --parent-phone=+13015551212 \
-//     --child-name=Grayson \
+//     --child-name=Riley \
 //     --child-birth-year=2017 \
 //     --discount=50
 

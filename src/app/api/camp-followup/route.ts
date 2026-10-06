@@ -4,7 +4,7 @@
 // request and gates the secret, mirroring /api/camp-outreach. Always dryRun
 // first: there's no sent-flag column, so a repeated live run re-sends.
 
-import { secretEquals } from "@/lib/secret-compare";
+import { authorizeAdminSecret } from "@/lib/admin-secret-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { runCampFollowup } from "@/lib/camp-followup-run";
 
@@ -12,8 +12,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
-  if (!secretEquals(secret, process.env.NGA_ADMIN_SECRET)) {
+  if (!authorizeAdminSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

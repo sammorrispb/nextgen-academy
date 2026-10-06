@@ -141,14 +141,14 @@ test.describe("fall registration link — send-on-confirm transitions", () => {
 });
 
 test.describe("fall registration link — family folding", () => {
-  // OBSERVED IN PROD: jeffwhitey@gmail.com owns three CRM rows (Spencer White,
-  // Spencer white, "DELETE — Spencer white"). One tap must mean one email.
+  // OBSERVED IN PROD: one parent email owns three CRM rows (the same child's
+  // name twice in different casing, plus a "DELETE — …" row). One tap must mean one email.
   test("a three-row family on one parent email gets exactly ONE send", async () => {
     const email = "threerows@regspec.org";
     installWorld([
-      crmRow(email, "Spencer White", null),
-      crmRow(email, "Spencer white", null),
-      crmRow(email, "DELETE — Spencer white", null),
+      crmRow(email, "Riley Kid", null),
+      crmRow(email, "riley kid", null),
+      crmRow(email, "DELETE — riley kid", null),
     ]);
 
     await postConfirm("in", email);

@@ -238,7 +238,7 @@ price without it is selling the shorter hour and none of the reason.
   open / Filling up / Last spot / Full from seats remaining.
 - **Refunds**: parent withdrawal → none (stated at point of sale); NGA-cancelled
   → prorated over the 6 Saturdays. Admin path:
-  `POST /api/cancel-picklpark-registration?secret=$NGA_ADMIN_SECRET` — always
+  `POST /api/cancel-picklpark-registration` (header `Authorization: Bearer $NGA_ADMIN_SECRET`) — always
   `{"dryRun": true}` first. Out-of-band Stripe refunds reconcile via the
   `charge.refunded` webhook leg (partial refunds page Sam and touch nothing).
 - **Sub list**: no code — same reply-or-text flow as the Wood season; the

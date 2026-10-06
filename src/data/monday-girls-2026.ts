@@ -4,7 +4,7 @@
 // picklpark-2026.ts (Frederick Saturdays); the three seasons run in parallel
 // and share nothing but the shape, so editing one can never move another.
 //
-// WHY THIS GROUP EXISTS. Amanda Stone told Sam on 2026-08-03 that her daughter
+// WHY THIS GROUP EXISTS. A parent told Sam on 2026-08-03 that her daughter
 // had trained elsewhere and enjoyed it, but the group was all boys and she was
 // hoping for "additional girl energy" — she would not book an evaluation
 // without it. Sam proposed a girls-only group around that objection on
@@ -23,7 +23,7 @@
 // ages 7–12 that is no longer true, and a parent of a 12-year-old advanced
 // beginner would notice. The sameness claim therefore moves from STAGE to
 // SETTING — see MONDAY_GIRLS_PEER_NOTE, which is the sentence that answers
-// Amanda's objection and must never quietly become a claim we can't keep.
+// that parent's objection and must never quietly become a claim we can't keep.
 //
 // SHAPE (Sam, 2026-08-23; RESCHEDULED 2026-09-04): Mondays 6:00–7:00 PM at
 // Earle B. Wood Middle School in Rockville, $225 for the 6-session block paid
@@ -205,7 +205,7 @@ export const MONDAY_GIRLS_SESSION_FORMAT =
 
 /**
  * The sentence that says what a parent is actually buying, and the one that
- * answers Amanda Stone's original objection. Every surface that quotes the
+ * answers that parent's original objection. Every surface that quotes the
  * price carries it.
  *
  * REWRITTEN 2026-09-20 with the two-level widening. It used to read "every

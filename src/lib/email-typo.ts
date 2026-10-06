@@ -15,7 +15,7 @@
 //   email fields so parents catch it before submitting.
 
 const DOMAIN_TYPO_MAP: Record<string, string> = {
-  // gmail.com — the harrington.ea@gmail.fom bounce (Oct 1, 2026) came from here
+  // gmail.com — a real gmail.fom bounce (Oct 1, 2026) came from here
   "gmial.com": "gmail.com",
   "gamil.com": "gmail.com",
   "gnail.com": "gmail.com",

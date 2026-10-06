@@ -1,4 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
+import { authorizeAdminSecret } from "@/lib/admin-secret-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { cancelDropIn } from "@/lib/cancel-dropin";
 
@@ -11,9 +11,7 @@ interface CancelBody {
 }
 
 export async function POST(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
-  const expected = process.env.NGA_ADMIN_SECRET;
-  if (!secretEquals(secret, expected)) {
+  if (!authorizeAdminSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

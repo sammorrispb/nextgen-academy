@@ -114,7 +114,7 @@ test.describe("camp reminder — child PII egress (Friday-before-camp path)", ()
     // 2026-06-30 is inside june-29's [startDate-7, endDate] window but is NOT
     // startDate-3 for any camp, so upcomingCampForReminder finds no match and
     // the reminder email is skipped — the backstop must still write the roster
-    // row. Mirrors the real gap: Logan/Louis paid after the one-time Friday
+    // row. Mirrors the real gap: two campers paid after the one-time Friday
     // sync and got no roster row until this fix.
     stub
       .on("databases/db-camp-roster-test/query", { results: [] })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { secretEquals } from "@/lib/secret-compare";
+import { authorizeAdminSecret } from "@/lib/admin-secret-auth";
 import { cancelPicklParkRegistration } from "@/lib/cancel-picklpark";
 import {
   picklParkRefundPolicyFor,
@@ -35,8 +35,7 @@ interface CancelPicklParkBody {
 // is decided by picklpark-refund-policy.ts unless explicitly overridden, so
 // the published policy and the code can't drift.
 export async function POST(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
-  if (!secretEquals(secret, process.env.NGA_ADMIN_SECRET)) {
+  if (!authorizeAdminSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

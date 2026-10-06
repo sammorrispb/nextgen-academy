@@ -1,6 +1,6 @@
 # Fall 2026 survey — the Link & Dink half of the campaign
 
-The NGA half sends itself: `POST /api/fall-survey?secret=$NGA_ADMIN_SECRET` with
+The NGA half sends itself: `POST /api/fall-survey` (header `Authorization: Bearer $NGA_ADMIN_SECRET`) with
 `{"variant":"nga"}`. The **Link & Dink half ships no code** — the community-os
 newsletter pipeline already does exactly what's needed, and routing around it
 would be worse:

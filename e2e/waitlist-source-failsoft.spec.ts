@@ -8,7 +8,7 @@ import { createNotionPageSourceFailSoft } from "../src/lib/notion-utils";
 // 2026-08-25: a real signup (parent + preferred area) emailed fine and never
 // landed in Notion — the waitlist DB had no `Source` property, so the create
 // 400'd with "Source is not a property that exists." and the row was lost.
-// Same shape as the 2026-06-13 Landon incident on the drop-ins DB, which is
+// Same shape as the 2026-06-13 drop-in incident on the drop-ins DB, which is
 // why the retry now lives in ONE shared helper instead of per-route copies.
 test.describe("createNotionPageSourceFailSoft", () => {
   const realFetch = globalThis.fetch;

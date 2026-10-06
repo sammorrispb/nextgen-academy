@@ -7,8 +7,8 @@ import {
 } from "../src/lib/eval-confirmation-send";
 
 const valid = {
-  parentEmail: "hun_duong@yahoo.com",
-  childFirst: "Zoe",
+  parentEmail: "parent@example.com",
+  childFirst: "Ava",
   date: "2026-06-09",
   startTime: "10:00 AM",
   endTime: "10:45 AM",

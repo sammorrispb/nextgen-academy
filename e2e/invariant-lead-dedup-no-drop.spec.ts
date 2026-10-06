@@ -29,7 +29,7 @@ function existingRow(overrides: Record<string, unknown> = {}) {
   return {
     id: EXISTING_PAGE,
     properties: {
-      "Player Name": { title: [{ plain_text: "Fabian" }] },
+      "Player Name": { title: [{ plain_text: "Riley" }] },
       "Parent Email": { email: KNOWN_PARENT },
       Notes: { rich_text: [{ plain_text: "Lead form submission. Child age: 11" }] },
       Level: { select: { name: "Eval Needed" } },
@@ -65,7 +65,7 @@ function randomIp() {
 
 function submission(kids: Array<{ name: string; age: number }>, extra = {}) {
   return {
-    parentName: "Juan Uribe",
+    parentName: "Pat Parent",
     contact: KNOWN_PARENT,
     kids,
     notes: "He is a 3+ year tennis player that is new to pickleball",
@@ -87,7 +87,7 @@ function createCalls() {
 test.describe("lead dedup — a repeat inquiry is never dropped", () => {
   test("a returning parent's inquiry UPDATES the existing row", async () => {
     installWorld(stub);
-    const res = await leadPOST(submissionRequest([{ name: "Fabian", age: 11 }]));
+    const res = await leadPOST(submissionRequest([{ name: "Riley", age: 11 }]));
     expect(res.status).toBe(200);
 
     const patches = patchCalls();
@@ -103,7 +103,7 @@ test.describe("lead dedup — a repeat inquiry is never dropped", () => {
 
   test("the appended note carries the parent's own words", async () => {
     installWorld(stub);
-    await leadPOST(submissionRequest([{ name: "Fabian", age: 11 }]));
+    await leadPOST(submissionRequest([{ name: "Riley", age: 11 }]));
 
     const body = JSON.parse(patchCalls()[0].body);
     const notes = body.properties.Notes.rich_text[0].text.content;
@@ -125,7 +125,7 @@ test.describe("lead dedup — a repeat inquiry is never dropped", () => {
 
   test("a child we already have is not duplicated", async () => {
     installWorld(stub);
-    await leadPOST(submissionRequest([{ name: "fabian", age: 11 }]));
+    await leadPOST(submissionRequest([{ name: "riley", age: 11 }]));
 
     expect(
       createCalls().length,
@@ -135,7 +135,7 @@ test.describe("lead dedup — a repeat inquiry is never dropped", () => {
 
   test("never rewrites Status or Level — those are coach judgment", async () => {
     installWorld(stub);
-    await leadPOST(submissionRequest([{ name: "Fabian", age: 11 }]));
+    await leadPOST(submissionRequest([{ name: "Riley", age: 11 }]));
 
     for (const call of patchCalls()) {
       const props = JSON.parse(call.body).properties ?? {};
@@ -149,7 +149,7 @@ test.describe("lead dedup — a repeat inquiry is never dropped", () => {
       existingRow({ Location: { select: { name: "Rockville" } } }),
     ]);
     await leadPOST(
-      submissionRequest([{ name: "Fabian", age: 11 }], {
+      submissionRequest([{ name: "Riley", age: 11 }], {
         location: "Frederick — The Pickl Park",
       }),
     );
@@ -166,7 +166,7 @@ test.describe("lead dedup — a repeat inquiry is never dropped", () => {
   test("fills an EMPTY Location from the submission", async () => {
     installWorld(stub);
     await leadPOST(
-      submissionRequest([{ name: "Fabian", age: 11 }], {
+      submissionRequest([{ name: "Riley", age: 11 }], {
         location: "Frederick — The Pickl Park",
       }),
     );

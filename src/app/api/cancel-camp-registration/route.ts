@@ -1,4 +1,4 @@
-import { secretEquals } from "@/lib/secret-compare";
+import { authorizeAdminSecret } from "@/lib/admin-secret-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { cancelCampRegistration } from "@/lib/cancel-camp";
 import type { RefundOption } from "@/lib/refund-amount";
@@ -19,9 +19,7 @@ interface CancelCampBody {
 // Notion roster, so this keys off the Stripe Checkout Session (or parent email)
 // and deregisters via the Player CRM + Open Brain. Gated by NGA_ADMIN_SECRET.
 export async function POST(req: NextRequest) {
-  const secret = req.nextUrl.searchParams.get("secret");
-  const expected = process.env.NGA_ADMIN_SECRET;
-  if (!secretEquals(secret, expected)) {
+  if (!authorizeAdminSecret(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
