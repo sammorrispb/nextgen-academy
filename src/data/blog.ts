@@ -24,7 +24,7 @@ import {
   MVF_JUNIOR_TOURNAMENT_DIVISIONS, MVF_JUNIOR_TOURNAMENT_DIVISION_MIN,
   MVF_JUNIOR_TOURNAMENT_DIVISION_MAX, MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
   MVF_JUNIOR_TOURNAMENT_VENUE, NONRESIDENT_PRICE_USD, NO_REFUNDS_TEXT,
-  RAIN_OR_SHINE_TEXT, RESIDENT_PRICE_USD,
+  RAIN_OR_SHINE_TEXT, RESIDENT_PRICE_USD, MVF_JUNIOR_TOURNAMENT_OUTDOOR_CHECK_IN_TEXT,
 } from "./mvf-junior-tournament-2026";
 
 import {
@@ -124,7 +124,7 @@ export const blogPosts: BlogPost[] = [
     slug: "mvf-junior-tournament-october-24-2026",
     title: "October 24 MVF Junior Pickleball: Parent Guide",
     headline: "October 24 MVF junior pickleball: your family's guide",
-    description: "Plan for NGA's October 24 Montgomery Village junior tournament: event-day ages, rotating partners, fees, 3:30 PM check-in and invoice payment.",
+    description: "NGA's October 24 Montgomery Village junior tournament: ages, fees, indoor rain backup, 15-minute check-in and invoice payment.",
     datePublished: "2026-10-05",
     sections: [
       {
@@ -159,7 +159,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Before leaving home",
         paragraphs: [
-          `Check in at 3:30 PM ET at ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_ADDRESS}. Check your event email for the meeting point and any updated instructions.`,
+          `${MVF_JUNIOR_TOURNAMENT_OUTDOOR_CHECK_IN_TEXT} The outdoor event runs at ${MVF_JUNIOR_TOURNAMENT_VENUE}, ${MVF_JUNIOR_TOURNAMENT_ADDRESS}. Check in 15 minutes before the start, and check your event email for the meeting point and any updated instructions.`,
           "Bring a refillable water bottle and court shoes. Pack your player's paddle if they have one. If you need to borrow one, confirm availability with Coach Sam beforehand.",
           `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} Read these posted terms before paying. If conditions raise a question, contact NGA and follow the organizer's current instructions.`,
         ],

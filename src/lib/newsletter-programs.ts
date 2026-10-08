@@ -1,7 +1,7 @@
 import { upcomingMvfPrograms, isMvfProgramInProgress, mvfClassesRemaining, MVF_AGE_MIN, MVF_AGE_MAX, type MvfProgram } from "@/data/mvf";
 import {
   MVF_JUNIOR_TOURNAMENT_DATE_ISO, MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
-  MVF_JUNIOR_TOURNAMENT_TIME_LABEL, MVF_JUNIOR_TOURNAMENT_VENUE,
+  MVF_JUNIOR_TOURNAMENT_TIME_LABEL, MVF_JUNIOR_TOURNAMENT_WHERE_LINE, RAIN_OR_SHINE_TEXT,
   RESIDENT_PRICE_USD, NONRESIDENT_PRICE_USD,
 } from "@/data/mvf-junior-tournament-2026";
 import { MONDAY_GIRLS_MONDAYS, MONDAY_GIRLS_TIME_LABEL, MONDAY_GIRLS_AGE_MIN, MONDAY_GIRLS_AGE_MAX, MONDAY_GIRLS_VENUE_SHORT } from "@/data/monday-girls-2026";
@@ -47,7 +47,7 @@ export function newsletterPrograms(today: string, origin: string, campaign: stri
   if (today <= MVF_JUNIOR_TOURNAMENT_DATE_ISO) programs.push({
     key: "mvf-junior-tournament",
     title: "Montgomery Village junior tournament",
-    body: `${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} ET at ${MVF_JUNIOR_TOURNAMENT_VENUE}. 10U and 14U divisions, with rotating partners and at least four games per player. From $${RESIDENT_PRICE_USD} per player: $${RESIDENT_PRICE_USD} for Montgomery Village residents, $${NONRESIDENT_PRICE_USD} for non-residents. Register through Next Gen.`,
+    body: `${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} ET at ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE} ${RAIN_OR_SHINE_TEXT} 10U and 14U divisions, with rotating partners and at least four games per player. From $${RESIDENT_PRICE_USD} per player: $${RESIDENT_PRICE_USD} for Montgomery Village residents, $${NONRESIDENT_PRICE_USD} for non-residents. Register through Next Gen.`,
     url: link("/mvf-junior-tournament", "mvf-tournament"), linkLabel: "View tournament details",
   });
   if (MONDAY_GIRLS_MONDAYS.some(date => date >= today)) programs.push({

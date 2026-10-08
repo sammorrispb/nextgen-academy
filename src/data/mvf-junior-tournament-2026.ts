@@ -36,7 +36,8 @@
 //
 // POLICY (Sam 2026-09-22): No refunds. Rain or shine — we play. No rain date.
 // RAIN BACKUP (MVF email, 2026-10-08): Lake Marion's gym is held for
-// October 24 from 3–6 PM. Indoor check-in timing was not confirmed.
+// October 24 from 3–6 PM. Sam confirmed check-in 15 minutes before
+// either start time on 2026-10-08.
 
 import { NORTH_CREEK } from "@/data/mvf";
 
@@ -67,8 +68,12 @@ export const NGA_REVENUE_SHARE = 0.8;
 export const NO_REFUNDS_TEXT = "No refunds.";
 export const MVF_JUNIOR_TOURNAMENT_RAIN_VENUE = "Lake Marion Community Center";
 export const MVF_JUNIOR_TOURNAMENT_RAIN_ADDRESS = "8821 East Village Avenue, Montgomery Village, MD 20886";
+export const MVF_JUNIOR_TOURNAMENT_CHECK_IN_TIME = "3:45 PM ET";
+export const MVF_JUNIOR_TOURNAMENT_RAIN_CHECK_IN_TIME = "2:45 PM ET";
+export const MVF_JUNIOR_TOURNAMENT_OUTDOOR_CHECK_IN_TEXT = `Outdoor check-in: ${MVF_JUNIOR_TOURNAMENT_CHECK_IN_TIME}.`;
+export const MVF_JUNIOR_TOURNAMENT_INDOOR_CHECK_IN_TEXT = `Indoor check-in: ${MVF_JUNIOR_TOURNAMENT_RAIN_CHECK_IN_TIME}.`;
 export const MVF_JUNIOR_TOURNAMENT_RAIN_TIME_LABEL = "3:00–6:00 PM ET";
-export const RAIN_OR_SHINE_TEXT = `Rain or shine — we play. If it rains on ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, the tournament will move indoors to the gym at ${MVF_JUNIOR_TOURNAMENT_RAIN_VENUE}, ${MVF_JUNIOR_TOURNAMENT_RAIN_ADDRESS}, from ${MVF_JUNIOR_TOURNAMENT_RAIN_TIME_LABEL} — one hour earlier than the outdoor schedule. No rain date.`;
+export const RAIN_OR_SHINE_TEXT = `Rain or shine — we play. ${MVF_JUNIOR_TOURNAMENT_OUTDOOR_CHECK_IN_TEXT} If it rains on ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, the tournament will move indoors to the gym at ${MVF_JUNIOR_TOURNAMENT_RAIN_VENUE}, ${MVF_JUNIOR_TOURNAMENT_RAIN_ADDRESS}, from ${MVF_JUNIOR_TOURNAMENT_RAIN_TIME_LABEL} — one hour earlier than the outdoor schedule. ${MVF_JUNIOR_TOURNAMENT_INDOOR_CHECK_IN_TEXT} Check in 15 minutes before the start. No rain date.`;
 export const GUARANTEED_GAMES_TEXT = "Minimum 4 guaranteed games.";
 export const MEDALS_TEXT = "Medals for the winners of each division.";
 /** Why this venue (Sam 2026-09-28) — rendered wherever the address is. */

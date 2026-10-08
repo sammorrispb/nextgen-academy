@@ -11,6 +11,7 @@ import {
   MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
   MVF_JUNIOR_TOURNAMENT_DIVISIONS,
   MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA,
+  MVF_JUNIOR_TOURNAMENT_OUTDOOR_CHECK_IN_TEXT,
   MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
   MVF_JUNIOR_TOURNAMENT_TITLE,
   MVF_JUNIOR_TOURNAMENT_VENUE,
@@ -96,7 +97,7 @@ export default function MvfJuniorTournamentPage() {
               {MVF_JUNIOR_TOURNAMENT_TIME_LABEL}
             </p>
             <p className="text-ngpa-white/70 mt-2">
-              Outdoor check-in: 3:30 PM ET.
+              {MVF_JUNIOR_TOURNAMENT_OUTDOOR_CHECK_IN_TEXT}
             </p>
           </div>
           <div className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate/60">

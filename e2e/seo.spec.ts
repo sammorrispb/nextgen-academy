@@ -159,7 +159,7 @@ const ROUTES: RouteSpec[] = [
 test.describe("parent guide publication", () => {
   const guides = [
     { slug: "walter-johnson-youth-pickleball-fall-2026", destination: "/fall", label: "See current Bethesda season details", facts: ["Green Ball", "Yellow Ball", "$225", "paid up front", "east side", "not six remaining Sundays"] },
-    { slug: "mvf-junior-tournament-october-24-2026", destination: "/mvf-junior-tournament", label: "See current tournament details and registration", facts: ["10U: ages 6–10", "14U: ages 11–14", "3:30 PM ET", "20125 Arrowhead", "divisions will be merged", "not proof of a paid spot"] },
+    { slug: "mvf-junior-tournament-october-24-2026", destination: "/mvf-junior-tournament", label: "See current tournament details and registration", facts: ["10U: ages 6–10", "14U: ages 11–14", "Outdoor check-in: 3:45 PM ET", "Indoor check-in: 2:45 PM ET", "Lake Marion", "3:00–6:00 PM ET", "20125 Arrowhead", "divisions will be merged", "not proof of a paid spot"] },
   ];
   test.beforeEach(async ({ page }) => {
     await page.route("**/*", async (route) => {
