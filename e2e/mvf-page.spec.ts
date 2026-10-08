@@ -21,6 +21,40 @@ const today = new Date().toLocaleDateString("en-CA", {
 const LIVE = upcomingMvfPrograms(today);
 const FINISHED = MVF_PROGRAMS.filter((p) => !LIVE.includes(p));
 
+test.describe("/mvf-junior-tournament rain plan", () => {
+  test("shows the conditional indoor venue and earlier hours before registration", async ({ page }) => {
+    const response = await page.goto("/mvf-junior-tournament");
+    expect(response?.status()).toBe(200);
+    const plan = page.getByRole("region", { name: "Rain plan" });
+    await expect(plan).toBeVisible();
+    await expect(plan).toContainText("Lake Marion Community Center");
+    await expect(plan).toContainText("8821 East Village Avenue, Montgomery Village, MD 20886");
+    await expect(plan).toContainText("3:00–6:00 PM ET");
+    await expect(plan).toContainText("one hour earlier than the outdoor schedule");
+    await expect(plan).toContainText(/if it rains/i);
+    await expect(page.getByText("Outdoor check-in: 3:30 PM ET.", { exact: true })).toBeVisible();
+    const text = await page.locator("#main").innerText();
+    expect(text).toContain("North Creek Community Center");
+    expect(text).toContain("4:00–7:00 PM");
+    const event = (await page.locator('script[type="application/ld+json"]').allTextContents())
+      .map((body) => JSON.parse(body)).find((value) => value["@type"] === "SportsEvent");
+    expect(event.location.name).toBe("North Creek Community Center");
+    expect(event.startDate).toBe("2026-10-24T16:00:00-04:00");
+    expect(event.endDate).toBe("2026-10-24T19:00:00-04:00");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test("registration receipt repeats the rain plan without claiming payment", async ({ page }) => {
+    await page.goto("/mvf-junior-tournament/success");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("We couldn't verify your payment status");
+    const main = page.locator("#main");
+    await expect(main).toContainText("Lake Marion Community Center");
+    await expect(main).toContainText("3:00–6:00 PM ET");
+    await expect(main).toContainText("one hour earlier than the outdoor schedule");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+});
+
 test.describe("/montgomery-village-youth-pickleball", () => {
   test("renders the hero h1 and MVF partnership line", async ({ page }) => {
     await page.goto(PAGE_PATH);

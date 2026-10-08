@@ -22,6 +22,7 @@ import {
   mvfTournamentPreEventReminderSubject,
   mvfTournamentPreEventReminderText,
   mvfTournamentPreEventReminderHtml,
+  MVF_TOURNAMENT_PRE_EVENT_SEND_DATE_ISO,
   todayEtIso,
 } from "../src/lib/email/mvf-tournament-pre-event-reminder";
 
@@ -170,6 +171,16 @@ test.describe("mvf tournament venue — North Creek Community Center", () => {
   ];
 
   for (const [name, body] of renders) {
+    test(`${name} explains the indoor rain location and one-hour-earlier schedule`, () => {
+      expect(body).toContain("Lake Marion Community Center");
+      expect(body).toContain("8821 East Village Avenue, Montgomery Village, MD 20886");
+      expect(body).toContain("3:00–6:00 PM ET");
+      expect(body).toContain("one hour earlier than the outdoor schedule");
+      expect(body).toContain("Saturday, October 24, 2026");
+      expect(body).toContain("4:00–7:00 PM");
+      expect(body).toMatch(/if it rains/i);
+    });
+
     test(`${name} names North Creek, its address and its lit courts — never Apple Ridge`, () => {
       expect(body).toContain("North Creek Community Center");
       expect(body).toContain("20125 Arrowhead Road, Montgomery Village, MD 20886");
@@ -177,6 +188,20 @@ test.describe("mvf tournament venue — North Creek Community Center", () => {
       expect(body).not.toMatch(/apple ridge/i);
     });
   }
+
+  test("pre-event email scopes check-in to outdoor play without inventing an indoor arrival time", () => {
+    for (const body of [
+      mvfTournamentPreEventReminderText(preEventInput),
+      mvfTournamentPreEventReminderHtml(preEventInput),
+    ]) {
+      expect(body).toMatch(/outdoor check-in/i);
+      expect(body).toContain("3:30 PM ET");
+      expect(body).toContain("the outdoor check-in and warm-up times below do not apply");
+      expect(body.indexOf("Lake Marion")).toBeLessThan(body.indexOf("3:30 PM"));
+      expect(body).not.toMatch(/2:30 PM|2:45 PM/);
+    }
+    expect(MVF_TOURNAMENT_PRE_EVENT_SEND_DATE_ISO).toBe("2026-10-19");
+  });
 
   test("no tournament web surface hardcodes a venue name", () => {
     // The success page's metadata once hardcoded "Apple Ridge Courts" and

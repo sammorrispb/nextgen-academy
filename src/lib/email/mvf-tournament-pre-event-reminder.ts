@@ -65,7 +65,10 @@ export function mvfTournamentPreEventReminderText(
     ``,
     `Where: ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}`,
     ``,
-    `CHECK-IN (please arrive by 3:30 PM):`,
+    `Rain plan: ${RAIN_OR_SHINE_TEXT}`,
+    `If we relocate indoors, the outdoor check-in and warm-up times below do not apply.`,
+    ``,
+    `OUTDOOR CHECK-IN (please arrive by 3:30 PM ET):`,
     `- Check in at the NGA tent by the courts — look for the Next Gen Pickleball Academy banner.`,
     `- Players warm up together at 3:45 PM; first games start at 4:00 PM sharp.`,
     `- Format: rotating-partner round robin — ${GUARANTEED_GAMES_TEXT} ${MEDALS_TEXT}`,
@@ -74,7 +77,7 @@ export function mvfTournamentPreEventReminderText(
     `- A refillable water bottle and court shoes — we have loaner paddles.`,
     `- Sunscreen and a light snack for between games.`,
     ``,
-    `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT}`,
+    NO_REFUNDS_TEXT,
     ``,
     `KNOW A FRIEND WHO SHOULD PLAY?`,
     `Spots are limited to 12 players per division and registration closes soon — forward this link: ${REGISTRATION_URL}`,
@@ -96,8 +99,13 @@ export function mvfTournamentPreEventReminderHtml(
   <h1 style="${s.heading}">5 days out, ${parentFirst}!</h1>
   <p>The MVF Junior Tournament is this Saturday — <strong>${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</strong>. <strong>${childFirst}</strong> is locked in for the ${divisionLabel} division.</p>
   <p><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}</p>
+  <div style="${s.card}">
+    <p style="${s.actionLabel}">Rain plan</p>
+    <p style="margin: 8px 0 0;">${RAIN_OR_SHINE_TEXT}</p>
+    <p style="margin: 8px 0 0;">If we relocate indoors, the outdoor check-in and warm-up times below do not apply.</p>
+  </div>
   <div style="${s.cardAccent}">
-    <p style="${s.actionLabel}">Check-in — please arrive by 3:30 PM</p>
+    <p style="${s.actionLabel}">Outdoor check-in — please arrive by 3:30 PM ET</p>
     <ul style="margin: 8px 0 0; padding-left: 20px;">
       <li>Check in at the NGA tent by the courts — look for the Next Gen Pickleball Academy banner.</li>
       <li>Players warm up together at 3:45 PM; first games start at 4:00 PM sharp.</li>
@@ -111,7 +119,7 @@ export function mvfTournamentPreEventReminderHtml(
       <li>Sunscreen and a light snack for between games.</li>
     </ul>
   </div>
-  <p style="color: ${c.muted};">${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT}</p>
+  <p style="color: ${c.muted};">${NO_REFUNDS_TEXT}</p>
   <div style="${s.actionCalloutYellow}">
     <p style="${s.actionLabelYellow}">Know a friend who should play?</p>
     <p style="margin: 8px 0 0;">Spots are limited to 12 players per division and registration closes soon — forward this link: <a href="${REGISTRATION_URL}" style="${s.link}">${REGISTRATION_URL}</a></p>

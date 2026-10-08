@@ -35,6 +35,8 @@
 // amount.
 //
 // POLICY (Sam 2026-09-22): No refunds. Rain or shine — we play. No rain date.
+// RAIN BACKUP (MVF email, 2026-10-08): Lake Marion's gym is held for
+// October 24 from 3–6 PM. Indoor check-in timing was not confirmed.
 
 import { NORTH_CREEK } from "@/data/mvf";
 
@@ -63,7 +65,10 @@ export const NGA_REVENUE_SHARE = 0.8;
 
 /** Exact copy — shown pre-submit on the form and on the success page. */
 export const NO_REFUNDS_TEXT = "No refunds.";
-export const RAIN_OR_SHINE_TEXT = "Rain or shine — we play. No rain date.";
+export const MVF_JUNIOR_TOURNAMENT_RAIN_VENUE = "Lake Marion Community Center";
+export const MVF_JUNIOR_TOURNAMENT_RAIN_ADDRESS = "8821 East Village Avenue, Montgomery Village, MD 20886";
+export const MVF_JUNIOR_TOURNAMENT_RAIN_TIME_LABEL = "3:00–6:00 PM ET";
+export const RAIN_OR_SHINE_TEXT = `Rain or shine — we play. If it rains on ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, the tournament will move indoors to the gym at ${MVF_JUNIOR_TOURNAMENT_RAIN_VENUE}, ${MVF_JUNIOR_TOURNAMENT_RAIN_ADDRESS}, from ${MVF_JUNIOR_TOURNAMENT_RAIN_TIME_LABEL} — one hour earlier than the outdoor schedule. No rain date.`;
 export const GUARANTEED_GAMES_TEXT = "Minimum 4 guaranteed games.";
 export const MEDALS_TEXT = "Medals for the winners of each division.";
 /** Why this venue (Sam 2026-09-28) — rendered wherever the address is. */
