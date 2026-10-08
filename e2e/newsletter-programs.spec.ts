@@ -18,3 +18,16 @@ test("ended programs and unconfirmed interest announcements retire instead of re
   const afterFallI = newsletterPrograms("2026-10-09", "https://nextgenpbacademy.com", "wk");
   expect(afterFallI.map(p => p.body).join(" ")).not.toContain("Sept 3 – Oct 8");
 });
+
+
+test("tournament card gives both conditional venues, event hours and 15-minute check-in", () => {
+  const card = newsletterPrograms("2026-10-08", "https://nextgenpbacademy.com", "wk")
+    .find(program => program.key === "mvf-junior-tournament");
+  expect(card).toBeDefined();
+  for (const fact of ["North Creek Community Center", "20125 Arrowhead Road", "4:00–7:00 PM ET", "Outdoor check-in: 3:45 PM ET", "Lake Marion Community Center", "8821 East Village Avenue", "3:00–6:00 PM ET", "Indoor check-in: 2:45 PM ET"]) {
+    expect(card!.body).toContain(fact);
+  }
+  expect(card!.body).toMatch(/if it rains/i);
+  expect(card!.body).toContain("one hour earlier");
+  expect(card!.body).not.toContain("3:30 PM");
+});

@@ -32,10 +32,12 @@ test.describe("/mvf-junior-tournament rain plan", () => {
     await expect(plan).toContainText("3:00–6:00 PM ET");
     await expect(plan).toContainText("one hour earlier than the outdoor schedule");
     await expect(plan).toContainText(/if it rains/i);
-    await expect(page.getByText("Outdoor check-in: 3:30 PM ET.", { exact: true })).toBeVisible();
+    await expect(plan).toContainText("Indoor check-in: 2:45 PM ET");
+    await expect(page.getByText("Outdoor check-in: 3:45 PM ET.", { exact: true })).toBeVisible();
     const text = await page.locator("#main").innerText();
     expect(text).toContain("North Creek Community Center");
     expect(text).toContain("4:00–7:00 PM");
+    expect(text).not.toContain("3:30 PM");
     const event = (await page.locator('script[type="application/ld+json"]').allTextContents())
       .map((body) => JSON.parse(body)).find((value) => value["@type"] === "SportsEvent");
     expect(event.location.name).toBe("North Creek Community Center");
@@ -51,6 +53,9 @@ test.describe("/mvf-junior-tournament rain plan", () => {
     await expect(main).toContainText("Lake Marion Community Center");
     await expect(main).toContainText("3:00–6:00 PM ET");
     await expect(main).toContainText("one hour earlier than the outdoor schedule");
+    await expect(main).toContainText("Outdoor check-in: 3:45 PM ET");
+    await expect(main).toContainText("Indoor check-in: 2:45 PM ET");
+    await expect(main).not.toContainText("3:30 PM");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });

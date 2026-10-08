@@ -103,7 +103,10 @@ test.describe("parent guides", () => {
     expect(copy).toMatch(/Turning 11 on October 25.*10U/);
     expect(copy).toMatch(/turning 11 on October 24.*14U/);
     expect(copy).toMatch(/15- or 16-year-old.*cannot enter 14U/);
-    expect(copy).toMatch(/3:30 PM ET/);
+    expect(copy).toMatch(/Outdoor check-in: 3:45 PM ET/);
+    expect(copy).toMatch(/Indoor check-in: 2:45 PM ET/);
+    expect(copy).toMatch(/if it rains/i);
+    expect(copy).not.toContain("3:30 PM");
     expect(copy).toContain("20125 Arrowhead");
     expect(copy).toMatch(/\$50.*residents.*\$60.*non-residents/);
     expect(copy).toMatch(/6-player minimum.*12-player cap/);
@@ -111,7 +114,7 @@ test.describe("parent guides", () => {
     expect(copy).toMatch(/Submitting the form.*not.*paid/i);
     expect(copy).toMatch(/pay.*invoice.*lock.*spot/i);
     expect(copy).toMatch(/No refunds.*Rain or shine.*No rain date/);
-    expect(copy).not.toMatch(/3:45|\btent\b|\bbanner\b|register now|upcoming/i);
+    expect(copy).not.toMatch(/\btent\b|\bbanner\b|register now|upcoming/i);
     expect(post!.links).toContainEqual({
       label: "See current tournament details and registration", href: "/mvf-junior-tournament",
     });

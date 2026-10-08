@@ -122,8 +122,8 @@ test.describe("mvf tournament pre-event reminder", () => {
     expect(text).toContain("Hi Hun,");
     expect(text).toContain("Zoe");
     expect(text).toContain("10U");
-    expect(text).toContain("3:30 PM");
-    expect(text).toContain("NGA tent");
+    expect(text).toContain("3:45 PM ET");
+    expect(text).toContain("Check in with NGA");
     expect(text).toContain("water bottle");
     expect(text).toContain("loaner paddles");
     expect(text).toContain("nextgenpbacademy.com/mvf-junior-tournament");
@@ -133,7 +133,7 @@ test.describe("mvf tournament pre-event reminder", () => {
 
   test("html renders check-in card and share callout", () => {
     const html = mvfTournamentPreEventReminderHtml(preEventInput);
-    expect(html).toContain("3:30 PM");
+    expect(html).toContain("3:45 PM ET");
     expect(html).toContain("nextgenpbacademy.com/mvf-junior-tournament");
   });
 });
@@ -179,6 +179,9 @@ test.describe("mvf tournament venue — North Creek Community Center", () => {
       expect(body).toContain("Saturday, October 24, 2026");
       expect(body).toContain("4:00–7:00 PM");
       expect(body).toMatch(/if it rains/i);
+      expect(body).toContain("Outdoor check-in: 3:45 PM ET");
+      expect(body).toContain("Indoor check-in: 2:45 PM ET");
+      expect(body).not.toContain("3:30 PM");
     });
 
     test(`${name} names North Creek, its address and its lit courts — never Apple Ridge`, () => {
@@ -189,16 +192,16 @@ test.describe("mvf tournament venue — North Creek Community Center", () => {
     });
   }
 
-  test("pre-event email scopes check-in to outdoor play without inventing an indoor arrival time", () => {
+  test("pre-event email uses 15-minute check-in for either venue without a separate warmup promise", () => {
     for (const body of [
       mvfTournamentPreEventReminderText(preEventInput),
       mvfTournamentPreEventReminderHtml(preEventInput),
     ]) {
-      expect(body).toMatch(/outdoor check-in/i);
-      expect(body).toContain("3:30 PM ET");
-      expect(body).toContain("the outdoor check-in and warm-up times below do not apply");
-      expect(body.indexOf("Lake Marion")).toBeLessThan(body.indexOf("3:30 PM"));
-      expect(body).not.toMatch(/2:30 PM|2:45 PM/);
+      expect(body).toContain("Outdoor check-in: 3:45 PM ET");
+      expect(body).toContain("Indoor check-in: 2:45 PM ET");
+      expect(body).toContain("15 minutes before the start");
+      expect(body).toContain("Check in with NGA");
+      expect(body).not.toMatch(/3:30 PM|2:30 PM|warm up together|NGA tent|Academy banner|registration table/);
     }
     expect(MVF_TOURNAMENT_PRE_EVENT_SEND_DATE_ISO).toBe("2026-10-19");
   });

@@ -19,8 +19,7 @@ import {
  * call to share the registration link with friends. Pure builder so the copy
  * is unit-testable.
  *
- * NOTE: the check-in procedures below are DRAFT copy — Sam reserves anything
- * a paying customer reads cold. Review before the Oct 19 send.
+ * Check-in is 15 minutes before either start time (Sam, Oct 8, 2026).
  */
 export interface MvfTournamentPreEventReminderInput {
   parentFirst: string;
@@ -66,11 +65,9 @@ export function mvfTournamentPreEventReminderText(
     `Where: ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}`,
     ``,
     `Rain plan: ${RAIN_OR_SHINE_TEXT}`,
-    `If we relocate indoors, the outdoor check-in and warm-up times below do not apply.`,
     ``,
-    `OUTDOOR CHECK-IN (please arrive by 3:30 PM ET):`,
-    `- Check in at the NGA tent by the courts — look for the Next Gen Pickleball Academy banner.`,
-    `- Players warm up together at 3:45 PM; first games start at 4:00 PM sharp.`,
+    `CHECK-IN:`,
+    `- Check in with NGA 15 minutes before the start.`,
     `- Format: rotating-partner round robin — ${GUARANTEED_GAMES_TEXT} ${MEDALS_TEXT}`,
     ``,
     `WHAT TO BRING:`,
@@ -102,13 +99,11 @@ export function mvfTournamentPreEventReminderHtml(
   <div style="${s.card}">
     <p style="${s.actionLabel}">Rain plan</p>
     <p style="margin: 8px 0 0;">${RAIN_OR_SHINE_TEXT}</p>
-    <p style="margin: 8px 0 0;">If we relocate indoors, the outdoor check-in and warm-up times below do not apply.</p>
   </div>
   <div style="${s.cardAccent}">
-    <p style="${s.actionLabel}">Outdoor check-in — please arrive by 3:30 PM ET</p>
+    <p style="${s.actionLabel}">Check-in — 15 minutes before the start</p>
     <ul style="margin: 8px 0 0; padding-left: 20px;">
-      <li>Check in at the NGA tent by the courts — look for the Next Gen Pickleball Academy banner.</li>
-      <li>Players warm up together at 3:45 PM; first games start at 4:00 PM sharp.</li>
+      <li>Check in with NGA 15 minutes before the start.</li>
       <li>Format: rotating-partner round robin — ${GUARANTEED_GAMES_TEXT} ${MEDALS_TEXT}</li>
     </ul>
   </div>
