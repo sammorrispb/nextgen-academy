@@ -1,5 +1,19 @@
 import { test, expect } from "@playwright/test";
 
+test("NGA photo gallery displays all six supplied photos without page overflow", async ({ page }) => {
+  await page.goto("/");
+  const gallery = page.getByRole("region", { name: "Next Gen photo gallery" });
+  await expect(gallery.getByRole("img")).toHaveCount(6);
+  for (const photo of await gallery.getByRole("img").all()) {
+    await expect(photo).toHaveAttribute("alt", /.+/);
+    await photo.scrollIntoViewIfNeeded();
+    await expect.poll(() => photo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.locator("#levels")).toContainText("Next Gen on the court.");
+  await expect(page.locator("section").first().getByRole("link", { name: /Text for a Free 30-Minute Evaluation/ })).toHaveAttribute("href", "sms:+13013254731");
+});
+
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {

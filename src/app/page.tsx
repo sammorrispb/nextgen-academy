@@ -35,6 +35,15 @@ import {
 } from "@/lib/seo";
 import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 
+const trainingPhotos = [
+  "A courtside selfie with a doubles rally in the background",
+  "Four players rallying on outdoor pickleball courts",
+  "A young player returning a ball in a gym",
+  "Young players playing doubles across a gym net",
+  "Two players exchanging shots on an outdoor court",
+  "Players sharing outdoor courts surrounded by trees",
+];
+
 export const metadata = {
   alternates: { canonical: "/" },
   description: seo.home.description,
@@ -143,6 +152,31 @@ export default async function Home() {
           <LevelGrid />
           <div className="mt-10">
             <YellowBallCTA />
+          </div>
+          <div className="mt-12 border-t border-ngpa-teal/20 pt-8">
+            <h3 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-6">
+              Next Gen on the court.
+            </h3>
+            <section
+              aria-label="Next Gen photo gallery"
+              tabIndex={0}
+              className="min-w-0 overflow-x-auto snap-x snap-mandatory rounded-2xl pb-3 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ngpa-teal"
+            >
+              <ul className="grid grid-flow-col auto-cols-[70%] gap-4 sm:auto-cols-[32%] lg:grid-flow-row lg:grid-cols-6">
+                {trainingPhotos.map((alt, index) => (
+                  <li key={alt} className="aspect-[3/4] snap-start overflow-hidden rounded-2xl border border-ngpa-teal/20 bg-ngpa-panel">
+                    <Image
+                      src={`/images/training/training-${index + 1}.jpg`}
+                      alt={alt}
+                      width={2880}
+                      height={3840}
+                      sizes="(min-width: 1024px) 16vw, (min-width: 640px) 32vw, 70vw"
+                      className="h-full w-full object-cover"
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
           </div>
         </div>
       </section>
