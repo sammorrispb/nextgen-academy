@@ -96,7 +96,7 @@ export default function MvfJuniorTournamentPage() {
               {MVF_JUNIOR_TOURNAMENT_TIME_LABEL}
             </p>
             <p className="text-ngpa-white/70 mt-2">
-              Check-in: 3:30 PM ET.
+              Outdoor check-in: 3:30 PM ET.
             </p>
           </div>
           <div className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate/60">
@@ -110,7 +110,7 @@ export default function MvfJuniorTournamentPage() {
               {MVF_JUNIOR_TOURNAMENT_ADDRESS}
             </p>
             <p className="text-ngpa-white/70 text-sm mt-2">
-              {COURTS_TEXT} {RAIN_OR_SHINE_TEXT}
+              {COURTS_TEXT}
             </p>
           </div>
           <div className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-slate/60">
@@ -125,6 +125,18 @@ export default function MvfJuniorTournamentPage() {
             </p>
           </div>
         </div>
+        <section
+          aria-labelledby="rain-plan-heading"
+          className="bg-ngpa-panel rounded-2xl p-5 border border-ngpa-teal/40 mt-4"
+        >
+          <h2
+            id="rain-plan-heading"
+            className="font-heading text-lg font-bold text-ngpa-teal-bright"
+          >
+            Rain plan
+          </h2>
+          <p className="text-ngpa-white/80 text-sm mt-2">{RAIN_OR_SHINE_TEXT}</p>
+        </section>
       </section>
 
       {/* Register */}
