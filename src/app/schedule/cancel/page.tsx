@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { verifyCancelToken } from "@/lib/cancel-token";
@@ -42,7 +43,8 @@ export default async function CancelPage({ searchParams }: PageProps) {
 
         {await renderBody(token)}
       </div>
-    </section>
+
+          </section>
   );
 }
 
@@ -97,13 +99,16 @@ async function renderBody(token: string | undefined) {
   }
 
   return (
-    <CancelClient
-      token={token}
-      childFirstName={dropIn.childFirstName}
-      sessionTitle={dropIn.sessionTitle}
-      sessionDateLong={formatLongDate(dropIn.sessionDate)}
-      sessionStart={dropIn.sessionStartTime}
-    />
+    <>
+      <CancelClient
+        token={token}
+        childFirstName={dropIn.childFirstName}
+        sessionTitle={dropIn.sessionTitle}
+        sessionDateLong={formatLongDate(dropIn.sessionDate)}
+        sessionStart={dropIn.sessionStartTime}
+      />
+      <PagePhoto page="/schedule/cancel" />
+    </>
   );
 }
 

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
@@ -138,7 +139,10 @@ export default async function FallSuccessPage({ searchParams }: PageProps) {
             Back to home
           </Link>
         </div>
+
+        <PagePhoto page="/fall/success" />
       </div>
-    </section>
+
+        </section>
   );
 }

@@ -36,12 +36,10 @@ import {
 import { sportsEventJsonLd } from "@/lib/sports-event-jsonld";
 
 const trainingPhotos = [
-  "A courtside selfie with a doubles rally in the background",
-  "Four players rallying on outdoor pickleball courts",
-  "A young player returning a ball in a gym",
-  "Young players playing doubles across a gym net",
-  "Two players exchanging shots on an outdoor court",
-  "Players sharing outdoor courts surrounded by trees",
+  { src: "/images/training/training-3.jpg", alt: "A young player returning a ball in a gym" },
+  { src: "/images/training/training-4.jpg", alt: "Young players playing doubles across a gym net" },
+  { src: "/images/training/training-5.jpg", alt: "Two players exchanging shots on an outdoor court" },
+  { src: "/images/training/training-6.jpg", alt: "Players sharing outdoor courts surrounded by trees" },
 ];
 
 export const metadata = {
@@ -162,12 +160,12 @@ export default async function Home() {
               tabIndex={0}
               className="min-w-0 overflow-x-auto snap-x snap-mandatory rounded-2xl pb-3 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ngpa-teal"
             >
-              <ul className="grid grid-flow-col auto-cols-[70%] gap-4 sm:auto-cols-[32%] lg:grid-flow-row lg:grid-cols-6">
-                {trainingPhotos.map((alt, index) => (
-                  <li key={alt} className="aspect-[3/4] snap-start overflow-hidden rounded-2xl border border-ngpa-teal/20 bg-ngpa-panel">
+              <ul className="grid grid-flow-col auto-cols-[70%] gap-4 sm:auto-cols-[32%] lg:grid-flow-row lg:grid-cols-4">
+                {trainingPhotos.map((photo) => (
+                  <li key={photo.src} className="aspect-[3/4] snap-start overflow-hidden rounded-2xl border border-ngpa-teal/20 bg-ngpa-panel">
                     <Image
-                      src={`/images/training/training-${index + 1}.jpg`}
-                      alt={alt}
+                      src={photo.src}
+                      alt={photo.alt}
                       width={2880}
                       height={3840}
                       sizes="(min-width: 1024px) 16vw, (min-width: 640px) 32vw, 70vw"

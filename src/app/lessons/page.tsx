@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import LessonPolicyNotice from "@/components/LessonPolicyNotice";
@@ -40,6 +41,8 @@ export default function LessonsPage() {
             Coach Sam confirms the time and location, then sends your invoice.
           </p>
         </div>
+
+        <PagePhoto page="/lessons" />
       </section>
 
       <section className="bg-ngpa-navy py-14 sm:py-20 px-4 sm:px-6 lg:px-10">

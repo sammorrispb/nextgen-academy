@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
@@ -183,6 +184,8 @@ export default async function MvfJuniorTournamentSuccessPage({
           See what else is open &rarr;
         </Link>
       </section>
+
+      <PagePhoto page="/mvf-junior-tournament/success" />
     </main>
   );
 }

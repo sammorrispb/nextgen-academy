@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -126,8 +127,11 @@ export default async function LessonBookPage({ searchParams }: PageProps) {
         <div className="mt-8">
           <LessonBookingForm invoiceId={invoice.id} />
         </div>
+
+        <PagePhoto page="/lessons/book" />
       </div>
-    </section>
+
+        </section>
   );
 }
 

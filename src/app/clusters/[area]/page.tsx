@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -171,6 +172,8 @@ export default async function ClusterPage({ params }: ClusterRouteProps) {
             {" "}— we&apos;ll place them on the pathway and tell you whether a
             cluster or private lessons fit best right now.
           </p>
+
+          <PagePhoto page={`/clusters/${cluster.slug}`} />
         </section>
 
         <section

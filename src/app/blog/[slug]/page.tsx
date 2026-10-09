@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -75,7 +76,9 @@ export default async function BlogPostPage({
         </header>
 
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-10 pb-16 sm:pb-20">
-          {post.sections.map((section, i) => (
+
+          <PagePhoto page={`/blog/${post.slug}`} />
+        {post.sections.map((section, i) => (
             <section key={i} className="mt-8 first:mt-0">
               {section.heading && (
                 <h2 className="font-heading text-2xl font-black text-ngpa-white tracking-tight mb-4">

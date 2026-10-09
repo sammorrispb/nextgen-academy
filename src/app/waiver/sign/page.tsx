@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import WaiverSignForm from "@/components/WaiverSignForm";
@@ -60,7 +61,10 @@ export default function WaiverSignPage() {
             ← Read the full waiver
           </Link>
         </div>
+
+        <PagePhoto page="/waiver/sign" />
       </div>
-    </section>
+
+        </section>
   );
 }

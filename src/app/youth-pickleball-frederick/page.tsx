@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
@@ -116,6 +117,8 @@ export default function FrederickPage() {
             </Link>
           </div>
         </div>
+
+        <PagePhoto page="/youth-pickleball-frederick" />
       </section>
 
       {/* ─── What runs in Frederick ───────────── */}

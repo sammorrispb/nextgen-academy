@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -350,6 +351,8 @@ export default function SchoolsPage() {
             </div>
           </div>
         </div>
+
+        <PagePhoto page="/schools" />
       </section>
 
       {/* ─── Who we work with ──────────────────────── */}

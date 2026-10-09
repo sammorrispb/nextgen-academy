@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -81,6 +82,8 @@ export default function LevelsPage() {
             guessing required.
           </p>
         </div>
+
+        <PagePhoto page="/levels" />
       </section>
 
       <section className="bg-ngpa-navy">

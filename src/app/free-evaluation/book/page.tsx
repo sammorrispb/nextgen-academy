@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import EvaluationSchedulingCard from "@/components/EvaluationSchedulingCard";
@@ -21,7 +22,10 @@ export default function EvalBookPage() {
         <Link href="/free-evaluation" className="mt-6 inline-flex min-h-[48px] items-center text-ngpa-teal hover:text-ngpa-teal-bright font-semibold">
           What happens at an evaluation &rarr;
         </Link>
+
+        <PagePhoto page="/free-evaluation/book" />
       </div>
-    </section>
+
+        </section>
   );
 }

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -102,6 +103,8 @@ export default async function CampWeekPage({ params }: PageProps) {
         </h2>
         <CampRegisterForm campSlug={camp.slug} />
       </div>
+
+      <PagePhoto page={`/camp/${camp.slug}`} />
     </section>
   );
 }

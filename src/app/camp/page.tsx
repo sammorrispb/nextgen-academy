@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -252,6 +253,8 @@ export default function CampIndexPage() {
             See you on the court — better than yesterday, together.
           </p>
         </div>
+
+        <PagePhoto page="/camp" />
       </section>
     </>
   );

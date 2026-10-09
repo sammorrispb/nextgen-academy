@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
@@ -108,7 +109,10 @@ export default async function CampSuccessPage({ searchParams }: PageProps) {
             Back to home
           </Link>
         </div>
+
+        <PagePhoto page="/camp/success" />
       </div>
-    </section>
+
+        </section>
   );
 }

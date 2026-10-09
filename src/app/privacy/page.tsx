@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import { site } from "@/data/site";
 
@@ -139,6 +140,8 @@ export default function PrivacyPage() {
           </section>
         </div>
       </section>
+
+      <PagePhoto page="/privacy" />
     </main>
   );
 }

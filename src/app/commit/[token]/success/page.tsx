@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -109,6 +110,8 @@ export default async function CommitSuccessPage({
           )}
         </div>
       </section>
+
+          {ok && <PagePhoto page="/commit/[token]/success" />}
     </div>
   );
 }

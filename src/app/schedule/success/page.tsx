@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -153,8 +154,11 @@ export default async function ScheduleSuccessPage({ searchParams }: PageProps) {
             Back to home
           </Link>
         </div>
+
+        <PagePhoto page="/schedule/success" />
       </div>
-    </section>
+
+        </section>
   );
 }
 

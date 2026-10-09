@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -80,7 +81,10 @@ export default function WaiverPage() {
             ← Back to camp
           </Link>
         </div>
+
+        <PagePhoto page="/waiver" />
       </div>
-    </section>
+
+        </section>
   );
 }

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { verifyCommitToken } from "@/lib/commit-token";
@@ -78,6 +79,8 @@ export default async function CommitPage({ params }: PageProps) {
             actually opens. Contact Coach Sam if you need to skip a week or stop
             the auto-reserve. Refund requests follow the terms shown below.
           </p>
+
+          <PagePhoto page="/commit/[token]" />
         </div>
       </section>
 
@@ -148,6 +151,7 @@ export default async function CommitPage({ params }: PageProps) {
           )}
         </div>
       </section>
-    </div>
+
+        </div>
   );
 }

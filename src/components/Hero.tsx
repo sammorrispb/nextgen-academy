@@ -1,5 +1,5 @@
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
-import Image from "next/image";
+import PagePhoto from "@/components/PagePhoto";
 import { seasons } from "@/data/schedule";
 import TrackedCTA from "@/components/TrackedCTA";
 
@@ -8,27 +8,11 @@ const heroSeason = seasons[seasons.length - 1];
 export default function Hero() {
   return (
     <section className="relative isolate overflow-hidden bg-ngpa-deep">
-      {/* Photo backdrop — full bleed on mobile, side-card on desktop */}
-      <div className="absolute inset-0 -z-10">
-        <Image
-          src="/images/hero-action.jpeg"
-          alt=""
-          fill
-          priority
-          className="object-cover object-center opacity-60 lg:opacity-95"
-          sizes="100vw"
-        />
-        {/* Mobile: full overlay so text reads */}
-        <div className="absolute inset-0 lg:hidden bg-photo-overlay" />
-        {/* Desktop: side-fade overlay */}
-        <div className="absolute inset-0 hidden lg:block bg-photo-overlay-side" />
-      </div>
-
       {/* Subtle teal radial accent on top */}
       <div className="absolute inset-x-0 top-0 h-96 bg-teal-glow pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pt-12 sm:pt-20 pb-20 sm:pb-28 lg:py-32">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center lg:items-start">
           <div className="lg:col-span-7 max-w-2xl">
             {/* Brand promise kicker — lead with the tagline, then the offer */}
             <p className="font-heading text-sm sm:text-base font-bold text-ngpa-teal tracking-tight mb-3">
@@ -102,8 +86,9 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Right column — empty on desktop so the photo shines through */}
-          <div className="hidden lg:block lg:col-span-5" aria-hidden="true" />
+          <div className="lg:col-span-5 lg:pt-4">
+            <PagePhoto page="/" priority />
+          </div>
         </div>
       </div>
 

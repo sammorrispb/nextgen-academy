@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import { orgRef } from "@/lib/seo";
@@ -164,6 +165,8 @@ export default function AfterSchoolClubsPage() {
               not sure whether your school is taking sign-ups.
             </p>
           </div>
+
+          <PagePhoto page="/after-school-clubs" />
         </section>
       </main>
     </>

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import FallRegistrationForm from "@/components/FallRegistrationForm";
@@ -151,6 +152,8 @@ export default async function FallPage() {
             what we didn&rsquo;t run.
           </p>
         </div>
+
+        <PagePhoto page="/fall" />
       </section>
 
       <section className="bg-ngpa-navy">

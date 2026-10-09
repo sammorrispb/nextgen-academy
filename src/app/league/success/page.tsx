@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
@@ -104,7 +105,10 @@ export default async function LeagueSuccessPage({ searchParams }: PageProps) {
             Back to home
           </Link>
         </div>
+
+        <PagePhoto page="/league/success" />
       </div>
-    </section>
+
+        </section>
   );
 }

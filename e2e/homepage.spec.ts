@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-test("NGA photo gallery displays all six supplied photos without page overflow", async ({ page }) => {
+test("NGA youth photo gallery displays four scenes without page overflow", async ({ page }) => {
   await page.goto("/");
   const gallery = page.getByRole("region", { name: "Next Gen photo gallery" });
-  await expect(gallery.getByRole("img")).toHaveCount(6);
+  await expect(gallery.getByRole("img")).toHaveCount(4);
   for (const photo of await gallery.getByRole("img").all()) {
     await expect(photo).toHaveAttribute("alt", /.+/);
     await photo.scrollIntoViewIfNeeded();

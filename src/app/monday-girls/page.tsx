@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import MondayGirlsRegistrationForm from "@/components/MondayGirlsRegistrationForm";
@@ -135,6 +136,8 @@ export default async function MondayGirlsPage() {
           </Link>
           .
         </p>
+
+        <PagePhoto page="/monday-girls" />
       </section>
 
       {/* At a glance */}
