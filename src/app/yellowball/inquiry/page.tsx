@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import Image from "next/image";
 import type { Metadata } from "next";
 import YellowBallInquiryForm from "@/components/YellowBallInquiryForm";
@@ -113,6 +114,8 @@ export default function YellowBallInquiryPage() {
           </div>
         </div>
       </section>
+
+      <PagePhoto page="/yellowball/inquiry" />
     </>
   );
 }

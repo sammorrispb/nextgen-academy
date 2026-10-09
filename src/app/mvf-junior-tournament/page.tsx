@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import MvfJuniorTournamentForm from "@/components/MvfJuniorTournamentForm";
@@ -55,6 +56,8 @@ export default function MvfJuniorTournamentPage() {
           {GUARANTEED_GAMES_TEXT.toLowerCase()} {MEDALS_TEXT} Coached by Next
           Gen Pickleball Academy.
         </p>
+
+        <PagePhoto page="/mvf-junior-tournament" />
       </section>
 
       {/* The two divisions */}

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import Image from "next/image";
 import type { Metadata } from "next";
 import NewsletterForm from "@/components/NewsletterForm";
@@ -149,6 +150,8 @@ export default function NewsletterPage() {
             </div>
           </div>
         </div>
+
+        <PagePhoto page="/newsletter" />
       </section>
 
       {/* ─── Why join strip ───────────────────────── */}

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import Image from "next/image";
 import type { Metadata } from "next";
 import EvaluationSchedulingCard from "@/components/EvaluationSchedulingCard";
@@ -171,6 +172,8 @@ export default function FreeEvaluationPage() {
             </div>
           </div>
         </div>
+
+        <PagePhoto page="/free-evaluation" />
       </section>
 
       {/* ─── Social proof ─────────────────────────── */}

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { verifyBookingToken } from "@/lib/lesson-booking-token";
@@ -55,7 +56,10 @@ export default async function CounterOfferRespondPage({ searchParams }: PageProp
         <div className="mt-8">
           <CounterOfferResponse token={token} suggested={suggested} />
         </div>
+
+        <PagePhoto page="/lessons/book/respond" />
       </div>
-    </section>
+
+        </section>
   );
 }

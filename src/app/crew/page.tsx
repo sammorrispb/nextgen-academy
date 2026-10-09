@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import Image from "next/image";
 import type { Metadata } from "next";
 import CrewInterestForm from "@/components/CrewInterestForm";
@@ -137,6 +138,8 @@ export default function CrewPage() {
             </div>
           </div>
         </div>
+
+        <PagePhoto page="/crew" />
       </section>
 
       <section className="relative bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10 overflow-hidden">

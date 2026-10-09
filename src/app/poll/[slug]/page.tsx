@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -85,6 +86,8 @@ export default async function PollPage({ params }: PageProps) {
               )}
             </div>
           )}
+
+          <PagePhoto page="/poll/[slug]" />
         </div>
       </section>
 
@@ -116,7 +119,8 @@ export default async function PollPage({ params }: PageProps) {
           )}
         </div>
       </section>
-    </div>
+
+        </div>
   );
 }
 

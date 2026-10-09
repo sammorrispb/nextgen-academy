@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -181,6 +182,8 @@ export default async function SessionPage({ params }: PageProps) {
         buttonHref="/#contact-form"
         trackingSection="session_detail_cta_banner"
       />
+
+      <PagePhoto page="/schedule/[slug]" />
     </>
   );
 }

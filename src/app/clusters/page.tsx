@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
@@ -91,6 +92,8 @@ export default function ClustersIndexPage() {
             Down-County, Up-County, East-County, Mid-County — find your area,
             join your cluster. Better than yesterday, together.
           </p>
+
+          <PagePhoto page="/clusters" />
         </section>
 
         <section

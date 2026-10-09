@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import { site } from "@/data/site";
 import ProgramPolicySummary from "@/components/ProgramPolicySummary";
@@ -138,6 +139,8 @@ export default function TermsPage() {
           </section>
         </div>
       </section>
+
+      <PagePhoto page="/terms" />
     </main>
   );
 }

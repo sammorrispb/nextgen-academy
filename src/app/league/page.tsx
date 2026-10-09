@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import LeagueInterestForm from "@/components/LeagueInterestForm";
@@ -252,6 +253,8 @@ export default function LeaguePage() {
             </div>
           </div>
         </div>
+
+        <PagePhoto page="/league" />
       </section>
 
       {/* ── Running now — the leagues and seasons that actually exist ── */}

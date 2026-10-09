@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -394,6 +395,8 @@ export default function MontgomeryVillagePage() {
             </TrackedCTA>
           </div>
         </div>
+
+        <PagePhoto page="/montgomery-village-youth-pickleball" />
       </section>
 
       {/* ─── Programs ─────────────────────────── */}

@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { formatLongDate } from "@/lib/format-date";
@@ -54,6 +55,8 @@ export default async function FallStandingsPage({ params }: PageProps) {
             doubles every week, and a seeded playoff on{" "}
             <time dateTime={view.playoffDate}>{formatLongDate(view.playoffDate)}</time>.
           </p>
+
+          <PagePhoto page="/fall/standings/[group]/[token]" />
         </div>
       </section>
 
@@ -89,6 +92,7 @@ export default async function FallStandingsPage({ params }: PageProps) {
           the group. Questions about the standings? Ask Coach Sam on Sunday.
         </p>
       </div>
-    </div>
+
+        </div>
   );
 }

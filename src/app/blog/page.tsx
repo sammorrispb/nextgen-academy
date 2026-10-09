@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import Link from "next/link";
 import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
@@ -66,6 +67,8 @@ export default function BlogIndexPage() {
             game, where to play in Montgomery County, and how to get started.
           </p>
         </div>
+
+        <PagePhoto page="/blog" />
       </section>
 
       <section className="bg-ngpa-navy py-14 sm:py-16 px-4 sm:px-6 lg:px-10">

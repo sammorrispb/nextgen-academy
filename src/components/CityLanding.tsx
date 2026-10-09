@@ -1,4 +1,4 @@
-import Image from "next/image";
+import PagePhoto from "@/components/PagePhoto";
 import Link from "next/link";
 import { site } from "@/data/site";
 import { localFaq } from "@/data/faq";
@@ -133,17 +133,6 @@ export default function CityLanding({
 
       {/* ─── Hero ─────────────────────────────── */}
       <section className="relative isolate overflow-hidden bg-ngpa-deep">
-        <div className="absolute inset-0 -z-10">
-          <Image
-            src="/images/outdoor-courts.jpeg"
-            alt=""
-            fill
-            priority
-            className="object-cover object-center opacity-30"
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-photo-overlay" />
-        </div>
         <div className="absolute inset-x-0 top-0 h-96 bg-teal-glow pointer-events-none" />
 
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-16 sm:pt-24 pb-20 sm:pb-24">
@@ -193,6 +182,7 @@ export default function CityLanding({
             </TrackedCTA>
           </div>
         </div>
+        <PagePhoto page={`/${slug}`} />
       </section>
 
       {/* ─── Where we play near {city} ────────── */}

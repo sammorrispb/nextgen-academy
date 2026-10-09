@@ -1,3 +1,4 @@
+import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
@@ -190,6 +191,8 @@ export default async function PicklParkPage() {
             {PICKLPARK_INDOOR_NOTE}
           </p>
         </div>
+
+        <PagePhoto page="/picklpark" />
       </section>
 
       <section className="bg-ngpa-navy" id="leagues">
