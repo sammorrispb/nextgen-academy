@@ -59,9 +59,10 @@ test("a recognized legacy youth drop-in still looks up its own roster", async ()
   if (res) expect(res.status).toBe(200);
 });
 
-test("a native lesson invoice still reaches its parent confirmation", async () => {
-  await POST(request({ id: "in_native", status: "paid", amount_paid: 8000, customer_email: "parent@example.com", metadata: { payment_owner: "nga_site", kind: "lesson", parent_name: "Test Parent", child_first_name: "Synthetic" } }, "invoice.payment_succeeded")).catch(() => undefined);
-  expect(stub.callsTo("api.resend.com")).toHaveLength(2);
+test("a native lesson invoice without original payment time is held for review", async () => {
+  const response = await POST(request({ id: "in_native", status: "paid", amount_paid: 8000, customer_email: "parent@example.com", metadata: { payment_owner: "nga_site", kind: "lesson", parent_name: "Test Parent", child_first_name: "Synthetic" } }, "invoice.payment_succeeded"));
+  expect(await response.json()).toMatchObject({ notificationsHeld: true });
+  expect(stub.calls).toHaveLength(0);
 });
 
 test("a legacy refund without ownership metadata is resolved only through native roster payment references", async () => {

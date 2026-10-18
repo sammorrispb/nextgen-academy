@@ -83,6 +83,7 @@ export function checkoutEvent(
   return JSON.stringify({
     id: "evt_test_invariants",
     object: "event",
+    livemode: true, // Synthetic live-shaped payload; signature and network remain offline.
     type,
     data: { object: session },
   });
