@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { computeStandings } from "../src/lib/season-league/standings";
 import { gameWinner, validateScore } from "../src/lib/season-league/scores";
+import { SEASON_LEAGUE_SUNDAYS } from "../src/data/season-league-2026";
+import { SCORE_RULES } from "../src/lib/season-league-view";
 import type { PlayedGame } from "../src/lib/season-league/types";
 
 // Pure-function spec (no dev server) for the season-league standings and the
@@ -37,6 +39,33 @@ test.describe("score rules (to 11, win by 2)", () => {
     expect(validateScore(-1, 11, RULES).ok).toBe(false);
     expect(validateScore(11.5, 3, RULES).ok).toBe(false);
     expect(validateScore("11", 3, RULES).ok).toBe(false);
+  });
+
+  test("longer games (to 15 / 21) are accepted without a per-game picker", () => {
+    // The 2026-10-18 report: a 15-4 game to 15 was refused as "past 11".
+    expect(validateScore(4, 15, SCORE_RULES)).toEqual({ ok: true });
+    expect(validateScore(17, 15, SCORE_RULES)).toEqual({ ok: true });
+    expect(validateScore(21, 12, SCORE_RULES)).toEqual({ ok: true });
+    expect(validateScore(11, 6, SCORE_RULES)).toEqual({ ok: true });
+    expect(validateScore(13, 11, SCORE_RULES)).toEqual({ ok: true });
+    // Still refused: no target reached, past a target by more than two, win by 1.
+    expect(validateScore(10, 8, SCORE_RULES).ok).toBe(false);
+    expect(validateScore(14, 11, SCORE_RULES).ok).toBe(false);
+    expect(validateScore(18, 15, SCORE_RULES).ok).toBe(false);
+    expect(validateScore(15, 14, SCORE_RULES).ok).toBe(false);
+    // The single-target rules are unchanged.
+    expect(validateScore(15, 4, RULES).ok).toBe(false);
+  });
+
+  test("league weeks follow the Sundays actually played (W3 slid to Oct 18)", () => {
+    expect(SEASON_LEAGUE_SUNDAYS).toEqual([
+      "2026-09-20",
+      "2026-09-27",
+      "2026-10-18",
+      "2026-10-25",
+      "2026-11-01",
+      "2026-11-08",
+    ]);
   });
 
   test("'ended on time' accepts any non-tied score but never a tie", () => {

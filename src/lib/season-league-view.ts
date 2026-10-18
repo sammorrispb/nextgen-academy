@@ -2,6 +2,7 @@ import {
   SEASON_LEAGUE_COURTS,
   SEASON_LEAGUE_GAMES_PER_PLAYER,
   SEASON_LEAGUE_GAME_TARGET,
+  SEASON_LEAGUE_GAME_TARGETS,
   SEASON_LEAGUE_GROUPS,
   SEASON_LEAGUE_MAX_BRACKET_TEAMS,
   SEASON_LEAGUE_PLAYOFF_WEEK,
@@ -76,6 +77,7 @@ import { verifyStandingsLink } from "@/lib/standings-link-token";
 
 export const SCORE_RULES = {
   target: SEASON_LEAGUE_GAME_TARGET,
+  targets: SEASON_LEAGUE_GAME_TARGETS,
   winBy: SEASON_LEAGUE_WIN_BY,
 } as const;
 
@@ -266,6 +268,9 @@ export interface DayInput {
   week: unknown;
   presentIds: unknown[];
   rounds?: unknown;
+  /** Extra time: add rounds AFTER every round already on the sheet, keeping
+   * the scheduled-but-unplayed ones. Without it, unplayed rounds are replanned. */
+  append?: unknown;
 }
 
 export type DayPreview =
@@ -283,7 +288,13 @@ export type DayPreview =
     }
   | { ok: false; message: string };
 
-function computeDay(snapshot: LeagueSnapshot, week: SeasonLeagueWeek, presentIds: unknown[], roundsRaw: unknown): DayPreview {
+function computeDay(
+  snapshot: LeagueSnapshot,
+  week: SeasonLeagueWeek,
+  presentIds: unknown[],
+  roundsRaw: unknown,
+  append = false,
+): DayPreview {
   if (!isPlayWeek(week)) return { ok: false, message: "Week 6 is the playoff — use the teams panel" };
   if (snapshot.rowsStatus !== "ok") {
     return {
@@ -302,6 +313,12 @@ function computeDay(snapshot: LeagueSnapshot, week: SeasonLeagueWeek, presentIds
     .filter((g) => g.phase === "League" && g.status === "Played")
     .map(toPlannedGame);
   const roundsPlayed = playedToday.reduce((m, g) => Math.max(m, g.round), 0);
+  // In append mode the rounds already on the sheet count as today's games, for
+  // round numbering and for partner/sit balance, even before they are scored.
+  const keptToday = append
+    ? weekSummary.games.filter((g) => g.phase === "League" && g.status === "Scheduled").map(toPlannedGame)
+    : [];
+  const roundsOnSheet = [...playedToday, ...keptToday].reduce((m, g) => Math.max(m, g.round), 0);
   const defaultNewRounds = Math.max(
     0,
     defaultRounds(present.length, SEASON_LEAGUE_COURTS, SEASON_LEAGUE_GAMES_PER_PLAYER) - roundsPlayed,
@@ -309,11 +326,11 @@ function computeDay(snapshot: LeagueSnapshot, week: SeasonLeagueWeek, presentIds
   const attempt = (weekSummary.dayRow?.attempt ?? 0) + 1;
   const plan = planDay({
     present,
-    history: buildHistory(snapshot.playedGames),
-    playedToday,
+    history: buildHistory([...snapshot.playedGames, ...keptToday]),
+    playedToday: [...playedToday, ...keptToday],
     courts: SEASON_LEAGUE_COURTS,
     targetGamesPerPlayer: SEASON_LEAGUE_GAMES_PER_PLAYER,
-    rounds: parseRounds(roundsRaw),
+    rounds: append ? (parseRounds(roundsRaw) ?? 1) : parseRounds(roundsRaw),
     seed: `${snapshot.group}-W${week}-A${attempt}`,
   });
   const names: Record<PlayerId, string> = {};
@@ -324,8 +341,8 @@ function computeDay(snapshot: LeagueSnapshot, week: SeasonLeagueWeek, presentIds
     week,
     present,
     allocation: plan.allocation,
-    roundsPlayed,
-    defaultNewRounds,
+    roundsPlayed: append ? roundsOnSheet : roundsPlayed,
+    defaultNewRounds: append ? 1 : defaultNewRounds,
     rounds: plan.rounds,
     attempt,
     names,
@@ -338,7 +355,7 @@ export async function previewDay(input: DayInput): Promise<DayPreview> {
   const week = parseWeek(input.week);
   if (!group || !week) return { ok: false, message: "Unknown league or week" };
   const snapshot = await loadLeagueSnapshot(group);
-  return computeDay(snapshot, week, input.presentIds ?? [], input.rounds);
+  return computeDay(snapshot, week, input.presentIds ?? [], input.rounds, input.append === true);
 }
 
 export interface SaveDayResult {
@@ -364,7 +381,8 @@ export async function saveDay(input: DayInput): Promise<SaveDayResult> {
   const week = parseWeek(input.week);
   if (!group || !week) return { ok: false, message: "Unknown league or week", ...zero };
   const snapshot = await loadLeagueSnapshot(group);
-  const preview = computeDay(snapshot, week, input.presentIds ?? [], input.rounds);
+  const append = input.append === true;
+  const preview = computeDay(snapshot, week, input.presentIds ?? [], input.rounds, append);
   if (!preview.ok) return { ok: false, message: preview.message, ...zero };
   if (preview.rounds.length === 0) {
     return { ok: false, message: "Nothing to add — every round is played or the round count is 0", ...zero };
@@ -404,7 +422,8 @@ export async function saveDay(input: DayInput): Promise<SaveDayResult> {
   for (const o of outcomes) counts[o.action] += 1;
 
   const keep = new Set(entries.map((e) => e.key));
-  const stale = snapshot.rows.filter(
+  // Appending never clears anything: the rounds already on the sheet stay.
+  const stale = append ? [] : snapshot.rows.filter(
     (r) =>
       r.phase === "League" &&
       r.status === "Scheduled" &&

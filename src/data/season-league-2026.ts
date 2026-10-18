@@ -20,6 +20,7 @@
 // a venue or court change on /fall reaches the engine without a second edit.
 
 import {
+  FALL_RAIN_DATES,
   FALL_SUNDAYS,
   FALL_TENNIS_COURTS_PER_SESSION,
   FALL_VENUE_SHORT,
@@ -34,9 +35,20 @@ export const SEASON_LEAGUE_GROUPS = FALL_SEASON_GROUPS;
 
 export const SEASON_LEAGUE_VENUE_SHORT = FALL_VENUE_SHORT;
 
-/** The six Sundays, week 1 first. A washed-out week slides to a rain date and
- * keeps its number — rows key on Week, never on the calendar date. */
-export const SEASON_LEAGUE_SUNDAYS = FALL_SUNDAYS;
+/** The Sunday each league week is actually PLAYED on, week 1 first. Written
+ * out, never computed. Oct 4 and Oct 11 were lost, so week 3 slid to Oct 18
+ * and everything after it moved down a Sunday, using both rain dates (Sam,
+ * 2026-10-18). Rows key on Week, never on the date, so this only moves labels
+ * and the Session Date stamped on new rows. The /fall page and the weather
+ * tracker keep their own calendar (FALL_SUNDAYS + FALL_RAIN_DATES). */
+export const SEASON_LEAGUE_SUNDAYS: readonly string[] = [
+  FALL_SUNDAYS[0],
+  FALL_SUNDAYS[1],
+  "2026-10-18",
+  "2026-10-25",
+  FALL_RAIN_DATES[0],
+  FALL_RAIN_DATES[1],
+];
 
 export const SEASON_LEAGUE_WEEKS = [1, 2, 3, 4, 5, 6] as const;
 export type SeasonLeagueWeek = (typeof SEASON_LEAGUE_WEEKS)[number];
@@ -49,6 +61,9 @@ export const SEASON_LEAGUE_COURTS =
   FALL_TENNIS_COURTS_PER_SESSION * PICKLEBALL_COURTS_PER_TENNIS_COURT;
 
 export const SEASON_LEAGUE_GAME_TARGET = 11;
+/** Every game length a coach may call on the day; 11 stays the default and
+ * the copy. Longer games when there is time (Sam, 2026-10-18: "to 15 today"). */
+export const SEASON_LEAGUE_GAME_TARGETS = [11, 15, 21] as const;
 export const SEASON_LEAGUE_WIN_BY = 2;
 /** The Sunday target; the engine rounds UP so nobody plays fewer. */
 export const SEASON_LEAGUE_GAMES_PER_PLAYER = 3;

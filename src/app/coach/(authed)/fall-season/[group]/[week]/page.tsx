@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   SEASON_LEAGUE_GAME_TARGET,
+  SEASON_LEAGUE_GAME_TARGETS,
   SEASON_LEAGUE_GROUPS,
   SEASON_LEAGUE_PLAYOFF_WEEK,
   SEASON_LEAGUE_WIN_BY,
@@ -64,8 +65,10 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
         {option.label} · {isPlayoff ? "Playoff" : `Sunday ${week}`}
       </h1>
       <p className="text-sm text-ngpa-white/65 mb-8">
-        Games to {SEASON_LEAGUE_GAME_TARGET}, win by {SEASON_LEAGUE_WIN_BY}. Tick &ldquo;ended on
-        time&rdquo; to record a game the clock stopped.
+        Games to {SEASON_LEAGUE_GAME_TARGET} (or{" "}
+        {SEASON_LEAGUE_GAME_TARGETS.filter((t) => t !== SEASON_LEAGUE_GAME_TARGET).join(" or ")} when there&rsquo;s
+        time), win by {SEASON_LEAGUE_WIN_BY}. Tick &ldquo;ended on time&rdquo; to record a game the clock
+        stopped. Extra time? &ldquo;+ Add a round&rdquo; adds one after the last round.
       </p>
 
       {snapshot.rowsStatus !== "ok" && (
@@ -92,6 +95,7 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
               roster={roster}
               initialPresent={initialPresent}
               hasSchedule={dayGames.some((g) => g.status === "Scheduled")}
+              hasRounds={dayGames.length > 0}
               roundsPlayed={roundsPlayed}
             />
           </section>

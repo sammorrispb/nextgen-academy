@@ -39,6 +39,7 @@ export async function previewDayAction(input: {
   week: number;
   presentIds: string[];
   rounds?: number | null;
+  append?: boolean;
 }): Promise<DayPreview> {
   const email = await requireCoach();
   if (!email) return UNAUTHORIZED;
@@ -50,6 +51,7 @@ export async function saveDayAction(input: {
   week: number;
   presentIds: string[];
   rounds?: number | null;
+  append?: boolean;
 }): Promise<SaveDayResult> {
   const email = await requireCoach();
   if (!email) return { ...UNAUTHORIZED, created: 0, updated: 0, skipped: 0, failed: 0, voided: 0 };
