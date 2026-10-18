@@ -47,10 +47,10 @@ export async function bindMvfSeat(division: string, submissionId: string, invoic
   const result = await command({ action: "bind", division, submissionId, invoiceId });
   if (result.invoice_id !== invoiceId) throw new MvfCapacityError("unavailable");
 }
-export async function markMvfSeatPaid(division: string, invoiceId: string): Promise<{ adminNotified: boolean; parentNotified: boolean; retryAllowed: boolean }> {
+export async function markMvfSeatPaid(division: string, invoiceId: string): Promise<{ adminNotified: boolean; parentNotified: boolean; retryAllowed: boolean; legacyCallbackDeferred: boolean }> {
   const result = await command({ action: "paid", division, invoiceId });
-  if (typeof result.already_paid !== "boolean" || typeof result.admin_notified !== "boolean" || typeof result.parent_notified !== "boolean" || typeof result.notification_retry_allowed !== "boolean") throw new MvfCapacityError("unavailable");
-  return { adminNotified: result.admin_notified, parentNotified: result.parent_notified, retryAllowed: result.notification_retry_allowed };
+  if (typeof result.already_paid !== "boolean" || typeof result.admin_notified !== "boolean" || typeof result.parent_notified !== "boolean" || typeof result.notification_retry_allowed !== "boolean" || typeof result.legacy_callback_deferred !== "boolean" || (result.legacy_callback_deferred && result.notification_retry_allowed)) throw new MvfCapacityError("unavailable");
+  return { adminNotified: result.admin_notified, parentNotified: result.parent_notified, retryAllowed: result.notification_retry_allowed, legacyCallbackDeferred: result.legacy_callback_deferred };
 }
 
 export async function markMvfNotification(division: string, invoiceId: string, recipient: "admin" | "parent"): Promise<void> {
