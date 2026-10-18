@@ -2,7 +2,7 @@ import { c, s } from "./brand";
 import {
   FALL_PUBLIC_AREA,
   FALL_RAIN_DATES,
-  FALL_SEASON_LABEL,
+  FALL_ORIGINAL_SEASON_LABEL,
   FALL_SEASON_WEEKS,
   FALL_SUNDAYS,
   FALL_VENUE,
@@ -130,7 +130,7 @@ export function fallVenueChangeHtml(input: FallVenueChangeInput): string {
       <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Unchanged</p>
       <p style="margin:0 0 8px 0;color:${c.text};font-size:14px;line-height:1.7;">
         <strong>${blocksLine}</strong><br>
-        ${FALL_SEASON_LABEL}
+        ${FALL_ORIGINAL_SEASON_LABEL}
       </p>
       <p style="margin:0 0 8px 0;color:${c.text};font-size:14px;line-height:1.6;">
         Your Sundays: ${sundaysLine}.
@@ -200,7 +200,7 @@ export function fallVenueChangeText(input: FallVenueChangeInput): string {
     ``,
     `UNCHANGED`,
     `${blocksLine}`,
-    `${FALL_SEASON_LABEL}`,
+    `${FALL_ORIGINAL_SEASON_LABEL}`,
     `Your Sundays: ${sundaysLine}.`,
     `Rain dates are still held for ${rainLine} — at the new courts too.`,
     ``,

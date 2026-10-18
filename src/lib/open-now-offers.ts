@@ -1,8 +1,8 @@
 import {
-  FALL_SEASON_LABEL,
-  FALL_SUNDAYS,
-  FALL_VENUE_SHORT,
   FALL_PUBLIC_AREA,
+  FALL_SEASON_END,
+  FALL_SEASON_LABEL,
+  FALL_VENUE_SHORT,
 } from "@/data/fall-2026";
 import {
   FALL_SEASON_GROUPS,
@@ -64,7 +64,7 @@ export function buildOpenNowOffers(
 
   // Same gate /fall and the weekly newsletter read: the env flag AND the
   // season's own last Sunday, so the card retires itself.
-  const lastSunday = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
+  const lastSunday = FALL_SEASON_END;
   if (fallRegistrationOpen && todayIso <= lastSunday) {
     const groupLine = FALL_SEASON_GROUPS.map(
       (g) => `${g.label} ${g.timeLabel}`,

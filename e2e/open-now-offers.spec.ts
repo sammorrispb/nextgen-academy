@@ -3,7 +3,7 @@ import {
   buildOpenNowOffers,
   type OpenNowFlags,
 } from "../src/lib/open-now-offers";
-import { FALL_SUNDAYS } from "../src/data/fall-2026";
+import { FALL_SEASON_END } from "../src/data/fall-2026";
 import { FALL_SEASON_PRICE_USD } from "../src/data/fall-season-2026";
 import { PICKLPARK_SATURDAYS } from "../src/data/picklpark-2026";
 import { LEAGUE_SEASONS } from "../src/data/leagues";
@@ -25,8 +25,9 @@ const picklParkOnly = (picklParkRegistrationOpen: boolean): OpenNowFlags => ({
 // same lesson twice: copy that ships on a surface nobody re-reads goes stale
 // silently, so every offer here must retire itself from its own data.
 
-const LAST_SUNDAY = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
-const DAY_AFTER_SEASON = "2026-10-26";
+// The season ends on the playoff Sunday (both rain dates are in use).
+const LAST_SUNDAY = FALL_SEASON_END;
+const DAY_AFTER_SEASON = "2026-11-09";
 const LEAGUE_DEADLINE = LEAGUE_SEASONS[0].registrationDeadline;
 const LAST_SATURDAY = PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1];
 const DAY_AFTER_PICKLPARK = "2026-11-01";

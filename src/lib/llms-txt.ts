@@ -23,7 +23,13 @@
 // invented a checkout that does not exist, which is the fabrication the ground
 // rules below exist to stop. Each entry states who takes the money.
 
-import { FALL_PUBLIC_AREA, FALL_SEASON_LABEL, FALL_SUNDAYS, FALL_VENUE_SHORT, FALL_YOUTH_BLOCKS } from "@/data/fall-2026";
+import {
+  FALL_PUBLIC_AREA,
+  FALL_SEASON_END,
+  FALL_SEASON_LABEL,
+  FALL_VENUE_SHORT,
+  FALL_YOUTH_BLOCKS,
+} from "@/data/fall-2026";
 import { MVF_AGE_MAX, MVF_AGE_MIN } from "@/data/mvf";
 import {
   PICKLPARK_PUBLIC_AREA,
@@ -95,7 +101,7 @@ interface SeasonEntry {
 
 const SEASON_ENTRIES: readonly SeasonEntry[] = [
   {
-    endsOn: lastDate(FALL_SUNDAYS),
+    endsOn: FALL_SEASON_END,
     line:
       `- https://nextgenpbacademy.com/fall — Youth Fall Season: six Sundays at ` +
       `${FALL_VENUE_SHORT} in ${FALL_PUBLIC_AREA}, ${FALL_SEASON_LABEL} ` +

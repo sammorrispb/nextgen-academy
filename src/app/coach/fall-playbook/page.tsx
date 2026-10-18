@@ -1,3 +1,11 @@
+import {
+  FALL_PLAYOFF_DATE,
+  FALL_PLAY_DATES,
+  FALL_SEASON_LABEL,
+  FALL_SLOTS_BY_GROUP,
+  FALL_VENUE,
+  FALL_YOUTH_BLOCKS,
+} from "@/data/fall-2026";
 import type { Metadata } from "next";
 
 import { LEVEL_COLOR, LEVEL_COLOR_FALLBACK } from "@/lib/level-colors";
@@ -17,14 +25,6 @@ import {
   phaseClock,
   type BallRules,
 } from "@/data/session-curriculum";
-import {
-  FALL_SEASON_LABEL,
-  FALL_SUNDAYS,
-  FALL_RAIN_DATES,
-  FALL_VENUE,
-  FALL_YOUTH_BLOCKS,
-  FALL_SLOTS_BY_GROUP,
-} from "@/data/fall-2026";
 import {
   focusBlockFor,
   gamesFor,
@@ -872,8 +872,8 @@ export default async function FallPlaybookPage() {
               ))}
             </div>
             <p className="mt-4 text-xs text-ngpa-muted print:text-gray-600">
-              Season Sundays: {FALL_SUNDAYS.map(formatSunday).join(" · ")}.
-              Rain dates held: {FALL_RAIN_DATES.map(formatSunday).join(" · ")}.
+              Season Sundays: {FALL_PLAY_DATES.map(formatSunday).join(" · ")}. Playoff:{" "}
+              {formatSunday(FALL_PLAYOFF_DATE)}. Both rain dates are in use.
             </p>
           </Section>
 

@@ -203,8 +203,38 @@ export const FALL_SUNDAYS = [
 /** Held only in case a Sunday washes out — not part of the season proper. */
 export const FALL_RAIN_DATES = ["2026-11-01", "2026-11-08"] as const;
 
-/** Human range for copy, e.g. email subject lines and page headers. */
-export const FALL_SEASON_LABEL = "September 20 – October 25, 2026";
+/**
+ * The six Sundays the season is actually PLAYED on, week 1 first. Sep 27 and
+ * Oct 11 rained out and moved to the two rain dates (the weather record on
+ * /fall), so the season ends on Nov 8 and that Sunday is the playoff (Sam,
+ * 2026-10-18). Written out, never derived at build time.
+ *
+ * FALL_SUNDAYS + FALL_RAIN_DATES stay as the SOLD calendar: the weather
+ * tracker keys its rows on them, and the confirmation and venue-change emails
+ * families already received quote them. Every "when is the season" surface
+ * reads this list instead.
+ */
+export const FALL_PLAY_DATES = [
+  "2026-09-20",
+  "2026-10-04",
+  "2026-10-18",
+  "2026-10-25",
+  "2026-11-01",
+  "2026-11-08",
+] as const;
+
+/** Week 6, both groups. */
+export const FALL_PLAYOFF_DATE: string = FALL_PLAY_DATES[FALL_PLAY_DATES.length - 1];
+
+/** The last Sunday anyone plays — what "is the season still on" checks read. */
+export const FALL_SEASON_END: string = FALL_PLAYOFF_DATE;
+
+/** Human range for copy, e.g. page headers. Follows the played calendar. */
+export const FALL_SEASON_LABEL = "September 20 – November 8, 2026";
+
+/** The range the season was SOLD as. Only for copy that describes the
+ * original calendar (sent emails, the season history note). */
+export const FALL_ORIGINAL_SEASON_LABEL = "September 20 – October 25, 2026";
 
 export const FALL_PROGRAMS: readonly FallProgram[] = [
   {

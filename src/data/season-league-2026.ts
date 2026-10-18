@@ -20,8 +20,7 @@
 // a venue or court change on /fall reaches the engine without a second edit.
 
 import {
-  FALL_RAIN_DATES,
-  FALL_SUNDAYS,
+  FALL_PLAY_DATES,
   FALL_TENNIS_COURTS_PER_SESSION,
   FALL_VENUE_SHORT,
 } from "./fall-2026";
@@ -35,20 +34,11 @@ export const SEASON_LEAGUE_GROUPS = FALL_SEASON_GROUPS;
 
 export const SEASON_LEAGUE_VENUE_SHORT = FALL_VENUE_SHORT;
 
-/** The Sunday each league week is actually PLAYED on, week 1 first. Written
- * out, never computed. Oct 4 and Oct 11 were lost, so week 3 slid to Oct 18
- * and everything after it moved down a Sunday, using both rain dates (Sam,
- * 2026-10-18). Rows key on Week, never on the date, so this only moves labels
- * and the Session Date stamped on new rows. The /fall page and the weather
- * tracker keep their own calendar (FALL_SUNDAYS + FALL_RAIN_DATES). */
-export const SEASON_LEAGUE_SUNDAYS: readonly string[] = [
-  FALL_SUNDAYS[0],
-  FALL_SUNDAYS[1],
-  "2026-10-18",
-  "2026-10-25",
-  FALL_RAIN_DATES[0],
-  FALL_RAIN_DATES[1],
-];
+/** The Sunday each league week is actually PLAYED on, week 1 first: the
+ * season's played calendar (FALL_PLAY_DATES), playoff on Nov 8. Rows key on
+ * Week, never on the date, so this only moves labels and the Session Date
+ * stamped on new rows. */
+export const SEASON_LEAGUE_SUNDAYS: readonly string[] = FALL_PLAY_DATES;
 
 export const SEASON_LEAGUE_WEEKS = [1, 2, 3, 4, 5, 6] as const;
 export type SeasonLeagueWeek = (typeof SEASON_LEAGUE_WEEKS)[number];

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { activeSeasonLines, buildLlmsTxt, wrapEntry } from "../src/lib/llms-txt";
-import { FALL_SEASON_LABEL, FALL_SUNDAYS } from "../src/data/fall-2026";
+import { FALL_PLAY_DATES, FALL_SEASON_END, FALL_SEASON_LABEL } from "../src/data/fall-2026";
 import {
   PICKLPARK_SATURDAYS,
   PICKLPARK_SEASON_LABEL,
@@ -43,7 +43,7 @@ test.describe("llms.txt publishes the active programs", () => {
     expect(txt).toContain("/fall");
     expect(flat(txt)).toContain("Walter Johnson High School");
     expect(txt).toContain("Bethesda, MD");
-    expect(flat(txt)).toContain("September 20 – October 25, 2026");
+    expect(flat(txt)).toContain("September 20 – November 8, 2026");
   });
 
   test("each Pickl Park league appears with the age band and time it actually runs", () => {
@@ -98,7 +98,7 @@ test.describe("llms.txt publishes the active programs", () => {
 
   test("a season stays listed through its final date, then is dropped", () => {
     const lastSaturday = PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1];
-    const lastSunday = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
+    const lastSunday = FALL_SEASON_END;
 
     // Final day: still listed — a season in progress still takes registrations.
     expect(flat(activeSeasonLines(lastSaturday).join("\n"))).toContain("/picklpark");
@@ -106,7 +106,7 @@ test.describe("llms.txt publishes the active programs", () => {
 
     // Day after each: gone.
     expect(activeSeasonLines("2026-11-01").join("\n")).not.toContain("/picklpark");
-    expect(activeSeasonLines("2026-10-26").join("\n")).not.toContain("/fall");
+    expect(activeSeasonLines("2026-11-09").join("\n")).not.toContain("/fall");
   });
 
   test("once every season is over the heading goes too, and the rest survives", () => {
@@ -144,8 +144,8 @@ test.describe("llms.txt publishes the active programs", () => {
     expect(PICKLPARK_SEASON_LABEL).toContain(monthDay(ppFirst));
     expect(PICKLPARK_SEASON_LABEL).toContain(monthDay(ppLast));
 
-    const fFirst = FALL_SUNDAYS[0];
-    const fLast = FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
+    const fFirst = FALL_PLAY_DATES[0];
+    const fLast = FALL_PLAY_DATES[FALL_PLAY_DATES.length - 1];
     expect(FALL_SEASON_LABEL).toContain(monthDay(fFirst));
     expect(FALL_SEASON_LABEL).toContain(monthDay(fLast));
   });

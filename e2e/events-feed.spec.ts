@@ -10,7 +10,7 @@ import {
   timeToMinutes,
 } from "../src/lib/events-feed";
 import { MVF_PROGRAMS } from "../src/data/mvf";
-import { FALL_RAIN_DATES, FALL_SUNDAYS } from "../src/data/fall-2026";
+import { FALL_PLAY_DATES, FALL_PLAYOFF_DATE, FALL_SUNDAYS } from "../src/data/fall-2026";
 import { PICKLPARK_MAKEUP_DATES } from "../src/data/picklpark-2026";
 
 const ORIGIN = "https://nextgenpbacademy.com";
@@ -225,13 +225,13 @@ test.describe("events feed — MVF", () => {
 });
 
 test.describe("events feed — Fall 2026", () => {
-  test("every confirmed Sunday ships as a real block", () => {
+  test("every played Sunday ships as a real block", () => {
     const items = buildFallEvents(ORIGIN);
-    expect(items).toHaveLength(FALL_SUNDAYS.length + FALL_RAIN_DATES.length);
+    expect(items).toHaveLength(FALL_PLAY_DATES.length);
 
-    const sundays = new Set<string>(FALL_SUNDAYS);
+    const sundays = new Set<string>(FALL_PLAY_DATES);
     const confirmed = items.filter((i) => sundays.has(i.date));
-    expect(confirmed).toHaveLength(FALL_SUNDAYS.length);
+    expect(confirmed).toHaveLength(FALL_PLAY_DATES.length);
 
     for (const item of confirmed) {
       expect(item.tentative).toBe(false);
@@ -243,19 +243,15 @@ test.describe("events feed — Fall 2026", () => {
     }
   });
 
-  test("rain dates stay flagged holds", () => {
+  test("washed-out Sundays are gone and the playoff is named", () => {
     const items = buildFallEvents(ORIGIN);
-    const rain = new Set<string>(FALL_RAIN_DATES);
-    const holds = items.filter((i) => rain.has(i.date));
-    expect(holds).toHaveLength(FALL_RAIN_DATES.length);
-
-    for (const item of holds) {
-      expect(item.tentative).toBe(true);
-      expect(item.status).toBe("Tentative");
-      expect(item.title).toContain("[TENTATIVE]");
-      expect(item.startTime).toBe("1:00 PM");
-      expect(item.endTime).toBe("4:00 PM");
+    const played = new Set<string>(FALL_PLAY_DATES);
+    for (const washedOut of FALL_SUNDAYS.filter((d) => !played.has(d))) {
+      expect(items.map((i) => i.date)).not.toContain(washedOut);
     }
+    const playoff = items.find((i) => i.date === FALL_PLAYOFF_DATE)!;
+    expect(playoff.title).toContain("Playoff");
+    expect(items.filter((i) => i.title.includes("Playoff"))).toHaveLength(1);
   });
 });
 
@@ -276,15 +272,11 @@ test.describe("events feed — whole payload", () => {
     }
   });
 
-  test("tentative items are only the fall rain-date and picklpark makeup holds", () => {
+  test("tentative items are only the picklpark makeup holds (the fall rain dates are in use)", () => {
     const feed = buildEventsFeed({ sessions: [session()] }, ORIGIN);
-    const rain = new Set<string>(FALL_RAIN_DATES);
     const makeup = new Set<string>(PICKLPARK_MAKEUP_DATES);
     for (const item of feed) {
-      expect(item.tentative).toBe(
-        (item.source === "fall" && rain.has(item.date)) ||
-          (item.source === "picklpark" && makeup.has(item.date)),
-      );
+      expect(item.tentative).toBe(item.source === "picklpark" && makeup.has(item.date));
     }
   });
 });

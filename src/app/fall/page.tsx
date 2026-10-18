@@ -1,18 +1,21 @@
+import {
+  FALL_PLAYOFF_DATE,
+  FALL_PLAY_DATES,
+  FALL_PUBLIC_AREA,
+  FALL_RAIN_DATES,
+  FALL_SEASON_END,
+  FALL_SEASON_LABEL,
+  FALL_SEASON_WEEKS,
+  FALL_SUNDAYS,
+  FALL_VENUE,
+  FALL_VENUE_SHORT,
+} from "@/data/fall-2026";
 import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import FallRegistrationForm from "@/components/FallRegistrationForm";
 import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import JsonLd from "@/components/JsonLd";
-import {
-  FALL_RAIN_DATES,
-  FALL_SEASON_LABEL,
-  FALL_SEASON_WEEKS,
-  FALL_SUNDAYS,
-  FALL_VENUE,
-  FALL_PUBLIC_AREA,
-  FALL_VENUE_SHORT,
-} from "@/data/fall-2026";
 import {
   FALL_SEASON_GROUPS,
   FALL_SEASON_PRICE_USD,
@@ -69,6 +72,9 @@ const MONTH_DAY: Intl.DateTimeFormatOptions = {
   timeZone: "UTC",
 };
 
+/** Sold Sundays that washed out onto a rain date. */
+const washedOut = FALL_SUNDAYS.filter((d) => !(FALL_PLAY_DATES as readonly string[]).includes(d));
+
 function sundayLabel(iso: string): string {
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", MONTH_DAY);
 }
@@ -97,8 +103,8 @@ export default async function FallPage() {
     "@context": "https://schema.org",
     "@type": "SportsEvent",
     name: `${FALL_SEASON_TITLE} — ${FALL_SEASON_LABEL}`,
-    startDate: FALL_SUNDAYS[0],
-    endDate: FALL_SUNDAYS[FALL_SUNDAYS.length - 1],
+    startDate: FALL_PLAY_DATES[0],
+    endDate: FALL_SEASON_END,
     location: {
       "@type": "Place",
       name: FALL_VENUE_SHORT,
@@ -215,25 +221,33 @@ export default async function FallPage() {
               </li>
               <li>
                 <strong className="text-ngpa-white">Your Sundays:</strong>{" "}
-                {FALL_SUNDAYS.map((d, i) => (
+                {FALL_PLAY_DATES.map((d, i) => (
                   <span key={d}>
                     {i > 0 && " · "}
                     <time dateTime={d}>{sundayLabel(d)}</time>
+                    {d === FALL_PLAYOFF_DATE && " (playoff)"}
                   </span>
                 ))}
                 .
               </li>
               <li>
-                <strong className="text-ngpa-white">Rain dates built in.</strong>{" "}
-                If a Sunday washes out we make it up on{" "}
+                <strong className="text-ngpa-white">Both rain dates are in use.</strong>{" "}
+                {washedOut.map((d, i) => (
+                  <span key={d}>
+                    {i > 0 && " and "}
+                    <time dateTime={d}>{sundayLabel(d)}</time>
+                  </span>
+                ))}{" "}
+                washed out and moved to{" "}
                 {FALL_RAIN_DATES.map((d, i) => (
                   <span key={d}>
-                    {i > 0 && " or "}
+                    {i > 0 && " and "}
                     <time dateTime={d}>{sundayLabel(d)}</time>
                   </span>
                 ))}
-                {" "}&mdash; whichever is next open. We make the call two hours before
-                your group starts.
+                , so the season wraps with the playoff on{" "}
+                <time dateTime={FALL_PLAYOFF_DATE}>{sundayLabel(FALL_PLAYOFF_DATE)}</time>. We
+                make the weather call two hours before your group starts.
               </li>
               <li>
                 <strong className="text-ngpa-white">

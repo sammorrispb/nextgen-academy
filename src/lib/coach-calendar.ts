@@ -1,15 +1,14 @@
+import {
+  FALL_PLAY_DATES,
+  FALL_VENUE_SHORT,
+  FALL_YOUTH_BLOCKS,
+  fallSlotsFor,
+} from "@/data/fall-2026";
 import type { CalendarSessionRow } from "@/lib/notion-sessions";
 import { sessionToSlug } from "@/lib/session-slug";
 import { isoWeekday } from "@/lib/crew-matching";
 import { type CrewDay, CREW_DAYS } from "@/lib/validate-crew-interest";
 import { type LeagueBand, LEAGUE_BANDS, bandForAge } from "@/data/leagues";
-import {
-  FALL_SUNDAYS,
-  FALL_RAIN_DATES,
-  FALL_YOUTH_BLOCKS,
-  FALL_VENUE_SHORT,
-  fallSlotsFor,
-} from "@/data/fall-2026";
 
 /**
  * Pure logic behind /coach/calendar. Kept free of Notion and React so every
@@ -185,8 +184,7 @@ export function sessionsToEntries(
 export function fallEntriesForMonth(month: string): CalendarEntry[] {
   const entries: CalendarEntry[] = [];
   const dates: { iso: string; tentative: boolean }[] = [
-    ...FALL_SUNDAYS.map((iso) => ({ iso, tentative: false })),
-    ...FALL_RAIN_DATES.map((iso) => ({ iso, tentative: true })),
+    ...FALL_PLAY_DATES.map((iso) => ({ iso, tentative: false })),
   ];
 
   for (const { iso, tentative } of dates) {

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import {
+  FALL_SEASON_END,
   FALL_SEASON_LABEL,
-  FALL_SUNDAYS,
   FALL_VENUE_SHORT,
 } from "@/data/fall-2026";
+import Link from "next/link";
 import {
   FALL_SEASON_GROUPS,
   fallSeasonSlotsFor,
@@ -64,7 +64,7 @@ export default async function AdminFallPage() {
 
   const registrationOpen =
     process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true" &&
-    new Date().toISOString().slice(0, 10) <= FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
+    new Date().toISOString().slice(0, 10) <= FALL_SEASON_END;
 
   return (
     <div>

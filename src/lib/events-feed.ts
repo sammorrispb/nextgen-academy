@@ -30,17 +30,17 @@
  *     per-session dates and no times, and the venue isn't booked
  *     (`exactLocation` is empty). There is nothing schedulable to emit yet.
  */
+import {
+  FALL_END_TIME,
+  FALL_PLAYOFF_DATE,
+  FALL_PLAY_DATES,
+  FALL_START_TIME,
+  FALL_VENUE,
+} from "@/data/fall-2026";
 import type { NgaSession } from "@/lib/notion-sessions";
 import { publicLocation } from "@/lib/session-location";
 import { CAMP_OPTIONS, campDays, type Camp } from "@/data/camps";
 import { MVF_PROGRAMS, mvfClassDates, type MvfProgram } from "@/data/mvf";
-import {
-  FALL_RAIN_DATES,
-  FALL_SUNDAYS,
-  FALL_START_TIME,
-  FALL_END_TIME,
-  FALL_VENUE,
-} from "@/data/fall-2026";
 import {
   PICKLPARK_MAKEUP_DATES,
   PICKLPARK_SATURDAYS,
@@ -297,17 +297,16 @@ export function buildFallEvents(origin: string): EventFeedItem[] {
   });
 
   return [
-    ...FALL_SUNDAYS.map((date) => ({
+    // The played calendar: Sep 27 and Oct 11 washed out onto the rain dates,
+    // so Nov 1 and Nov 8 are confirmed sessions now and Nov 8 is the playoff.
+    ...FALL_PLAY_DATES.map((date) => ({
       ...shared(date),
-      title: "NGA Fall Season — Green & Yellow",
+      title:
+        date === FALL_PLAYOFF_DATE
+          ? "NGA Fall Season — Playoff (Green & Yellow)"
+          : "NGA Fall Season — Green & Yellow",
       tentative: false,
       status: "Open" as const,
-    })),
-    ...FALL_RAIN_DATES.map((date) => ({
-      ...shared(date),
-      title: "[TENTATIVE] NGA Fall Season — rain date hold",
-      tentative: true,
-      status: "Tentative" as const,
     })),
   ];
 }

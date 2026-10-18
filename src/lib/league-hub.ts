@@ -16,6 +16,7 @@
 
 import {
   FALL_PUBLIC_AREA,
+  FALL_SEASON_END,
   FALL_SEASON_LABEL,
   FALL_SUNDAYS,
   FALL_VENUE_SHORT,
@@ -53,7 +54,7 @@ export function buildLeagueHubCards(
 ): LeagueHubCard[] {
   const cards: LeagueHubCard[] = [];
 
-  if (todayIso <= FALL_SUNDAYS[FALL_SUNDAYS.length - 1]) {
+  if (todayIso <= FALL_SEASON_END) {
     cards.push({
       key: "fall",
       title: FALL_SEASON_TITLE,

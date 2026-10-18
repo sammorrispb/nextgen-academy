@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createRequire } from "node:module";
 import CountyPage, { metadata } from "../src/app/montgomery-county-youth-pickleball/page";
 import { faq, localFaq } from "../src/data/faq";
-import { FALL_SUNDAYS } from "../src/data/fall-2026";
+import { FALL_SEASON_END } from "../src/data/fall-2026";
 import { MVF_PROGRAMS } from "../src/data/mvf";
 import { EVALUATION_SMS_URL } from "../src/data/scheduling";
 import { CITY_LANDING_PAGES, orgRef } from "../src/lib/seo";
@@ -71,10 +71,10 @@ test.describe("Montgomery County program discovery", () => {
   });
 
   test("the Bethesda season remains on its final day and retires the next day", () => {
-    const lastDay = FALL_SUNDAYS.at(-1)!;
+    // The season ends on the playoff Sunday (Nov 8) since both rain dates are in use.
+    const lastDay = FALL_SEASON_END;
     expect(programs(renderOn(lastDay))).toContain("Walter Johnson High School");
-    expect(programs(renderOn("2026-10-26"))).not.toContain("Walter Johnson High School");
-    expect(programs(renderOn("2026-10-26"))).toContain("Montgomery Village Foundation");
+    expect(programs(renderOn("2026-11-09"))).not.toContain("Walter Johnson High School");
   });
 
   test("each MVF session retires independently", () => {
