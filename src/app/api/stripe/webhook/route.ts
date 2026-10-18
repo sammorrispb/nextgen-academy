@@ -1751,12 +1751,16 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
   // Payment never allocates a new seat. It can only consume the reservation
   // bound before the invoice became payable. Unknown/legacy invoices need the
   // explicit rollout reconciliation, not a post-capture best-effort seat.
-  let notifications: { adminNotified: boolean; parentNotified: boolean; retryAllowed: boolean };
+  let notifications: Awaited<ReturnType<typeof markMvfSeatPaid>>;
   try {
     notifications = await markMvfSeatPaid(division, r.stripeRef);
   } catch {
     return NextResponse.json({ error: "mvf tournament capacity reconciliation required" }, { status: 503 });
   }
+  // Imported historical payments remain quarantined until their roster and
+  // notification history are reconciled. Acknowledge only the durable hold;
+  // do not repair Notion, resend old mail or schedule background effects.
+  if (notifications.legacyCallbackDeferred) return NextResponse.json({ received: true, mvfTournament: true, reconciliationDeferred: true });
 
   // The checkout route writes the Stripe invoice id on the roster row; the
   // webhook keys off it. (No payment-intent lookup: the tournament is

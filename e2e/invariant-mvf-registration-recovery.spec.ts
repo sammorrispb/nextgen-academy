@@ -17,7 +17,7 @@ test.beforeEach(() => {
   process.env.RESEND_API_KEY = 're_test_boundaries';
   process.env.NGA_SYNC_SECRET = "qa-capacity";
   process.env.LINKDINK_BASE_URL = "https://capacity.example.invalid";
-  stub.reset(); stub.on("capacity.example.invalid", { ok: true, already_paid: true, admin_notified: true, parent_notified: true, notification_retry_allowed: true }); stub.install();
+  stub.reset(); stub.on("capacity.example.invalid", { ok: true, already_paid: true, admin_notified: true, parent_notified: true, notification_retry_allowed: true, legacy_callback_deferred: false }); stub.install();
 });
 test.afterEach(() => stub.uninstall());
 test.afterAll(() => { for (const k of KEYS) { if (savedEnv[k] === undefined) delete process.env[k]; else process.env[k] = savedEnv[k]; } });
@@ -60,7 +60,7 @@ test("both paid event aliases retry only the missing notification after a partia
   stub.onDynamic("capacity.example.invalid", call => {
     const body = JSON.parse(call.body);
     if (body.action === "notified") { if (body.recipient === "parent") parentSent = true; return {status:200,json:{ok:true,recorded:true}}; }
-    return {status:200,json:{ok:true,already_paid:true,admin_notified:true,parent_notified:parentSent,notification_retry_allowed:true}};
+    return {status:200,json:{ok:true,already_paid:true,admin_notified:true,parent_notified:parentSent,notification_retry_allowed:true,legacy_callback_deferred:false}};
   });
   stub.on("api.notion.com",{results:[{id:"synthetic-row",properties:{Paid:{checkbox:true}}}]});
   stub.onDynamic("api.resend.com", () => {
@@ -77,7 +77,7 @@ test("both paid event aliases retry only the missing notification after a partia
 
 test("concurrent webhook requests use the same provider idempotency key per recipient", async () => {
   stub.reset();
-  stub.onDynamic("capacity.example.invalid", call => ({status:200,json:JSON.parse(call.body).action === "notified" ? {ok:true,recorded:true} : {ok:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:true}}));
+  stub.onDynamic("capacity.example.invalid", call => ({status:200,json:JSON.parse(call.body).action === "notified" ? {ok:true,recorded:true} : {ok:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:true,legacy_callback_deferred:false}}));
   stub.on("api.notion.com",{results:[{id:"synthetic-row",properties:{Paid:{checkbox:true}}}]});
   stub.on("api.resend.com",{id:"synthetic-email"});
   const keys:string[]=[];
@@ -96,7 +96,7 @@ test("concurrent webhook requests use the same provider idempotency key per reci
 
 test("an ambiguous unacknowledged send beyond the provider replay window needs reconciliation", async () => {
   stub.reset();
-  stub.on("capacity.example.invalid",{ok:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:false});
+  stub.on("capacity.example.invalid",{ok:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:false,legacy_callback_deferred:false});
   stub.on("api.notion.com",{results:[{id:"synthetic-row",properties:{Paid:{checkbox:true}}}]});
   const payload=JSON.stringify({id:"evt_synthetic_expired",object:"event",type:"invoice.payment_succeeded",data:{object:{id:"in_QAExpired",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
   const response=await webhook(new NextRequest("http://localhost/api/stripe/webhook",{method:"POST",body:payload,headers:{"stripe-signature":signedHeader(payload)}}));
@@ -105,7 +105,7 @@ test("an ambiguous unacknowledged send beyond the provider replay window needs r
 
 test("transient Notion backfill failure requests redelivery before any mail", async () => {
   stub.reset();
-  stub.on("capacity.example.invalid",{ok:true,claimed:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:true});
+  stub.on("capacity.example.invalid",{ok:true,claimed:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:true,legacy_callback_deferred:false});
   stub.on(/api\.notion\.com\/v1\/databases\//,{results:[]});
   stub.on(/api\.notion\.com\/v1\/pages$/,{message:"synthetic unavailable"},503);
   const payload=JSON.stringify({id:"evt_synthetic_backfill",object:"event",type:"invoice.payment_succeeded",data:{object:{id:"in_QABackfill",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
@@ -133,7 +133,7 @@ for (const initialRoster of ["missing", "permanent"] as const) {
         return {status:200,json:{ok:true,recorded:true}};
       }
       attempt++;
-      return {status:200,json:{ok:true,already_paid:true,admin_notified:adminAcknowledged,parent_notified:parentAcknowledged,notification_retry_allowed:true}};
+      return {status:200,json:{ok:true,already_paid:true,admin_notified:adminAcknowledged,parent_notified:parentAcknowledged,notification_retry_allowed:true,legacy_callback_deferred:false}};
     });
     stub.onDynamic(/api\.notion\.com\/v1\/databases\//, () => {
       if (attempt === 1 && initialRoster === "permanent") return {status:400,json:{message:"synthetic schema failure"}};

@@ -39,7 +39,7 @@ function services() {
       return { status: 200, json: { ok: true, claimed } };
     }
     expect(command.action).toBe("paid");
-    return { status: 200, json: { ok: true, already_paid: true, admin_notified: true, parent_notified: true, notification_retry_allowed: true } };
+    return { status: 200, json: { ok: true, already_paid: true, admin_notified: true, parent_notified: true, notification_retry_allowed: true, legacy_callback_deferred: false } };
   });
   stub.onDynamic(query, () => ({ status: 200, json: { results: pages.map(page => ({ id: page.id, properties: { Paid: { checkbox: page.paid } } })) } }));
   stub.onDynamic(create, call => {
