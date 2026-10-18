@@ -133,6 +133,21 @@ If any optional integration's env var is missing, that step logs a warning and i
 
 **A repeat inquiry is never a no-op (2026-08-30).** Dedup is still per PARENT, but "already on file" used to mean the route wrote NOTHING — no row created, no row updated — so a second child, a changed location and fresh parent notes were dropped while the admin email rendered them in full. The only tell was a `Notion CRM: already exists` line nobody reads. Both `/api/lead` and `/api/contact` now call `appendLeadInquiry()` (`src/lib/notion-lead-enrich.ts`) on the family's newest row and create a row only for kids `hasChildRow()` doesn't already match. `notionStatus` reports what happened (`updated existing`, `+ created N new child row(s)`). Pinned by `e2e/invariant-lead-dedup-no-drop.spec.ts`.
 
+**The pipeline stage travels with the Open Brain ingest (2026-10-18).** Open Brain's NGA
+ladder is inquiry → trialed → enrolled → active → renewed → alumni. Until this date no NGA
+ingest named a stage, so Open Brain wrote inquiry for every touch: paying camp families
+were created AT inquiry, and a later waiver signature or coach check-in knocked enrolled
+families back to it (four confirmed demotions). `SOURCE_STAGES` in
+`src/lib/open-brain-ingest.ts` now maps each source to the stage it proves: every Stripe
+paid event is `enrolled`, a Present check-in is `active`, and the post-eval follow-up is
+`trialed` (it now ingests `nga_eval_completed` after a successful send, a third egress
+beside Notion and Resend, carrying parent identifiers, the child's first name and age, and
+the level, never the coach's observations). A form, a waiver or a newsletter signup maps
+to nothing, and Open Brain keeps whatever the contact earned; its RPC refuses an unforced
+downgrade regardless. Every source the webhook emits must have an entry, pinned by
+`e2e/invariant-open-brain-stage-mapping.spec.ts`; the eval egress by
+`e2e/invariant-post-eval-open-brain.spec.ts`.
+
 **The location radio's answer is no longer discarded.** `LeadForm`/`ContactForm` used to transmit `location` ONLY when the parent picked Frederick, so every Montgomery County family — the default and the common case — read "No preference" in the admin email and left Notion's `Location` empty. Both forms now send whichever option was chosen. NOTE: the CRM `Location` select still carries an older vocabulary (`Rockville` / `North Bethesda` / `Either`) that doesn't overlap `LEAD_LOCATIONS`; Notion auto-creates the new options on first write, but whether to migrate the old ones is an open operator decision.
 
 ### Email → CRM enrichment (`POST /api/lead-enrich`)

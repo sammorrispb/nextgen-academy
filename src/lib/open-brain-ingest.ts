@@ -18,10 +18,66 @@ export interface OpenBrainIngestPayload {
   phone?: string;
   business: OpenBrainBusiness;
   source: string;
+  /** The pipeline stage this touch proves. Left unset, it is derived from the
+   * source (see SOURCE_STAGES); unset after that, Open Brain keeps whatever
+   * stage the contact already earned. */
   initial_stage?: string;
   utm?: { campaign?: string; source?: string; medium?: string };
   interest?: string;
   metadata?: Record<string, unknown>;
+  /** Open Brain activity fields. leads-ingest defaults them to "form_submit",
+   * the source's prefix and "Form submit: <source>". */
+  activity_type?: string;
+  channel?: string;
+  summary?: string;
+}
+
+export type OpenBrainNgaStage = "trialed" | "enrolled" | "active";
+
+/**
+ * The stage a source proves. Open Brain's NGA ladder is inquiry → trialed →
+ * enrolled → active → renewed → alumni, and until 2026-10-18 no NGA ingest
+ * named a stage, so leads-ingest wrote its default, inquiry, for every touch:
+ * paying camp families were created AT inquiry, and a later waiver signature or
+ * check-in knocked enrolled families back to it (four confirmed demotions).
+ *
+ * A source that proves nothing about stage (a form, a waiver, a newsletter
+ * signup, a refund) is deliberately ABSENT: Open Brain then keeps whatever the
+ * contact already earned, and its RPC refuses an unforced downgrade regardless.
+ * Every source the Stripe webhook emits must have an entry, which
+ * e2e/invariant-open-brain-stage-mapping.spec.ts enforces, so a new paid
+ * product cannot ship without this decision being made.
+ */
+export const SOURCE_STAGES: Readonly<Record<string, OpenBrainNgaStage>> = {
+  // A paid registration. Each of these fires from a Stripe paid event
+  // (checkout.session.completed or invoice.payment_succeeded) or, for the crew
+  // auto-reserve, after an off-session charge succeeded and its roster row saved.
+  nga_summer_camp: "enrolled",
+  nga_fall_registration: "enrolled",
+  nga_picklpark_registration: "enrolled",
+  nga_monday_girls_registration: "enrolled",
+  nga_monday_girls_dropin: "enrolled",
+  nga_league_enrollment: "enrolled",
+  nga_lesson_purchase: "enrolled",
+  nga_mvf_junior_tournament: "enrolled",
+  nga_cluster_registration: "enrolled",
+  nga_crew_autoreserve: "enrolled",
+  // The evaluation happened (the post-eval follow-up).
+  nga_eval_completed: "trialed",
+  // A coach check-in. Only a Present check-in means the child played; a
+  // No-show carries the same source and proves nothing (see stageForSource).
+  nga_attendance: "active",
+};
+
+/** The stage to send for a source, or undefined to send none. */
+export function stageForSource(
+  source: string,
+  metadata?: Record<string, unknown>,
+): OpenBrainNgaStage | undefined {
+  const stage = SOURCE_STAGES[source];
+  if (!stage) return undefined;
+  if (source === "nga_attendance" && metadata?.attendance !== "Present") return undefined;
+  return stage;
 }
 
 // Sam's call (2026-08-30, recorded in open-brain supabase/functions/
@@ -83,6 +139,9 @@ export async function ingestToOpenBrain(
         metadata: capChildFields(payload.metadata, stripped) as Record<string, unknown>,
       }
     : { ...payload };
+  // The stage this source proves, unless the caller claimed one itself.
+  const impliedStage = payload.initial_stage ?? stageForSource(payload.source, payload.metadata);
+  if (impliedStage) safePayload.initial_stage = impliedStage;
   // Some callers put the child's name in the top-level `interest` too, which
   // Open Brain copies into the activity summary — cap it like the metadata.
   const childNames = new Set(

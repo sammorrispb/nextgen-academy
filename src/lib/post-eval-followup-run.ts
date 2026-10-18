@@ -30,6 +30,7 @@ import {
   type Level,
 } from "@/lib/email/post-eval-followup";
 import { fetchUpcomingSessions, onColorLadder } from "@/lib/notion-sessions";
+import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 
 const LEVEL_SET = new Set(Object.keys(LEVEL_DESCRIPTIONS));
 const MAX_SESSION_LINES = 5;
@@ -158,6 +159,9 @@ export async function runPostEvalFollowup(
 
   const props = player.properties ?? {};
   const parentEmail: string | null = props["Parent Email"]?.email ?? null;
+  const parentPhone: string | null =
+    typeof props["Parent Phone"]?.phone_number === "string" ? props["Parent Phone"].phone_number : null;
+  const childAge: number | null = typeof props["Age"]?.number === "number" ? props["Age"].number : null;
   const parentName = richText(props["Parent Name"]);
   const playerName = title(props["Player Name"]);
 
@@ -226,6 +230,31 @@ export async function runPostEvalFollowup(
     } catch {
       console.error("[post-eval-followup] email sent; CRM update unavailable");
     }
+
+    // The evaluation happened: tell Open Brain, so the family's pipeline moves
+    // inquiry → trialed (never backwards; the RPC refuses that) and the timeline
+    // carries it. Parent identifiers, the child's first name and age, and the
+    // level only. The coach's observations are the parent's email, not a record
+    // about a child, and never leave this function. The helper never throws and
+    // times out on its own, so a dead Open Brain cannot turn a sent email into
+    // a retryable failure. Pinned by e2e/invariant-post-eval-open-brain.spec.ts.
+    await ingestToOpenBrain({
+      email: parentEmail,
+      phone: parentPhone ?? undefined,
+      name: parentName || undefined,
+      business: "nga",
+      source: "nga_eval_completed",
+      activity_type: "evaluation",
+      channel: "nga",
+      summary: `Evaluation completed: ${body.level} Ball`,
+      interest: body.level,
+      metadata: {
+        child_first_name: cfn === "your child" ? null : cfn,
+        child_age: childAge,
+        level: body.level,
+        notion_updated: notionUpdated,
+      },
+    });
 
     return {
       status: 200,
