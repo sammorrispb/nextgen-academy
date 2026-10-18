@@ -238,6 +238,30 @@ test.describe("season play — a save never rewrites a played game", () => {
       expect(ids, "a non-Confirmed registration is never scheduled or listed present").not.toContain("reg-refunded");
     }
   });
+
+  test("'+ Add a round' appends after the last round and never voids or rewrites one on the sheet", async () => {
+    const games: Page[] = [];
+    installWorld(stub, games, KIDS.map((_, i) => regRow(i)));
+    await saveDay({ group: "Green", week: 3, presentIds: REG_IDS });
+    const league = () => games.filter((p) => p.properties.Phase?.select?.name === "League");
+    const before = league().map((p) => ({ id: p.id, round: p.properties.Round.number, status: p.properties.Status.select.name }));
+    const lastRound = Math.max(...before.map((g) => g.round));
+    // Score one game so the sheet holds both Played and Scheduled rounds.
+    const first = league().find((p) => p.properties.Round.number === 1)!;
+    await recordGameScore({ group: "Green", week: 3, key: first.properties.Game.title[0].plain_text, scoreA: 15, scoreB: 4, timed: false });
+    stub.calls.length = 0;
+
+    const added = await saveDay({ group: "Green", week: 3, presentIds: REG_IDS, append: true });
+    expect(added.ok).toBe(true);
+    expect(added.voided).toBe(0);
+
+    const patchedIds = writes(stub).filter((w) => w.method === "PATCH").map((w) => w.url.split("/pages/")[1]);
+    for (const g of before) expect(patchedIds, "an existing round must not be rewritten by an append").not.toContain(g.id);
+    for (const g of before) expect(games.find((p) => p.id === g.id)!.properties.Status.select.name).not.toBe("Void");
+    const fresh = league().filter((p) => !before.some((g) => g.id === p.id));
+    expect(fresh.length).toBeGreaterThan(0);
+    for (const p of fresh) expect(p.properties.Round.number).toBe(lastRound + 1);
+  });
 });
 
 test.describe("season play — the parent link", () => {

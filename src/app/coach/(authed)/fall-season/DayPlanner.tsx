@@ -17,17 +17,22 @@ interface Props {
   /** From the Day row when one exists, else every Confirmed kid. */
   initialPresent: string[];
   hasSchedule: boolean;
+  /** Any League round on the sheet today, played or not. */
+  hasRounds: boolean;
   roundsPlayed: number;
 }
 
 // Attendance → preview → save. The plan is computed server-side both times
 // (the same present list + attempt gives the same plan), so the client never
 // sends games — only who is here and how many rounds to add.
-export default function DayPlanner({ group, week, roster, initialPresent, hasSchedule, roundsPlayed }: Props) {
+export default function DayPlanner({ group, week, roster, initialPresent, hasSchedule, hasRounds, roundsPlayed }: Props) {
   const router = useRouter();
   const [present, setPresent] = useState<Set<string>>(() => new Set(initialPresent));
   const [rounds, setRounds] = useState("");
   const [preview, setPreview] = useState<DayPreview | null>(null);
+  // "replan" rebuilds the unplayed rounds; "append" adds rounds after the last
+  // one on the sheet and touches nothing already there (extra time).
+  const [mode, setMode] = useState<"replan" | "append">("replan");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -45,11 +50,18 @@ export default function DayPlanner({ group, week, roster, initialPresent, hasSch
     });
   }
 
-  function runPreview() {
+  function runPreview(nextMode: "replan" | "append" = "replan") {
+    setMode(nextMode);
     startTransition(async () => {
       setError(null);
       setMessage(null);
-      const result = await previewDayAction({ group, week, presentIds, rounds: roundsValue });
+      const result = await previewDayAction({
+        group,
+        week,
+        presentIds,
+        rounds: nextMode === "append" ? (roundsValue ?? 1) : roundsValue,
+        append: nextMode === "append",
+      });
       if (!result.ok) {
         setPreview(null);
         setError(result.message);
@@ -60,14 +72,23 @@ export default function DayPlanner({ group, week, roster, initialPresent, hasSch
   }
 
   function save() {
-    const label = hasSchedule
-      ? "Replace the unplayed rounds with this plan? Played games are kept."
-      : "Save this schedule?";
+    const label =
+      mode === "append"
+        ? "Add these rounds after the ones already on the sheet?"
+        : hasSchedule
+          ? "Replace the unplayed rounds with this plan? Played games are kept."
+          : "Save this schedule?";
     if (!window.confirm(label)) return;
     startTransition(async () => {
       setError(null);
       setMessage(null);
-      const result = await saveDayAction({ group, week, presentIds, rounds: roundsValue });
+      const result = await saveDayAction({
+        group,
+        week,
+        presentIds,
+        rounds: mode === "append" ? (roundsValue ?? 1) : roundsValue,
+        append: mode === "append",
+      });
       if (!result.ok) {
         setError(result.message);
         return;
@@ -133,12 +154,22 @@ export default function DayPlanner({ group, week, roster, initialPresent, hasSch
         </label>
         <button
           type="button"
-          onClick={runPreview}
+          onClick={() => runPreview("replan")}
           disabled={pending || presentIds.length < 2}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-ngpa-teal/60 text-ngpa-teal font-bold text-sm hover:bg-ngpa-teal/15 transition-colors disabled:opacity-50 min-h-[44px]"
         >
-          {pending && !preview ? "Working…" : "Preview schedule"}
+          {pending && !preview && mode === "replan" ? "Working…" : "Preview schedule"}
         </button>
+        {hasRounds && (
+          <button
+            type="button"
+            onClick={() => runPreview("append")}
+            disabled={pending || presentIds.length < 2}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-ngpa-lime/60 text-ngpa-lime font-bold text-sm hover:bg-ngpa-lime/15 transition-colors disabled:opacity-50 min-h-[44px]"
+          >
+            {pending && !preview && mode === "append" ? "Working…" : `+ Add ${roundsValue && roundsValue > 1 ? `${roundsValue} rounds` : "a round"}`}
+          </button>
+        )}
         {preview?.ok && (
           <button
             type="button"
@@ -146,7 +177,13 @@ export default function DayPlanner({ group, week, roster, initialPresent, hasSch
             disabled={pending}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ngpa-lime text-ngpa-deep font-bold text-sm hover:brightness-110 transition-all disabled:opacity-50 min-h-[44px]"
           >
-            {pending ? "Saving…" : hasSchedule ? "Save — replace unplayed rounds" : "Save schedule"}
+            {pending
+              ? "Saving…"
+              : mode === "append"
+                ? "Save — add to the sheet"
+                : hasSchedule
+                  ? "Save — replace unplayed rounds"
+                  : "Save schedule"}
           </button>
         )}
       </div>
@@ -157,7 +194,7 @@ export default function DayPlanner({ group, week, roster, initialPresent, hasSch
       {preview?.ok && (
         <div className="rounded-2xl border border-ngpa-teal/40 bg-ngpa-panel/60 p-4 sm:p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ngpa-teal mb-2">
-            Preview · attempt {preview.attempt}
+            {mode === "append" ? "Extra rounds" : "Preview"} · attempt {preview.attempt}
           </p>
           <p className="text-sm text-ngpa-white/80 mb-3">
             {preview.present.length} kids · {preview.allocation.doubles} doubles court
