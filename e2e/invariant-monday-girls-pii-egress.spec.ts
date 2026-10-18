@@ -1,3 +1,4 @@
+import { fixedDate } from "./fixtures/fixed-date";
 import { test, expect } from "@playwright/test";
 import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
@@ -90,8 +91,11 @@ async function runToStripe(payload: string) {
   await POST(req(payload)).catch(() => undefined);
 }
 
-test.beforeEach(() => stub.reset());
-test.afterEach(() => stub.uninstall());
+// These invariants exercise the original full-season sale, not today's
+// season-end gate. Pin the clock before the block so they keep testing it.
+let restoreClock = () => {};
+test.beforeEach(() => { restoreClock = fixedDate("2026-09-01T16:00:00Z"); stub.reset(); });
+test.afterEach(() => { stub.uninstall(); restoreClock(); });
 
 test.describe("Monday Girls registration — child-PII egress", () => {
   test("reaches ONLY Notion, even with Open Brain configured", async () => {

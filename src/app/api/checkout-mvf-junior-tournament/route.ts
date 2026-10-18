@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+import { bindMvfSeat, reserveMvfSeat, mvfAttendeeKey, mvfRequestKey, MvfCapacityError } from "@/lib/mvf-capacity";
 import { getStripe } from "@/lib/stripe";
 import { createAndSendSignupInvoice, type SignupInvoiceResult } from "@/lib/stripe-invoices";
 import { parseSubmissionId } from "@/lib/submission-key";
@@ -24,7 +26,6 @@ import {
 } from "@/lib/validate-mvf-junior-tournament";
 import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
 import {
-  countPaidMvfTournamentRegistrations,
   createMvfTournamentRegistration,
   type MvfTournamentDivisionSlug,
 } from "@/lib/notion-mvf-tournament-registrations";
@@ -112,22 +113,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Division not found" }, { status: 404 });
   }
 
-  // Per-division paid seat cap. Fail-open on a Notion blip (null = unknown) —
-  // an oversold seat is a refundable mistake, an outage blocking checkout
-  // isn't. Same posture as the Monday Girls roster.
-  const paidCount = await countPaidMvfTournamentRegistrations(
-    division.division as MvfTournamentDivisionSlug,
-  );
-  if (paidCount !== null && paidCount >= MVF_JUNIOR_TOURNAMENT_DIVISION_MAX) {
-    return NextResponse.json(
-      {
-        error: `The ${division.label} division is full (${MVF_JUNIOR_TOURNAMENT_DIVISION_MAX} players) — text Coach Sam at 301-325-4731 and we'll add you to the waitlist.`,
-        code: "sold_out",
-      },
-      { status: 409 },
-    );
-  }
-
   // One-time waiver gate — must be on file before the player's first session.
   if (!(await hasWaiverOnFile(data.email, data.phone))) {
     return NextResponse.json(
@@ -151,10 +136,26 @@ export async function POST(req: NextRequest) {
   // The form resends the same id for a retry of the same content, so a retry
   // replays this sign-up's invoice rather than sending a second one.
   const submissionId = parseSubmissionId(body.submissionId);
+  const reservationId = submissionId ?? randomUUID();
+  let existingInvoiceId: string | null;
+  try {
+    ({ invoiceId: existingInvoiceId } = await reserveMvfSeat(division.division, reservationId, mvfAttendeeKey(data), mvfRequestKey(data)));
+  } catch (error) {
+    if (error instanceof MvfCapacityError && error.code === "conflict") return NextResponse.json({ code: "registration_changed", error: "This registration attempt has different details. Check your existing invoice or contact Coach Sam before submitting again." }, { status: 409 });
+    if (error instanceof MvfCapacityError && error.code === "duplicate") return NextResponse.json({ code: "registration_exists", error: "A registration already exists for this player. Check your invoice email or contact Coach Sam before submitting again." }, { status: 409 });
+    if (error instanceof MvfCapacityError && error.code === "full") {
+      return NextResponse.json({ code: "sold_out", error: `The ${division.label} division is full (${MVF_JUNIOR_TOURNAMENT_DIVISION_MAX} players). Text Coach Sam to join the waitlist.` }, { status: 409 });
+    }
+    console.error("[checkout-mvf-junior-tournament] capacity unavailable — checkout refused before invoice creation");
+    return NextResponse.json({ code: "capacity_unavailable", error: "We couldn't confirm an available tournament spot. Please try again before paying." }, { status: 503 });
+  }
 
   let result: SignupInvoiceResult;
   try {
+    const existing = existingInvoiceId ? await getStripe().invoices.retrieve(existingInvoiceId) : null;
+    if (existing && (existing.metadata?.kind !== MVF_JUNIOR_TOURNAMENT_KIND || existing.metadata?.division !== division.division)) throw new Error("Invoice reservation mismatch");
     result = await createAndSendSignupInvoice({
+      existingInvoiceId: existingInvoiceId ?? undefined,
       customerEmail: data.email,
       customerName: invoiceSafeName(data.parentName, ""),
       items: [
@@ -171,6 +172,7 @@ export async function POST(req: NextRequest) {
         event_time: MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
         venue: MVF_JUNIOR_TOURNAMENT_VENUE,
         division: division.division,
+        nga_capacity_submission_id: reservationId,
         division_label: division.label,
         resident: data.resident ? "true" : "false",
         amount_usd: priceUsd.toFixed(2),
@@ -197,12 +199,11 @@ export async function POST(req: NextRequest) {
       footer: `${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} Bring a refillable water bottle and court shoes — we have loaner paddles.`,
       // A week to pay keeps the roster real.
       daysUntilDue: 7,
-      idempotencyKey: submissionId
-        ? `mvf-junior-tournament-${submissionId}`
-        : undefined,
+      idempotencyKey: `mvf-junior-tournament-${reservationId}`,
+      beforeFinalize: (invoiceId) => bindMvfSeat(division.division, reservationId, invoiceId),
     });
-  } catch (err) {
-    console.error("[checkout-mvf-junior-tournament] invoice creation failed", err);
+  } catch {
+    console.error("[checkout-mvf-junior-tournament] invoice creation or reservation binding failed");
     return NextResponse.json(
       {
         error:
@@ -220,7 +221,8 @@ export async function POST(req: NextRequest) {
 
   // Roster row now, Paid=false — the Stripe webhook flips it on payment. A
   // failed write here is loud but can't fail a signup whose invoice already
-  // went out; the webhook backfills the row on payment if it finds none. A
+  // went out; payment retries the lookup and safely claims a new create only
+  // if none was attempted. An ambiguous prior create needs reconciliation. A
   // retry gets the same invoice back, and the write finds that invoice's row
   // rather than adding a second.
   const rowResult = await createMvfTournamentRegistration({
@@ -242,7 +244,7 @@ export async function POST(req: NextRequest) {
   });
   if (rowResult !== "ok") {
     console.error(
-      `[checkout-mvf-junior-tournament] roster row write ${rowResult} for invoice ${invoice.id} — webhook will backfill on payment`,
+      `[checkout-mvf-junior-tournament] roster row write ${rowResult} for invoice ${invoice.id} — retry lookup or reconcile before recreating`,
     );
   }
 

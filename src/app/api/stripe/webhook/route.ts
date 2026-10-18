@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
+import { markMvfSeatPaid, markMvfNotification } from "@/lib/mvf-capacity";
 import { incrementSessionRegistered } from "@/lib/notion-sessions";
 import {
   createDropInRegistrationResult,
@@ -348,7 +349,8 @@ export async function POST(req: NextRequest) {
   // Sign-up invoices (lessons + Monday Girls drop-ins) are finalized and
   // emailed by the checkout routes; this is where the paid confirmation
   // emails + CRM sync happen for them.
-  if (event.type === "invoice.payment_succeeded") {
+  if (event.type === "invoice.payment_succeeded" || event.type === "invoice.paid") {
+    if (event.type === "invoice.paid" && metaString((event.data.object as Stripe.Invoice).metadata ?? {}, "kind") !== "mvf-junior-tournament") return NextResponse.json({ received: true });
     const invoice = event.data.object as Stripe.Invoice;
     const kind = metaString(invoice.metadata ?? {}, "kind");
     if (kind === "monday-girls-dropin") {
@@ -1731,9 +1733,9 @@ async function handleLessonPaid(r: PaidReceipt) {
 
 // MVF Junior Tournament entries (kind=mvf-junior-tournament). The checkout
 // route writes the roster row at invoice time with Paid=false; this flips it
-// on invoice.payment_succeeded, so the per-division cap and the 80/20 NGA/MVF
-// split both run off paid rows. Idempotent: a redelivered event finds Paid
-// already true and no-ops. If the route's row write failed (Notion blip at
+// after the reserved invoice is paid. Capacity comes from the atomic ledger.
+// Durable notification receipts and provider keys make redelivery retryable.
+// If the route's row write failed (Notion blip at
 // checkout), the row is backfilled here from the invoice metadata so a paid
 // family is never missing from the roster.
 async function handleMvfTournamentPaid(r: PaidReceipt) {
@@ -1746,6 +1748,16 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
     `${metaString(m, "child_first_name")} ${metaString(m, "child_last_name")}`.trim() ||
     "your player";
 
+  // Payment never allocates a new seat. It can only consume the reservation
+  // bound before the invoice became payable. Unknown/legacy invoices need the
+  // explicit rollout reconciliation, not a post-capture best-effort seat.
+  let notifications: { adminNotified: boolean; parentNotified: boolean; retryAllowed: boolean };
+  try {
+    notifications = await markMvfSeatPaid(division, r.stripeRef);
+  } catch {
+    return NextResponse.json({ error: "mvf tournament capacity reconciliation required" }, { status: 503 });
+  }
+
   // The checkout route writes the Stripe invoice id on the roster row; the
   // webhook keys off it. (No payment-intent lookup: the tournament is
   // no-refunds, so there is no refund-mapping path to feed.)
@@ -1756,8 +1768,7 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
   );
   if (marked === "not_found") {
     // The route's row write failed — backfill from the invoice metadata, then
-    // mark paid. A create failure here is logged; the admin email below still
-    // names the family so Sam can hand-add the row.
+    // mark paid. Transient failures request redelivery before sending mail.
     console.error(
       "[stripe-webhook] mvf tournament row missing for paid invoice — backfilling",
       r.stripeRef,
@@ -1779,8 +1790,13 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
       emergencyPhone: metaString(m, "emergency_phone"),
       allergies: metaString(m, "allergies"),
     });
+    if (created === "transient") return NextResponse.json({ error: "mvf tournament roster backfill retry required" }, { status: 500 });
     if (created === "ok") {
-      await markMvfTournamentRegPaid(r.stripeRef, r.amountCents / 100, null);
+      const backfilled = await markMvfTournamentRegPaid(r.stripeRef, r.amountCents / 100, null);
+      if (backfilled === "transient" || backfilled === "not_found") return NextResponse.json({ error: "mvf tournament roster backfill retry required" }, { status: 500 });
+      if (backfilled === "permanent") console.error("[stripe-webhook] mvf tournament roster reconciliation required", r.stripeRef);
+    } else if (created === "permanent") {
+      console.error("[stripe-webhook] mvf tournament roster reconciliation required", r.stripeRef);
     }
   } else if (marked === "transient") {
     // 500 → Stripe redelivers; the already_paid guard makes the retry safe.
@@ -1789,14 +1805,21 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
       { status: 500 },
     );
   }
-  // "permanent": same posture as fall/picklpark — the family keeps their seat;
-  // a mis-schema'd Notion DB must not claw back a real registration. The admin
-  // email flags the missing row for a hand backfill.
+  // The family keeps the reserved seat on a permanent Notion schema failure.
+  // Keep mutable roster status in operational logs: a retry must send exactly
+  // the same immutable invoice payload under the same provider idempotency key.
+  if (marked === "permanent") console.error("[stripe-webhook] mvf tournament roster reconciliation required", r.stripeRef);
 
+  // Resend retains idempotency keys for 24 hours. An unacknowledged send
+  // beyond the conservative 23-hour window needs manual reconciliation; never
+  // blindly resend after the provider can forget its key.
+  if (!notifications.retryAllowed) return NextResponse.json({ error: "mvf tournament notification reconciliation required" }, { status: 503 });
+  let notificationFailed = false;
   const apiKey = process.env.RESEND_API_KEY;
   if (apiKey) {
     const resend = new Resend(apiKey);
 
+    if (!notifications.adminNotified) {
     const { error: adminError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [...ADMIN_NOTIFY, MVF_PARTNER_EMAIL],
@@ -1815,18 +1838,15 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
         ``,
         `Paid: $${amount} — NGA $${metaString(m, "nga_share_usd")} / MVF $${metaString(m, "mvf_share_usd")}`,
         `Stripe: ${r.stripeRef}`,
-        ...(marked === "permanent" || marked === "not_found"
-          ? [
-              "",
-              "⚠️ ROSTER WRITE FAILED — this registration is NOT (fully) in the MVF Tournament Registrations DB. Backfill the row by hand or the seat count undersells the cap.",
-            ]
-          : []),
       ].join("\n"),
-    });
-    if (adminError)
-      console.error("[stripe-webhook] mvf tournament admin email rejected", adminError);
+    }, { idempotencyKey: `mvf-paid-${r.stripeRef}-admin` });
+    if (adminError) notificationFailed = true;
+    else {
+      try { await markMvfNotification(division, r.stripeRef, "admin"); } catch { notificationFailed = true; }
+    }
+    }
 
-    if (parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+    if (!notifications.parentNotified && parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
       const { error: parentError } = await resend.emails.send({
         from: FROM_EMAIL,
         to: parentEmail,
@@ -1850,13 +1870,18 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
           `Coach Sam`,
           `Next Gen Pickleball Academy`,
         ].join("\n"),
-      });
-      if (parentError)
-        console.error("[stripe-webhook] mvf tournament parent email rejected", parentError);
+      }, { idempotencyKey: `mvf-paid-${r.stripeRef}-parent` });
+      if (parentError) notificationFailed = true;
+      else {
+        try { await markMvfNotification(division, r.stripeRef, "parent"); } catch { notificationFailed = true; }
+      }
     }
   } else {
-    console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping mvf tournament emails");
+    notificationFailed = !notifications.adminNotified || !notifications.parentNotified;
   }
+
+  if (notificationFailed) return NextResponse.json({ error: "mvf tournament notification retry required" }, { status: 503 });
+  if (marked === "already_paid") return NextResponse.json({ received: true, mvfTournament: true });
 
   after(async () => {
     await Promise.allSettled([

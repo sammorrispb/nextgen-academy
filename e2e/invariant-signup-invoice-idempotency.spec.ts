@@ -3,16 +3,16 @@ import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 import { FakeStripeInvoicing, type FakeStripeEndpoint } from "./fixtures/fake-stripe-invoices";
 
-process.env.STRIPE_SECRET_KEY = "sk_test_dummy_offline";
-process.env.NOTION_API_KEY = "ntn_test_invoice_idempotency";
-process.env.NOTION_MVF_TOURNAMENT_REGS_DB_ID = "mvfregsdb";
-process.env.RESEND_API_KEY = "re_test_invoice_idempotency";
-// Waiver gate fails open without its DB; the L&D roster sync skips outside a
-// production deploy, so neither reaches the network here.
-delete process.env.NOTION_WAIVERS_DB_ID;
-delete process.env.VERCEL_ENV;
-delete process.env.LINKDINK_BASE_URL;
-delete process.env.NGA_SYNC_SECRET;
+const TOUCHED_ENV = ["STRIPE_SECRET_KEY","NOTION_API_KEY","NOTION_MVF_TOURNAMENT_REGS_DB_ID","RESEND_API_KEY","NOTION_WAIVERS_DB_ID","VERCEL_ENV","LINKDINK_BASE_URL","NGA_SYNC_SECRET"] as const;
+const originalEnv = Object.fromEntries(TOUCHED_ENV.map(key => [key,process.env[key]]));
+test.beforeEach(() => {
+  for (const key of TOUCHED_ENV) delete process.env[key];
+  process.env.STRIPE_SECRET_KEY = "sk_test_dummy_offline";
+  process.env.NOTION_API_KEY = "ntn_test_invoice_idempotency";
+  process.env.NOTION_MVF_TOURNAMENT_REGS_DB_ID = "mvfregsdb";
+  process.env.RESEND_API_KEY = "re_test_invoice_idempotency";
+});
+test.afterAll(() => { for(const key of TOUCHED_ENV) { if(originalEnv[key] === undefined) delete process.env[key]; else process.env[key]=originalEnv[key]; } });
 
 import { getStripe } from "../src/lib/stripe";
 import { createAndSendSignupInvoice } from "../src/lib/stripe-invoices";
@@ -269,6 +269,22 @@ test.describe("the MVF sign-up route — a retry is the same sign-up", () => {
     rows = [];
     stub.reset();
     stubRoster(stub, rows);
+    process.env.NGA_SYNC_SECRET = "qa-capacity";
+    process.env.LINKDINK_BASE_URL = "https://capacity.example.invalid";
+    const reservations = new Map<string, { attendee: string; invoiceId: string | null }>();
+    stub.onDynamic("capacity.example.invalid/play/api/internal/nga-tournament-capacity", call => {
+      const c = JSON.parse(call.body);
+      if (c.action === "roster_claim") return {status:200,json:{ok:true,claimed:true}};
+      if(c.action === "reserve") {
+        const existing=reservations.get(c.submission_id);
+        if(!existing && [...reservations.values()].some(r=>r.attendee===c.attendee_key)) return {status:409,json:{error:"registration_exists"}};
+        const r=existing || {attendee:c.attendee_key,invoiceId:null}; reservations.set(c.submission_id,r);
+        return {status:200,json:{ok:true,state:r.invoiceId ? "payable" : "held",invoice_id:r.invoiceId}};
+      }
+      reservations.get(c.submission_id)!.invoiceId=c.invoice_id;
+      return {status:200,json:{ok:true,invoice_id:c.invoice_id}};
+    });
+    stub.on("capacity.example.invalid",{ok:true});
     stub.on("api.resend.com", { id: "email_test" });
     stub.install();
   });
@@ -340,7 +356,7 @@ test.describe("the MVF sign-up route — a retry is the same sign-up", () => {
 
   test("a submission id that isn't one of ours never blocks the sign-up — it just isn't replay-protected", async () => {
     for (const [i, bad] of ["not-a-uuid", "x".repeat(300), 42, ""].entries()) {
-      const res = await post(mvfCheckout, "/api/checkout-mvf-junior-tournament", mvfBody(bad), `10.68.1.${i}`);
+      const res = await post(mvfCheckout, "/api/checkout-mvf-junior-tournament", mvfBody(bad, { childFirstName: `Synthetic ${i}` }), `10.68.1.${i}`);
       expect(res.status, JSON.stringify(bad).slice(0, 20)).toBe(200);
     }
     expect(fake.all()).toHaveLength(4);
@@ -408,6 +424,9 @@ test.describe("the MVF roster — one row per invoice", () => {
 
   test.beforeEach(() => {
     stub.reset();
+    process.env.NGA_SYNC_SECRET = "qa-roster-claim";
+    process.env.LINKDINK_BASE_URL = "https://capacity.example.invalid";
+    stub.on("capacity.example.invalid", { ok: true, claimed: true });
     stub.install();
   });
   test.afterEach(() => stub.uninstall());

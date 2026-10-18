@@ -1,5 +1,6 @@
 import { classifyNotionFailure, type CreateDropInResult } from "./notion-dropins";
 import { DedupeLookupError } from "./dedupe-lookup";
+import { claimMvfRosterCreation } from "./mvf-capacity";
 
 const NOTION_API = "https://api.notion.com/v1";
 const NOTION_VERSION = "2022-06-28";
@@ -15,8 +16,8 @@ const NOTION_VERSION = "2022-06-28";
 // select (10U / 14U), Resident checkbox, and a Paid checkbox.
 //
 // The DB is written at invoice time with Paid=false; the Stripe webhook flips
-// Paid=true on invoice.payment_succeeded. The per-division cap counts Paid
-// rows, so split accounting and capacity both run off paid rows.
+// Paid=true on invoice.payment_succeeded. The opaque P3 reservation ledger
+// owns capacity and serializes creation; Notion remains the operations roster.
 //
 // Env: NOTION_MVF_TOURNAMENT_REGS_DB_ID. Until it is set every helper
 // fail-softs, so the page can ship before the DB exists. A new DB is also
@@ -67,7 +68,7 @@ function headers(notionKey: string): Record<string, string> {
 
 /**
  * Write the roster row when the invoice goes out. Paid=false until the
- * webhook flips it — an unpaid invoice never occupies one of the 12 seats.
+ * webhook flips it. A payable invoice already holds its seat in the ledger.
  */
 export async function createMvfTournamentRegistration(
   row: MvfTournamentRegistrationRow,
@@ -92,6 +93,20 @@ export async function createMvfTournamentRegistration(
   } catch (err) {
     if (err instanceof DedupeLookupError) return err.kind;
     throw err;
+  }
+
+  // Notion has no unique invoice constraint. A separate lookup/create is a
+  // race across checkout and both paid-event aliases, including on different
+  // servers. Only the durable claim winner may attempt the provider write.
+  // A lost response leaves the claim held: positive lookups recover safely;
+  // a still-missing row needs reconciliation before any new create attempt.
+  try {
+    if (!(await claimMvfRosterCreation(row.division, row.stripeInvoiceId))) {
+      console.error("[notion-mvf-tournament-registrations] creation already attempted; retry lookup or reconcile invoice", row.stripeInvoiceId);
+      return "transient";
+    }
+  } catch {
+    return "transient";
   }
 
   const res = await fetch(`${NOTION_API}/pages`, {
@@ -134,8 +149,8 @@ export async function createMvfTournamentRegistration(
   }).catch(() => null);
 
   if (!res) {
-    // Unreachable Notion must not throw out of the checkout route after the
-    // invoice already went out; the webhook backfills the row on payment.
+    // The provider may have accepted the write before the response was lost.
+    // Keep the claim; retry lookup, never an automatic second POST.
     console.error("[notion-mvf-tournament-registrations] create failed: Notion unreachable");
     return "transient";
   }

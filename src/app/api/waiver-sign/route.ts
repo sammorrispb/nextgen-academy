@@ -43,11 +43,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  if (!process.env.RESEND_API_KEY || !process.env.NOTION_API_KEY || !process.env.NOTION_WAIVERS_DB_ID) {
     // The confirmation email is the parent's record copy — the core deliverable.
     return NextResponse.json(
       { error: "Waiver signing is temporarily unavailable. Please try again later." },
-      { status: 500 },
+      { status: 503 },
     );
   }
 
@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
   });
 
   // Notion write — dedup by email so a re-sign doesn't pile up duplicate rows.
-  // Fail-soft: the confirmation email (the record copy) still sends either way.
+  // A confirmation is not proof that the next registration can find the waiver.
+  // Refuse failed/unknown storage before any email or CRM side effect.
   let alreadyOnFile = false;
   try {
     const existing = await findWaiverByEmail(email);
@@ -82,10 +83,20 @@ export async function POST(request: NextRequest) {
         signedAtIso,
         signedIp: ip !== "unknown" ? ip : undefined,
       });
-      if (!result.ok) console.error("[waiver-sign]", result.error);
+      if (!result.ok || typeof result.pageId !== "string" || !result.pageId) {
+        console.error("[waiver-sign] waiver storage failed");
+        return NextResponse.json(
+          { error: "We couldn't save your waiver. Please try signing again." },
+          { status: 503 },
+        );
+      }
     }
-  } catch (err) {
-    console.error("[waiver-sign] notion error:", err);
+  } catch {
+    console.error("[waiver-sign] waiver storage unavailable");
+    return NextResponse.json(
+      { error: "We couldn't save your waiver. Please try signing again." },
+      { status: 503 },
+    );
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY);
