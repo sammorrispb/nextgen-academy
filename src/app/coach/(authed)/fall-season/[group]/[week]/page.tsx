@@ -14,7 +14,9 @@ import { formatLongDate } from "@/lib/format-date";
 import { buildStandingsView, loadLeagueSnapshot } from "@/lib/season-league-view";
 import { nameFor, sideLabel } from "@/lib/season-league/names";
 import { RankingNote, StandingsTable } from "@/components/season-league/StandingsTable";
+import AddRoundButton from "../../AddRoundButton";
 import DayPlanner from "../../DayPlanner";
+import { GameTargetProvider } from "../../GameTarget";
 import GameScoreForm from "../../GameScoreForm";
 import PlayoffScoreForm from "../../PlayoffScoreForm";
 import TeamLocker from "../../TeamLocker";
@@ -65,11 +67,16 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
         {option.label} · {isPlayoff ? "Playoff" : `Sunday ${week}`}
       </h1>
       <p className="text-sm text-ngpa-white/65 mb-8">
-        Games to {SEASON_LEAGUE_GAME_TARGET} (or{" "}
-        {SEASON_LEAGUE_GAME_TARGETS.filter((t) => t !== SEASON_LEAGUE_GAME_TARGET).join(" or ")} when there&rsquo;s
-        time), win by {SEASON_LEAGUE_WIN_BY}. Tick &ldquo;ended on time&rdquo; to record a game the clock
-        stopped. Extra time? &ldquo;+ Add a round&rdquo; adds one after the last round.
+        Tick &ldquo;ended on time&rdquo; to record a game the clock stopped.
       </p>
+
+      <GameTargetProvider
+        group={group}
+        week={week}
+        targets={SEASON_LEAGUE_GAME_TARGETS}
+        defaultTarget={SEASON_LEAGUE_GAME_TARGET}
+        winBy={SEASON_LEAGUE_WIN_BY}
+      >
 
       {snapshot.rowsStatus !== "ok" && (
         <div className="mb-8 rounded-2xl border border-amber-400/50 bg-amber-400/10 px-5 py-4 text-sm text-amber-100">
@@ -151,6 +158,14 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
                 })}
               </ol>
             )}
+            {rounds.length > 0 && (
+              <AddRoundButton
+                group={group}
+                week={week}
+                presentIds={initialPresent}
+                nextRound={rounds[rounds.length - 1] + 1}
+              />
+            )}
           </section>
 
           <section>
@@ -162,6 +177,7 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
           </section>
         </div>
       )}
+      </GameTargetProvider>
       <p className="mt-10 text-xs text-ngpa-white/40">
         Other Sundays:{" "}
         {snapshot.weeks.map((w) => (

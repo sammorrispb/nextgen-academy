@@ -81,6 +81,22 @@ export const SCORE_RULES = {
   winBy: SEASON_LEAGUE_WIN_BY,
 } as const;
 
+/**
+ * The rules for one score. The coach's "Games to" picker sends the length the
+ * game was played to; it is validated against exactly that length. No target
+ * (an older open tab) falls back to accepting any allowed length. A target
+ * outside the allowed set is refused rather than trusted.
+ */
+export function scoreRulesFor(
+  target: unknown,
+): { ok: true; rules: { target: number; winBy: number; targets?: readonly number[] } } | { ok: false; reason: string } {
+  if (target === undefined || target === null) return { ok: true, rules: SCORE_RULES };
+  if (typeof target === "number" && (SEASON_LEAGUE_GAME_TARGETS as readonly number[]).includes(target)) {
+    return { ok: true, rules: { target, winBy: SEASON_LEAGUE_WIN_BY } };
+  }
+  return { ok: false, reason: `Games are to ${SEASON_LEAGUE_GAME_TARGETS.join(", ")}` };
+}
+
 // ---------------------------------------------------------------------------
 // Snapshot
 // ---------------------------------------------------------------------------
@@ -448,6 +464,7 @@ export interface ScoreInput {
   scoreA: unknown;
   scoreB: unknown;
   timed?: unknown;
+  target?: unknown;
 }
 
 export interface ScoreResult {
@@ -461,7 +478,9 @@ export async function recordGameScore(input: ScoreInput): Promise<ScoreResult> {
   if (!group || !week) return { ok: false, message: "Unknown league or week" };
   const key = typeof input.key === "string" ? input.key : "";
   const timed = input.timed === true;
-  const valid = validateScore(input.scoreA, input.scoreB, SCORE_RULES, { timed });
+  const rules = scoreRulesFor(input.target);
+  if (!rules.ok) return { ok: false, message: rules.reason };
+  const valid = validateScore(input.scoreA, input.scoreB, rules.rules, { timed });
   if (!valid.ok) return { ok: false, message: valid.reason };
 
   const snapshot = await loadLeagueSnapshot(group);
@@ -602,6 +621,7 @@ export interface PlayoffScoreInput {
   scoreA: unknown;
   scoreB: unknown;
   timed?: unknown;
+  target?: unknown;
 }
 
 export async function recordPlayoffScore(input: PlayoffScoreInput): Promise<ScoreResult> {
@@ -609,7 +629,9 @@ export async function recordPlayoffScore(input: PlayoffScoreInput): Promise<Scor
   if (!group) return { ok: false, message: "Unknown league" };
   const slot = typeof input.slot === "string" ? input.slot : "";
   const timed = input.timed === true;
-  const valid = validateScore(input.scoreA, input.scoreB, SCORE_RULES, { timed });
+  const rules = scoreRulesFor(input.target);
+  if (!rules.ok) return { ok: false, message: rules.reason };
+  const valid = validateScore(input.scoreA, input.scoreB, rules.rules, { timed });
   if (!valid.ok) return { ok: false, message: valid.reason };
 
   const snapshot = await loadLeagueSnapshot(group);

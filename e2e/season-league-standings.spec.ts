@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { computeStandings } from "../src/lib/season-league/standings";
 import { gameWinner, validateScore } from "../src/lib/season-league/scores";
 import { SEASON_LEAGUE_SUNDAYS } from "../src/data/season-league-2026";
-import { SCORE_RULES } from "../src/lib/season-league-view";
+import { SCORE_RULES, scoreRulesFor } from "../src/lib/season-league-view";
 import type { PlayedGame } from "../src/lib/season-league/types";
 
 // Pure-function spec (no dev server) for the season-league standings and the
@@ -55,6 +55,25 @@ test.describe("score rules (to 11, win by 2)", () => {
     expect(validateScore(15, 14, SCORE_RULES).ok).toBe(false);
     // The single-target rules are unchanged.
     expect(validateScore(15, 4, RULES).ok).toBe(false);
+  });
+
+  test("the 'Games to' picker validates against the length the coach picked", () => {
+    const to = (t: unknown) => {
+      const r = scoreRulesFor(t);
+      if (!r.ok) throw new Error(r.reason);
+      return r.rules;
+    };
+    expect(validateScore(15, 4, to(15))).toEqual({ ok: true });
+    expect(validateScore(17, 15, to(15))).toEqual({ ok: true });
+    // Picked 15: an 11-4 is a typo, not a finished game.
+    expect(validateScore(11, 4, to(15)).ok).toBe(false);
+    // Picked 11: a 15-4 is refused, as before.
+    expect(validateScore(15, 4, to(11)).ok).toBe(false);
+    // No pick (an older open tab): any allowed length passes.
+    expect(validateScore(15, 4, to(undefined))).toEqual({ ok: true });
+    // A length outside the allowed set is refused, never trusted.
+    expect(scoreRulesFor(13).ok).toBe(false);
+    expect(scoreRulesFor("15").ok).toBe(false);
   });
 
   test("league weeks follow the Sundays actually played (W3 slid to Oct 18)", () => {
