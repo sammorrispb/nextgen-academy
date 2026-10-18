@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { recordPlayoffScoreAction } from "./actions";
+import { useGameTarget } from "./GameTarget";
 
 interface Props {
   group: string;
@@ -15,6 +16,7 @@ interface Props {
 
 export default function PlayoffScoreForm({ group, slot, scoreA, scoreB, timed, played }: Props) {
   const router = useRouter();
+  const target = useGameTarget();
   const [a, setA] = useState(scoreA === null ? "" : String(scoreA));
   const [b, setB] = useState(scoreB === null ? "" : String(scoreB));
   const [onTime, setOnTime] = useState(timed);
@@ -32,6 +34,7 @@ export default function PlayoffScoreForm({ group, slot, scoreA, scoreB, timed, p
         scoreA: Number(a),
         scoreB: Number(b),
         timed: onTime,
+        target,
       });
       if (!result.ok) {
         setError(result.message);

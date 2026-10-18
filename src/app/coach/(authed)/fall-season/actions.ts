@@ -67,6 +67,7 @@ export async function recordScoreAction(input: {
   scoreA: number;
   scoreB: number;
   timed: boolean;
+  target?: number | null;
 }): Promise<ScoreResult> {
   const email = await requireCoach();
   if (!email) return UNAUTHORIZED;
@@ -111,6 +112,7 @@ export async function recordPlayoffScoreAction(input: {
   scoreA: number;
   scoreB: number;
   timed: boolean;
+  target?: number | null;
 }): Promise<ScoreResult> {
   const email = await requireCoach();
   if (!email) return UNAUTHORIZED;
