@@ -1,3 +1,4 @@
+import { ownedCheckoutParams } from "@/lib/payment-ownership";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchSessionById } from "@/lib/notion-sessions";
 import { isSessionClosed } from "@/lib/session-time";
@@ -113,7 +114,7 @@ export async function POST(req: NextRequest) {
   const origin = siteOrigin();
 
   const stripe = getStripe();
-  const checkout = await stripe.checkout.sessions.create({
+  const checkout = await stripe.checkout.sessions.create(ownedCheckoutParams({
     mode: "payment",
     line_items: [{ price: priceId, quantity: 1 }],
     allow_promotion_codes: true,
@@ -154,7 +155,7 @@ export async function POST(req: NextRequest) {
     },
     success_url: `${origin}/schedule/success?cs={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/schedule`,
-  });
+  }));
 
   return NextResponse.json({ url: checkout.url });
 }

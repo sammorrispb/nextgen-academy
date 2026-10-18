@@ -1,3 +1,4 @@
+import { ownedCheckoutParams } from "@/lib/payment-ownership";
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { verifyCommitToken } from "@/lib/commit-token";
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   const origin = siteOrigin();
 
-  const checkout = await stripe.checkout.sessions.create({
+  const checkout = await stripe.checkout.sessions.create(ownedCheckoutParams({
     mode: "setup",
     customer: customer.id,
     payment_method_types: ["card"],
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
     },
     success_url: `${origin}/commit/${token}/success?cs={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/commit/${token}`,
-  });
+  }));
 
   return NextResponse.json({ url: checkout.url });
 }

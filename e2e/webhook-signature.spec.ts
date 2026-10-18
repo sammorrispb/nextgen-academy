@@ -67,7 +67,7 @@ test.describe("stripe webhook signature gate", () => {
   });
 
   test("valid signature, irrelevant event type → plain ack, zero downstream calls", async () => {
-    const payload = checkoutEvent(dropInSession(), "invoice.paid");
+    const payload = checkoutEvent(dropInSession(), "payment_intent.succeeded");
     const res = await POST(webhookRequest(payload, signedHeader(payload)));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ received: true });
@@ -90,7 +90,7 @@ test.describe("stripe webhook signature gate", () => {
     );
     const res = await POST(webhookRequest(payload, signedHeader(payload)));
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ skipped: "not_a_dropin" });
+    expect(await res.json()).toMatchObject({ skipped: "payment_not_owned" });
     expect(stub.calls.length).toBe(0);
   });
 });

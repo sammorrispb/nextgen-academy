@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
+import { hasForeignPaymentOwner, nativePaymentOwned } from "@/lib/payment-ownership";
 import { markMvfSeatPaid, markMvfNotification } from "@/lib/mvf-capacity";
 import { incrementSessionRegistered } from "@/lib/notion-sessions";
 import {
@@ -343,15 +344,24 @@ export async function POST(req: NextRequest) {
   }
 
   if (event.type === "charge.refunded") {
-    return handleChargeRefunded(event.data.object as Stripe.Charge);
+    const charge = event.data.object as Stripe.Charge;
+    if (hasForeignPaymentOwner(charge.metadata)) {
+      return NextResponse.json({ received: true, skipped: "payment_not_owned" });
+    }
+    // Historical charges may lack metadata. The refund handler must still
+    // resolve an exact PI already stored in a native roster before any write.
+    return handleChargeRefunded(charge);
   }
 
   // Sign-up invoices (lessons + Monday Girls drop-ins) are finalized and
   // emailed by the checkout routes; this is where the paid confirmation
   // emails + CRM sync happen for them.
   if (event.type === "invoice.payment_succeeded" || event.type === "invoice.paid") {
-    if (event.type === "invoice.paid" && metaString((event.data.object as Stripe.Invoice).metadata ?? {}, "kind") !== "mvf-junior-tournament") return NextResponse.json({ received: true });
     const invoice = event.data.object as Stripe.Invoice;
+    if (!nativePaymentOwned(invoice.metadata, "invoice")) {
+      return NextResponse.json({ received: true, skipped: "payment_not_owned" });
+    }
+    if (event.type === "invoice.paid" && metaString(invoice.metadata ?? {}, "kind") !== "mvf-junior-tournament") return NextResponse.json({ received: true });
     const kind = metaString(invoice.metadata ?? {}, "kind");
     if (kind === "monday-girls-dropin") {
       return handleMondayGirlsDropinPaid(receiptFromInvoice(invoice));
@@ -376,6 +386,9 @@ export async function POST(req: NextRequest) {
   const session = event.data.object as Stripe.Checkout.Session;
   if (session.payment_status !== "paid") {
     return NextResponse.json({ received: true, skipped: "not_paid" });
+  }
+  if (!nativePaymentOwned(session.metadata, "checkout")) {
+    return NextResponse.json({ received: true, skipped: "payment_not_owned" });
   }
 
   // Summer Camp registrations are a separate product from the $20 drop-in. They
@@ -1518,11 +1531,9 @@ async function handleMondayGirlsCheckout(session: Stripe.Checkout.Session) {
 // Monday Girls drop-in purchases (kind=monday-girls-dropin). No roster row —
 // the season block roster is the season commitment — but the family and Sam
 // both get an email naming the exact Monday, and the lead is ingested to
-// Open Brain. Idempotency: keyed on the Stripe session via a module-level set
-// is NOT durable; instead we check nothing and rely on Stripe's at-most-once
-// delivery of checkout.session.completed per session plus Resend's tolerance
-// for the rare redelivery (a duplicate "see you Monday" email is a paper cut,
-// not a double charge — the charge itself is idempotent in Stripe).
+// Open Brain. This legacy notification path has no durable delivery claim:
+// Stripe can retry or concurrently deliver an event. Ownership fencing keeps
+// other apps out, but does not make native confirmations replay-safe.
 //
 // Lessons and drop-ins are now paid via sign-up invoices (Stripe.Invoice)
 // instead of fixed-price checkout sessions. Both arrive here normalized as a
