@@ -12,7 +12,7 @@
 // sites on 2026-09-13 and deliberately names no times: families check those
 // schedules directly.
 
-import { FALL_RAIN_DATES, FALL_SEASON_LABEL, FALL_SEASON_WEEKS, FALL_VENUE, FALL_VENUE_SHORT, FALL_WEATHER_CALL_LEAD_HOURS } from "./fall-2026";
+import { FALL_ORIGINAL_SEASON_LABEL, FALL_RAIN_DATES, FALL_SEASON_LABEL, FALL_SEASON_WEEKS, FALL_VENUE, FALL_VENUE_SHORT, FALL_WEATHER_CALL_LEAD_HOURS } from "./fall-2026";
 import { FALL_SEASON_GROUPS, FALL_SEASON_PRICE_USD } from "./fall-season-2026";
 import { MVF_AGE_MIN, MVF_AGE_MAX, NORTH_CREEK } from "./mvf";
 import { levels } from "./levels";
@@ -86,7 +86,7 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Season dates and payment",
         paragraphs: [
-          `The original schedule was six Sundays, ${FALL_SEASON_LABEL}. These are not six remaining Sundays. Held makeup dates are ${FALL_RAIN_DATES.map(formatLongDate).join(" and ")}, 2026; they replace cancelled sessions rather than add two extra paid sessions. Check the current season record for cancellations and makeup assignments.`,
+          `The original schedule was six Sundays, ${FALL_ORIGINAL_SEASON_LABEL}. These are not six remaining Sundays. Held makeup dates are ${FALL_RAIN_DATES.map(formatLongDate).join(" and ")}, 2026; they replace cancelled sessions rather than add two extra paid sessions. Check the current season record for cancellations and makeup assignments.`,
           `The $${FALL_SEASON_PRICE_USD} full-season commitment is paid up front. This is the full-season price, not a late-start quote. If you are joining after the season starts, confirm the current group, remaining sessions, space and late-start payment terms with Coach Sam before paying.`,
           "Joining the substitute list is not a confirmed spot. Separate drop-ins and substitute opportunities have their own availability. Text Coach Sam at 301-325-4731 if you need help choosing the next step.",
         ],

@@ -15,8 +15,7 @@ import {
 } from "../src/lib/coach-calendar";
 import type { CalendarSessionRow } from "../src/lib/notion-sessions";
 import {
-  FALL_SUNDAYS,
-  FALL_RAIN_DATES,
+  FALL_PLAY_DATES,
   FALL_SLOTS_BY_GROUP,
 } from "../src/data/fall-2026";
 
@@ -129,9 +128,9 @@ test.describe("entry normalization", () => {
     expect(entry.timeLabel).toBe("");
   });
 
-  test("fall Sundays render both color blocks; rain dates are tentative", () => {
+  test("fall Sundays render both color blocks on the played calendar, playoff included", () => {
     const sept = fallEntriesForMonth("2026-09");
-    const septSundays = FALL_SUNDAYS.filter((d) => d.startsWith("2026-09"));
+    const septSundays = FALL_PLAY_DATES.filter((d) => d.startsWith("2026-09"));
     expect(sept).toHaveLength(septSundays.length * 2);
     expect(sept.every((e) => e.status === "Open")).toBe(true);
     expect(sept.map((e) => e.level)).toContain("Green");
@@ -149,8 +148,10 @@ test.describe("entry normalization", () => {
     expect(sept.every((e) => e.href === null)).toBe(true);
 
     const nov = fallEntriesForMonth("2026-11");
-    expect(nov).toHaveLength(FALL_RAIN_DATES.length * 2);
-    expect(nov.every((e) => e.status === "Tentative")).toBe(true);
+    // Both rain dates absorbed a washout, so November holds two real Sundays
+    // (the second is the playoff), not tentative holds.
+    expect(nov).toHaveLength(FALL_PLAY_DATES.filter((d) => d.startsWith("2026-11")).length * 2);
+    expect(nov.every((e) => e.status === "Open")).toBe(true);
 
     expect(fallEntriesForMonth("2026-12")).toHaveLength(0);
   });

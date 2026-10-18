@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import {
-  FALL_RAIN_DATES,
+  FALL_PLAY_DATES,
   FALL_SEASON_WEEKS,
   FALL_SUNDAYS,
   FALL_YOUTH_BLOCKS,
@@ -50,15 +50,16 @@ for (const [group, plan] of ARCS) {
 
     test("each week sits on the matching season Sunday, in calendar order", () => {
       plan.forEach((week, i) => {
-        expect(week.date, `week ${week.week}`).toBe(FALL_SUNDAYS[i]);
+        expect(week.date, `week ${week.week}`).toBe(FALL_PLAY_DATES[i]);
       });
       const sorted = [...plan.map((w) => w.date)].sort();
       expect(plan.map((w) => w.date)).toEqual(sorted);
     });
 
-    test("no week is scheduled on a rain date — those are holds, not season weeks", () => {
-      for (const week of plan) {
-        expect(FALL_RAIN_DATES).not.toContain(week.date);
+    test("no week is scheduled on a Sunday that washed out", () => {
+      const played = new Set<string>(FALL_PLAY_DATES);
+      for (const washedOut of FALL_SUNDAYS.filter((d) => !played.has(d))) {
+        expect(plan.map((w) => w.date)).not.toContain(washedOut);
       }
     });
 

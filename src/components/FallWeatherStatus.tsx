@@ -1,3 +1,4 @@
+import { FALL_PLAYOFF_DATE } from "@/data/fall-2026";
 import {
   FALL_WEATHER_CALL_POLICY,
   buildFallCalendar,
@@ -37,7 +38,12 @@ function pill(s: FallGroupSession, g: FallGroupSchedule): { text: string; tone: 
       };
     default:
       return {
-        text: s.makeupFor ? `Make-up for ${shortDayLabel(s.makeupFor)}` : "Scheduled",
+        text:
+          s.date === FALL_PLAYOFF_DATE
+            ? "Playoff"
+            : s.makeupFor
+              ? `Make-up for ${shortDayLabel(s.makeupFor)}`
+              : "Scheduled",
         tone: "bg-ngpa-slate/30 text-ngpa-white/75 border-ngpa-slate/60",
       };
   }

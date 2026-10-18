@@ -3,7 +3,7 @@ import {
   FALL_END_TIME,
   FALL_NO_HOLD_NOTE,
   FALL_PROGRAMS,
-  FALL_SEASON_LABEL,
+  FALL_ORIGINAL_SEASON_LABEL,
   FALL_SEASON_WEEKS,
   FALL_START_TIME,
   FALL_VENUE_SHORT,
@@ -93,7 +93,7 @@ export function fallSurveyHtml(input: FallSurveyInput): string {
     <p style="margin:0 0 20px 0;color:${c.text};font-size:15px;line-height:1.65;">
       We&rsquo;re running ${FALL_SEASON_WEEKS} weeks at ${FALL_VENUE_SHORT},
       <strong>Sundays, ${FALL_START_TIME}&ndash;${FALL_END_TIME}</strong>,
-      running ${FALL_SEASON_LABEL}. Two programs, so a family can come
+      running ${FALL_ORIGINAL_SEASON_LABEL}. Two programs, so a family can come
       together and everybody plays.
     </p>
 
@@ -151,7 +151,7 @@ export function fallSurveyText(input: FallSurveyInput): string {
   const lines: string[] = [
     `Hey ${firstName} — would this fall work?`,
     "",
-    `We're running ${FALL_SEASON_WEEKS} weeks at ${FALL_VENUE_SHORT}, Sundays, ${FALL_START_TIME}–${FALL_END_TIME}, running ${FALL_SEASON_LABEL}. Two programs, so a family can come together and everybody plays.`,
+    `We're running ${FALL_SEASON_WEEKS} weeks at ${FALL_VENUE_SHORT}, Sundays, ${FALL_START_TIME}–${FALL_END_TIME}, running ${FALL_ORIGINAL_SEASON_LABEL}. Two programs, so a family can come together and everybody plays.`,
     "",
   ];
 

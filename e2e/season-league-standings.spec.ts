@@ -76,10 +76,10 @@ test.describe("score rules (to 11, win by 2)", () => {
     expect(scoreRulesFor("15").ok).toBe(false);
   });
 
-  test("league weeks follow the Sundays actually played (W3 slid to Oct 18)", () => {
+  test("league weeks follow the Sundays actually played (playoff Nov 8)", () => {
     expect(SEASON_LEAGUE_SUNDAYS).toEqual([
       "2026-09-20",
-      "2026-09-27",
+      "2026-10-04",
       "2026-10-18",
       "2026-10-25",
       "2026-11-01",

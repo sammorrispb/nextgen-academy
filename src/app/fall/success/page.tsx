@@ -1,13 +1,13 @@
+import {
+  FALL_PLAYOFF_DATE,
+  FALL_PLAY_DATES,
+  FALL_SEASON_LABEL,
+  FALL_VENUE,
+} from "@/data/fall-2026";
 import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getStripe } from "@/lib/stripe";
-import {
-  FALL_RAIN_DATES,
-  FALL_SEASON_LABEL,
-  FALL_SUNDAYS,
-  FALL_VENUE,
-} from "@/data/fall-2026";
 import { FALL_SEASON_TITLE } from "@/data/fall-season-2026";
 
 export const metadata: Metadata = {
@@ -96,21 +96,16 @@ export default async function FallSuccessPage({ searchParams }: PageProps) {
               Your Sundays
             </p>
             <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-              {FALL_SUNDAYS.map((d) => (
+              {FALL_PLAY_DATES.map((d) => (
                 <li key={d} className="text-sm text-ngpa-muted font-mono">
                   <time dateTime={d}>{sundayLabel(d)}</time>
+                  {d === FALL_PLAYOFF_DATE && " · playoff"}
                 </li>
               ))}
             </ul>
             <p className="text-xs text-ngpa-muted/80 mt-3">
-              Rain dates if a Sunday washes out:{" "}
-              {FALL_RAIN_DATES.map((d, i) => (
-                <span key={d}>
-                  {i > 0 && " or "}
-                  <time dateTime={d}>{sundayLabel(d)}</time>
-                </span>
-              ))}
-              .
+              Both rain dates are already in use, so the season ends with the playoff on{" "}
+              <time dateTime={FALL_PLAYOFF_DATE}>{sundayLabel(FALL_PLAYOFF_DATE)}</time>.
             </p>
           </div>
         </div>

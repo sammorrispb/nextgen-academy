@@ -2,7 +2,7 @@ import { c, s } from "./brand";
 import {
   FALL_END_TIME,
   FALL_NO_HOLD_NOTE,
-  FALL_SEASON_LABEL,
+  FALL_ORIGINAL_SEASON_LABEL,
   FALL_START_TIME,
   FALL_VENUE_SHORT,
   type FallTrack,
@@ -56,7 +56,7 @@ export function fallInterestConfirmationHtml(
 
     <p style="margin:0 0 20px 0;color:${c.text};font-size:15px;line-height:1.65;">
       That&rsquo;s exactly what we needed. We&rsquo;re working out whether a fall season at
-      ${FALL_VENUE_SHORT} can run &mdash; ${FALL_SEASON_LABEL},
+      ${FALL_VENUE_SHORT} can run &mdash; ${FALL_ORIGINAL_SEASON_LABEL},
       ${FALL_START_TIME}&ndash;${FALL_END_TIME} &mdash; and your answer
       is part of that call.
     </p>
@@ -111,7 +111,7 @@ export function fallInterestConfirmationText(
   const lines: string[] = [
     `Thanks, ${firstName}.`,
     "",
-    `That's exactly what we needed. We're working out whether a fall season at ${FALL_VENUE_SHORT} can run — ${FALL_SEASON_LABEL}, ${FALL_START_TIME}–${FALL_END_TIME} — and your answer is part of that call.`,
+    `That's exactly what we needed. We're working out whether a fall season at ${FALL_VENUE_SHORT} can run — ${FALL_ORIGINAL_SEASON_LABEL}, ${FALL_START_TIME}–${FALL_END_TIME} — and your answer is part of that call.`,
     "",
     "WHAT YOU TOLD US",
     `Interested in: ${trackLabel(tracks)}`,

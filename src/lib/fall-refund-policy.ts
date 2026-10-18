@@ -1,4 +1,4 @@
-import { FALL_SUNDAYS } from "@/data/fall-2026";
+import { FALL_PLAY_DATES, FALL_SUNDAYS } from "@/data/fall-2026";
 
 /**
  * Fall 2026 season refund policy.
@@ -85,9 +85,11 @@ export function fallRefundPolicyFor(
 /**
  * Sessions not yet delivered as of `todayIso`, today INCLUSIVE — a session
  * cancelled on its own morning has not been played, so the family is owed it.
+ * Counted on the PLAYED calendar: after the Sep 27 and Oct 11 rainouts moved
+ * to Nov 1 and Nov 8, those two Sundays are still owed.
  */
 export function fallSessionsRemaining(todayIso: string): number {
-  return FALL_SUNDAYS.filter((sunday) => sunday >= todayIso).length;
+  return FALL_PLAY_DATES.filter((sunday) => sunday >= todayIso).length;
 }
 
 /**
@@ -99,7 +101,7 @@ export function fallProratedRefundCents(
   todayIso: string,
   paidCents: number,
 ): number {
-  const total = FALL_SUNDAYS.length;
+  const total = FALL_PLAY_DATES.length;
   const remaining = fallSessionsRemaining(todayIso);
   if (remaining <= 0) return 0;
   if (remaining >= total) return paidCents;

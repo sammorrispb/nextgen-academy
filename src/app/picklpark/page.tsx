@@ -1,3 +1,9 @@
+import {
+  FALL_PUBLIC_AREA,
+  FALL_SEASON_END,
+  FALL_SEASON_LABEL,
+  FALL_VENUE_SHORT,
+} from "@/data/fall-2026";
 import PagePhoto from "@/components/PagePhoto";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -20,12 +26,6 @@ import {
   picklParkLeagueSignupOpen,
   picklParkLeagueStartHour24,
 } from "@/data/picklpark-leagues-2026";
-import {
-  FALL_PUBLIC_AREA,
-  FALL_SEASON_LABEL,
-  FALL_SUNDAYS,
-  FALL_VENUE_SHORT,
-} from "@/data/fall-2026";
 import {
   picklParkLeaguesOpen,
   picklParkTodayET,
@@ -110,7 +110,7 @@ export default async function PicklParkPage() {
   // page.
   const fallOpen =
     process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true" &&
-    todayIso <= FALL_SUNDAYS[FALL_SUNDAYS.length - 1];
+    todayIso <= FALL_SEASON_END;
 
   // One SportsEvent per league, each with its OWN podplay registration URL —
   // a single event carrying one offer would send every structured-data reader

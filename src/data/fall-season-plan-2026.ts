@@ -29,12 +29,13 @@
 // same reason (a nine-year-old can feel what topspin does to a bounce there),
 // then selection, patterns, reading opponents, a weapon, and winning.
 //
-// The dates come from FALL_SUNDAYS. If a Sunday washes out and slides to a rain
-// date, both plans slide with it — the weeks stay in order, they just land on
-// different dates. Never reorder the weeks to fit a calendar.
+// The dates come from FALL_PLAY_DATES, the Sundays actually played. When a
+// Sunday washes out and slides to a rain date, edit that list and both plans
+// slide with it — the weeks stay in order, they just land on different dates.
+// Never reorder the weeks to fit a calendar.
 
 import {
-  FALL_SUNDAYS,
+  FALL_PLAY_DATES,
   FALL_YOUTH_BLOCKS,
   FALL_SEASON_WEEKS,
   type FallBlockLevel,
@@ -50,7 +51,7 @@ export type SeasonPlanGroup = FallBlockLevel;
 export interface SeasonWeek {
   /** 1-indexed week number. */
   week: number;
-  /** ISO date-only, from FALL_SUNDAYS. */
+  /** ISO date-only, from FALL_PLAY_DATES. */
   date: string;
   /** Short title, used on the run sheet and in the parent note. */
   title: string;
@@ -81,7 +82,7 @@ export interface SeasonWeek {
 export const FALL_SEASON_PLAN: readonly SeasonWeek[] = [
   {
     week: 1,
-    date: FALL_SUNDAYS[0],
+    date: FALL_PLAY_DATES[0],
     title: "Where we're starting",
     focusBlock: 1,
     word: "Attitude",
@@ -97,7 +98,7 @@ export const FALL_SEASON_PLAN: readonly SeasonWeek[] = [
   },
   {
     week: 2,
-    date: FALL_SUNDAYS[1],
+    date: FALL_PLAY_DATES[1],
     title: "The soft game",
     focusBlock: 2,
     word: "Skills",
@@ -113,7 +114,7 @@ export const FALL_SEASON_PLAN: readonly SeasonWeek[] = [
   },
   {
     week: 3,
-    date: FALL_SUNDAYS[2],
+    date: FALL_PLAY_DATES[2],
     title: "Starting the point",
     focusBlock: 6,
     word: "Excellence",
@@ -129,7 +130,7 @@ export const FALL_SEASON_PLAN: readonly SeasonWeek[] = [
   },
   {
     week: 4,
-    date: FALL_SUNDAYS[3],
+    date: FALL_PLAY_DATES[3],
     title: "The third shot",
     focusBlock: 3,
     word: "Ethics",
@@ -145,7 +146,7 @@ export const FALL_SEASON_PLAN: readonly SeasonWeek[] = [
   },
   {
     week: 5,
-    date: FALL_SUNDAYS[4],
+    date: FALL_PLAY_DATES[4],
     title: "Owning the net",
     focusBlock: 4,
     word: "Attitude",
@@ -161,7 +162,7 @@ export const FALL_SEASON_PLAN: readonly SeasonWeek[] = [
   },
   {
     week: 6,
-    date: FALL_SUNDAYS[5],
+    date: FALL_PLAY_DATES[5],
     title: "Put it together",
     focusBlock: 5,
     word: "Excellence",
@@ -187,7 +188,7 @@ export const FALL_SEASON_PLAN_GREEN = FALL_SEASON_PLAN;
 export const FALL_SEASON_PLAN_YELLOW: readonly SeasonWeek[] = [
   {
     week: 1,
-    date: FALL_SUNDAYS[0],
+    date: FALL_PLAY_DATES[0],
     title: "Spin, from the first ball",
     focusBlock: 1,
     word: "Attitude",
@@ -203,7 +204,7 @@ export const FALL_SEASON_PLAN_YELLOW: readonly SeasonWeek[] = [
   },
   {
     week: 2,
-    date: FALL_SUNDAYS[1],
+    date: FALL_PLAY_DATES[1],
     title: "Shot selection",
     focusBlock: 3,
     word: "Skills",
@@ -219,7 +220,7 @@ export const FALL_SEASON_PLAN_YELLOW: readonly SeasonWeek[] = [
   },
   {
     week: 3,
-    date: FALL_SUNDAYS[2],
+    date: FALL_PLAY_DATES[2],
     title: "Shot patterns",
     focusBlock: 2,
     word: "Excellence",
@@ -235,7 +236,7 @@ export const FALL_SEASON_PLAN_YELLOW: readonly SeasonWeek[] = [
   },
   {
     week: 4,
-    date: FALL_SUNDAYS[3],
+    date: FALL_PLAY_DATES[3],
     title: "Finding the weakness",
     focusBlock: 5,
     word: "Ethics",
@@ -251,7 +252,7 @@ export const FALL_SEASON_PLAN_YELLOW: readonly SeasonWeek[] = [
   },
   {
     week: 5,
-    date: FALL_SUNDAYS[4],
+    date: FALL_PLAY_DATES[4],
     title: "Playing to your strengths",
     focusBlock: 4,
     word: "Attitude",
@@ -267,7 +268,7 @@ export const FALL_SEASON_PLAN_YELLOW: readonly SeasonWeek[] = [
   },
   {
     week: 6,
-    date: FALL_SUNDAYS[5],
+    date: FALL_PLAY_DATES[5],
     title: "Learning to win",
     focusBlock: 6,
     word: "Excellence",

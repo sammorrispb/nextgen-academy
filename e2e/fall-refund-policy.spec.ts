@@ -6,7 +6,7 @@ import {
   fallSessionsRemaining,
   fallProratedRefundCents,
 } from "../src/lib/fall-refund-policy";
-import { FALL_SUNDAYS } from "../src/data/fall-2026";
+import { FALL_PLAY_DATES, FALL_SUNDAYS } from "../src/data/fall-2026";
 
 // Pure spec — no dev server.
 //   npx playwright test e2e/fall-refund-policy.spec.ts --project=desktop
@@ -83,11 +83,14 @@ test("NGA cancelling prorates regardless of when they registered", () => {
 // ─── Proration maths ────────────────────────────────────────────────────────
 
 test("sessions remaining counts Sundays not yet played, today inclusive", () => {
-  expect(fallSessionsRemaining("2026-09-01")).toBe(FALL_SUNDAYS.length);
+  expect(fallSessionsRemaining("2026-09-01")).toBe(FALL_PLAY_DATES.length);
   // On a session day that session still counts — it has not been delivered yet.
   expect(fallSessionsRemaining("2026-09-20")).toBe(6);
   expect(fallSessionsRemaining("2026-09-21")).toBe(5);
-  expect(fallSessionsRemaining("2026-10-25")).toBe(1);
+  // Counted on the PLAYED calendar: Sep 27 and Oct 11 washed out onto Nov 1
+  // and Nov 8, so on Oct 25 three sessions are still owed, not one.
+  expect(fallSessionsRemaining("2026-10-25")).toBe(3);
+  expect(fallSessionsRemaining("2026-11-08")).toBe(1);
   expect(fallSessionsRemaining("2026-11-30")).toBe(0);
 });
 
@@ -96,9 +99,9 @@ test("NGA cancelling before the season returns the whole fee", () => {
 });
 
 test("NGA cancelling mid-season returns only the undelivered sessions", () => {
-  // 3 of 6 left on Oct 11 (Oct 11, 18, 25) → half back.
-  expect(fallSessionsRemaining("2026-10-11")).toBe(3);
-  expect(fallProratedRefundCents("2026-10-11", 22500)).toBe(11250);
+  // 3 of 6 left on Oct 19 (Oct 25, Nov 1, Nov 8) → half back.
+  expect(fallSessionsRemaining("2026-10-19")).toBe(3);
+  expect(fallProratedRefundCents("2026-10-19", 22500)).toBe(11250);
 });
 
 test("proration rounds in the parent's favour and never exceeds what they paid", () => {
