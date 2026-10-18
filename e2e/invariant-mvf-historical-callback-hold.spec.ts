@@ -53,7 +53,7 @@ test.afterAll(() => {
 
 async function deliver(type: typeof aliases[number]) {
   const payload = JSON.stringify({
-    id: "evt_QAHistoricalHold", object: "event", type,
+    id: "evt_QAHistoricalHold", object: "event", livemode: true, type,
     data: { object: {
       id: "in_QAHistoricalHold", object: "invoice", amount_paid: 5000,
       customer_email: "synthetic@example.invalid",

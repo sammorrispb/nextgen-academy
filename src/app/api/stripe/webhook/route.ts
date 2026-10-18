@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
+import { hasForeignPaymentOwner, nativePaymentOwned } from "@/lib/payment-ownership";
+import { deliverNativeInvoiceEmail, verifiedNativeInvoiceContext, type NativeInvoiceDeliveryContext } from "@/lib/native-invoice-deliveries";
 import { markMvfSeatPaid, markMvfNotification } from "@/lib/mvf-capacity";
 import { incrementSessionRegistered } from "@/lib/notion-sessions";
 import {
@@ -341,23 +343,40 @@ export async function POST(req: NextRequest) {
     console.error("[stripe-webhook] signature verification failed", err);
     return NextResponse.json({ error: "Bad signature" }, { status: 400 });
   }
+  if (event.livemode !== true || (event.data.object as { livemode?: boolean }).livemode === false) {
+    return NextResponse.json({ received: true, skipped: "not_live" });
+  }
 
   if (event.type === "charge.refunded") {
-    return handleChargeRefunded(event.data.object as Stripe.Charge);
+    const charge = event.data.object as Stripe.Charge;
+    if (hasForeignPaymentOwner(charge.metadata)) {
+      return NextResponse.json({ received: true, skipped: "payment_not_owned" });
+    }
+    // Historical charges may lack metadata. The refund handler must still
+    // resolve an exact PI already stored in a native roster before any write.
+    return handleChargeRefunded(charge);
   }
 
   // Sign-up invoices (lessons + Monday Girls drop-ins) are finalized and
   // emailed by the checkout routes; this is where the paid confirmation
   // emails + CRM sync happen for them.
   if (event.type === "invoice.payment_succeeded" || event.type === "invoice.paid") {
-    if (event.type === "invoice.paid" && metaString((event.data.object as Stripe.Invoice).metadata ?? {}, "kind") !== "mvf-junior-tournament") return NextResponse.json({ received: true });
     const invoice = event.data.object as Stripe.Invoice;
-    const kind = metaString(invoice.metadata ?? {}, "kind");
-    if (kind === "monday-girls-dropin") {
-      return handleMondayGirlsDropinPaid(receiptFromInvoice(invoice));
+    if (!nativePaymentOwned(invoice.metadata, "invoice")) {
+      return NextResponse.json({ received: true, skipped: "payment_not_owned" });
     }
-    if (kind === "lesson") {
-      return handleLessonPaid(receiptFromInvoice(invoice));
+    if (event.type === "invoice.paid" && metaString(invoice.metadata ?? {}, "kind") !== "mvf-junior-tournament") return NextResponse.json({ received: true });
+    const kind = metaString(invoice.metadata ?? {}, "kind");
+    if (kind === "monday-girls-dropin" || kind === "lesson") {
+      try {
+        const context = await verifiedNativeInvoiceContext(invoice, event, stripe);
+        if (!context) return NextResponse.json({ received: true, notificationsHeld: true });
+        return kind === "lesson"
+          ? await handleLessonPaid(receiptFromInvoice(invoice), context)
+          : await handleMondayGirlsDropinPaid(receiptFromInvoice(invoice), context);
+      } catch {
+        return NextResponse.json({ error: "native_invoice_notification_pending" }, { status: 503 });
+      }
     }
     // MVF Junior Tournament entries (kind=mvf-junior-tournament). Invoice-based
     // like the drop-in and lesson products: the paid event flips the Notion
@@ -376,6 +395,9 @@ export async function POST(req: NextRequest) {
   const session = event.data.object as Stripe.Checkout.Session;
   if (session.payment_status !== "paid") {
     return NextResponse.json({ received: true, skipped: "not_paid" });
+  }
+  if (!nativePaymentOwned(session.metadata, "checkout")) {
+    return NextResponse.json({ received: true, skipped: "payment_not_owned" });
   }
 
   // Summer Camp registrations are a separate product from the $20 drop-in. They
@@ -429,14 +451,14 @@ export async function POST(req: NextRequest) {
   // the season DB (the block roster is the season commitment), just admin +
   // parent emails so the family knows which Monday they're on.
   if (metaString(session.metadata ?? {}, "kind") === "monday-girls-dropin") {
-    return handleMondayGirlsDropinPaid(receiptFromCheckoutSession(session));
+    return NextResponse.json({ received: true, notificationsHeld: true });
   }
 
   // Lesson purchases carry kind=lesson. A lesson is a scheduling conversation:
   // the webhook notifies Sam (who reaches out to lock the hour) and confirms
   // to the parent. No roster DB — lessons are 1:1 scheduled, not inventoried.
   if (metaString(session.metadata ?? {}, "kind") === "lesson") {
-    return handleLessonPaid(receiptFromCheckoutSession(session));
+    return NextResponse.json({ received: true, notificationsHeld: true });
   }
 
   const m = session.metadata ?? {};
@@ -1518,33 +1540,19 @@ async function handleMondayGirlsCheckout(session: Stripe.Checkout.Session) {
 // Monday Girls drop-in purchases (kind=monday-girls-dropin). No roster row —
 // the season block roster is the season commitment — but the family and Sam
 // both get an email naming the exact Monday, and the lead is ingested to
-// Open Brain. Idempotency: keyed on the Stripe session via a module-level set
-// is NOT durable; instead we check nothing and rely on Stripe's at-most-once
-// delivery of checkout.session.completed per session plus Resend's tolerance
-// for the rare redelivery (a duplicate "see you Monday" email is a paper cut,
-// not a double charge — the charge itself is idempotent in Stripe).
+// Open Brain. Native invoices use the service-only recipient claim below.
+// Stripe can retry or deliver concurrent events; legacy Checkout purchases are
+// held for review because they have no invoice-keyed delivery receipt.
 //
-// Lessons and drop-ins are now paid via sign-up invoices (Stripe.Invoice)
-// instead of fixed-price checkout sessions. Both arrive here normalized as a
-// PaidReceipt — same emails, same CRM sync, whichever object Stripe paid.
+// Lessons and drop-ins are now paid via sign-up invoices (Stripe.Invoice).
+// Legacy Checkout callbacks are review-only; only an invoice with verified
+// original payment time and source account can claim a native notification.
 interface PaidReceipt {
   metadata: Stripe.Metadata;
   parentEmail: string;
   amountCents: number;
   /** Stripe object id for logging / CRM (session id or invoice id). */
   stripeRef: string;
-}
-
-function receiptFromCheckoutSession(
-  session: Stripe.Checkout.Session,
-): PaidReceipt {
-  const m = session.metadata ?? {};
-  return {
-    metadata: m,
-    parentEmail: payerEmail(session) || metaString(m, "parent_email"),
-    amountCents: session.amount_total ?? 0,
-    stripeRef: session.id,
-  };
 }
 
 function receiptFromInvoice(invoice: Stripe.Invoice): PaidReceipt {
@@ -1557,19 +1565,19 @@ function receiptFromInvoice(invoice: Stripe.Invoice): PaidReceipt {
   };
 }
 
-async function handleMondayGirlsDropinPaid(r: PaidReceipt) {
+async function handleMondayGirlsDropinPaid(r: PaidReceipt, context: NativeInvoiceDeliveryContext) {
   const m = r.metadata;
   const mondayIso = metaString(m, "monday");
   const mondayLabel = mondayIso ? formatLongDate(mondayIso) : "their Monday";
   const parentEmail = r.parentEmail;
   const amount = (r.amountCents / 100).toFixed(2);
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (apiKey) {
-    const resend = new Resend(apiKey);
+  let freshDelivery = false;
+  let heldDelivery = false;
+  {
 
     // Admin first — Sam needs to know who's on court Monday.
-    const { error: adminError } = await resend.emails.send({
+    const adminDelivery = await deliverNativeInvoiceEmail(context, "admin", {
       from: FROM_EMAIL,
       to: ADMIN_NOTIFY,
       subject: `Monday Girls drop-in: ${metaString(m, "child_first_name")} — ${mondayLabel}`,
@@ -1587,12 +1595,12 @@ async function handleMondayGirlsDropinPaid(r: PaidReceipt) {
         `Stripe: ${r.stripeRef}`,
       ].join("\n"),
     });
-    if (adminError)
-      console.error("[stripe-webhook] dropin admin email rejected", adminError);
+    freshDelivery ||= adminDelivery.fresh;
+    heldDelivery ||= adminDelivery.state !== "accepted";
 
     // Parent confirmation.
     if (parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
-      const { error: parentError } = await resend.emails.send({
+      const parentDelivery = await deliverNativeInvoiceEmail(context, "parent", {
         from: FROM_EMAIL,
         to: parentEmail,
         bcc: ADMIN_EMAIL,
@@ -1613,12 +1621,13 @@ async function handleMondayGirlsDropinPaid(r: PaidReceipt) {
           `Next Gen Pickleball Academy`,
         ].join("\n"),
       });
-      if (parentError)
-        console.error("[stripe-webhook] dropin parent email rejected", parentError);
+      freshDelivery ||= parentDelivery.fresh;
+      heldDelivery ||= parentDelivery.state !== "accepted";
     }
-  } else {
-    console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping dropin emails");
   }
+
+  if (heldDelivery) return NextResponse.json({ received: true, mondayGirlsDropin: true, notificationsHeld: true });
+  if (!freshDelivery) return NextResponse.json({ received: true, mondayGirlsDropin: true, idempotent: true });
 
   after(async () => {
     await Promise.allSettled([
@@ -1646,17 +1655,17 @@ async function handleMondayGirlsDropinPaid(r: PaidReceipt) {
 // Lesson purchases (kind=lesson). The product is a scheduling conversation:
 // Sam gets everything he needs to reach out and lock the hour, and the parent
 // gets confirmation that the hour is paid for and a coach will be in touch.
-async function handleLessonPaid(r: PaidReceipt) {
+async function handleLessonPaid(r: PaidReceipt, context: NativeInvoiceDeliveryContext) {
   const m = r.metadata;
   const lessonTitle = metaString(m, "lesson_title") || "Lesson";
   const parentEmail = r.parentEmail;
   const amount = (r.amountCents / 100).toFixed(2);
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (apiKey) {
-    const resend = new Resend(apiKey);
+  let freshDelivery = false;
+  let heldDelivery = false;
+  {
 
-    const { error: adminError } = await resend.emails.send({
+    const adminDelivery = await deliverNativeInvoiceEmail(context, "admin", {
       from: FROM_EMAIL,
       to: ADMIN_NOTIFY,
       subject: `Lesson sold: ${lessonTitle} — ${metaString(m, "child_first_name")} (${metaString(m, "parent_name")})`,
@@ -1676,12 +1685,12 @@ async function handleLessonPaid(r: PaidReceipt) {
         `Next step: the parent picks times at ${SITE_ORIGIN}/lessons/book?inv=${encodeURIComponent(r.stripeRef)} — the booking request lands in this inbox for confirm/counter.`,
       ].join("\n"),
     });
-    if (adminError)
-      console.error("[stripe-webhook] lesson admin email rejected", adminError);
+    freshDelivery ||= adminDelivery.fresh;
+    heldDelivery ||= adminDelivery.state !== "accepted";
 
     if (parentEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
       const bookUrl = `${SITE_ORIGIN}/lessons/book?inv=${encodeURIComponent(r.stripeRef)}`;
-      const { error: parentError } = await resend.emails.send({
+      const parentDelivery = await deliverNativeInvoiceEmail(context, "parent", {
         from: FROM_EMAIL,
         to: parentEmail,
         bcc: ADMIN_EMAIL,
@@ -1701,12 +1710,13 @@ async function handleLessonPaid(r: PaidReceipt) {
           `Next Gen Pickleball Academy`,
         ].join("\n"),
       });
-      if (parentError)
-        console.error("[stripe-webhook] lesson parent email rejected", parentError);
+      freshDelivery ||= parentDelivery.fresh;
+      heldDelivery ||= parentDelivery.state !== "accepted";
     }
-  } else {
-    console.warn("[stripe-webhook] RESEND_API_KEY missing — skipping lesson emails");
   }
+
+  if (heldDelivery) return NextResponse.json({ received: true, lesson: true, notificationsHeld: true });
+  if (!freshDelivery) return NextResponse.json({ received: true, lesson: true, idempotent: true });
 
   after(async () => {
     await Promise.allSettled([

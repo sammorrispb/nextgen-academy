@@ -1,3 +1,4 @@
+import { ownedCheckoutParams } from "@/lib/payment-ownership";
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
     };
   }
 
-  const checkout = await stripe.checkout.sessions.create({
+  const checkout = await stripe.checkout.sessions.create(ownedCheckoutParams({
     mode: "payment",
     line_items: [lineItem],
     allow_promotion_codes: true,
@@ -249,7 +250,7 @@ export async function POST(req: NextRequest) {
     },
     success_url: `${origin}/monday-girls/success?cs={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/monday-girls`,
-  });
+  }));
 
   return NextResponse.json({ url: checkout.url });
 }

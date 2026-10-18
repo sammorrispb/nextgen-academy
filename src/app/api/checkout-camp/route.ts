@@ -1,3 +1,4 @@
+import { ownedCheckoutParams } from "@/lib/payment-ownership";
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { findCampBySlug, findCampOption } from "@/data/camps";
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
   const optionLabel = dayLabel ? `${option.label} — ${dayLabel}` : option.label;
 
   const stripe = getStripe();
-  const checkout = await stripe.checkout.sessions.create({
+  const checkout = await stripe.checkout.sessions.create(ownedCheckoutParams({
     mode: "payment",
     line_items: [{ price: priceId, quantity: 1 }],
     allow_promotion_codes: true,
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest) {
     },
     success_url: `${origin}/camp/success?cs={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/camp/${camp.slug}`,
-  });
+  }));
 
   return NextResponse.json({ url: checkout.url });
 }

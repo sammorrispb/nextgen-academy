@@ -1,3 +1,4 @@
+import { PAYMENT_OWNER } from "@/lib/payment-ownership";
 import { secretEquals } from "@/lib/secret-compare";
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
@@ -136,6 +137,7 @@ async function processOne(
       confirm: true,
       description: `NGA crew reservation — ${commit.childFirstName} — ${next.title}`,
       metadata: {
+        payment_owner: PAYMENT_OWNER,
         nga_commit_id: commit.id,
         nga_crew_id: commit.crewId,
         nga_session_id: next.id,

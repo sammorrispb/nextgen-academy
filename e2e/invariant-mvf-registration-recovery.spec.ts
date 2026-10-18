@@ -32,7 +32,7 @@ test('a redelivered already-paid invoice produces no repeated announcements', as
   const invoiceId = 'in_syntheticDuplicate';
   stub.on(/api\.notion\.com\/v1\/databases\/mvf_boundaries\/query/, {results:[{id:'synthetic_row',properties:{Paid:{checkbox:true}}}]});
   stub.on('api.resend.com',{id:'synthetic_mail'});
-  const payload = JSON.stringify({id:'evt_synthetic_repeated', object:'event',type:'invoice.payment_succeeded',data:{object:{id:invoiceId,object:'invoice',amount_paid:5000,customer_email:'synthetic@example.com',metadata}}});
+  const payload = JSON.stringify({id:'evt_synthetic_repeated', object:'event', livemode: true,type:'invoice.payment_succeeded',data:{object:{id:invoiceId,object:'invoice',amount_paid:5000,customer_email:'synthetic@example.com',metadata}}});
   for(let i=0;i<2;i++) {
     const request = new NextRequest('http://localhost/api/stripe/webhook',{method:'POST',body:payload,headers:{'stripe-signature':signedHeader(payload)}});
     // next/server after() throws outside request context; all observed sends precede it.
@@ -68,7 +68,7 @@ test("both paid event aliases retry only the missing notification after a partia
     return parentAttempts === 1 ? {status:503,json:{name:"application_error",message:"synthetic outage"}} : {status:200,json:{id:"synthetic-email"}};
   });
   for (const [type, status] of [["invoice.payment_succeeded",503],["invoice.paid",200],["invoice.payment_succeeded",200]] as const) {
-    const payload=JSON.stringify({id:"evt_synthetic_alias",object:"event",type,data:{object:{id:"in_QAAlias",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
+    const payload=JSON.stringify({id:"evt_synthetic_alias",object:"event", livemode: true,type,data:{object:{id:"in_QAAlias",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
     const response=await webhook(new NextRequest("http://localhost/api/stripe/webhook",{method:"POST",body:payload,headers:{"stripe-signature":signedHeader(payload)}}));
     expect(response.status).toBe(status);
   }
@@ -86,7 +86,7 @@ test("concurrent webhook requests use the same provider idempotency key per reci
     if(String(input).includes("api.resend.com")) keys.push(new Headers(init?.headers).get("idempotency-key") || "");
     return installed(input,init);
   };
-  const payload=JSON.stringify({id:"evt_synthetic_concurrent",object:"event",type:"invoice.payment_succeeded",data:{object:{id:"in_QAConcurrent",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
+  const payload=JSON.stringify({id:"evt_synthetic_concurrent",object:"event", livemode: true,type:"invoice.payment_succeeded",data:{object:{id:"in_QAConcurrent",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
   try {
     const responses=await Promise.all([1,2].map(() => webhook(new NextRequest("http://localhost/api/stripe/webhook",{method:"POST",body:payload,headers:{"stripe-signature":signedHeader(payload)}}))));
     expect(responses.map(r=>r.status)).toEqual([200,200]);
@@ -98,7 +98,7 @@ test("an ambiguous unacknowledged send beyond the provider replay window needs r
   stub.reset();
   stub.on("capacity.example.invalid",{ok:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:false,legacy_callback_deferred:false});
   stub.on("api.notion.com",{results:[{id:"synthetic-row",properties:{Paid:{checkbox:true}}}]});
-  const payload=JSON.stringify({id:"evt_synthetic_expired",object:"event",type:"invoice.payment_succeeded",data:{object:{id:"in_QAExpired",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
+  const payload=JSON.stringify({id:"evt_synthetic_expired",object:"event", livemode: true,type:"invoice.payment_succeeded",data:{object:{id:"in_QAExpired",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
   const response=await webhook(new NextRequest("http://localhost/api/stripe/webhook",{method:"POST",body:payload,headers:{"stripe-signature":signedHeader(payload)}}));
   expect(response.status).toBe(503); expect(stub.callsTo("api.resend.com")).toHaveLength(0);
 });
@@ -108,7 +108,7 @@ test("transient Notion backfill failure requests redelivery before any mail", as
   stub.on("capacity.example.invalid",{ok:true,claimed:true,already_paid:true,admin_notified:false,parent_notified:false,notification_retry_allowed:true,legacy_callback_deferred:false});
   stub.on(/api\.notion\.com\/v1\/databases\//,{results:[]});
   stub.on(/api\.notion\.com\/v1\/pages$/,{message:"synthetic unavailable"},503);
-  const payload=JSON.stringify({id:"evt_synthetic_backfill",object:"event",type:"invoice.payment_succeeded",data:{object:{id:"in_QABackfill",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
+  const payload=JSON.stringify({id:"evt_synthetic_backfill",object:"event", livemode: true,type:"invoice.payment_succeeded",data:{object:{id:"in_QABackfill",object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
   const response=await webhook(new NextRequest("http://localhost/api/stripe/webhook",{method:"POST",body:payload,headers:{"stripe-signature":signedHeader(payload)}}));
   expect(response.status).toBe(500); expect(stub.callsTo("api.resend.com")).toHaveLength(0);
 });
@@ -163,7 +163,7 @@ for (const initialRoster of ["missing", "permanent"] as const) {
       return Response.json({id:`synthetic-${key}`});
     };
     try {
-      const payload=JSON.stringify({id:"evt_synthetic_ack",object:"event",type:"invoice.payment_succeeded",data:{object:{id:`in_QAAck${initialRoster}`,object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
+      const payload=JSON.stringify({id:"evt_synthetic_ack",object:"event", livemode: true,type:"invoice.payment_succeeded",data:{object:{id:`in_QAAck${initialRoster}`,object:"invoice",amount_paid:5000,customer_email:"synthetic@example.invalid",metadata}}});
       const deliver=() => webhook(new NextRequest("http://localhost/api/stripe/webhook",{method:"POST",body:payload,headers:{"stripe-signature":signedHeader(payload)}}));
       expect((await deliver()).status).toBe(503);
       expect((await deliver()).status).toBe(200);

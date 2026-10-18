@@ -74,7 +74,7 @@ function forceConcurrentMissingReads(count: 2 | 4) {
 }
 async function paid(type = "invoice.paid") {
   const metadata = { kind: "mvf-junior-tournament", event_date: "2026-10-24", division: "10u", division_label: "10U", parent_name: row.parentName, parent_email: row.parentEmail, parent_phone: row.parentPhone, child_first_name: row.childFirstName, child_last_name: row.childLastName, child_dob: row.childDob, emergency_name: row.emergencyName, emergency_phone: row.emergencyPhone };
-  const payload = JSON.stringify({ id: "evt_QARosterCreation", object: "event", type, data: { object: { id: invoiceId, object: "invoice", amount_paid: 5000, customer_email: row.parentEmail, metadata } } });
+  const payload = JSON.stringify({ id: "evt_QARosterCreation", object: "event", livemode: true, type, data: { object: { id: invoiceId, object: "invoice", amount_paid: 5000, customer_email: row.parentEmail, metadata } } });
   try { return (await webhook(new NextRequest("http://localhost/api/stripe/webhook", { method: "POST", body: payload, headers: { "stripe-signature": signedHeader(payload) } }))).status; }
   catch (error) { expect(String(error)).toMatch(/after.*(?:request|scope)/i); return 200; }
 }

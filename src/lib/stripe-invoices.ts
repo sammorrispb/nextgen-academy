@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { getStripe } from "./stripe";
+import { PAYMENT_OWNER, hasForeignPaymentOwner } from "./payment-ownership";
 
 // Invoice-from-signup helper. Replaces fixed Stripe Price IDs: the caller
 // passes line items built from the sign-up form (description + amount in
@@ -98,6 +99,7 @@ export async function createAndSendSignupInvoice(
   if (items.length === 0) {
     throw new Error("createAndSendSignupInvoice needs at least one line item");
   }
+  if (hasForeignPaymentOwner(metadata)) throw new Error("Invoice belongs to another payment owner");
   for (const item of items) {
     if (item.amountCents <= 0 || (item.quantity ?? 1) <= 0) {
       throw new Error(`Invalid line item amounts: ${item.description}`);
@@ -109,6 +111,7 @@ export async function createAndSendSignupInvoice(
 
   if (existingInvoiceId) {
     const existing = await stripe.invoices.retrieve(existingInvoiceId);
+    if (hasForeignPaymentOwner(existing.metadata)) throw new Error("Invoice belongs to another payment owner");
     if (existing.status === "paid") return { invoice: existing, alreadySent: true };
     if (existing.status !== "draft" && existing.status !== "open") throw new Error("Invoice is no longer payable");
     if (beforeFinalize) await beforeFinalize(existingInvoiceId);
@@ -134,7 +137,7 @@ export async function createAndSendSignupInvoice(
       auto_advance: !beforeFinalize,
       description: memo || undefined,
       footer: footer || undefined,
-      metadata,
+      metadata: { ...metadata, payment_owner: PAYMENT_OWNER },
     },
     keyed("invoice"),
   );
