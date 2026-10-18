@@ -1,3 +1,4 @@
+import { fixedDate } from "./fixtures/fixed-date";
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -226,8 +227,11 @@ function installRoster(count: number) {
     .install();
 }
 
-test.beforeEach(() => stub.reset());
-test.afterEach(() => stub.uninstall());
+// These invariants exercise the original full-season sale, not today's
+// season-end gate. Pin the clock before the block so they keep testing it.
+let restoreClock = () => {};
+test.beforeEach(() => { restoreClock = fixedDate("2026-09-01T16:00:00Z"); stub.reset(); });
+test.afterEach(() => { stub.uninstall(); restoreClock(); });
 
 test.describe("Monday Girls — checkout enforces the block cap", () => {
   test("a full block is sold out to BOTH levels, however the seats are split", async () => {

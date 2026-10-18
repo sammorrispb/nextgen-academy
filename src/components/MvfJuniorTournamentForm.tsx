@@ -1,8 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import InlineWaiverStep from "@/components/InlineWaiverStep";
 import { submissionKeyFor } from "@/lib/submission-key";
+import {
+  clearMvfDraft,
+  emptyMvfForm,
+  focusMvfError,
+  readMvfDraft,
+  rememberMvfSubmission,
+  saveMvfDraft,
+  type DraftStorage,
+} from "@/lib/mvf-registration-recovery";
 import {
   GUARANTEED_GAMES_TEXT,
   getMvfTournamentDobBounds,
@@ -32,32 +41,63 @@ import EmailTypoHint from "@/components/EmailTypoHint";
 
 type FormStatus = "idle" | "submitting" | "redirecting" | "error" | "closed";
 
-function emptyForm(): MvfJuniorTournamentData {
-  return {
-    division: "",
-    resident: true,
-    parentName: "",
-    email: "",
-    phone: "",
-    childFirstName: "",
-    childLastName: "",
-    childDob: "",
-    emergencyName: "",
-    emergencyPhone: "",
-    allergies: "",
-    smsConsent: false,
-  };
-}
-
 export default function MvfJuniorTournamentForm() {
-  const [form, setForm] = useState<MvfJuniorTournamentData>(emptyForm);
+  const [form, setForm] = useState<MvfJuniorTournamentData>(emptyMvfForm);
   const [errors, setErrors] = useState<MvfJuniorTournamentErrors>({});
   const [status, setStatus] = useState<FormStatus>("idle");
   const [serverError, setServerError] = useState("");
   const [waiverNeeded, setWaiverNeeded] = useState(false);
-  // Submission keys issued this page load, by form content — see startCheckout.
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [recoveryConflict, setRecoveryConflict] = useState(false);
+  const storage = useRef<DraftStorage | undefined>(undefined);
+  const recoveryFingerprint = useRef<string | undefined>(undefined);
+  const draftTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const submissionKeys = useRef(new Map<string, string>());
   const dobBounds = getMvfTournamentDobBounds(form.division);
+
+  useEffect(() => {
+    let mounted = true;
+    try { storage.current = window.sessionStorage; } catch { /* Optional in private/blocked browsers. */ }
+    const recovered = readMvfDraft(storage.current);
+    // Defer client-only recovery until hydration finishes.
+    queueMicrotask(() => {
+      if (!mounted) return;
+      if (recovered) {
+        setForm(recovered.form);
+        recoveryFingerprint.current = recovered.lastAttempt;
+        setDraftRestored(true);
+      }
+      setDraftReady(true);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    if (draftTimer.current) clearTimeout(draftTimer.current);
+    if (!draftReady || status === "redirecting") return;
+    if (JSON.stringify(form) === JSON.stringify(emptyMvfForm())) {
+      clearMvfDraft(storage.current);
+      return;
+    }
+    const expiresAt = saveMvfDraft(storage.current, form);
+    // A tab left open should discard its saved personal fields at expiry too.
+    // The read checks the current expiry, so an older timer cannot erase a newer draft.
+    // Keep this expiry task when the form unmounts on an in-tab navigation.
+    draftTimer.current = setTimeout(() => { readMvfDraft(storage.current); }, Math.max(0, expiresAt - Date.now()));
+  }, [draftReady, form, status]);
+
+  function startNewRegistration() {
+    clearMvfDraft(storage.current);
+    recoveryFingerprint.current = undefined;
+    setForm(emptyMvfForm());
+    setErrors({});
+    setServerError("");
+    setRecoveryConflict(false);
+    setDraftRestored(false);
+    setWaiverNeeded(false);
+    setStatus("idle");
+  }
 
   function update<K extends keyof MvfJuniorTournamentData>(
     field: K,
@@ -78,17 +118,24 @@ export default function MvfJuniorTournamentForm() {
     const allErrors = validateMvfJuniorTournament(form);
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors);
-      const first = Object.keys(allErrors)[0];
-      document.getElementById(first)?.focus();
+      focusMvfError(allErrors, document);
       return;
     }
     await startCheckout();
   }
 
   async function startCheckout() {
+    if (!draftReady || status === "submitting" || status === "redirecting") return;
     setServerError("");
     setStatus("submitting");
     try {
+      if (!(await rememberMvfSubmission(submissionKeys.current, form, storage.current, recoveryFingerprint.current))) {
+        setRecoveryConflict(true);
+        setServerError("These details differ from the payment request saved before refresh. Re-enter the original date of birth, emergency contact, medical notes and text-message preference to retry that request. If an invoice arrived, use its payment link. Clearing the form to start a new registration may create another invoice.");
+        setStatus("error");
+        return;
+      }
+      setRecoveryConflict(false);
       const res = await fetch("/api/checkout-mvf-junior-tournament", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -101,11 +148,11 @@ export default function MvfJuniorTournamentForm() {
           submissionId: submissionKeyFor(submissionKeys.current, form),
         }),
       });
-      if (res.status === 503) {
+      const data = await res.json();
+      if (res.status === 503 && data.code !== "capacity_unavailable") {
         setStatus("closed");
         return;
       }
-      const data = await res.json();
       if (isWaiverRequired(res.status, data)) {
         setWaiverNeeded(true);
         setStatus("idle");
@@ -114,6 +161,7 @@ export default function MvfJuniorTournamentForm() {
       if (!res.ok) {
         if (data.errors) {
           setErrors(data.errors);
+          focusMvfError(data.errors, document);
           setStatus("error");
           return;
         }
@@ -121,6 +169,7 @@ export default function MvfJuniorTournamentForm() {
       }
       if (!data.url || !data.invoiceId)
         throw new Error("Could not create your invoice");
+      clearMvfDraft(storage.current);
       setStatus("redirecting");
       // The invoice is emailed too; the success page shows its status and a
       // Pay-now button that points at the hosted invoice.
@@ -139,7 +188,7 @@ export default function MvfJuniorTournamentForm() {
     "block font-heading text-sm font-bold text-ngpa-white mb-1.5";
   const errorClass = "text-ngpa-red text-sm mt-1.5";
 
-  const busy = status === "submitting" || status === "redirecting";
+  const busy = !draftReady || status === "submitting" || status === "redirecting";
   const price = form.resident ? RESIDENT_PRICE_USD : NONRESIDENT_PRICE_USD;
 
   if (status === "closed") {
@@ -184,8 +233,18 @@ export default function MvfJuniorTournamentForm() {
           waiverNeeded ? " hidden" : ""
         }`}
       >
+        {draftRestored && (
+          <div className="bg-ngpa-teal/10 border border-ngpa-teal/30 rounded-lg p-4 mb-6">
+            <p className="text-ngpa-white text-sm">
+              Your form was partly restored in this tab. Please re-enter your player’s date of birth, emergency contact name and phone, and any medical notes, then review your text-message preference; those details aren&rsquo;t saved. Drafts expire after 30 minutes.
+            </p>
+            <button type="button" disabled={busy} onClick={startNewRegistration} className="min-h-12 text-sm text-ngpa-teal-bright underline disabled:opacity-60">
+              {recoveryConflict ? "Clear form and start a new registration" : "Clear saved form"}
+            </button>
+          </div>
+        )}
         {serverError && (
-          <div className="bg-ngpa-red/10 border border-ngpa-red/30 rounded-lg p-4 mb-6">
+          <div role="alert" className="bg-ngpa-red/10 border border-ngpa-red/30 rounded-lg p-4 mb-6">
             <p className="text-ngpa-red text-sm font-medium">{serverError}</p>
           </div>
         )}
@@ -209,6 +268,7 @@ export default function MvfJuniorTournamentForm() {
                   }`}
                 >
                   <input
+                    id={`mt-division-${option.division}`}
                     type="radio"
                     name="division"
                     value={option.division}
@@ -254,6 +314,7 @@ export default function MvfJuniorTournamentForm() {
                   }`}
                 >
                   <input
+                    id={`mt-resident-${option.value ? "yes" : "no"}`}
                     type="radio"
                     name="resident"
                     value={option.value ? "yes" : "no"}
@@ -416,10 +477,12 @@ export default function MvfJuniorTournamentForm() {
             value={form.allergies}
             onChange={(e) => update("allergies", e.target.value)}
           />
+          {errors.allergies && <p className={errorClass}>{errors.allergies}</p>}
         </div>
 
         <label className="flex items-start gap-3 mb-6 cursor-pointer">
           <input
+            id="mt-smsConsent"
             type="checkbox"
             checked={form.smsConsent}
             onChange={(e) => update("smsConsent", e.target.checked)}
@@ -429,6 +492,7 @@ export default function MvfJuniorTournamentForm() {
             {SMS_CONSENT_TEXT}
           </span>
         </label>
+        {errors.smsConsent && <p className={errorClass}>{errors.smsConsent}</p>}
 
         <div className="bg-ngpa-deep/60 border border-ngpa-slate/60 rounded-xl p-4 mb-6">
           <p className="text-sm text-ngpa-white/80">

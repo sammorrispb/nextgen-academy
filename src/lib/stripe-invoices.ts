@@ -38,6 +38,10 @@ export interface CreateSignupInvoiceArgs {
    * invoice that already exists instead of making another.
    */
   idempotencyKey?: string;
+  /** Reserve/bind scarce inventory before this invoice can become payable. */
+  beforeFinalize?: (invoiceId: string) => Promise<void>;
+  /** Resume an already bound draft/open invoice; never create another. */
+  existingInvoiceId?: string;
 }
 
 export interface SignupInvoiceResult {
@@ -87,6 +91,8 @@ export async function createAndSendSignupInvoice(
     footer,
     daysUntilDue = 7,
     idempotencyKey,
+    beforeFinalize,
+    existingInvoiceId,
   } = args;
 
   if (items.length === 0) {
@@ -101,6 +107,16 @@ export async function createAndSendSignupInvoice(
   const keyed = (step: string): Stripe.RequestOptions | undefined =>
     idempotencyKey ? { idempotencyKey: `${idempotencyKey}:${step}` } : undefined;
 
+  if (existingInvoiceId) {
+    const existing = await stripe.invoices.retrieve(existingInvoiceId);
+    if (existing.status === "paid") return { invoice: existing, alreadySent: true };
+    if (existing.status !== "draft" && existing.status !== "open") throw new Error("Invoice is no longer payable");
+    if (beforeFinalize) await beforeFinalize(existingInvoiceId);
+    if (existing.status === "draft") await stripe.invoices.finalizeInvoice(existingInvoiceId, {}, keyed("finalize"));
+    const sent = await stripe.invoices.sendInvoice(existingInvoiceId, {}, keyed("send"));
+    return { invoice: await stripe.invoices.retrieve(existingInvoiceId), alreadySent: sent.lastResponse?.headers?.["idempotent-replayed"] === "true" };
+  }
+
   const customer = await findOrCreateCustomer(
     stripe,
     customerEmail,
@@ -113,7 +129,9 @@ export async function createAndSendSignupInvoice(
       customer: customer.id,
       collection_method: "send_invoice",
       days_until_due: daysUntilDue,
-      auto_advance: true,
+      // A capacity-backed invoice must remain an unpayable draft if binding
+      // fails or the process stops. Never let Stripe finalize it unattended.
+      auto_advance: !beforeFinalize,
       description: memo || undefined,
       footer: footer || undefined,
       metadata,
@@ -138,6 +156,7 @@ export async function createAndSendSignupInvoice(
     );
   }
 
+  if (beforeFinalize) await beforeFinalize(invoice.id);
   await stripe.invoices.finalizeInvoice(invoice.id, {}, keyed("finalize"));
   const sent = await stripe.invoices.sendInvoice(invoice.id, {}, keyed("send"));
   return {

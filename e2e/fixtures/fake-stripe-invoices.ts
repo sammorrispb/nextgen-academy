@@ -29,6 +29,7 @@ export interface FakeInvoice {
   id: string;
   customer: string;
   status: "draft" | "open";
+  auto_advance: boolean;
   metadata: Record<string, string>;
   lines: Array<{ amount: number; description: string }>;
   sends: number;
@@ -119,15 +120,16 @@ export class FakeStripeInvoicing {
       }),
     );
 
-    patch(stripe.invoices, "create", (params: { customer: string; metadata?: Record<string, string> }, opts: Options) =>
+    patch(stripe.invoices, "create", (params: { customer: string; metadata?: Record<string, string>; auto_advance?: boolean }, opts: Options) =>
       this.post("invoices.create", params, opts, () => {
         if (!this.customers.has(params.customer)) {
           throw new FakeStripeError("invalid_request_error", `No such customer: ${params.customer}`);
         }
         const invoice: FakeInvoice = {
-          id: `in_fake_${++this.seq}`,
+          id: `in_fake${++this.seq}`,
           customer: params.customer,
           status: "draft",
+          auto_advance: params.auto_advance === true,
           metadata: { ...(params.metadata ?? {}) },
           lines: [],
           sends: 0,

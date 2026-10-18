@@ -16,34 +16,46 @@ export interface WaiverSignFormData {
 }
 
 export type WaiverSignValidationErrors = Partial<
-  Record<"parentName" | "email" | "signatureName" | "agree", string>
+  Record<keyof WaiverSignFormData, string>
 >;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateWaiverSignForm(
-  data: Partial<WaiverSignFormData>,
+  input: unknown,
 ): WaiverSignValidationErrors {
+  const data = input !== null && typeof input === "object" && !Array.isArray(input)
+    ? input as Record<string, unknown>
+    : {};
   const errors: WaiverSignValidationErrors = {};
+  const parentName = typeof data.parentName === "string" ? data.parentName.trim() : "";
+  const email = typeof data.email === "string" ? data.email.trim() : "";
+  const signatureName = typeof data.signatureName === "string" ? data.signatureName.trim() : "";
 
-  if (!data.parentName?.trim()) {
+  if (!parentName) {
     errors.parentName = "Your name is required";
   }
 
-  if (!data.email?.trim()) {
+  if (!email) {
     errors.email = "Email is required";
-  } else if (!EMAIL_RE.test(data.email.trim())) {
+  } else if (!EMAIL_RE.test(email)) {
     errors.email = "Please enter a valid email address";
   }
 
-  if (!data.signatureName?.trim()) {
+  if (!signatureName) {
     errors.signatureName = "Type your full legal name to sign";
-  } else if (data.signatureName.trim().length < 2) {
+  } else if (signatureName.length < 2) {
     errors.signatureName = "Please type your full legal name";
   }
 
   if (data.agree !== true) {
     errors.agree = "You must agree to the waiver to sign";
+  }
+
+  for (const field of ["phone", "utm_source", "utm_medium", "utm_campaign", "utm_content", "ref"] as const) {
+    if (data[field] !== undefined && typeof data[field] !== "string") {
+      errors[field] = field === "phone" ? "Please enter your phone as text" : "Invalid attribution field";
+    }
   }
 
   return errors;
