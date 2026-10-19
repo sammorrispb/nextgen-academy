@@ -246,6 +246,8 @@ export async function POST(request: NextRequest) {
           {
             date: todayET(),
             channel: "Contact form",
+            // A repeat submission is the family writing to us again.
+            direction: "inbound",
             summary: contactInquirySummary(body, interestLabel, kids),
             location: body.location,
             landingPage: body.landing_page ?? undefined,

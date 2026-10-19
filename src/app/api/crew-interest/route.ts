@@ -13,6 +13,7 @@ import {
 } from "@/lib/validate-crew-interest";
 import { forwardToCohortPool } from "@/lib/forward-to-cohort-pool";
 import { createCrewInterest } from "@/lib/notion-crew-interest";
+import { recordCrmInquiry } from "@/lib/player-crm-inquiry";
 import { fetchUpcomingSessions, onColorLadder } from "@/lib/notion-sessions";
 import { matchSessionsForPreferences } from "@/lib/crew-matching";
 import {
@@ -105,6 +106,7 @@ export async function POST(request: NextRequest) {
   // Notion write — fails soft. The welcome email and Open Brain ingest still
   // run so Sam has a copy of every submission via BCC + analytics.
   let notionStatus = "skipped";
+  let crewInterestPageId: string | undefined;
   if (process.env.NOTION_API_KEY && process.env.NOTION_CREW_INTEREST_DB_ID) {
     try {
       const result = await createCrewInterest({
@@ -124,11 +126,32 @@ export async function POST(request: NextRequest) {
         marketingOptIn: true,
       });
       notionStatus = result.ok ? "created" : `failed: ${result.error}`;
+      crewInterestPageId = result.pageId;
       if (!result.ok) console.error("[crew-interest]", result.error);
     } catch (err) {
       notionStatus = "error";
       console.error("[crew-interest] notion error:", err);
     }
+  }
+
+  // The Player CRM is the one sales pipeline (Sam, 2026-10-19): a crew
+  // inquiry lands there as a lead too. Fail-soft. The friends field names
+  // OTHER children, so it stays out of the CRM line.
+  const crm = await recordCrmInquiry({
+    source: "Crew Interest",
+    parentName,
+    email,
+    phone,
+    kids: [{ firstName: childFirstName, age: childAge }],
+    summary:
+      `Wants a regular crew: ${preferredSummary}, age ${childAge}` +
+      (childSubLevel ? `, parent-reported sub-level ${childSubLevel}` : "") +
+      (cluster ? `, preferred cluster ${cluster.name}` : "") +
+      (notes ? `. Parent says: "${notes}"` : ""),
+    sourcePageId: crewInterestPageId,
+  });
+  if (crm.status.startsWith("error") || crm.status.includes("failed")) {
+    console.error("[crew-interest] player CRM:", crm.status);
   }
 
   // Open sessions that already fit this family — surfaced in the welcome email
@@ -167,7 +190,8 @@ export async function POST(request: NextRequest) {
     ${notes ? `<tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notes</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notes)}</td></tr>` : ""}
     ${cluster ? `<tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Cluster</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(cluster.name)}</td></tr>` : ""}
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Source</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(source)}</td></tr>
-    <tr><td style="padding: 10px 8px; color: #7A88B8;">Notion</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notionStatus)}</td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notion</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notionStatus)}</td></tr>
+    <tr><td style="padding: 10px 8px; color: #7A88B8;">Player CRM</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(crm.status)}</td></tr>
   </table>
 </div>`;
 

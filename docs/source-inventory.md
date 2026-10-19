@@ -116,6 +116,14 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | src/lib/season-league-view.ts | 2026-09-13 | orchestration over engine + Notion: preview/save a day, scores, lock/unlock teams, bracket scores, the parent StandingsView (minor PII) | high |
 | src/app/coach/(authed)/fall-season/actions.ts | 2026-09-13 | thin requireCoach wrappers over season-league-view | high |
 
+**Inquiry intake into the Player CRM (2026-10-19):**
+
+| path | last-commit | purpose | conf |
+|---|---|---|---|
+| src/lib/player-crm-inquiry.ts | 2026-10-19 | `recordCrmInquiry`: league interest, waitlist, crew interest and Yellow Ball land a Lead in the Player CRM (child first name + age only; Notion-only; fail-soft). Pinned by `invariant-player-crm-inquiry.spec.ts` + `invariant-inquiry-routes-to-crm.spec.ts` | high |
+| src/lib/notion-lead-enrich.ts | 2026-10-19 | `findFamilyRows` + `appendLeadInquiry`: the shared family lookup and Notes appender; stamps the strict reply pair (Last Inbound / Last Replied Date) by entry direction | high |
+| src/lib/lead-enrich-run.ts | 2026-10-19 | `/api/lead-enrich` engine (Open Brain's write-back caller); closed vocabularies for channel, message source and direction | high |
+
 **Child-PII libs (SLOP-FREE):**
 
 | path | last-commit | purpose | conf |

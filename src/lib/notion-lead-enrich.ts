@@ -14,6 +14,10 @@
  * still rendered them in full. The loss was invisible unless you read the
  * "Notion CRM: already exists" line.
  *
+ * Since 2026-10-19 it also keeps the strict reply pair: an entry marked
+ * `inbound` stamps Last Inbound Date and one marked `outbound` stamps Last
+ * Replied Date, both forward-only (see EntryDirection).
+ *
  * What this deliberately does NOT touch:
  *  - `Status` and `Level` are coach judgment. A label inferred from form text
  *    or an email parse must never stick to a kid.
@@ -43,12 +47,36 @@ export interface FamilyRow {
   parentPhone: string;
   /** YYYY-MM-DD or "" — the floor Last Contact Date may not drop below. */
   lastContactDate: string;
+  /** YYYY-MM-DD or "" — the latest verified message FROM the family. */
+  lastInboundDate: string;
+  /** YYYY-MM-DD or "" — the latest real reply TO the family. */
+  lastRepliedDate: string;
 }
 
-export type MessageSource = "gmail" | "imessage" | "open_brain";
+export type MessageSource = "gmail" | "imessage" | "open_brain" | "site_form";
+/** What an EXTERNAL caller of /api/lead-enrich may name. `site_form` is
+ * internal: it marks a line this site wrote for one of its own forms (the
+ * form's own Notion row id), so it is not on the public allowlist. */
 export const MESSAGE_SOURCES: readonly MessageSource[] = ["gmail", "imessage", "open_brain"];
 /** Prefix inside the Notes marker. Short because Notes is capped ~2000 chars. */
-const MARKER_PREFIX: Record<MessageSource, string> = { gmail: "gm", imessage: "im", open_brain: "ob" };
+const MARKER_PREFIX: Record<MessageSource, string> = {
+  gmail: "gm",
+  imessage: "im",
+  open_brain: "ob",
+  site_form: "sf",
+};
+
+/**
+ * Which way a line moved, for the strict reply signal (2026-10-19).
+ * `Last Contact Date` means "last heard from or spoke with" and moves on
+ * anything, so it cannot tell whether a family is waiting on Sam. These two
+ * can: `inbound` (the family wrote to us, or submitted a form) stamps
+ * `Last Inbound Date`; `outbound` (Sam actually replied) stamps
+ * `Last Replied Date`. Undefined (a coach note, a meeting, a stage change)
+ * stamps neither, because it is neither.
+ */
+export type EntryDirection = "inbound" | "outbound";
+export const ENTRY_DIRECTIONS: readonly EntryDirection[] = ["inbound", "outbound"];
 
 /** The labels a caller may render before the colon. A caller must not invent
  * vocabulary in Notes any more than in a select option. */
@@ -82,6 +110,8 @@ export interface InquiryEntry {
   /** Only written when the row's own value is empty. */
   location?: string;
   landingPage?: string;
+  /** See EntryDirection. Omitted = a note: neither strict date moves. */
+  direction?: EntryDirection;
 }
 
 export interface AppendResult {
@@ -119,7 +149,8 @@ export function markerFor(entry: Pick<InquiryEntry, "messageId" | "messageSource
  * any caller idempotent without a new Notion property. */
 export function renderInquiryLine(entry: InquiryEntry): string {
   const marker = markerFor(entry);
-  return `${entry.date} · ${entry.channel}: ${entry.summary}${marker ? ` ${marker}` : ""}`;
+  const label = entry.direction === "outbound" ? `${entry.channel} (sent)` : entry.channel;
+  return `${entry.date} · ${label}: ${entry.summary}${marker ? ` ${marker}` : ""}`;
 }
 
 /** Append a line, trimming the OLDEST middle entries if we'd blow the cap. The
@@ -223,11 +254,15 @@ function toFamilyRow(page: NotionPage): FamilyRow {
     parentEmail: typeof p["Parent Email"]?.email === "string" ? p["Parent Email"].email : "",
     parentPhone:
       typeof p["Parent Phone"]?.phone_number === "string" ? p["Parent Phone"].phone_number : "",
-    lastContactDate:
-      typeof p["Last Contact Date"]?.date?.start === "string"
-        ? p["Last Contact Date"].date.start.slice(0, 10)
-        : "",
+    lastContactDate: dateOnly(p["Last Contact Date"]),
+    lastInboundDate: dateOnly(p["Last Inbound Date"]),
+    lastRepliedDate: dateOnly(p["Last Replied Date"]),
   };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function dateOnly(prop: any): string {
+  return typeof prop?.date?.start === "string" ? prop.date.start.slice(0, 10) : "";
 }
 
 /** Case-insensitive "do we already have this child for this parent?" */
@@ -238,8 +273,9 @@ export function hasChildRow(rows: FamilyRow[], childName: string): boolean {
 }
 
 /** Properties we can drop and still deliver the thing that matters. Notes and
- * Last Contact Date are NOT in here — losing those is losing the update. */
-const OPTIONAL_PROPS = ["Location", "Landing Page"] as const;
+ * Last Contact Date are NOT in here — losing those is losing the update. The
+ * strict dates are: a CRM that lacks the column still gets the Notes line. */
+const OPTIONAL_PROPS = ["Location", "Landing Page", "Last Inbound Date", "Last Replied Date"] as const;
 
 /**
  * PATCH, and if Notion rejects because an OPTIONAL property doesn't exist on
@@ -328,6 +364,21 @@ export async function appendLeadInquiry(
     // "last heard from" back behind a newer one.
     if (!current.lastContactDate || entry.date >= current.lastContactDate) {
       properties["Last Contact Date"] = { date: { start: entry.date } };
+    }
+    // The strict pair moves forward-only too, and only on the side the entry
+    // proves: a parent's message never stamps a reply, a reply never stamps an
+    // inbound. This is what lets the nudge tell who owes whom a reply.
+    if (
+      entry.direction === "inbound" &&
+      (!current.lastInboundDate || entry.date > current.lastInboundDate)
+    ) {
+      properties["Last Inbound Date"] = { date: { start: entry.date } };
+    }
+    if (
+      entry.direction === "outbound" &&
+      (!current.lastRepliedDate || entry.date > current.lastRepliedDate)
+    ) {
+      properties["Last Replied Date"] = { date: { start: entry.date } };
     }
     // Fill-if-empty only: an operator's value outranks anything we derived.
     if (entry.location && !current.location) {

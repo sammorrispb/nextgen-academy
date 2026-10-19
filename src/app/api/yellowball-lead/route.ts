@@ -6,6 +6,7 @@ import { c, s } from "@/lib/email/brand";
 import { whatsappInviteHtml } from "@/lib/email/whatsapp-invite";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { isFirstTimeParent } from "@/lib/notion-player-lookup";
+import { recordCrmInquiry } from "@/lib/player-crm-inquiry";
 import { site } from "@/data/site";
 import { escapeHtml } from "@/lib/html";
 
@@ -88,6 +89,26 @@ export async function POST(request: NextRequest) {
 
   const isFirstTimer = await isFirstTimeParent(email);
 
+  // The Player CRM is the one sales pipeline (Sam, 2026-10-19). A Yellow Ball
+  // inquiry used to reach Sam's inbox and Open Brain only; it now lands as a
+  // lead in the CRM too. Read AFTER the first-timer check, so the new row can
+  // never make a first-time parent look like a returning one. Fail-soft. This
+  // form asks for "your player's name", which can carry a surname; the CRM
+  // gets the first name only, the same cut the Open Brain ingest makes.
+  const crm = await recordCrmInquiry({
+    source: "Yellow Ball Inquiry",
+    parentName,
+    email,
+    phone,
+    kids: [{ firstName: childName.split(/\s+/)[0], age }],
+    summary:
+      `Yellow Ball tournament-track inquiry, age ${age}` +
+      (notes ? `. Parent says: "${notes}"` : ""),
+  });
+  if (crm.status.startsWith("error") || crm.status.includes("failed")) {
+    console.error("[yellowball-lead] player CRM:", crm.status);
+  }
+
   // Escaped copies for the HTML bodies: the parent email goes to whatever
   // address was submitted, so typed text must never become markup.
   const e = {
@@ -130,6 +151,10 @@ export async function POST(request: NextRequest) {
     </tr>`
         : ""
     }
+    <tr style="${s.tableRow}">
+      <td style="${s.tableLabel}">Player CRM</td>
+      <td style="${s.tableValue}">${escapeHtml(crm.status)}</td>
+    </tr>
   </table>
   <div style="${s.actionCalloutYellow}">
     <p style="${s.actionLabelYellow}">ACTION NEEDED</p>
