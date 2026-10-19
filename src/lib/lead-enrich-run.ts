@@ -24,11 +24,13 @@ import { LEAD_LOCATIONS } from "./validate-lead";
 import {
   appendLeadInquiry,
   ENRICH_CHANNELS,
+  ENTRY_DIRECTIONS,
   findFamilyRows,
   MESSAGE_ID_RE,
   MESSAGE_SOURCES,
   renderInquiryLine,
   todayET,
+  type EntryDirection,
   type MessageSource,
 } from "./notion-lead-enrich";
 
@@ -52,6 +54,10 @@ export interface LeadEnrichInput {
    * select option. Only written when the row's Location is empty. */
   location?: string;
   landingPage?: string;
+  /** "inbound" (the family wrote to us) stamps Last Inbound Date; "outbound"
+   * (Sam replied) stamps Last Replied Date. Omitted: a note, neither moves.
+   * Open Brain's write-back sends it for message activities only. */
+  direction?: string;
   dryRun?: boolean;
 }
 
@@ -85,6 +91,9 @@ export function validateLeadEnrich(input: LeadEnrichInput): string[] {
   if (input.messageSource && !(MESSAGE_SOURCES as readonly string[]).includes(input.messageSource)) {
     errors.push("messageSource must be gmail, imessage or open_brain");
   }
+  if (input.direction && !(ENTRY_DIRECTIONS as readonly string[]).includes(input.direction)) {
+    errors.push("direction must be inbound or outbound");
+  }
   if (input.messageId && !MESSAGE_ID_RE.test(input.messageId)) {
     errors.push("messageId must be an opaque id (letters, digits, . _ -; max 80)");
   }
@@ -105,6 +114,7 @@ export async function runLeadEnrich(input: LeadEnrichInput): Promise<LeadEnrichR
     messageSource: input.messageSource as MessageSource | undefined,
     location: input.location,
     landingPage: input.landingPage,
+    direction: input.direction as EntryDirection | undefined,
   };
 
   // dryRun renders the exact line that WOULD be appended and touches nothing —

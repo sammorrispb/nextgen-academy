@@ -10,6 +10,7 @@ import {
 } from "@/lib/validate-league-interest";
 import { findBand, type LeagueBand } from "@/data/leagues";
 import { createLeagueInterest } from "@/lib/notion-league-interest";
+import { recordCrmInquiry } from "@/lib/player-crm-inquiry";
 import {
   leagueInterestWelcomeHtml,
   leagueInterestWelcomeSubject,
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
   // Notion write — fails soft. The welcome email and Open Brain ingest still
   // run so Sam captures every submission via BCC + the demand signal.
   let notionStatus = "skipped";
+  let leagueInterestPageId: string | undefined;
   if (process.env.NOTION_API_KEY && process.env.NOTION_LEAGUE_INTEREST_DB_ID) {
     try {
       const result = await createLeagueInterest({
@@ -92,11 +94,30 @@ export async function POST(request: NextRequest) {
         marketingOptIn: true,
       });
       notionStatus = result.ok ? "created" : `failed: ${result.error}`;
+      leagueInterestPageId = result.pageId;
       if (!result.ok) console.error("[league-interest]", result.error);
     } catch (err) {
       notionStatus = "error";
       console.error("[league-interest] notion error:", err);
     }
+  }
+
+  // The Player CRM is the one sales pipeline (Sam, 2026-10-19): a league
+  // inquiry lands there too, not only in the league database. Fail-soft.
+  const crm = await recordCrmInquiry({
+    source: "League Interest",
+    parentName,
+    email,
+    phone,
+    kids: [{ firstName: childFirstName, age: childAge }],
+    summary:
+      `${bandLabel} league interest, age ${childAge}` +
+      (childLevel ? `, parent-reported level ${childLevel}` : "") +
+      (notes ? `. Parent says: "${notes}"` : ""),
+    sourcePageId: leagueInterestPageId,
+  });
+  if (crm.status.startsWith("error") || crm.status.includes("failed")) {
+    console.error("[league-interest] player CRM:", crm.status);
   }
 
   if (!process.env.RESEND_API_KEY) {
@@ -116,7 +137,8 @@ export async function POST(request: NextRequest) {
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Band</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(preferredBand)}${childLevel ? ` · ${escape(childLevel)}` : ""}</td></tr>
     ${notes ? `<tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notes</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notes)}</td></tr>` : ""}
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Source</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(source)}</td></tr>
-    <tr><td style="padding: 10px 8px; color: #7A88B8;">Notion</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notionStatus)}</td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notion</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(notionStatus)}</td></tr>
+    <tr><td style="padding: 10px 8px; color: #7A88B8;">Player CRM</td><td style="padding: 10px 8px; color: #EEF2FF;">${escape(crm.status)}</td></tr>
   </table>
 </div>`;
 

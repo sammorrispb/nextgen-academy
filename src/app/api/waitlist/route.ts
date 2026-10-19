@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { LEAD_AREA_SET } from "@/data/lead-areas";
 import { EMAIL_RE, createNotionPageSourceFailSoft } from "@/lib/notion-utils";
+import { recordCrmInquiry } from "@/lib/player-crm-inquiry";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { site } from "@/data/site";
@@ -233,9 +234,11 @@ export async function POST(request: NextRequest) {
     .join("");
 
   let notionStatus = "skipped";
+  let waitlistPageId: string | undefined;
   if (process.env.NOTION_API_KEY && process.env.NOTION_WAITLIST_DB_ID) {
     try {
       const result = await createWaitlistEntry(required);
+      waitlistPageId = result.id;
       // Say so when attribution was dropped — a silent "created" would hide
       // the schema drift that the retry papered over.
       notionStatus = result.id
@@ -248,6 +251,24 @@ export async function POST(request: NextRequest) {
       notionStatus = "error";
       console.error("[waitlist] notion error:", err);
     }
+  }
+
+  // The Player CRM is the one sales pipeline (Sam, 2026-10-19): a waitlist
+  // family lands there as a lead too, not only in the waitlist database, so
+  // the daily uncontacted-leads nudge can see them. Fail-soft.
+  const crm = await recordCrmInquiry({
+    source: "Waitlist",
+    parentName: required.parentName,
+    email,
+    phone,
+    kids: [{ firstName: required.childFirstName, age: Number(required.childAge) }],
+    summary:
+      `Joined the empty-schedule waitlist, age ${Number(required.childAge)}, preferred area ${required.preferredArea}` +
+      (required.childLevel ? `, parent-reported level ${required.childLevel}` : ""),
+    sourcePageId: waitlistPageId,
+  });
+  if (crm.status.startsWith("error") || crm.status.includes("failed")) {
+    console.error("[waitlist] player CRM:", crm.status);
   }
 
   const adminHtml = `
@@ -263,6 +284,7 @@ export async function POST(request: NextRequest) {
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Marketing Opt-In</td><td style="padding: 10px 8px; color: #EEF2FF;">${required.marketingOptIn ? "Yes" : "No"}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Signed Up From</td><td style="padding: 10px 8px; color: #EEF2FF;">${describeSurface(required)}</td></tr>
     <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notion DB</td><td style="padding: 10px 8px; color: #EEF2FF;">${notionStatus}</td></tr>
+    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Player CRM</td><td style="padding: 10px 8px; color: #EEF2FF;">${esc(crm.status)}</td></tr>
   </table>
 </div>`;
 

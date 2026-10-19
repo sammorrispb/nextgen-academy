@@ -8,6 +8,7 @@ import { FetchStub } from "./fixtures/fetch-stub";
 process.env.NOTION_API_KEY = "ntn_test";
 process.env.NOTION_CREW_INTEREST_DB_ID = "crew-interest-db";
 process.env.NOTION_SESSIONS_DB_ID = "sessions-db";
+process.env.NOTION_PLAYER_CRM_DB_ID = "crew-egress-crm-db";
 process.env.RESEND_API_KEY = "re_test";
 delete process.env.OPEN_BRAIN_INGEST_URL;
 delete process.env.LEAD_INGEST_TOKEN;
@@ -73,9 +74,15 @@ test.describe("crew-interest route — child-PII egress", () => {
       expect(call.url).not.toContain("cohort");
     }
 
-    // The new sub-level field must actually land on the Notion CRM row.
-    const create = stub.callsTo("api.notion.com/v1/pages");
+    // The new sub-level field must actually land on the crew-interest row.
+    // Since 2026-10-19 the route also writes a lead into the Player CRM (also
+    // Notion), so each create is told apart by its database.
+    const pageCreates = stub.callsTo("api.notion.com/v1/pages");
+    const create = pageCreates.filter((c) => c.body.includes('"database_id":"crew-interest-db"'));
     expect(create).toHaveLength(1);
+    const crmCreates = pageCreates.filter((c) => c.body.includes('"database_id":"crew-egress-crm-db"'));
+    expect(crmCreates, "one Player CRM lead, and nothing else").toHaveLength(1);
+    expect(pageCreates).toHaveLength(2);
     expect(create[0].body).toContain(CHILD_NAME);
     expect(create[0].body).toContain("Skill Sub-Level");
     expect(create[0].body).toContain(SUB_LEVEL);

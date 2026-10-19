@@ -5,6 +5,7 @@ import { FetchStub } from "./fixtures/fetch-stub";
 // Env BEFORE importing the route — the route + its libs read these at call time.
 process.env.NOTION_API_KEY = "ntn_test";
 process.env.NOTION_WAITLIST_DB_ID = "waitlist-db";
+process.env.NOTION_PLAYER_CRM_DB_ID = "waitlist-egress-crm-db";
 process.env.RESEND_API_KEY = "re_test";
 // Open Brain is deliberately CONFIGURED here, unlike the crew-interest egress
 // spec which deletes these so the helper self-skips. On this route the ingest
@@ -127,12 +128,35 @@ test.describe("waitlist route — child-PII egress", () => {
   test("the Notion row — the intended destination — does receive the child", async () => {
     await POST(req(body()));
 
-    const creates = stub.calls.filter((c) => c.url.includes("/v1/pages"));
+    const creates = stub.calls.filter(
+      (c) => c.url.includes("/v1/pages") && c.body.includes('"database_id":"waitlist-db"'),
+    );
     expect(creates).toHaveLength(1);
     expect(creates[0].body).toContain(CHILD_NAME);
     expect(creates[0].body).toContain("Child First Name");
     expect(creates[0].body).toContain("Child Age");
     expect(creates[0].body).toContain("Child Level");
+  });
+
+  // Since 2026-10-19 a waitlist family is also a lead in the Player CRM, the
+  // sanctioned home for a child's first name and age. That is the ONLY other
+  // Notion row this route writes, and the parent's colour stays out of Level.
+  test("the Player CRM gets one lead: first name and age, Level left to the coach", async () => {
+    await POST(req(body()));
+
+    const pageCreates = stub.calls.filter((c) => c.url.includes("/v1/pages"));
+    const crm = pageCreates.filter((c) =>
+      c.body.includes('"database_id":"waitlist-egress-crm-db"'),
+    );
+    expect(crm).toHaveLength(1);
+    expect(pageCreates, "the waitlist row and the CRM lead, nothing else").toHaveLength(2);
+
+    const props = JSON.parse(crm[0].body).properties;
+    expect(props["Player Name"].title[0].text.content).toBe(CHILD_NAME);
+    expect(props.Age.number).toBe(Number(CHILD_AGE));
+    expect(props.Level.select.name).toBe("Eval Needed");
+    expect(props.Source.select.name).toBe("Waitlist");
+    expect(Object.keys(props)).not.toContain("Child Level");
   });
 
   test("the JSON response never echoes child PII back to the caller", async () => {
