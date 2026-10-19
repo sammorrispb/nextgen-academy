@@ -40,6 +40,7 @@ import {
 
 const ALLOWED_HOSTS = ["api.notion.com"];
 const CHILD_NAME = "Egressmondaykid";
+const CHILD_LAST_NAME = "Egresslastname";
 const ALLERGY_TEXT = "Bee stings — carries an EpiPen";
 const EMERGENCY_NAME = "Egressemergencyperson";
 const PARENT_EMAIL = "egress-monday-girls@example.com";
@@ -51,6 +52,7 @@ function body(over: Record<string, unknown> = {}): string {
     email: PARENT_EMAIL,
     phone: "3015550142",
     childFirstName: CHILD_NAME,
+    childLastName: CHILD_LAST_NAME,
     childBirthYear: String(new Date().getFullYear() - 9),
     emergencyName: EMERGENCY_NAME,
     emergencyPhone: "3015550143",
@@ -123,6 +125,7 @@ test.describe("Monday Girls registration — child-PII egress", () => {
     // unsanctioned write of minor PII.
     for (const call of notionCalls) {
       expect(call.body).not.toContain(CHILD_NAME);
+      expect(call.body).not.toContain(CHILD_LAST_NAME);
       expect(call.body).not.toContain(EMERGENCY_NAME);
       expect(call.body).not.toContain(ALLERGY_TEXT);
     }
@@ -145,6 +148,7 @@ test.describe("Monday Girls registration — child-PII egress", () => {
     for (const call of stub.calls) {
       expect(ALLOWED_HOSTS).toContain(new URL(call.url).host);
       expect(call.body).not.toContain(CHILD_NAME);
+      expect(call.body).not.toContain(CHILD_LAST_NAME);
       expect(call.body).not.toContain(EMERGENCY_NAME);
       expect(call.body).not.toContain(ALLERGY_TEXT);
     }
@@ -172,6 +176,7 @@ test.describe("Monday Girls registration — child-PII egress", () => {
     expect(json.code).toBe("sold_out");
     const rendered = JSON.stringify(json);
     expect(rendered).not.toContain(CHILD_NAME);
+    expect(rendered).not.toContain(CHILD_LAST_NAME);
     expect(rendered).not.toContain(EMERGENCY_NAME);
     expect(rendered).not.toContain(ALLERGY_TEXT);
   });
@@ -234,6 +239,7 @@ test.describe("Monday Girls registration — child-PII egress", () => {
     expect(json.code).toBe("waiver_required");
     const rendered = JSON.stringify(json);
     expect(rendered).not.toContain(CHILD_NAME);
+    expect(rendered).not.toContain(CHILD_LAST_NAME);
     expect(rendered).not.toContain(EMERGENCY_NAME);
     expect(rendered).not.toContain(ALLERGY_TEXT);
   });
@@ -244,6 +250,7 @@ test.describe("Monday Girls registration — child-PII egress", () => {
     expect(res.status).toBe(400);
     const rendered = JSON.stringify(await res.json());
     expect(rendered).not.toContain(CHILD_NAME);
+    expect(rendered).not.toContain(CHILD_LAST_NAME);
     expect(rendered).not.toContain(ALLERGY_TEXT);
     // And nothing left the process at all on a rejected payload.
     expect(stub.calls).toHaveLength(0);

@@ -26,6 +26,8 @@ export interface MondayGirlsRegistrationRow {
   parentEmail: string;
   parentPhone: string;
   childFirstName: string;
+  /** Absent on checkouts started before 2026-10-19. */
+  childLastName?: string;
   childBirthYear: number;
   group: string;
   amountPaidUsd: number;
@@ -76,6 +78,15 @@ export async function createMondayGirlsRegistrationResult(
         "Child First Name": {
           rich_text: [{ text: { content: row.childFirstName } }],
         },
+        // Written only when present, so a checkout started before the field
+        // existed (no metadata) still lands its row.
+        ...(row.childLastName
+          ? {
+              "Child Last Name": {
+                rich_text: [{ text: { content: row.childLastName } }],
+              },
+            }
+          : {}),
         "Child Birth Year": { number: row.childBirthYear || null },
         Group: { select: { name: row.group } },
         Status: { select: { name: "Confirmed" } },

@@ -51,6 +51,7 @@ function emptyForm(): MondayGirlsRegistrationData {
     email: "",
     phone: "",
     childFirstName: "",
+    childLastName: "",
     childBirthYear: "",
     emergencyName: "",
     emergencyPhone: "",
@@ -340,12 +341,29 @@ export default function MondayGirlsRegistrationForm({
                 id="childFirstName"
                 type="text"
                 className={inputClass}
-                placeholder="First name only"
+                placeholder="First name"
                 value={form.childFirstName}
                 onChange={(e) => update("childFirstName", e.target.value)}
               />
               {errors.childFirstName && (
                 <p className={errorClass}>{errors.childFirstName}</p>
+              )}
+            </div>
+            <div>
+              <label htmlFor="childLastName" className={labelClass}>
+                Player&rsquo;s last name
+              </label>
+              <input
+                id="childLastName"
+                type="text"
+                autoComplete="off"
+                className={inputClass}
+                placeholder="Last name"
+                value={form.childLastName}
+                onChange={(e) => update("childLastName", e.target.value)}
+              />
+              {errors.childLastName && (
+                <p className={errorClass}>{errors.childLastName}</p>
               )}
             </div>
             <div>

@@ -23,6 +23,7 @@ import {
   WAIVER_REQUIRED_CODE,
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
+import { cleanChildLastName } from "@/lib/child-last-name";
 
 // Fall 2026 season checkout — full-pay only, ENV-GATED like checkout-league:
 // until STRIPE_FALL_SEASON_PRICE_ID is set this returns 503 so the season
@@ -135,6 +136,7 @@ export async function POST(req: NextRequest) {
       parent_email: data.email,
       parent_phone: data.phone,
       child_first_name: data.childFirstName,
+      child_last_name: cleanChildLastName(data.childLastName),
       child_birth_year: data.childBirthYear,
       emergency_name: data.emergencyName,
       emergency_phone: data.emergencyPhone,

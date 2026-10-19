@@ -30,6 +30,7 @@ function validForm(): FallRegistrationData {
     email: "parent@example.com",
     phone: "301-555-0142",
     childFirstName: "Testkid",
+    childLastName: "Walker",
     childBirthYear: String(new Date().getFullYear() - 10),
     emergencyName: "Emergency Person",
     emergencyPhone: "301-555-0143",

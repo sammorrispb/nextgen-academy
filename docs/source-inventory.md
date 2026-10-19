@@ -238,6 +238,11 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
     - **Options not taken (still available if Sam narrows it later):** a birth year plus a self-attested "age on Oct 24" instead of the DOB; keeping allergies and the emergency contact out of the MVF partner email; deleting the fields once the event is over.
 
 
+13. **Season checkouts: child last name (collected since 2026-10-19; approved by Sam 2026-10-19, required).** `/fall` and `/monday-girls` now require a "Player's last name" (`src/lib/child-last-name.ts`: letters, spaces, hyphens, apostrophes, periods, 40 max, the same rule Link & Dink's `ld.rotation_league_roster` command parser enforces). Why: the season rosters held a first name only, and the rotation-league coach screens send the full name to Link & Dink.
+    - **Where it goes:** Stripe checkout metadata (`child_last_name`, cleaned) -> Stripe webhook -> the season's Notion roster row (`Child Last Name`, written only when present so a checkout started before the field existed still lands) and the ADMIN notification's "Player:" line. Next, the coach screens send it to Link & Dink (approved the same day).
+    - **Where it never goes:** parent emails, Open Brain (`last_?name` is on the ingest strip list), the Player CRM sync, the webhook ack, any public page.
+    - **Not changed:** the Pickl Park checkout (retired 2026-09-07, answers 410), the MVF tournament (#12), drop-ins, camps, leagues.
+    - **Pinned** by `e2e/invariant-season-child-last-name.spec.ts` (mutation-checked 3/3: making the field optional, always writing the property, and leaking it into a parent email each turn it red). Rows created before 2026-10-19 stay blank; there is no backfill.
 ## 8a. Agent-action trigger parity — deferred surfaces (per-surface IPAV go required)
 
 Principle: an operational UI action with a multi-trigger fan-out must expose a single shared,
