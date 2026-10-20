@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   title: "Fall Season standings — Next Gen Pickleball Academy",
   description: "Standings and results for the Next Gen fall Sunday season.",
   robots: { index: false, follow: false },
+  referrer: "no-referrer",
 };
 
 interface PageProps {

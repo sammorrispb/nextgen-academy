@@ -186,6 +186,11 @@ const ALLOWLIST = new Set([
 const CSRF_COMPARE_FILE = "src/app/api/admin/mvf-roster-sync/route.ts";
 const CSRF_COMPARE_LINE = 'if (req.headers.get("origin") !== siteOrigin()) return json(403, { ok: false, error: "bad_origin" });';
 
+// This exact Referer predicate only drops credential-bearing telemetry. It
+// cannot supply an origin, redirect or link; every other header read still trips.
+const ANALYTICS_PRIVACY_FILE = "src/app/api/analytics/route.ts";
+const ANALYTICS_PRIVACY_LINE = 'if (analyticsPayloadHasCapability(body) || containsStandingsCapability(request.headers.get("referer"))) {';
+
 function findRequestOriginReads(source: string): string[] {
   return source
     .split("\n")
@@ -231,10 +236,17 @@ test.describe("source guard — request-derived origins", () => {
       const hits = findRequestOriginReads(readFileSync(file, "utf8"));
       for (const h of hits) {
         if (rel === CSRF_COMPARE_FILE && h === CSRF_COMPARE_LINE) continue;
+        if (rel === ANALYTICS_PRIVACY_FILE && h === ANALYTICS_PRIVACY_LINE) continue;
         offenders.push(`${rel}: ${h}`);
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  test("the analytics header exception only rejects an event and cannot construct an origin", () => {
+    const source = readFileSync(join(__dirname, "..", ANALYTICS_PRIVACY_FILE), "utf8");
+    expect(findRequestOriginReads(source)).toEqual([ANALYTICS_PRIVACY_LINE]);
+    expect(source).toContain(`${ANALYTICS_PRIVACY_LINE}\n    return new NextResponse(null, { status: 204 });\n  }`);
   });
 
   test("every allowlist entry still needs its exemption (stale entries fail)", () => {

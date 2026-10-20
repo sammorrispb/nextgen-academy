@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { containsStandingsCapability } from "@/lib/analytics-privacy";
 import { trackEvent } from "@/lib/funnelClient";
 
 const SKIP_PREFIXES = ["/api", "/og", "/admin"];
 
 function shouldSkip(pathname: string | null): boolean {
-  if (!pathname) return true;
+  if (!pathname || containsStandingsCapability(pathname)) return true;
   return SKIP_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
