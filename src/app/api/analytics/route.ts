@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { analyticsPayloadHasCapability, containsStandingsCapability } from "@/lib/analytics-privacy";
 
 /**
  * Server-side proxy to the Open Brain analytics-ingest edge function.
@@ -16,6 +17,10 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
+    return new NextResponse(null, { status: 204 });
+  }
+
+  if (analyticsPayloadHasCapability(body) || containsStandingsCapability(request.headers.get("referer"))) {
     return new NextResponse(null, { status: 204 });
   }
 

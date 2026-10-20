@@ -1,5 +1,7 @@
 "use client";
 
+import { analyticsPayloadHasCapability, containsStandingsCapability } from "./analytics-privacy";
+
 /**
  * Client-side analytics + visitor-id + UTM capture for NGA.
  *
@@ -234,9 +236,12 @@ export function trackEvent<K extends keyof AnalyticsEventMap>(
 ): void {
   if (typeof window === "undefined") return;
 
-  // Callers are typed, but runtime inputs must not become arbitrary provider
-  // event names (or accidentally expand the third-party field contract).
-  if (!MIRRORED_EVENTS.has(name) || !props || typeof props !== "object" || Array.isArray(props)) return;
+  if (containsStandingsCapability(window.location?.pathname) ||
+      (typeof document !== "undefined" && containsStandingsCapability(document.referrer)) ||
+      analyticsPayloadHasCapability(props)) return;
+
+  // Runtime callers must not invent event identifiers.
+  if (!ANALYTICS_EVENTS.has(name) || !props || typeof props !== "object" || Array.isArray(props)) return;
 
   try {
     let visitorId: string;
@@ -247,11 +252,13 @@ export function trackEvent<K extends keyof AnalyticsEventMap>(
       // request-local; no persistence is claimed when cookies are unavailable.
       visitorId = generateVisitorId();
     }
-    const body = JSON.stringify({
+    const payload = {
       event_name: name,
       props: { ...props, visitor_id: visitorId, business: BUSINESS, ...getUtm() },
       page: window.location ? window.location.pathname : undefined,
-    });
+    };
+    if (analyticsPayloadHasCapability(payload)) return;
+    const body = JSON.stringify(payload);
 
     let accepted = false;
     if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
@@ -270,14 +277,12 @@ export function trackEvent<K extends keyof AnalyticsEventMap>(
       }).catch(() => { /* analytics must never break the page */ });
     }
   } catch {
-    /* First-party failure must not suppress the independent safe mirrors. */
+    /* Analytics must never break the page. */
   }
-  mirrorToThirdParty(name);
 }
 
-// Explicit event identifiers only. Do not derive provider parameters from
-// caller props: labels, interests, URLs and nested fields can contain PII.
-const MIRRORED_EVENTS = new Set<keyof AnalyticsEventMap>([
+// Keep event names bounded even when called outside TypeScript.
+const ANALYTICS_EVENTS = new Set<keyof AnalyticsEventMap>([
   "page_view", "cta_click", "lead_form", "lead_form_started", "lead_form_submitted",
   "yellowball_lead_submitted", "waitlist_submitted", "newsletter_signup_started",
   "newsletter_signup_submitted", "eval_book_started", "eval_book_submitted",
@@ -285,26 +290,3 @@ const MIRRORED_EVENTS = new Set<keyof AnalyticsEventMap>([
   "fall_interest_submitted", "league_interest_started", "league_interest_submitted",
   "external_link", "scroll_depth", "free_trial_rsvp",
 ]);
-
-/** Optional, coarse conversion mirrors; loading/enabling tags stays in Analytics. */
-function mirrorToThirdParty(name: keyof AnalyticsEventMap): void {
-  if (typeof window === "undefined") return;
-  // Analytics owns provider page views. YellowBallInquiryForm emits both the
-  // canonical lead and this legacy alias; retain both in OB, count one lead here.
-  if (name === "page_view" || name === "yellowball_lead_submitted") return;
-  const isLead = name.endsWith("_submitted");
-  try {
-    if (typeof window.gtag === "function") {
-      window.gtag("event", isLead ? "generate_lead" : name, { content_name: name });
-    }
-  } catch {
-    /* Google failure must not suppress Meta or interrupt navigation. */
-  }
-  try {
-    if (typeof window.fbq === "function") {
-      window.fbq(isLead ? "track" : "trackCustom", isLead ? "Lead" : name, { content_name: name });
-    }
-  } catch {
-    /* analytics must never break the page */
-  }
-}
