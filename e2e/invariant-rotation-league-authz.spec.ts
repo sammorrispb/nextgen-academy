@@ -6,6 +6,7 @@ import {
   parsePlayWeek,
   ROTATION_LEAGUE_SEASONS,
 } from "../src/data/rotation-league-seasons";
+import { FALL_PLAY_DATES } from "../src/data/fall-2026";
 
 // The rotation-league coach screens read and write children's names on Link &
 // Dink, so they live under coach/(authed) (the layout's requireCoach gate) and
@@ -75,5 +76,12 @@ test.describe("rotation-league coach screens — authorization", () => {
     const slugs = ROTATION_LEAGUE_SEASONS.map((s) => s.slug);
     expect(new Set(slugs).size).toBe(slugs.length);
     for (const s of slugs) expect(s).toMatch(/^[a-z0-9][a-z0-9-]{1,79}$/);
+  });
+
+  test("Fall trial weeks are labelled with the Sunday they are actually played", () => {
+    for (const season of ROTATION_LEAGUE_SEASONS.filter((s) => s.rosterSource === "fall")) {
+      const weeks = [...season.playWeeks, ...(season.playoffWeek ? [season.playoffWeek] : [])];
+      expect(weeks.map((w) => season.weekDates[w])).toEqual([...FALL_PLAY_DATES]);
+    }
   });
 });

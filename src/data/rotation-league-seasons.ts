@@ -1,4 +1,4 @@
-import { FALL_SUNDAYS } from "@/data/fall-2026";
+import { FALL_PLAY_DATES } from "@/data/fall-2026";
 
 // Seasons run on Link & Dink's rotation-league engine (community-os
 // packages/rotation-league, ld.rotation_league_*), reached through
@@ -40,8 +40,12 @@ export interface RotationLeagueSeason {
   parentTitle: string;
 }
 
+// The Sunday each week is actually played: FALL_PLAY_DATES follows the
+// rain-outs (Sep 27 and Oct 11 washed out), so week 2 is Oct 4 and the playoff
+// is Nov 8. FALL_SUNDAYS is the calendar as sold and would mislabel every week
+// after the first washout.
 const FALL_WEEK_DATES: Record<number, string> = Object.fromEntries(
-  FALL_SUNDAYS.map((date, i) => [i + 1, date]),
+  FALL_PLAY_DATES.map((date, i) => [i + 1, date]),
 );
 
 const TRIAL_NOTE =
