@@ -40,6 +40,16 @@ const KNOWN_CODES = new Set([
   "player_double_booked",
   "player_not_present",
   "court_taken",
+  "legacy_erasure_review_required",
+  "no_playoff",
+  "not_the_playoff_week",
+  "teams_locked",
+  "teams_not_locked",
+  "bracket_started",
+  "bracket_changed",
+  "bad_teams",
+  "slot_not_found",
+  "slot_not_ready",
 ]);
 
 export type LeagueResult<T> =

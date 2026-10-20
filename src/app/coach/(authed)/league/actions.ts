@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
 import {
   checkIn,
+  lockPlayoffTeams,
   planWeek,
+  previewPlayoff,
+  recordPlayoffScore,
+  unlockPlayoffTeams,
+  type PlayoffPreview,
   recordScore,
   removeGame,
   syncSeason,
@@ -82,5 +87,43 @@ export async function removeGameAction(input: {
   if (!(await requireCoach())) return UNAUTHORIZED;
   const result = await removeGame(input.slug, input.gameId);
   revalidate(input.slug, input.week);
+  return result;
+}
+
+function revalidatePlayoff(slug: unknown): void {
+  revalidatePath("/coach/league");
+  if (typeof slug === "string") revalidatePath(`/coach/league/${slug}/playoff`);
+}
+
+export async function previewPlayoffAction(input: { slug: string }): Promise<Outcome<PlayoffPreview>> {
+  if (!(await requireCoach())) return UNAUTHORIZED;
+  return previewPlayoff(input.slug);
+}
+
+export async function lockPlayoffAction(input: { slug: string; teams: string[][] }): Promise<Outcome> {
+  if (!(await requireCoach())) return UNAUTHORIZED;
+  const result = await lockPlayoffTeams(input.slug, input.teams);
+  revalidatePlayoff(input.slug);
+  return result;
+}
+
+export async function unlockPlayoffAction(input: { slug: string }): Promise<Outcome> {
+  if (!(await requireCoach())) return UNAUTHORIZED;
+  const result = await unlockPlayoffTeams(input.slug);
+  revalidatePlayoff(input.slug);
+  return result;
+}
+
+export async function playoffScoreAction(input: {
+  slug: string;
+  slot: string;
+  scoreA: number;
+  scoreB: number;
+  gameTarget: number;
+  timed: boolean;
+}): Promise<Outcome> {
+  if (!(await requireCoach())) return UNAUTHORIZED;
+  const result = await recordPlayoffScore(input);
+  revalidatePlayoff(input.slug);
   return result;
 }

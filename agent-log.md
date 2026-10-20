@@ -3,6 +3,14 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+## 2026-10-20 — Playoff screens and the parent standings link (Link & Dink seasons)
+
+- **Situation:** The rotation-league coach screens (#423) ran weeks 1-5 only. The engine had snake seeding and double elimination, but the Link & Dink endpoint and tables didn't expose them. Sam asked for playoff screens and a standings link, and chose full first and last names on the parent link over the recommended first name + initial.
+- **Decision:** community-os #1852 adds `ld.rotation_league_playoff_members` plus atomic lock / unlock / record functions and five endpoint commands. NGA adds `/coach/league/<slug>/playoff` (check-in, snake-seeded teams with tap-to-swap, lock, bracket scoring with corrections until a later game builds on it) and `/standings/<slug>/<token>` on its own token family. Stacked on #423.
+- **Risk:** Full names on a forwardable link; the protections are the signed URL, no indexing, no Referer, no cache, and rotating `STANDINGS_LINK_SECRET`. This reverses TD-186's own consequence line, so TD-186 is amended rather than left contradicting. The coach screens need #1852 deployed before the playoff page works; until then it shows Link & Dink's refusal message.
+- **Change:** `src/lib/league-standings-token.ts`; `src/app/standings/[slug]/[token]/page.tsx`; `src/app/coach/(authed)/league/[slug]/playoff/**`; `src/components/rotation-league/{Bracket,LeagueStandings}.tsx`; playoff ops in `src/lib/rotation-league/view.ts`; robots; CLAUDE.md, risk log #15.
+- **Validation:** 10 new tests; three mutations caught (token verified after the read, an admin-secret fallback, no-referrer dropped). Full pure suite, lint and build before push (see PR).
+
 ## 2026-10-20 — Rotation-league coach screens on Link & Dink (Fall trial)
 
 - **Situation:** The rotation-league engine, tables and endpoint are live on community-os (PRs #1833/#1835/#1837/#1842), and season checkouts now collect a last name (#422). Sam approved sending the child's first and last name to L&D from a picked registrations DB (2026-10-19), then chose to trial the screens on Fall 2026 Green/Yellow now rather than wait for Winter.

@@ -6,6 +6,7 @@
 
 import {
   findRotationLeagueSeason,
+  parsePlayoffWeek,
   parsePlayWeek,
   type RotationLeagueSeason,
 } from "@/data/rotation-league-seasons";
@@ -86,6 +87,18 @@ const MESSAGES: Record<string, string> = {
   bad_plan: "Link & Dink refused the plan. Preview again.",
   bad_side_size: "Link & Dink refused the plan. Preview again.",
   bad_input: "Link & Dink refused the request as malformed.",
+  legacy_erasure_review_required:
+    "Link & Dink is holding new roster adds for this season after an old erasure. Ask Sam to review it on Link & Dink.",
+  no_playoff: "This season has no playoff week.",
+  not_the_playoff_week: "That isn't this season's playoff week.",
+  teams_locked: "The teams are already locked. Unlock them first to change them.",
+  teams_not_locked: "Lock the teams before scoring the bracket.",
+  bracket_started: "A playoff game is already scored, so the teams can't be unlocked.",
+  bracket_changed: "That game's teams changed. Refresh the page.",
+  bad_teams: "Every team needs 2 or 3 checked-in players, each player on one team.",
+  slot_not_found: "That bracket game doesn't exist. Refresh the page.",
+  slot_not_ready:
+    "That game can't be scored yet, or a later game already depends on it. Refresh the page.",
 };
 
 function fail(result: Extract<LeagueResult<unknown>, { ok: false }>): { ok: false; message: string } {
@@ -157,7 +170,7 @@ export async function readWeek(
 ): Promise<Outcome<{ players: WeekPlayer[]; games: WeekGame[] }>> {
   const season = needSeason(slug);
   if ("ok" in season) return season;
-  const w = parsePlayWeek(season, week);
+  const w = parsePlayWeek(season, week) ?? parsePlayoffWeek(season, week);
   if (w === null) return { ok: false, message: "That week isn't a league week for this season." };
   const res = await callRotationLeague<{ players: WeekPlayer[]; games: WeekGame[] }>({
     action: "read_week",
@@ -176,7 +189,7 @@ export async function checkIn(
 ): Promise<Outcome> {
   const season = needSeason(slug);
   if ("ok" in season) return season;
-  const w = parsePlayWeek(season, week);
+  const w = parsePlayWeek(season, week) ?? parsePlayoffWeek(season, week);
   if (w === null) return { ok: false, message: "That week isn't a league week for this season." };
   if (typeof externalRef !== "string" || !REF.test(externalRef) || typeof present !== "boolean") {
     return { ok: false, message: "Bad check-in." };
@@ -279,4 +292,125 @@ export async function readStandings(slug: unknown): Promise<Outcome<{ standings:
   });
   if (!res.ok) return fail(res);
   return { ok: true, standings: Array.isArray(res.data.standings) ? res.data.standings : [] };
+}
+
+// --------------------------------------------------------------- playoff
+
+export interface PlayoffPlayer {
+  external_ref: string;
+  name: string;
+}
+
+export interface PlayoffPreview {
+  locked: boolean;
+  teams: { seed: number; players: PlayoffPlayer[] }[];
+}
+
+export type BracketEntrant = { seed: number; players: string[] } | "bye" | null;
+
+export interface BracketSlotView {
+  id: string;
+  side: "winners" | "losers" | "final" | "reset";
+  round: number;
+  label: string;
+  a: BracketEntrant;
+  b: BracketEntrant;
+  status: "pending" | "ready" | "played";
+  score_a: number | null;
+  score_b: number | null;
+  can_score: boolean;
+}
+
+export interface PlayoffView {
+  locked: boolean;
+  slots: BracketSlotView[];
+  champion: BracketEntrant;
+  runner_up: BracketEntrant;
+  complete: boolean;
+}
+
+const SLOT_ID = /^[A-Za-z0-9:_-]{1,40}$/;
+
+export async function previewPlayoff(slug: unknown): Promise<Outcome<PlayoffPreview>> {
+  const season = needSeason(slug);
+  if ("ok" in season) return season;
+  if (season.playoffWeek === null) return { ok: false, message: MESSAGES.no_playoff };
+  const res = await callRotationLeague<PlayoffPreview>({ action: "playoff_preview", season_slug: season.slug });
+  if (!res.ok) return fail(res);
+  return { ok: true, locked: res.data.locked === true, teams: Array.isArray(res.data.teams) ? res.data.teams : [] };
+}
+
+/** Lock teams given as seed order -> registration refs (the coach may have moved kids). */
+export async function lockPlayoffTeams(slug: unknown, teams: unknown): Promise<Outcome> {
+  const season = needSeason(slug);
+  if ("ok" in season) return season;
+  if (!Array.isArray(teams) || teams.length < 2 || teams.length > 16) {
+    return { ok: false, message: "Lock needs at least two teams." };
+  }
+  const clean: { seed: number; external_refs: string[] }[] = [];
+  for (const [i, t] of teams.entries()) {
+    if (!Array.isArray(t) || t.length < 2 || t.length > 3 || !t.every((r) => typeof r === "string" && REF.test(r))) {
+      return { ok: false, message: MESSAGES.bad_teams };
+    }
+    clean.push({ seed: i + 1, external_refs: [...(t as string[])] });
+  }
+  const res = await callRotationLeague({ action: "playoff_lock", season_slug: season.slug, teams: clean });
+  return res.ok ? { ok: true } : fail(res);
+}
+
+export async function unlockPlayoffTeams(slug: unknown): Promise<Outcome> {
+  const season = needSeason(slug);
+  if ("ok" in season) return season;
+  const res = await callRotationLeague({ action: "playoff_unlock", season_slug: season.slug });
+  return res.ok ? { ok: true } : fail(res);
+}
+
+export async function readPlayoff(slug: unknown): Promise<Outcome<PlayoffView>> {
+  const season = needSeason(slug);
+  if ("ok" in season) return season;
+  if (season.playoffWeek === null) return { ok: false, message: MESSAGES.no_playoff };
+  const res = await callRotationLeague<PlayoffView>({ action: "read_playoff", season_slug: season.slug });
+  if (!res.ok) return fail(res);
+  return {
+    ok: true,
+    locked: res.data.locked === true,
+    slots: Array.isArray(res.data.slots) ? res.data.slots : [],
+    champion: res.data.champion ?? null,
+    runner_up: res.data.runner_up ?? null,
+    complete: res.data.complete === true,
+  };
+}
+
+export async function recordPlayoffScore(input: {
+  slug: unknown;
+  slot: unknown;
+  scoreA: unknown;
+  scoreB: unknown;
+  gameTarget: unknown;
+  timed: unknown;
+}): Promise<Outcome> {
+  const season = needSeason(input.slug);
+  if ("ok" in season) return season;
+  const a = Number(input.scoreA);
+  const b = Number(input.scoreB);
+  const target = Number(input.gameTarget ?? season.gameTarget);
+  if (typeof input.slot !== "string" || !SLOT_ID.test(input.slot)) {
+    return { ok: false, message: "Unknown bracket game." };
+  }
+  if (![a, b].every((n) => Number.isInteger(n) && n >= 0 && n <= 99)) {
+    return { ok: false, message: "Scores are whole numbers from 0 to 99." };
+  }
+  if (!season.gameTargets.includes(target)) {
+    return { ok: false, message: `Games go to ${season.gameTargets.join(", ")}.` };
+  }
+  const res = await callRotationLeague({
+    action: "playoff_score",
+    season_slug: season.slug,
+    slot: input.slot,
+    score_a: a,
+    score_b: b,
+    game_target: target,
+    timed: input.timed === true,
+  });
+  return res.ok ? { ok: true } : fail(res);
 }

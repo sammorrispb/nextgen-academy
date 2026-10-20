@@ -1,6 +1,6 @@
 import type { StandingRow } from "@/lib/rotation-league/view";
 
-// Coach-only standings. Ranked on shrunk win % (W+2)/(GP+4), then point
+// Season standings (coach pages and the signed parent link). Ranked on shrunk win % (W+2)/(GP+4), then point
 // difference, then points for, by the Link & Dink engine.
 export function LeagueStandings({ rows }: { rows: StandingRow[] }) {
   if (rows.length === 0) {
