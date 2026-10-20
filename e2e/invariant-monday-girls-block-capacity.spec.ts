@@ -167,6 +167,7 @@ function body(group: string): string {
     email: PARENT_EMAIL,
     phone: "3015550142",
     childFirstName: "Capacityprobe",
+    childLastName: "Walker",
     childBirthYear: String(new Date().getFullYear() - 9),
     emergencyName: "Capacity Emergency",
     emergencyPhone: "3015550143",

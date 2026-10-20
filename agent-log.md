@@ -3,6 +3,14 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+## 2026-10-19 — Child last name at season checkout
+
+- **Situation:** The rotation-league engine moved to community-os (`packages/rotation-league`, `ld.rotation_league_*`, PRs #1833/#1835/#1837, last-name column in #1842). Sam asked the NGA coach screens to send each child's full name. The Fall and Monday Girls registration DBs held a first name only (sometimes with a hand-typed initial), so there was no source. Sam chose collecting it at checkout and approved the IPAV proposal as "go, required".
+- **Decision:** Require a "Player's last name" on `/fall` and `/monday-girls`, validated by one shared rule identical to Link & Dink's roster parser. Write it to the roster row and the admin email only. The Pickl Park checkout is retired (410) and was left untouched. No backfill: rows before today stay blank, which is fine because the coach screens cut over at the next season, not mid-Fall.
+- **Risk:** A webhook create naming a property the DB lacks 400s and loses a paid row. Mitigated twice: `Child Last Name` (rich text) was added to both Notion DBs (NGA Fall 2026 Registrations, NGA Monday Girls Registrations) before merge, and the writer names the property only when a value is present. A required field adds one box to checkout; Sam judged that worth it.
+- **Change:** `src/lib/child-last-name.ts`; both season validators, forms and checkout metadata; webhook roster writes + admin "Player:" lines; both Notion writers; `e2e/invariant-season-child-last-name.spec.ts`; five existing fixtures gained the field; CLAUDE.md governance + risk log #13.
+- **Validation:** Pure suite 3,003 passed; three mutations caught (optional field, always-write property, parent-email leak). TypeScript clean, lint zero errors (two existing warnings), production build green. No live checkout, email or Stripe call.
+
 ## 2026-10-08 — MVF October 24 tournament indoor rain backup
 
 - **Situation:** Sam supplied MVF's October 8 email confirming Lake Marion's gym is held for the October 24 tournament in case of rain, from 3–6 PM. The normal North Creek schedule is 4–7 PM; existing shared copy said only rain or shine. Sam approved the scoped page/email update before implementation. Work is isolated from the unrelated dirty primary checkout on fresh main `6a2e3d9`.

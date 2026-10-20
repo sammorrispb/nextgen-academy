@@ -38,6 +38,7 @@ import {
   WAIVER_REQUIRED_MESSAGE,
 } from "@/lib/waiver-gate";
 import { siteOrigin } from "@/lib/site-origin";
+import { cleanChildLastName } from "@/lib/child-last-name";
 
 // Monday Girls block checkout — ENV-GATED like
 // checkout-fall and checkout-picklpark: until STRIPE_MONDAY_GIRLS_PRICE_ID is
@@ -238,6 +239,7 @@ export async function POST(req: NextRequest) {
       parent_email: data.email,
       parent_phone: data.phone,
       child_first_name: data.childFirstName,
+      child_last_name: cleanChildLastName(data.childLastName),
       child_birth_year: data.childBirthYear,
       emergency_name: data.emergencyName,
       emergency_phone: data.emergencyPhone,

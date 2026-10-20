@@ -3,6 +3,7 @@ import {
   FALL_CHILD_AGE_MIN,
   FALL_CHILD_AGE_MAX,
 } from "@/lib/validate-fall-interest";
+import { childLastNameError } from "@/lib/child-last-name";
 
 // Validator for the Fall 2026 season REGISTRATION checkout (distinct from the
 // /fall demand survey's validate-fall-interest). Structural mirror of
@@ -15,6 +16,8 @@ export interface FallRegistrationData {
   email: string;
   phone: string;
   childFirstName: string;
+  /** Required since 2026-10-19; see lib/child-last-name.ts. */
+  childLastName: string;
   childBirthYear: string;
   emergencyName: string;
   emergencyPhone: string;
@@ -62,6 +65,8 @@ export function validateFallRegistration(
   if (!data.childFirstName?.trim()) {
     errors.childFirstName = "Child first name is required";
   }
+  const lastNameError = childLastNameError(data.childLastName);
+  if (lastNameError) errors.childLastName = lastNameError;
   if (!data.childBirthYear?.trim()) {
     errors.childBirthYear = "Child's birth year is required";
   } else {

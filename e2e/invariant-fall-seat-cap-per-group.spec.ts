@@ -57,6 +57,7 @@ function body(group: "Green" | "Yellow") {
     email: "dana@example.com",
     phone: "3013254731",
     childFirstName: "Ava",
+    childLastName: "Walker",
     childBirthYear: "2014",
     emergencyName: "Sam Parent",
     emergencyPhone: "3013254732",
