@@ -147,6 +147,12 @@ export default async function CoachDashboard() {
           Fall season play →
         </Link>
         <Link
+          href="/coach/league"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
+        >
+          League (Link &amp; Dink trial) →
+        </Link>
+        <Link
           href="/coach/fall-playbook"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ngpa-slate/60 hover:border-ngpa-teal hover:text-ngpa-teal text-sm font-bold transition-colors"
         >
