@@ -3,6 +3,14 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+## 2026-10-20 — Rotation-league coach screens on Link & Dink (Fall trial)
+
+- **Situation:** The rotation-league engine, tables and endpoint are live on community-os (PRs #1833/#1835/#1837/#1842), and season checkouts now collect a last name (#422). Sam approved sending the child's first and last name to L&D from a picked registrations DB (2026-10-19), then chose to trial the screens on Fall 2026 Green/Yellow now rather than wait for Winter.
+- **Decision:** New `/coach/league` (season list, standings, Sync roster) and `/coach/league/<slug>/<week>` (check-in, preview/try-another/save rounds, score and correct every game, standings) over a registry (`src/data/rotation-league-seasons.ts`) with two trial seasons mirroring Fall's real shape (2 courts, 3 games each, weeks 1-5, playoff week 6, `draft`). The Notion season play and the parent standings link are untouched; the trial runs beside them. Its own narrow roster reader rather than widening `fetchFallRosterForLeague`. Names must pass L&D's rule as typed: the invoice-name cleaner was rejected here because it turns an email into words that pass.
+- **Risk:** Real children's first names (and any last names collected since 2026-10-19) now also sit on L&D for the trial seasons; erasure there is `erase_player`, which has no NGA button yet. Coaches could mistake the trial standings for the real ones: every screen carries the trial note. The playoff week isn't supported here yet.
+- **Change:** `src/data/rotation-league-seasons.ts`; `src/lib/rotation-league/{client,roster,view}.ts`; `src/app/coach/(authed)/league/**`; a coach-home link; two invariant specs; CLAUDE.md section + Slop-Free list; `.env.example`; risk log #14.
+- **Validation:** 18 new tests; three mutations caught (an action without the coach check, the reader keeping allergies, dropping the production gate). Full pure suite, lint and build run before push (see PR). No live call to L&D from this session.
+
 ## 2026-10-19 — Child last name at season checkout
 
 - **Situation:** The rotation-league engine moved to community-os (`packages/rotation-league`, `ld.rotation_league_*`, PRs #1833/#1835/#1837, last-name column in #1842). Sam asked the NGA coach screens to send each child's full name. The Fall and Monday Girls registration DBs held a first name only (sometimes with a hand-typed initial), so there was no source. Sam chose collecting it at checkout and approved the IPAV proposal as "go, required".

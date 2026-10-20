@@ -510,6 +510,46 @@ a family nearly being told the wrong product under that name, so parent-facing c
   `e2e/invariant-season-league-authz.spec.ts` (source pins: every action gated, pages
   under `(authed)`, verify-before-read, no admin-secret fallback, noindex/robots/sitemap).
 
+### Rotating-partner league on Link & Dink (`/coach/league`, 2026-10-20)
+The coach screens for running a rotating-partner league on **Link & Dink's engine**
+(community-os `packages/rotation-league` over `ld.rotation_league_*`, reached through
+`POST {LINKDINK_BASE_URL or www.linkanddink.com}/play/api/internal/nga-rotation-league`).
+NGA stays the system of record for families; L&D holds the season's roster, check-ins,
+games and scores, and recomputes rounds and standings on every call. **First wired as a
+TRIAL on Fall 2026 Green and Yellow** (Sam, 2026-10-20) beside the Notion season play,
+which still drives the parent standings link. The plan is to cut NGA over at the next
+season.
+
+- **Seasons are one registry, `src/data/rotation-league-seasons.ts`.** Slug (the L&D key;
+  never rename once it has games), courts, games per player, play weeks, playoff week,
+  game targets, and which registration DB + `Group` value feeds the roster. Adding a
+  season is one entry.
+- **Flow:** `/coach/league` lists seasons with standings and a **Sync roster** button
+  (`season_upsert` + `roster_upsert`); `/coach/league/<slug>/<week>` is one page: tap to
+  check in, pick rounds (or automatic), **Preview → Try another → Save**, then score every
+  game (save and correct, "ended on time", game-to selector) with standings underneath.
+  Preview and save send the same `attempt`, and the engine is deterministic per attempt,
+  so what was previewed is what is saved. An unscored game can be removed (`void_game`).
+- **What crosses to L&D:** the registration's Notion page id (`external_ref`) and the
+  child's first and last name, in `roster_upsert` only (Sam's approval 2026-10-19). Never
+  birth year, allergies, emergency contact, parent fields or SMS consent: the roster reader
+  (`src/lib/rotation-league/roster.ts`) never reads them off the row. It is a separate
+  reader from `fetchFallRosterForLeague` on purpose (that one is pinned narrower), and it
+  fails LOUD. Names must pass L&D's rule as typed (`CHILD_LAST_NAME_RE`); a first name
+  that doesn't skips the row, a last name that doesn't is sent as none. Only `Confirmed` is
+  active; every other status is withdrawn, so a refunded kid's played games still count.
+- **Only production sends** (or a build `LINKDINK_BASE_URL` points at L&D on purpose);
+  `NGA_SYNC_SECRET` rides the `X-NGA-Sync-Secret` header. A preview shows a plain "this
+  build doesn't talk to Link & Dink" message. L&D's error text never reaches the coach
+  unless it is a known engine code; `bad_score` shows the engine's own short reason.
+- **Not built yet:** the week-6 playoff (seeding + double elimination exist in the engine
+  but not in the endpoint or these screens), a parent-facing link, and erasure from NGA
+  (`erase_player` exists on the endpoint).
+- Pinned by `e2e/invariant-rotation-league-egress.spec.ts` (projection, hosts, production
+  gate, secret placement, loud failures; mutation-checked) and
+  `e2e/invariant-rotation-league-authz.spec.ts` (every action checks the coach session
+  first, pages under `coach/(authed)`, registry-only seasons and weeks).
+
 ### Fall 2026 weather calls (`/admin/weather` + `POST /api/admin/fall-calls`, 2026-09-26)
 The go/no-go for a Walter Johnson Sunday, and the record of what was held versus
 cancelled. Sam's rules: **the call is made two hours before each group starts, per
@@ -1032,6 +1072,10 @@ See `.env.example`. Categories:
   reported as dark by the health cron, never as a misconfiguration (deliberately unlike
   `NOTION_NEWSLETTER_DRAFTS_DB_ID`, whose lead block is meant to ship). See the
   "Curriculum override layer" section above.
+- `NGA_SYNC_SECRET` + `LINKDINK_BASE_URL` — the Link & Dink internal-call pair (MVF roster
+  sync and the rotation-league coach screens). The secret must equal Link & Dink's
+  `NGA_SYNC_SECRET`. Only a production deploy calls L&D unless `LINKDINK_BASE_URL` points a
+  build at an L&D instance on purpose.
 - `NOTION_FALL_CALLS_DB_ID` — NGA Fall Season Calls DB (the weather-call tracker; see
   "Fall 2026 weather calls"). Optional. UNSET = `/fall` shows the weather policy line
   only and `/admin/weather` says how to switch it on; nothing can be saved. Share the DB
@@ -1066,7 +1110,7 @@ Tests OBSERVE these files; they never modify them. Any change here goes through 
 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `api/admin/monday-girls/remove`, `src/lib/{stripe,stripe-invoices,submission-key,refund-amount,cancel-camp,cancel-dropin,cancel-monday-girls,admin-monday-girls-actions,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
 - **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 8 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
-- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league,notion-mvf-tournament-registrations}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**`), the admin roster pages `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts` + `api/admin/monday-girls/maybe` and
+- **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league,notion-mvf-tournament-registrations}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**` and `coach/(authed)/league/**` + `src/lib/rotation-league/**`), the admin roster pages `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts` + `api/admin/monday-girls/maybe` and
   `admin/(authed)/fall` + `src/lib/{admin-fall-roster,admin-fall-actions}.ts` + `api/admin/fall/link-profile`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
