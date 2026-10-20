@@ -35,6 +35,9 @@ export interface RotationLeagueSeason {
   weekDates: Readonly<Record<number, string>>;
   /** Shown on every screen of the season. */
   note?: string;
+  /** Heading on the parent standings link. Never the word "league" (the
+   * /league product is a different thing; see CLAUDE.md). */
+  parentTitle: string;
 }
 
 const FALL_WEEK_DATES: Record<number, string> = Object.fromEntries(
@@ -42,7 +45,7 @@ const FALL_WEEK_DATES: Record<number, string> = Object.fromEntries(
 );
 
 const TRIAL_NOTE =
-  "Trial run beside the Notion season play. Nothing here changes the Fall standings parents see; the parent link still reads the Notion games.";
+  "Trial run beside the Notion season play. Nothing here changes the Fall standings link parents already have; this season's own parent link is separate and only reaches families you send it to.";
 
 export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
   {
@@ -62,6 +65,7 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     status: "draft",
     weekDates: FALL_WEEK_DATES,
     note: TRIAL_NOTE,
+    parentTitle: "Fall Season standings · Green Ball",
   },
   {
     slug: "nga-fall-2026-yellow-trial",
@@ -80,6 +84,7 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     status: "draft",
     weekDates: FALL_WEEK_DATES,
     note: TRIAL_NOTE,
+    parentTitle: "Fall Season standings · Yellow Ball",
   },
 ];
 
@@ -92,4 +97,10 @@ export function findRotationLeagueSeason(slug: unknown): RotationLeagueSeason | 
 export function parsePlayWeek(season: RotationLeagueSeason, week: unknown): number | null {
   const n = typeof week === "string" ? Number(week) : week;
   return typeof n === "number" && Number.isInteger(n) && season.playWeeks.includes(n) ? n : null;
+}
+
+/** The season's playoff week, or null when it has none or `week` isn't it. */
+export function parsePlayoffWeek(season: RotationLeagueSeason, week: unknown): number | null {
+  const n = typeof week === "string" ? Number(week) : week;
+  return season.playoffWeek !== null && n === season.playoffWeek ? season.playoffWeek : null;
 }

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { findRotationLeagueSeason, parsePlayWeek } from "@/data/rotation-league-seasons";
 import { formatLongDate } from "@/lib/format-date";
 import { readStandings, readWeek, type WeekGame } from "@/lib/rotation-league/view";
-import { LeagueStandings } from "../../LeagueStandings";
+import { LeagueStandings } from "@/components/rotation-league/LeagueStandings";
 import CheckInList from "./CheckInList";
 import PlanPanel from "./PlanPanel";
 import LeagueScoreForm from "./LeagueScoreForm";

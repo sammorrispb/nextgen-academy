@@ -2,10 +2,14 @@ import Link from "next/link";
 import { ROTATION_LEAGUE_SEASONS } from "@/data/rotation-league-seasons";
 import { formatLongDate } from "@/lib/format-date";
 import { readStandings } from "@/lib/rotation-league/view";
+import { leagueStandingsPath, signLeagueStandingsLink } from "@/lib/league-standings-token";
+import CopyLinkButton from "../fall-season/CopyLinkButton";
 import SyncRosterButton from "./SyncRosterButton";
-import { LeagueStandings } from "./LeagueStandings";
+import { LeagueStandings } from "@/components/rotation-league/LeagueStandings";
 
 export const dynamic = "force-dynamic";
+
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
 
 // Rotation-league seasons that run on Link & Dink. Roster, check-ins, rounds
 // and scores live there; NGA sends the roster from its registrations.
@@ -32,6 +36,8 @@ export default async function LeagueIndexPage() {
       <div className="space-y-12">
         {ROTATION_LEAGUE_SEASONS.map((season, i) => {
           const s = standings[i];
+          const token = signLeagueStandingsLink(season.slug);
+          const parentUrl = token ? `${SITE_ORIGIN}${leagueStandingsPath(season.slug, token)}` : null;
           return (
             <section key={season.slug}>
               <div className="flex flex-wrap items-end justify-between gap-3 mb-3">
@@ -65,6 +71,27 @@ export default async function LeagueIndexPage() {
                     )}
                   </Link>
                 ))}
+                {season.playoffWeek !== null && (
+                  <Link
+                    href={`/coach/league/${season.slug}/playoff`}
+                    className="px-4 py-2 rounded-full border border-ngpa-lime/60 text-sm font-bold text-ngpa-lime hover:bg-ngpa-lime/10 transition-colors min-h-[44px] inline-flex items-center"
+                  >
+                    Playoff · week {season.playoffWeek}
+                  </Link>
+                )}
+              </div>
+
+              <div className="mb-6 rounded-xl border border-ngpa-slate/40 px-3 py-2 text-xs text-ngpa-white/70">
+                {parentUrl ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>
+                      Parent standings link (full names; share only in this group&rsquo;s WhatsApp):
+                    </span>
+                    <CopyLinkButton url={parentUrl} />
+                  </div>
+                ) : (
+                  <span>Parent link is off: set STANDINGS_LINK_SECRET to turn it on.</span>
+                )}
               </div>
 
               {s.ok ? (

@@ -9,9 +9,10 @@ export default function robots(): MetadataRoute.Robots {
         // aggregate session data, no PII (see sessions-feed.ts) — advertised
         // in llms.txt for AI agents. Everything else under /api stays closed.
         allow: ["/", "/api/sessions/feed"],
-        // /fall/standings/* are signed parent links (season play) — each
-        // page is noindex too; this keeps a forwarded link out of a crawl.
-        disallow: ["/api/", "/admin/", "/coach/", "/fall/standings/"],
+        // /fall/standings/* and /standings/* are signed parent links (season
+        // play) — each page is noindex too; this keeps a forwarded link out of
+        // a crawl.
+        disallow: ["/api/", "/admin/", "/coach/", "/fall/standings/", "/standings/"],
       },
     ],
     sitemap: "https://nextgenpbacademy.com/sitemap.xml",

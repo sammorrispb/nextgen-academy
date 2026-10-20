@@ -542,13 +542,28 @@ season.
   `NGA_SYNC_SECRET` rides the `X-NGA-Sync-Secret` header. A preview shows a plain "this
   build doesn't talk to Link & Dink" message. L&D's error text never reaches the coach
   unless it is a known engine code; `bad_score` shows the engine's own short reason.
-- **Not built yet:** the week-6 playoff (seeding + double elimination exist in the engine
-  but not in the endpoint or these screens), a parent-facing link, and erasure from NGA
-  (`erase_player` exists on the endpoint).
+- **Playoff (`/coach/league/<slug>/playoff`, 2026-10-20):** check in on the playoff week,
+  review the snake-seeded teams from the standings of the kids checked in (tap two names
+  to swap them), **Lock**, then score the double-elimination bracket game by game. Link &
+  Dink stores only the locked teams and a score per slot (`ld.rotation_league_playoff_members`,
+  community-os #1852) and recomputes byes, the reset and the champion on every read. A
+  slot is scoreable when ready, or correctable while nothing downstream has been played;
+  teams unlock only before the first playoff score.
+- **Parent standings link (`/standings/<slug>/<token>`, 2026-10-20):** one signed link
+  per season (`src/lib/league-standings-token.ts`, `STANDINGS_LINK_SECRET` only, no admin
+  fallback, rotate to revoke; payload prefix `league-standings:` so a Fall-season token
+  never opens it). Verified BEFORE any Link & Dink call; `noindex`, `no-referrer`,
+  `force-dynamic`, robots-disallowed, not in the sitemap. Shows standings and the playoff
+  with **each child's first and last name** (Sam's call, 2026-10-20, amending TD-186,
+  which had said parent standings would not carry the last name). No ages, attendance or
+  parent fields. The coach index has a copy button per season.
+- **Not built yet:** erasure from NGA (`erase_player` exists on the endpoint).
 - Pinned by `e2e/invariant-rotation-league-egress.spec.ts` (projection, hosts, production
   gate, secret placement, loud failures; mutation-checked) and
   `e2e/invariant-rotation-league-authz.spec.ts` (every action checks the coach session
-  first, pages under `coach/(authed)`, registry-only seasons and weeks).
+  first, pages under `coach/(authed)`, registry-only seasons and weeks), plus
+  `e2e/invariant-league-standings-link.spec.ts` (token scope, no fallback, verify before
+  read, noindex/no-referrer/robots/sitemap, playoff commands carry ids and scores only).
 
 ### Fall 2026 weather calls (`/admin/weather` + `POST /api/admin/fall-calls`, 2026-09-26)
 The go/no-go for a Walter Johnson Sunday, and the record of what was held versus
@@ -1109,9 +1124,9 @@ NGA serves children ages 6–16; parents are the account holders and control eve
 Tests OBSERVE these files; they never modify them. Any change here goes through the IPAV loop (below) with its own approval:
 
 - **Payments:** `src/app/api/stripe/webhook/route.ts`, all `api/checkout*` + `api/commit/*` + `api/cancel-*` routes, `api/admin/monday-girls/remove`, `src/lib/{stripe,stripe-invoices,submission-key,refund-amount,cancel-camp,cancel-dropin,cancel-monday-girls,admin-monday-girls-actions,cluster-refund}.ts`, `api/cron/crew-autoreserve` (off-session charges).
-- **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 8 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
+- **Auth/tokens:** `src/lib/{coach-auth,coach-allowlist,admin-auth,admin-allowlist}.ts`, all 9 HMAC token libs (`cancel-token`, `commit-token`, `newsletter-token`, `referral-token`, `session-cancel-token`, `fall-poll-token`, `lead-consent-token`, `standings-link-token`, `league-standings-token`), the 4 auth-session routes (`admin|coach/auth/verify`, logout).
 - **Minor PII:** `src/lib/{notion-player-sync,notion-player-lookup,player-profiles,notion-dropins,notion-eval,registrant-match,roster-mailto,attendance,season-league-view,notion-season-league,notion-mvf-tournament-registrations}.ts`, `api/admin/sessions/registrants`, `api/coach/attendance`, coach roster/player pages (incl. `coach/(authed)/fall-season/**` and `coach/(authed)/league/**` + `src/lib/rotation-league/**`), the admin roster pages `admin/(authed)/monday-girls` + `src/lib/admin-monday-girls-roster.ts` + `api/admin/monday-girls/maybe` and
-  `admin/(authed)/fall` + `src/lib/{admin-fall-roster,admin-fall-actions}.ts` + `api/admin/fall/link-profile`, the parent standings page `fall/standings/[group]/[token]`, the 3 eval routes.
+  `admin/(authed)/fall` + `src/lib/{admin-fall-roster,admin-fall-actions}.ts` + `api/admin/fall/link-profile`, the parent standings pages `fall/standings/[group]/[token]` and `standings/[slug]/[token]`, the 3 eval routes.
 
 Full inventory + risk log: `docs/source-inventory.md`.
 
