@@ -8,6 +8,7 @@ import {
 } from "@/lib/cron-alert";
 import { EMAIL_RE } from "@/lib/notion-utils";
 import { fetchMvfTournamentRegistrations } from "@/lib/notion-mvf-tournament-registrations";
+import { isWithdrawnMvfRegistration } from "@/lib/mvf-tournament-status";
 import {
   mvfTournamentPaymentReminderSubject,
   mvfTournamentPaymentReminderText,
@@ -76,6 +77,12 @@ export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => 
   const flagFailed: string[] = [];
 
   for (const row of rows) {
+    // Refunded and Cancelled rows stay Paid=false for good. They need no
+    // reminder, so they never reach Stripe or the alert.
+    if (isWithdrawnMvfRegistration(row.status)) {
+      skipped++;
+      continue;
+    }
     // Only rows created at least 5 days ago.
     const created = row.createdAt ? Date.parse(row.createdAt) : NaN;
     if (Number.isNaN(created) || created > cutoff) {

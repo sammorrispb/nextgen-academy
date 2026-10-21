@@ -267,6 +267,8 @@ export interface MvfTournamentCronRow {
   resident: boolean;
   amountUsd: number;
   stripeInvoiceId: string;
+  /** The Status select as typed: Pending, Confirmed, or a hand-set Refunded. */
+  status: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -289,6 +291,7 @@ function cronRowFromPage(page: any): MvfTournamentCronRow | null {
     resident: props["Resident"]?.checkbox === true,
     amountUsd: props["Amount Paid"]?.number ?? 0,
     stripeInvoiceId: text("Stripe Invoice ID"),
+    status: props["Status"]?.select?.name ?? "",
   };
 }
 
