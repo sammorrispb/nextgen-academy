@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { NextRequest } from "next/server";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { FetchStub } from "./fixtures/fetch-stub";
 
 // Incident 2026-10-19: the MVF pre-event reminder reached 1 of 10 paid
@@ -249,6 +251,16 @@ test.describe("pre-event reminder: a failed invoice lookup is reported, not skip
     expect(parentSends()).toEqual([]);
     expect(alerts()[0].subject).toContain("invalid_parent_email");
     expect(alerts()[0].text).toContain("page-bad-email");
+  });
+
+  test("the route runs the engine on the real ET date, with no way to override it", () => {
+    // A date override on a live cron is a re-send button for every family.
+    const src = readFileSync(
+      join(__dirname, "..", "src", "app", "api", "cron", "mvf-tournament-pre-event-reminder", "route.ts"),
+      "utf8",
+    );
+    expect(src).toMatch(/runMvfTournamentPreEventReminder\(\s*\)/);
+    expect(src).not.toMatch(/todayIso|searchParams|nextUrl/);
   });
 
   test("off the send date it reads nothing and sends nothing", async () => {
