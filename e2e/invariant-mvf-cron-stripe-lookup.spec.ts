@@ -54,6 +54,7 @@ interface FakeRow {
   email: string;
   invoice: string;
   created?: string;
+  status?: string;
 }
 
 function page(r: FakeRow) {
@@ -70,6 +71,7 @@ function page(r: FakeRow) {
       "Stripe Invoice ID": {
         rich_text: r.invoice ? [{ plain_text: r.invoice }] : [],
       },
+      Status: { select: r.status ? { name: r.status } : null },
     },
   };
 }
@@ -253,6 +255,20 @@ test.describe("pre-event reminder: a failed invoice lookup is reported, not skip
     expect(alerts()[0].text).toContain("page-bad-email");
   });
 
+  test("a refunded or cancelled row that is still ticked Paid gets no email and no lookup", async () => {
+    installServices([
+      { id: "page-refunded", email: OLD_EMAIL, invoice: OLD, status: "Refunded" },
+      { id: "page-cancelled", email: "cancelled-parent@example.com", invoice: `${OLD}c`, status: "cancelled" },
+    ]);
+    const fake = new FakeInvoices({});
+
+    const res = await preEvent(fake);
+
+    expect(res.status).toBe(200);
+    expect(sends()).toEqual([]);
+    expect(fake.retrieved).toEqual([]);
+  });
+
   test("the route runs the engine on the real ET date, with no way to override it", () => {
     // A date override on a live cron is a re-send button for every family.
     const src = readFileSync(
@@ -381,6 +397,40 @@ test.describe("payment reminder: every due row it can't remind is reported", () 
     expect(res.status).toBe(200);
     expect(sends()).toEqual([]);
     expect(fake.retrieved).not.toContain(OLD);
+  });
+
+  test("refunded and cancelled rows are never looked up and never alert (the two rows on 2026-10-21)", async () => {
+    installServices([
+      { id: "page-refunded-1", email: OLD_EMAIL, invoice: OLD, status: "Refunded" },
+      { id: "page-refunded-2", email: "refunded-two@example.com", invoice: `${OLD}2`, status: "Refunded" },
+      { id: "page-cancelled", email: "cancelled@example.com", invoice: `${OLD}3`, status: "Canceled" },
+      { id: "page-refunded-no-invoice", email: "not-an-email", invoice: "", status: " refunded " },
+    ]);
+    patchStripe({});
+
+    const res = await run();
+
+    expect(res.status).toBe(200);
+    expect(sends()).toEqual([]);
+    expect(fake.retrieved).toEqual([]);
+  });
+
+  test("a Pending unpaid row whose lookup fails still alerts beside a refunded one", async () => {
+    installServices([
+      { id: "page-refunded-1", email: OLD_EMAIL, invoice: OLD, status: "Refunded" },
+      { id: "page-pending", email: "pending-parent@example.com", invoice: `${OLD}p`, status: "Pending" },
+    ]);
+    patchStripe({});
+
+    const res = await run();
+
+    expect(res.status).toBe(500);
+    expect(fake.retrieved).toEqual([`${OLD}p`]);
+    const [alert, ...more] = alerts();
+    expect(more).toEqual([]);
+    expect(alert.subject).toContain("stripe_lookup_failed");
+    expect(alert.text).toContain("page-pending");
+    expect(alert.text).not.toContain("page-refunded-1");
   });
 
   test("an unpaid row with no invoice id is reported", async () => {

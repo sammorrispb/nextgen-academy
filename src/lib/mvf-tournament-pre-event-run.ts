@@ -8,6 +8,7 @@ import {
 } from "@/lib/cron-alert";
 import { EMAIL_RE } from "@/lib/notion-utils";
 import { fetchMvfTournamentRegistrations } from "@/lib/notion-mvf-tournament-registrations";
+import { isWithdrawnMvfRegistration } from "@/lib/mvf-tournament-status";
 import {
   MVF_TOURNAMENT_PRE_EVENT_SEND_DATE_ISO,
   mvfTournamentPreEventReminderSubject,
@@ -97,6 +98,12 @@ export async function runMvfTournamentPreEventReminder(
   const flagFailed: string[] = [];
 
   for (const row of rows) {
+    // A refund can leave Paid ticked; a withdrawn family gets no "see you
+    // Saturday" email.
+    if (isWithdrawnMvfRegistration(row.status)) {
+      skipped++;
+      continue;
+    }
     if (!row.parentEmail || !EMAIL_RE.test(row.parentEmail)) {
       invalidEmail.push(row.pageId);
       continue;
