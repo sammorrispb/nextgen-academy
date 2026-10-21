@@ -3,6 +3,14 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+## 2026-10-21 — MVF reminder crons report a failed Stripe lookup
+
+- **Situation:** The 2026-10-19 pre-event reminder reached 1 of 10 paid families. Nine invoices live on an older Stripe account, so every `invoices.retrieve` threw `resource_missing`, and the idempotency check's catch counted the row as skipped without a failure entry. `withCronAlert` alerts on `failures.length` alone, so the run returned 200 and Sam got no alert. Sam covered the Oct 24 tournament by hand from Gmail drafts.
+- **Decision:** Both MVF crons now roll each row they can't handle into one failure per signature: `stripe_lookup_failed` (with the Stripe error code), `invalid_parent_email`, `flag_write_failed`, and on the payment reminder `missing_invoice_id`. A failed lookup still skips the send, because the sent-flag can't be checked. The payment reminder's unguarded flag write, which used to abort the rest of the batch, is caught and reported. The pre-event body moved to `src/lib/mvf-tournament-pre-event-run.ts` so a spec can run it on the send date; the route keeps the real date gate and has no date override.
+- **Risk:** The payment reminder runs daily with no alert-state store, so a row it can't remind alerts every day until fixed. On 2026-10-21 two unpaid rows (older than five days) carried old-account invoice ids, so that cron is expected to go red from its first run after deploy until those rows are resolved. That is the intended signal. Only the alert detail carries Notion page ids and the error code, never parent or child fields.
+- **Change:** `src/lib/mvf-tournament-pre-event-run.ts` (new); both MVF cron routes; `errorCode()` in `src/lib/cron-alert.ts`; `e2e/invariant-mvf-cron-stripe-lookup.spec.ts`.
+- **Validation:** 14 new tests. Putting the old `skipped++` back in both lookup catches failed 4 of them (the four lookup-throws cases); dropping the flag/email/invoice failure entries failed 5. Full pure suite, lint and build run before push (see PR). Neither cron was triggered.
+
 ## 2026-10-20 — Playoff screens and the parent standings link (Link & Dink seasons)
 
 - **Situation:** The rotation-league coach screens (#423) ran weeks 1-5 only. The engine had snake seeding and double elimination, but the Link & Dink endpoint and tables didn't expose them. Sam asked for playoff screens and a standings link, and chose full first and last names on the parent link over the recommended first name + initial.
