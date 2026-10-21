@@ -1,6 +1,11 @@
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
-import { rollupFailure, withCronAlert } from "@/lib/cron-alert";
+import {
+  errorCode,
+  rollupFailure,
+  withCronAlert,
+  type CronFailure,
+} from "@/lib/cron-alert";
 import { EMAIL_RE } from "@/lib/notion-utils";
 import { fetchMvfTournamentRegistrations } from "@/lib/notion-mvf-tournament-registrations";
 import {
@@ -29,7 +34,9 @@ const REMINDER_SENT_KEY = "payment_reminder_sent";
  * metadata, not Notion — Notion schema changes aren't API-writable).
  *
  * Safety posture mirrors the drop-in reminder: a Notion/Stripe outage
- * reports but never sends to a row it can't verify as still-open.
+ * reports but never sends to a row it can't verify as still-open. A due row
+ * the run can't remind (no invoice id, a failed invoice lookup, a bad parent
+ * email) is a failure, never a quiet skip.
  */
 export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => {
   const stripe = getStripe();
@@ -61,7 +68,12 @@ export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => 
   const cutoff = Date.now() - REMINDER_AFTER_DAYS * 24 * 60 * 60 * 1000;
   let sent = 0;
   let skipped = 0;
+  const missingInvoice: string[] = [];
+  const lookupFailed: string[] = [];
+  const lookupCodes = new Set<string>();
+  const invalidEmail: string[] = [];
   const rejected: string[] = [];
+  const flagFailed: string[] = [];
 
   for (const row of rows) {
     // Only rows created at least 5 days ago.
@@ -70,12 +82,10 @@ export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => 
       skipped++;
       continue;
     }
-    if (!row.parentEmail || !EMAIL_RE.test(row.parentEmail)) {
-      skipped++;
-      continue;
-    }
+    // The checkout writes the row with its invoice id, so a blank one is a
+    // broken row, not an unpaid family with nothing to pay.
     if (!row.stripeInvoiceId) {
-      skipped++;
+      missingInvoice.push(row.pageId);
       continue;
     }
 
@@ -88,7 +98,8 @@ export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => 
         `[cron/mvf-tournament-payment-reminder] stripe retrieve failed for ${row.pageId}`,
         err,
       );
-      skipped++;
+      lookupFailed.push(row.pageId);
+      lookupCodes.add(errorCode(err));
       continue;
     }
     if (invoice.status !== "open") {
@@ -97,6 +108,11 @@ export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => 
     }
     if (invoice.metadata?.[REMINDER_SENT_KEY] === "true") {
       skipped++;
+      continue;
+    }
+    // Checked after Stripe so only a reminder that is really due can alert.
+    if (!row.parentEmail || !EMAIL_RE.test(row.parentEmail)) {
+      invalidEmail.push(row.pageId);
       continue;
     }
 
@@ -128,22 +144,58 @@ export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => 
       continue;
     }
 
-    await stripe.invoices.update(row.stripeInvoiceId, {
-      metadata: { ...invoice.metadata, [REMINDER_SENT_KEY]: "true" },
-    });
     sent++;
+    // A throw here used to end the run and leave every later family
+    // unreminded. The email landed; a missing flag only risks a duplicate
+    // tomorrow, so report it and keep going.
+    try {
+      await stripe.invoices.update(row.stripeInvoiceId, {
+        metadata: { ...invoice.metadata, [REMINDER_SENT_KEY]: "true" },
+      });
+    } catch (err) {
+      console.error(
+        `[cron/mvf-tournament-payment-reminder] flag write failed for ${row.pageId}`,
+        err,
+      );
+      flagFailed.push(row.pageId);
+    }
   }
 
-  const failures = [];
-  const rolled = rollupFailure(
-    "resend_rejected",
-    rejected,
-    "payment reminders rejected",
-  );
-  if (rolled) failures.push(rolled);
+  const failures: CronFailure[] = [];
+  for (const rolled of [
+    rollupFailure(
+      "missing_invoice_id",
+      missingInvoice,
+      "unpaid row(s) with no Stripe invoice id",
+    ),
+    rollupFailure(
+      "stripe_lookup_failed",
+      lookupFailed,
+      `unpaid row(s) not reminded because the Stripe invoice lookup failed (${[...lookupCodes].sort().join(", ")})`,
+    ),
+    rollupFailure(
+      "invalid_parent_email",
+      invalidEmail,
+      "due reminder(s) with a missing/malformed parent email",
+    ),
+    rollupFailure("resend_rejected", rejected, "payment reminders rejected"),
+    rollupFailure(
+      "flag_write_failed",
+      flagFailed,
+      "reminder(s) sent but the Stripe sent-flag didn't save",
+    ),
+  ]) {
+    if (rolled) failures.push(rolled);
+  }
 
   return {
-    attempted: sent + skipped + rejected.length,
+    attempted:
+      sent +
+      skipped +
+      missingInvoice.length +
+      lookupFailed.length +
+      invalidEmail.length +
+      rejected.length,
     succeeded: sent,
     failures,
     body: { sent, skipped },

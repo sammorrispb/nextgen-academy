@@ -98,6 +98,16 @@ export function rollupFailure(
   };
 }
 
+/** A PII-free label for a caught error, safe for alert detail: an SDK error's
+ * own `code` when it is a plain snake_case token (Stripe's `resource_missing`
+ * is what says "this invoice is on another account"), else the error class
+ * name. Never the message, which can quote ids or names. */
+export function errorCode(err: unknown): string {
+  const code = (err as { code?: unknown } | null)?.code;
+  if (typeof code === "string" && /^[a-z][a-z0-9_]{0,63}$/.test(code)) return code;
+  return err instanceof Error ? err.constructor.name : typeof err;
+}
+
 function signatureSummary(failures: CronFailure[]): string {
   const sigs = [...new Set(failures.map((f) => f.signature || "unspecified_failure"))].sort();
   return sigs.join("+") || "unspecified_failure";
