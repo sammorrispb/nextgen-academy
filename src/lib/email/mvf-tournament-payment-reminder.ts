@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { escapeHtml } from "@/lib/html";
 import {
   signatureExtrasHtml,
   signatureExtrasText,
@@ -83,8 +84,8 @@ export function mvfTournamentPaymentReminderHtml(
   } = input;
 
   return `<div style="${s.wrapper}">
-  <h1 style="${s.headingYellow}">${childFirst}'s spot expires in 2 days</h1>
-  <p>Hi ${parentFirst} — quick heads-up: ${childFirst}'s MVF Junior Tournament (${divisionLabel} division) registration is still awaiting the <strong>$${amountUsd}</strong> entry fee (${residencyLabel}). The invoice expires in 2 days, and spots go to paid players first.</p>
+  <h1 style="${s.headingYellow}">${escapeHtml(childFirst)}'s spot expires in 2 days</h1>
+  <p>Hi ${escapeHtml(parentFirst)} — quick heads-up: ${escapeHtml(childFirst)}'s MVF Junior Tournament (${divisionLabel} division) registration is still awaiting the <strong>$${amountUsd}</strong> entry fee (${residencyLabel}). The invoice expires in 2 days, and spots go to paid players first.</p>
   <p style="margin: 24px 0;"><a href="${payUrl}" style="${s.cta}">Finish payment</a></p>
   <div style="${s.card}">
     <p style="margin: 0 0 8px;"><strong>When:</strong> ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</p>
