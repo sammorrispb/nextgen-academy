@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
+import { invoiceSafeName } from "@/lib/invoice-text";
 import { hasForeignPaymentOwner, nativePaymentOwned } from "@/lib/payment-ownership";
 import { deliverNativeInvoiceEmail, verifiedNativeInvoiceContext, type NativeInvoiceDeliveryContext } from "@/lib/native-invoice-deliveries";
 import { markMvfSeatPaid, markMvfNotification } from "@/lib/mvf-capacity";
@@ -1756,9 +1757,9 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
   const resident = metaString(m, "resident") === "true";
   const parentEmail = r.parentEmail;
   const amount = (r.amountCents / 100).toFixed(2);
-  const childName =
-    `${metaString(m, "child_first_name")} ${metaString(m, "child_last_name")}`.trim() ||
-    "your player";
+  const childName = invoiceSafeName(
+    `${metaString(m, "child_first_name")} ${metaString(m, "child_last_name")}`,
+  );
 
   // Payment never allocates a new seat. It can only consume the reservation
   // bound before the invoice became payable. Unknown/legacy invoices need the
@@ -1844,12 +1845,12 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
         `Tournament: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL} — ${MVF_JUNIOR_TOURNAMENT_VENUE}`,
         `Division: ${metaString(m, "division_label") || division}`,
         ``,
-        `Parent: ${metaString(m, "parent_name")}`,
+        `Parent: ${invoiceSafeName(metaString(m, "parent_name"), "parent")}`,
         `Email: ${parentEmail}`,
         `Phone: ${metaString(m, "parent_phone")}`,
         `Player: ${childName} (DOB ${metaString(m, "child_dob") || "—"})`,
         `Residency: ${resident ? "Montgomery Village resident" : "non-resident"}`,
-        `Emergency: ${metaString(m, "emergency_name")} · ${metaString(m, "emergency_phone")}`,
+        `Emergency: ${invoiceSafeName(metaString(m, "emergency_name"), "")} · ${metaString(m, "emergency_phone")}`,
         `Allergies: ${metaString(m, "allergies") || "none noted"}`,
         ``,
         `Paid: $${amount} — NGA $${metaString(m, "nga_share_usd")} / MVF $${metaString(m, "mvf_share_usd")}`,
@@ -1870,7 +1871,7 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
         replyTo: REPLY_TO,
         subject: `You're in — MVF Junior Tournament, ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}`,
         text: [
-          `Hi ${metaString(m, "parent_name")},`,
+          `Hi ${invoiceSafeName(metaString(m, "parent_name"), "parent")},`,
           ``,
           `${childName} is registered for the MVF Junior Tournament (${metaString(m, "division_label") || division} division).`,
           ``,
