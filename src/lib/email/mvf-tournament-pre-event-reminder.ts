@@ -1,4 +1,5 @@
 import { c, s } from "./brand";
+import { escapeHtml } from "@/lib/html";
 import {
   signatureExtrasHtml,
   signatureExtrasText,
@@ -93,8 +94,8 @@ export function mvfTournamentPreEventReminderHtml(
   const { parentFirst, childFirst, divisionLabel } = input;
 
   return `<div style="${s.wrapper}">
-  <h1 style="${s.heading}">5 days out, ${parentFirst}!</h1>
-  <p>The MVF Junior Tournament is this Saturday — <strong>${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</strong>. <strong>${childFirst}</strong> is locked in for the ${divisionLabel} division.</p>
+  <h1 style="${s.heading}">5 days out, ${escapeHtml(parentFirst)}!</h1>
+  <p>The MVF Junior Tournament is this Saturday — <strong>${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}</strong>. <strong>${escapeHtml(childFirst)}</strong> is locked in for the ${divisionLabel} division.</p>
   <p><strong>Where:</strong> ${MVF_JUNIOR_TOURNAMENT_WHERE_LINE}</p>
   <div style="${s.card}">
     <p style="${s.actionLabel}">Rain plan</p>
