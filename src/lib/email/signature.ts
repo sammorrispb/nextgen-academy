@@ -80,10 +80,10 @@ export function whatsappGroupsTopHtml(): string {
   return `<div style="${s.card}">
       <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.muted};font-weight:700;">Community groups</p>
       <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">
-        <a href="${WHATSAPP_NGA_GROUP_URL}" style="${s.link}font-weight:700;">Next Gen parents WhatsApp</a>
-        &mdash; carpools, who&rsquo;s coming this week, and the quickest way to reach the other Next Gen parents. Coach Sam&rsquo;s in there too.<br>
-        <a href="${WHATSAPP_LD_GROUP_URL}" style="${s.link}font-weight:700;">Link &amp; Dink WhatsApp</a>
-        &mdash; adult play around MoCo, if you&rsquo;re on court too.
+        <a href="${WHATSAPP_NGA_GROUP_URL}" style="${s.link}font-weight:700;">Next Gen parents WhatsApp</a>:
+        carpools, who&rsquo;s coming this week, and the quickest way to reach the other Next Gen parents. Coach Sam&rsquo;s in there too.<br>
+        <a href="${WHATSAPP_LD_GROUP_URL}" style="${s.link}font-weight:700;">Link &amp; Dink WhatsApp</a>:
+        adult play around MoCo, if you&rsquo;re on court too.
       </p>
     </div>`;
 }
@@ -91,9 +91,9 @@ export function whatsappGroupsTopHtml(): string {
 export function whatsappGroupsTopText(): string {
   return [
     `Community groups:`,
-    `Next Gen parents WhatsApp — carpools, who's coming this week, and the quickest way to reach the other Next Gen parents. Coach Sam's in there too:`,
+    `Next Gen parents WhatsApp: carpools, who's coming this week, and the quickest way to reach the other Next Gen parents. Coach Sam's in there too.`,
     WHATSAPP_NGA_GROUP_URL,
-    `Link & Dink WhatsApp — adult play around MoCo, if you're on court too:`,
+    `Link & Dink WhatsApp: adult play around MoCo, if you're on court too.`,
     WHATSAPP_LD_GROUP_URL,
   ].join("\n");
 }

@@ -199,7 +199,7 @@ test("October 1 cron sends the winter subject and first lead to parent and archi
       for (const body of [message.html, message.text]) {
         expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Another approved announcement"));
         expect(body.indexOf("Your winter options")).toBeLessThan(body.indexOf("Fall Session II"));
-        expect(body).not.toContain("Winter league interest — Montgomery Village and Frederick");
+        expect(body).not.toContain("Winter league interest: Montgomery Village and Frederick");
       }
     }
   } finally {
@@ -239,7 +239,7 @@ for (const issue of [
           expect(body.indexOf(issue.lead)).toBeLessThan(body.indexOf("Another approved announcement"));
           expect(body.indexOf(issue.lead)).toBeLessThan(body.indexOf("Fall Session II"));
           expect(body).not.toContain("Montgomery Village junior tournament");
-          expect(body.includes("Winter league interest — Montgomery Village and Frederick")).toBe(!issue.winterSuppressed);
+          expect(body.includes("Winter league interest: Montgomery Village and Frederick")).toBe(!issue.winterSuppressed);
           expect(body).toContain("/book/private-lesson");
           expect(body).toContain("Unsubscribe"); expect(body).toContain("chat.whatsapp.com");
         }

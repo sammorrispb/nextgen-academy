@@ -49,11 +49,11 @@ export function fallNewsletterProgress(today: string, calls: FallCallsReadResult
   return { underway, hasUpcoming: dates.some(groupDates => groupDates.length > 0), scheduleNotes, makeupNotes };
 }
 
-export function picklParkNewsletterProgress(today: string): { underway: boolean; remaining: number; scheduleNote: string } {
-  if (!validDay(today)) return { underway: false, remaining: 0, scheduleNote: "" };
+export function picklParkNewsletterProgress(today: string): { underway: boolean; remaining: number; remainingDates: string[]; scheduleNote: string } {
+  if (!validDay(today)) return { underway: false, remaining: 0, remainingDates: [], scheduleNote: "" };
   const remaining = PICKLPARK_SATURDAYS.filter(date => date >= today);
   return {
-    underway: today >= PICKLPARK_SATURDAYS[0], remaining: remaining.length,
+    underway: today >= PICKLPARK_SATURDAYS[0], remaining: remaining.length, remainingDates: [...remaining],
     scheduleNote: `${remaining.length} ${remaining.length === 1 ? "Saturday" : "Saturdays"} remaining${remaining.length ? `: ${remaining.map(shortDayLabel).join("; ")}` : ""}.`,
   };
 }

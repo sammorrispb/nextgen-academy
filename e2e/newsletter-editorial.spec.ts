@@ -35,7 +35,7 @@ for (const issue of rampDrafts) {
       parentFirst: "Taylor", editorial: newsletterEditorial(issue.date, [draft]),
       newsletterLeadHtml: draft.html, newsletterLeadText: draft.text,
       programs: newsletterPrograms(issue.date, origin, `weekly-${issue.date}`),
-      fallSeason: null, sessions: [], laterSessions: [], openPolls: [], news: [], camps: [],
+      fallSeason: null, sessions: [], laterSessions: [], openPolls: [], camps: [],
       tip: { title: "Practice", body: "Try one thing." }, scheduleUrl: `${origin}/schedule`,
       crewInterestUrl: `${origin}/crew`, unsubscribeUrl: `${origin}/unsubscribe`, origin,
       utmCampaign: `weekly-${issue.date}`, campUrl: `${origin}/camp`, campAgeMin: 8, campPriceFromUsd: 50,
@@ -45,7 +45,7 @@ for (const issue of rampDrafts) {
       expect(body.split("At least four games.")).toHaveLength(2);
       expect(body.indexOf(issue.heading)).toBeLessThan(body.indexOf("Fall Session II"));
       expect(body).not.toContain("Montgomery Village junior tournament");
-      expect(body.includes("Winter league interest — Montgomery Village and Frederick")).toBe(!issue.excludesWinter);
+      expect(body.includes("Winter league interest: Montgomery Village and Frederick")).toBe(!issue.excludesWinter);
       expect(body).toContain("$50"); expect(body).toContain("$60"); expect(body).toContain("4–7 PM ET");
       expect(body).toContain("/book/private-lesson"); expect(body).toContain("Unsubscribe"); expect(body).toContain("chat.whatsapp.com");
       expect(body).toContain("Try one thing.");
@@ -82,7 +82,7 @@ test("winter leads both MIME parts once, ahead of fall, with supporting offers i
     newsletterLeadText: winter.text,
     programs: newsletterPrograms("2026-10-01", origin, "weekly-2026-10-01"),
     fallSeason: { title: "Fall season", seasonLabel: "Fall 2026", weeks: 6, venueLine: "Walter Johnson", priceUsd: 120, groups: [], url: `${origin}/fall` },
-    sessions: [], laterSessions: [], openPolls: [], news: [], camps: [],
+    sessions: [], laterSessions: [], openPolls: [], camps: [],
     tip: { title: "Practice", body: "Try one thing." },
     scheduleUrl: `${origin}/schedule`, crewInterestUrl: `${origin}/crew`,
     unsubscribeUrl: `${origin}/unsubscribe`, origin, utmCampaign: "weekly-2026-10-01",
@@ -91,7 +91,7 @@ test("winter leads both MIME parts once, ahead of fall, with supporting offers i
   for (const body of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
     expect(body.split("Where will your player play this winter?")).toHaveLength(2);
     expect(body.indexOf("Where will your player play this winter?")).toBeLessThan(body.indexOf("Fall season"));
-    expect(body).not.toContain("Winter league interest — Montgomery Village and Frederick");
+    expect(body).not.toContain("Winter league interest: Montgomery Village and Frederick");
     expect(body).toContain("$50");
     expect(body).toContain("$60");
     expect(body).toContain("4:00–7:00 PM");
@@ -102,7 +102,7 @@ test("winter leads both MIME parts once, ahead of fall, with supporting offers i
   expect(weeklyNewsletterHtml(input)).toContain(input.editorial!.previewText);
   const ordinary = { ...input, editorial: null };
   for (const body of [weeklyNewsletterHtml(ordinary), weeklyNewsletterText(ordinary)]) {
-    expect(body).toContain("Winter league interest — Montgomery Village and Frederick");
+    expect(body).toContain("Winter league interest: Montgomery Village and Frederick");
     expect(body.indexOf("Fall season")).toBeLessThan(body.indexOf("Where will your player play this winter?"));
   }
 });
@@ -122,7 +122,7 @@ test("current fall sections show remaining dates in both MIME parts, after the w
       venueLine: "The Pickl Park, Frederick", sessionFormat: "30 minutes of coached drills, then 30 minutes of game play",
       indoorNote: "Indoors", groups: [{ label: "Kid's Drill and Play (Ages 8–13)", timeLabel: "2:00–3:00 PM", spotsLeft: null }],
       url: `${origin}/picklpark`, progress: picklParkNewsletterProgress("2026-10-01") },
-    sessions: [], laterSessions: [], openPolls: [], news: [], camps: [], tip: { title: "Practice", body: "Try one thing." },
+    sessions: [], laterSessions: [], openPolls: [], camps: [], tip: { title: "Practice", body: "Try one thing." },
     scheduleUrl: `${origin}/schedule`, crewInterestUrl: `${origin}/crew`, unsubscribeUrl: `${origin}/unsubscribe`,
     origin, utmCampaign: "weekly-2026-10-01", campUrl: `${origin}/camp`, campAgeMin: 8, campPriceFromUsd: 50,
   };
@@ -130,10 +130,9 @@ test("current fall sections show remaining dates in both MIME parts, after the w
     expect(body.indexOf("Where will your player play this winter?")).toBeLessThan(body.indexOf("Fall Session II"));
     expect(body.indexOf("Fall Session II")).toBeLessThan(body.indexOf("WJHS Sunday season"));
     expect(body).toContain("5 Sundays remaining");
-    expect(body).toContain("5 Saturdays remaining");
     expect(body).toContain("Sun, Nov 1 is the makeup for Sun, Sep 27");
     expect(body).toContain("availability and registration options");
-    expect(body).toContain("Ask The Pickl Park about joining");
+    expect(body).toContain("Pickl Park Saturdays in Frederick: 5 Saturdays left");
     expect(body).not.toContain("6 Sundays at");
     expect(body).not.toContain("6 Saturdays indoors");
     expect(body).not.toContain("$225");

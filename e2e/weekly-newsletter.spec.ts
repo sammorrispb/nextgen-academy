@@ -2,9 +2,13 @@ import { test, expect } from "@playwright/test";
 import {
   weeklyNewsletterHtml,
   weeklyNewsletterText,
+  weeklyNewsletterSubject,
+  weeklyNewsletterPreview,
+  newsletterHighlights,
   fallSpotsLabel,
   type WeeklyNewsletterInput,
 } from "../src/lib/email/weekly-newsletter";
+import { picklParkNewsletterProgress } from "../src/lib/newsletter-season-progress";
 import { appendUtm } from "../src/lib/email/utm";
 import { newsletterPrograms } from "../src/lib/newsletter-programs";
 import { CAMP_OPTIONS, CAMPS, upcomingCamps } from "../src/data/camps";
@@ -48,14 +52,13 @@ const baseInput: WeeklyNewsletterInput = {
       location: "Walter Johnson HS, Bethesda",
       weatherNote: "Sunny, 75°",
       slots: [
-        { label: "4:30–5:30 PM", registered: 4, goal: 16 },
-        { label: "5:30–6:30 PM", registered: 14, goal: 16 },
+        { label: "4:30–5:30 PM" },
+        { label: "5:30–6:30 PM" },
       ],
     },
   ],
   laterSessions: [],
   openPolls: [],
-  news: [],
   tip,
   scheduleUrl: `${ORIGIN}/schedule`,
   crewInterestUrl: `${ORIGIN}/crew`,
@@ -81,7 +84,7 @@ test("program announcements have HTML/text parity and safe escaping", () => {
       expect(html).toContain(p.url.replaceAll("&", "&amp;"));
     }
   }
-  const unsafe = weeklyNewsletterHtml({ ...baseInput, programs: [{ title: "<script>", body: "<img src=x>" }] });
+  const unsafe = weeklyNewsletterHtml({ ...baseInput, programs: [{ section: "join", title: "<script>", body: "<img src=x>" }] });
   expect(unsafe).not.toContain("<script>");
   expect(unsafe).toContain("&lt;img src=x&gt;");
 });
@@ -114,14 +117,176 @@ test.describe("appendUtm", () => {
   });
 });
 
+const poll = (title: string, yesCount: number) => ({
+  title,
+  slug: "sat-4pm-green",
+  day: "Sat",
+  startTime: "4:00 PM",
+  endTime: "5:00 PM",
+  location: "Walter Johnson HS",
+  level: "Green",
+  minPartySize: 4,
+  yesCount,
+});
+
+const fallGroups = FALL_SEASON_GROUPS.map((g) => ({
+  label: g.label,
+  timeLabel: g.timeLabel,
+  spotsLeft: fallSeasonSlotsFor(g.group),
+}));
+
+/** The fall season before its first Sunday: registration open. */
+const fallOpen = {
+  title: FALL_SEASON_TITLE,
+  seasonLabel: FALL_SEASON_LABEL,
+  weeks: FALL_SEASON_WEEKS,
+  venueLine: "Walter Johnson High School, Bethesda, MD",
+  priceUsd: FALL_SEASON_PRICE_USD,
+  groups: fallGroups,
+  url: `${ORIGIN}/fall`,
+};
+
+/** The fall season as the Oct 29 2026 issue sees it: underway, playoff ahead. */
+const fallUnderway = {
+  ...fallOpen,
+  progress: {
+    underway: true,
+    hasUpcoming: true,
+    scheduleNotes: ["2 Sundays remaining: Sun, Nov 1; Sun, Nov 8."],
+    makeupNotes: [],
+  },
+  playoffDate: "2026-11-08",
+};
+
+/** Pickl Park as the cron builds it; progress decides whether it shows. */
+const picklPark = (today: string) => ({
+  title: "Pickl Park Saturday Leagues",
+  seasonLabel: PICKLPARK_SEASON_LABEL,
+  weeks: PICKLPARK_SEASON_WEEKS,
+  venueLine: "The Pickl Park, Frederick, MD",
+  sessionFormat: PICKLPARK_LEAGUES_FORMAT_LINE,
+  indoorNote: PICKLPARK_INDOOR_NOTE,
+  groups: PICKLPARK_LEAGUES.map((l) => ({ label: `${l.title} (${l.ageLabel})`, timeLabel: l.timeLabel, spotsLeft: null })),
+  url: `${ORIGIN}/picklpark`,
+  progress: picklParkNewsletterProgress(today),
+});
+
+/** A realistic issue: the Thursday after this layout ships. */
+const oct29: WeeklyNewsletterInput = {
+  ...baseInput,
+  issueDate: "2026-10-29",
+  sessions: [],
+  programs: newsletterPrograms("2026-10-29", ORIGIN, "weekly-2026-10-29"),
+  fallSeason: fallUnderway,
+  picklParkSeason: picklPark("2026-10-29"),
+};
+
+const h2s = (html: string) => [...html.matchAll(/<h2[^>]*>([^<]*)<\/h2>/g)].map((m) => m[1].replace(/&#39;/g, "'"));
+
+test.describe("agent-friendly layout", () => {
+  test("opens with a dated At a glance list, before the invites and the detail", () => {
+    const html = weeklyNewsletterHtml(oct29);
+    const glance = html.indexOf(">At a glance</h2>");
+    expect(glance).toBeGreaterThan(-1);
+    expect(glance).toBeLessThan(html.indexOf(WHATSAPP_NGA_GROUP_URL));
+    expect(glance).toBeLessThan(html.indexOf(">For families enrolled now</h2>"));
+    expect(html).toContain('<time datetime="2026-10-29">Week of October 29, 2026</time>');
+    expect(html).toContain('<html lang="en">');
+    const highlights = newsletterHighlights(oct29);
+    expect(highlights.length).toBeGreaterThan(0);
+    expect(highlights.length).toBeLessThanOrEqual(6);
+    for (const h of highlights) expect(html).toContain(h.text.replace(/'/g, "&#39;"));
+  });
+
+  test("the Oct 29 issue leads with what families need now, and nothing that has ended", () => {
+    const texts = newsletterHighlights(oct29).map((h) => h.text).join("\n");
+    expect(texts).toContain("Playoff Sunday, November 8");
+    expect(texts).toContain("the last session is Saturday, October 31");
+    expect(texts).toContain("last class Thu, Nov 19");
+    expect(texts).toMatch(/Winter: indoor plans are being finalized/);
+    for (const rendered of [weeklyNewsletterHtml(oct29), weeklyNewsletterText(oct29)]) {
+      expect(rendered).not.toContain("Lake Marion");
+      expect(rendered).not.toContain("registration is open");
+      expect(rendered).not.toContain("Drill and Play");
+      expect(rendered).not.toMatch(/\$\d/);
+    }
+  });
+
+  test("the subject names the issue's top two items, and never says an underway season is open", () => {
+    expect(weeklyNewsletterSubject(oct29)).toBe("Next Gen this week: fall playoff Nov 8 and last Pickl Park Saturday Oct 31");
+    expect(weeklyNewsletterSubject(oct29)).not.toMatch(/open/i);
+    expect(weeklyNewsletterSubject({ ...baseInput, fallSeason: fallOpen, sessions: [] })).toBe("Next Gen this week: fall registration open");
+    expect(weeklyNewsletterSubject(baseInput)).toBe("Next Gen this week: open sessions this week");
+    expect(weeklyNewsletterSubject({ ...baseInput, sessions: [] })).toBe("Next Gen this week: Soft hands win");
+    const editorial = { leadPageId: "p", subject: "Editorial subject", previewText: "Editorial preview", headline: "H", intro: "I" };
+    expect(weeklyNewsletterSubject({ ...oct29, editorial })).toBe("Editorial subject");
+    expect(weeklyNewsletterPreview({ ...oct29, editorial })).toBe("Editorial preview");
+  });
+
+  test("the inbox preview is the opening glance lines, cut at a word", () => {
+    const preview = weeklyNewsletterPreview(oct29);
+    expect(preview.startsWith(newsletterHighlights(oct29)[0].text.slice(0, 40))).toBe(true);
+    expect(preview.length).toBeLessThanOrEqual(153);
+    expect(weeklyNewsletterHtml(oct29)).toContain(`opacity:0;">${preview.replace(/'/g, "&#39;")}</div>`);
+  });
+
+  test("the text part carries the same sections, in the same order, as markdown headings", () => {
+    for (const input of [oct29, baseInput, { ...baseInput, fallSeason: fallOpen }]) {
+      const html = weeklyNewsletterHtml(input);
+      const text = weeklyNewsletterText(input);
+      const headings = h2s(html);
+      expect(headings.length).toBeGreaterThan(3);
+      let at = -1;
+      for (const heading of headings) {
+        const found = text.indexOf(`## ${heading}`);
+        expect(found, heading).toBeGreaterThan(at);
+        at = found;
+      }
+      for (const h of newsletterHighlights(input)) expect(text).toContain(`- ${h.text}`);
+    }
+  });
+
+  test("programs sit under the section for who they are for", () => {
+    const html = weeklyNewsletterHtml(oct29);
+    const enrolled = html.indexOf(">For families enrolled now</h2>");
+    const ways = html.indexOf(">Ways to play</h2>");
+    const coming = html.indexOf(">Coming up</h2>");
+    expect(enrolled).toBeGreaterThan(-1);
+    expect(ways).toBeGreaterThan(enrolled);
+    expect(coming).toBeGreaterThan(ways);
+    const mvf = html.indexOf("Montgomery Village: Fall Session II (underway)");
+    expect(mvf).toBeGreaterThan(enrolled);
+    expect(mvf).toBeLessThan(ways);
+    expect(html.indexOf(FALL_SEASON_TITLE)).toBeLessThan(ways);
+    expect(html.indexOf("Winter: details coming soon")).toBeGreaterThan(coming);
+  });
+
+  test("no em dashes anywhere in a full issue", () => {
+    // Sam's rule for public copy. Rendered with every block that can appear.
+    const full: WeeklyNewsletterInput = {
+      ...oct29,
+      sessions: baseInput.sessions,
+      laterSessions: [{ dateLong: "Saturday, November 14", location: "Walter Johnson HS, Bethesda", slots: [] }],
+      camps: [{ weekLabel: "June 29 – July 2, 2026", publicArea: "Gaithersburg, MD" }],
+      openPolls: [poll("Sat 4pm Bethesda, Green", 4)],
+      newsletterLeadHtml: "<p>Draft copy.</p>",
+      newsletterLeadText: "Draft copy.",
+    };
+    for (const rendered of [weeklyNewsletterHtml(full), weeklyNewsletterText(full), weeklyNewsletterHtml({ ...full, fallSeason: fallOpen })]) {
+      expect(rendered).not.toContain("—");
+      expect(rendered).not.toContain("&mdash;");
+    }
+  });
+});
+
 test.describe("weeklyNewsletterHtml", () => {
-  test("renders the fill meter, weather, and unsubscribe", () => {
+  test("renders session times, weather, and unsubscribe, with no fill meter", () => {
     const html = weeklyNewsletterHtml(baseInput);
-    expect(html).toContain("4 of 16 in");
-    expect(html).toContain("14 of 16 in — 2 to go");
-    expect(html).toContain("▰▰▰▰");
+    expect(html).toContain("4:30–5:30 PM");
     expect(html).toContain("Forecast: Sunny, 75°");
     expect(html).toContain("/api/newsletter/unsubscribe?token=abc");
+    expect(html).not.toContain("▰");
+    expect(html).not.toMatch(/\d+ of \d+ in/);
   });
 
   test("never frames seats as spots left", () => {
@@ -132,7 +297,7 @@ test.describe("weeklyNewsletterHtml", () => {
 
   test("the forward ask carries no referral link and promises no discount", () => {
     // The personalized /newsletter?ref= link and its "you both get 50% off"
-    // perk came out 2026-09-03 — the referral program isn't set up, and a perk
+    // perk came out 2026-09-03: the referral program isn't set up, and a perk
     // the business can't honor is a promise, not a nudge.
     for (const rendered of [weeklyNewsletterHtml(baseInput), weeklyNewsletterText(baseInput)]) {
       expect(rendered).toContain("Forward this email");
@@ -143,50 +308,20 @@ test.describe("weeklyNewsletterHtml", () => {
     }
   });
 
-  test("crew interest CTA always renders, with copy that adapts to poll presence", () => {
+  test("group-interest CTA always renders, with copy that adapts to poll presence", () => {
     const noPolls = weeklyNewsletterHtml(baseInput);
     expect(noPolls).toContain("Want a regular group?");
     expect(noPolls).toContain(`${ORIGIN}/crew`);
 
-    const withPolls = weeklyNewsletterHtml({
-      ...baseInput,
-      openPolls: [
-        {
-          title: "Sat 4pm Bethesda — Green",
-          slug: "sat-4pm-green",
-          day: "Sat",
-          startTime: "4:00 PM",
-          endTime: "5:00 PM",
-          location: "Walter Johnson HS",
-          level: "Green",
-          minPartySize: 4,
-          yesCount: 2,
-        },
-      ],
-    });
+    const withPolls = weeklyNewsletterHtml({ ...baseInput, openPolls: [poll("Sat 4pm Bethesda, Green", 2)] });
     expect(withPolls).toContain("Forming groups now");
-    expect(withPolls).toContain("Sat 4pm Bethesda — Green");
+    expect(withPolls).toContain("Sat 4pm Bethesda, Green");
     expect(withPolls).toContain(`${ORIGIN}/poll/sat-4pm-green`);
     expect(withPolls).toContain("None of these fit?");
   });
 
   test("poll progress label reflects yes-count vs minPartySize", () => {
-    const html = weeklyNewsletterHtml({
-      ...baseInput,
-      openPolls: [
-        {
-          title: "Tue 5pm Rockville",
-          slug: "tue-5pm",
-          day: "Tue",
-          startTime: "5:00 PM",
-          endTime: "6:00 PM",
-          location: "RM HS",
-          level: "Orange",
-          minPartySize: 4,
-          yesCount: 2,
-        },
-      ],
-    });
+    const html = weeklyNewsletterHtml({ ...baseInput, openPolls: [poll("Tue 5pm Rockville", 2)] });
     expect(html).toContain("2 in · need 2 more to lock it in");
   });
 
@@ -221,32 +356,16 @@ test.describe("weeklyNewsletterHtml", () => {
   });
 
   test("internal CTA links carry first-party UTM tags for click attribution", () => {
-    const html = weeklyNewsletterHtml({
-      ...baseInput,
-      openPolls: [
-        {
-          title: "Sat 4pm Bethesda — Green",
-          slug: "sat-4pm-green",
-          day: "Sat",
-          startTime: "4:00 PM",
-          endTime: "5:00 PM",
-          location: "Walter Johnson HS",
-          level: "Green",
-          minPartySize: 4,
-          yesCount: 2,
-        },
-      ],
-    });
-    // Poll + lesson links built inside the template get stamped with the campaign.
+    const html = weeklyNewsletterHtml({ ...baseInput, openPolls: [poll("Sat 4pm Bethesda, Green", 2)] });
     expect(html).toContain(
-      `${ORIGIN}/poll/sat-4pm-green?utm_source=newsletter&utm_medium=email&utm_campaign=weekly-2026-06-04&utm_content=poll`,
+      `${ORIGIN}/poll/sat-4pm-green?utm_source=newsletter&amp;utm_medium=email&amp;utm_campaign=weekly-2026-06-04&amp;utm_content=poll`,
     );
     expect(html).toContain("utm_campaign=weekly-2026-06-04");
     // Unsubscribe link is never UTM-tagged.
     expect(html).not.toContain("unsubscribe?token=abc&utm");
   });
 
-  test("quotes no hard prices in session/tip/CTA blocks (drop-in $40 stays on /schedule only)", () => {
+  test("quotes no hard prices in session/tip/CTA blocks (the drop-in rate stays on Stripe checkout)", () => {
     const html = weeklyNewsletterHtml(baseInput);
     expect(html).not.toMatch(/\$\d/);
   });
@@ -259,63 +378,29 @@ test.describe("weeklyNewsletterHtml", () => {
     expect(weeklyNewsletterHtml(noWeather)).not.toContain("Forecast:");
   });
 
-  test("falls back to a tip-only issue with no sessions", () => {
-    const empty = { ...baseInput, sessions: [] };
-    const html = weeklyNewsletterHtml(empty);
-    expect(html).toContain("No open sessions this week");
+  test("an empty week still ships, with the schedule link and the tip", () => {
+    const html = weeklyNewsletterHtml({ ...baseInput, sessions: [] });
+    expect(html).toContain("No open drop-in sessions this week");
+    expect(html).toContain(`${ORIGIN}/schedule`);
     expect(html).toContain("Soft hands win");
   });
 
-  test("news block renders Approved items with title link + source + summary", () => {
-    const html = weeklyNewsletterHtml({
-      ...baseInput,
-      news: [
-        {
-          title: "Bethesda middle school launches pickleball PE unit",
-          url: "https://example.com/article",
-          source: "Bethesda Beat",
-          summary: "Three schools added paddle sports this spring.",
-        },
-        {
-          title: "Junior tournament returns to MoCo",
-          url: "https://example.com/jr",
-          source: "USA Pickleball",
-          summary: "",
-        },
-      ],
-    });
-    expect(html).toContain("In the news: youth pickleball");
-    expect(html).toContain("Bethesda middle school launches pickleball PE unit");
-    expect(html).toContain("https://example.com/article");
-    expect(html).toContain("Bethesda Beat");
-    expect(html).toContain("Three schools added paddle sports this spring.");
-    expect(html).toContain("Junior tournament returns to MoCo");
-    expect(html).toContain("Read the story");
-  });
-
-  test("news block is hidden entirely when no approved items", () => {
-    const html = weeklyNewsletterHtml(baseInput);
-    expect(html).not.toContain("In the news");
+  test("carries no scraped news block (removed 2026-10-23)", () => {
+    for (const rendered of [weeklyNewsletterHtml(oct29), weeklyNewsletterText(oct29)]) {
+      expect(rendered).not.toContain("In the news");
+      expect(rendered).not.toContain("Read the story");
+    }
   });
 
   test("hides the plan-ahead block when there are no later sessions", () => {
-    expect(weeklyNewsletterHtml(baseInput)).not.toContain(
-      "Further out on the calendar",
-    );
+    expect(weeklyNewsletterHtml(baseInput)).not.toContain("Further out on the calendar");
   });
 
   test("renders the plan-ahead block with a schedule CTA when present", () => {
-    const withLater: WeeklyNewsletterInput = {
+    const html = weeklyNewsletterHtml({
       ...baseInput,
-      laterSessions: [
-        {
-          dateLong: "Saturday, July 18",
-          location: "Walter Johnson HS, Bethesda",
-          slots: [],
-        },
-      ],
-    };
-    const html = weeklyNewsletterHtml(withLater);
+      laterSessions: [{ dateLong: "Saturday, July 18", location: "Walter Johnson HS, Bethesda", slots: [] }],
+    });
     expect(html).toContain("Further out on the calendar");
     expect(html).toContain("Saturday, July 18");
     expect(html).toContain("See the full schedule");
@@ -323,40 +408,28 @@ test.describe("weeklyNewsletterHtml", () => {
 
   test("the plan-ahead block carries no season word that can go stale", () => {
     // Load-bearing: this block used to be a hardcoded "Summer sessions are
-    // live" promo fed by a June/July/August date filter, so the Aug 20 2026
-    // issue pitched "lock in your summer spot" for one Aug 30 date with school
-    // starting the 25th. Season-neutral copy can't rot on the calendar.
+    // live" promo fed by a June/July/August date filter.
     const withLater: WeeklyNewsletterInput = {
       ...baseInput,
-      laterSessions: [
-        {
-          dateLong: "Sunday, September 13",
-          location: "Walter Johnson HS, Bethesda",
-          slots: [],
-        },
-      ],
+      laterSessions: [{ dateLong: "Sunday, September 13", location: "Walter Johnson HS, Bethesda", slots: [] }],
     };
-    for (const rendered of [
-      weeklyNewsletterHtml(withLater),
-      weeklyNewsletterText(withLater),
-    ]) {
+    for (const rendered of [weeklyNewsletterHtml(withLater), weeklyNewsletterText(withLater)]) {
       expect(rendered).not.toContain("Summer sessions are live");
       expect(rendered).not.toContain("Sign up for summer");
     }
   });
 
   test("hides the camp block when there are no upcoming camps", () => {
-    expect(weeklyNewsletterHtml(baseInput)).not.toContain("Summer camp");
+    expect(weeklyNewsletterHtml(baseInput)).not.toContain("Next Gen Pickleball Camp");
   });
 
   test("the camp 'from' price is derived from CAMP_OPTIONS and is $50", () => {
     // Load-bearing: the cron computes campPriceFromUsd = Math.min(CAMP_OPTIONS
-    // price). This asserts the real data, not a test-supplied input — so it
-    // fails if camps.ts ever drifts off $50.
+    // price). This asserts the real data, so it fails if camps.ts drifts.
     expect(Math.min(...CAMP_OPTIONS.map((o) => o.priceUsd))).toBe(50);
   });
 
-  test("renders the camp block with weeks, price tease, and a UTM-stamped /camp link", () => {
+  test("renders the camp block with weeks, price, and the /camp link", () => {
     const html = weeklyNewsletterHtml({
       ...baseInput,
       camps: [
@@ -364,21 +437,15 @@ test.describe("weeklyNewsletterHtml", () => {
         { weekLabel: "July 20 – July 23, 2026", publicArea: "Gaithersburg, MD" },
       ],
     });
-    expect(html).toContain("Summer camp");
+    expect(html).toContain("Next Gen Pickleball Camp");
     expect(html).toContain("ages 8+");
     expect(html).toContain("June 29 – July 2, 2026");
     expect(html).toContain("July 20 – July 23, 2026");
     expect(html).toContain("From $50/day");
-    // campUrl is UTM-stamped by the cron (like scheduleUrl); the template
-    // renders whatever it's handed. Assert the passed-in link appears.
     expect(html).toContain(`href="${ORIGIN}/camp"`);
   });
 
   test("each camp's area comes from its own row, never a hardcoded city", () => {
-    // Load-bearing: the block used to hardcode "mornings in Gaithersburg" in
-    // the intro line, so the Aug 17–20 Rockville camp would have advertised
-    // the wrong city. Area is per-row now — a camp at a new venue can't
-    // inherit a stale one.
     const input = {
       ...baseInput,
       camps: [{ weekLabel: "August 17 – August 20, 2026", publicArea: "Rockville, MD" }],
@@ -391,25 +458,15 @@ test.describe("weeklyNewsletterHtml", () => {
   });
 
   test("the upcoming-camp list comes from upcomingCamps, and the Aug 17 camp is in Rockville", () => {
-    // Mirrors the cron's `upcomingCamps(todayIso)` so the spec fails if
-    // camps.ts drifts (a renamed slug, a moved venue, a shifted week).
     const aug = CAMPS.find((c) => c.slug === "august-17");
     expect(aug).toBeDefined();
     expect(aug!.startDate).toBe("2026-08-17");
     expect(aug!.endDate).toBe("2026-08-20");
     expect(aug!.publicArea).toBe("Rockville, MD");
-    // Sent the week before, the block carries exactly this camp.
-    expect(upcomingCamps("2026-08-06", CAMPS).map((c) => c.slug)).toEqual([
-      "august-17",
-    ]);
+    expect(upcomingCamps("2026-08-06", CAMPS).map((c) => c.slug)).toEqual(["august-17"]);
   });
 
-  // ---- MVF tournament ----
-
-  test("carries no tournament card — the Sept 5 MVF block was removed, not gated", () => {
-    // It used to lead every issue through the rain date. Sam pulled it
-    // 2026-09-03, and the /montgomery-village-youth-pickleball card followed
-    // on 2026-09-04, so MVF_TOURNAMENT is gone from mvf.ts entirely.
+  test("carries no tournament card for the retired Sept 5 MVF event", () => {
     for (const rendered of [weeklyNewsletterHtml(baseInput), weeklyNewsletterText(baseInput)]) {
       expect(rendered).not.toContain("Tournament day");
       expect(rendered).not.toContain("Register with your partner");
@@ -421,22 +478,8 @@ test.describe("weeklyNewsletterHtml", () => {
     const html = weeklyNewsletterHtml({
       ...baseInput,
       camps: [{ weekLabel: "June 29 – July 2, 2026", publicArea: "Gaithersburg, MD" }],
-      openPolls: [
-        {
-          title: "Sat 4pm Bethesda — Green",
-          slug: "sat-4pm-green",
-          day: "Sat",
-          startTime: "4:00 PM",
-          endTime: "5:00 PM",
-          location: "Walter Johnson HS",
-          level: "Green",
-          minPartySize: 4,
-          yesCount: 2,
-        },
-      ],
+      openPolls: [poll("Sat 4pm Bethesda, Green", 2)],
     });
-    // The /crew route still appears in hrefs; assert no visible "crew" word by
-    // checking the human copy phrases that used to carry it are gone.
     expect(html).not.toContain("Forming crews");
     expect(html).not.toContain("regular crew");
     expect(html).not.toContain("Bring the crew");
@@ -446,80 +489,37 @@ test.describe("weeklyNewsletterHtml", () => {
 });
 
 test.describe("weeklyNewsletterText", () => {
-  test("mirrors the fill meter, weather, and forward ask in plain text", () => {
+  test("mirrors sessions, weather, and the forward ask in plain text", () => {
     const text = weeklyNewsletterText(baseInput);
-    expect(text).toContain("14 of 16 in — 2 to go");
-    expect(text).toContain("▰▰▰▰▱");
-    expect(text).toContain("Forecast: Sunny, 75°");
+    expect(text).toContain("- 5:30–6:30 PM");
+    expect(text).toContain("- Forecast: Sunny, 75°");
     expect(text).toContain("Forward this email");
-    expect(text).toContain(
-      "Unsubscribe: https://nextgenpbacademy.com/api/newsletter/unsubscribe",
-    );
-  });
-
-  test("mirrors the news block in plain text when approved items exist", () => {
-    const text = weeklyNewsletterText({
-      ...baseInput,
-      news: [
-        {
-          title: "Bethesda middle school launches pickleball PE unit",
-          url: "https://example.com/article",
-          source: "Bethesda Beat",
-          summary: "Three schools added paddle sports this spring.",
-        },
-      ],
-    });
-    expect(text).toContain("In the news: youth pickleball");
-    expect(text).toContain("Bethesda middle school launches pickleball PE unit");
-    expect(text).toContain("(Bethesda Beat)");
-    expect(text).toContain("https://example.com/article");
+    expect(text).toContain("Unsubscribe: https://nextgenpbacademy.com/api/newsletter/unsubscribe");
   });
 
   test("mirrors the plan-ahead block in plain text with a schedule link", () => {
     const text = weeklyNewsletterText({
       ...baseInput,
-      laterSessions: [
-        {
-          dateLong: "Saturday, July 18",
-          location: "Walter Johnson HS, Bethesda",
-          slots: [],
-        },
-      ],
+      laterSessions: [{ dateLong: "Saturday, July 18", location: "Walter Johnson HS, Bethesda", slots: [] }],
     });
-    expect(text).toContain("Further out on the calendar:");
-    expect(text).toContain("Saturday, July 18");
+    expect(text).toContain("### Further out on the calendar");
+    expect(text).toContain("- Saturday, July 18, Walter Johnson HS, Bethesda");
     expect(text).toContain(`See the full schedule: ${ORIGIN}/schedule`);
   });
 
   test("mirrors the polls block in plain text", () => {
-    const text = weeklyNewsletterText({
-      ...baseInput,
-      openPolls: [
-        {
-          title: "Sat 4pm Bethesda — Green",
-          slug: "sat-4pm-green",
-          day: "Sat",
-          startTime: "4:00 PM",
-          endTime: "5:00 PM",
-          location: "Walter Johnson HS",
-          level: "Green",
-          minPartySize: 4,
-          yesCount: 1,
-        },
-      ],
-    });
-    expect(text).toContain("Forming groups now:");
-    expect(text).toContain("Sat 4pm Bethesda — Green");
+    const text = weeklyNewsletterText({ ...baseInput, openPolls: [poll("Sat 4pm Bethesda, Green", 1)] });
+    expect(text).toContain("### Forming groups now");
+    expect(text).toContain("Sat 4pm Bethesda, Green");
     expect(text).toContain(`${ORIGIN}/poll/sat-4pm-green`);
-    expect(text).toContain("None of those fit?");
+    expect(text).toContain("None of these fit?");
   });
 });
 
 test.describe("weekly newsletter — community WhatsApp invites", () => {
   // Regression: the HTML used to compose the invites INSIDE the conditional
   // "From Coach Sam this week" lead card, so a week with no Approved Notion
-  // draft — the normal week — shipped with no WhatsApp link at all, while the
-  // plain-text part had them in the footer. baseInput sets no lead draft.
+  // draft shipped with no WhatsApp link at all. baseInput sets no lead draft.
   test("both invites ship even when no lead draft is approved", () => {
     const html = weeklyNewsletterHtml(baseInput);
     const text = weeklyNewsletterText(baseInput);
@@ -529,19 +529,18 @@ test.describe("weekly newsletter — community WhatsApp invites", () => {
     }
   });
 
-  test("the invites sit above the sessions block, not in the footer", () => {
+  test("the invites sit above the program detail, not in the footer", () => {
     const html = weeklyNewsletterHtml(baseInput);
-    const sessions = html.indexOf("This week&rsquo;s sessions");
-    expect(sessions).toBeGreaterThan(-1);
+    const ways = html.indexOf(">Ways to play</h2>");
+    expect(ways).toBeGreaterThan(-1);
     for (const url of [WHATSAPP_NGA_GROUP_URL, WHATSAPP_LD_GROUP_URL]) {
-      expect(html.indexOf(url)).toBeLessThan(sessions);
+      expect(html.indexOf(url)).toBeLessThan(ways);
     }
-
     const text = weeklyNewsletterText(baseInput);
-    const textSessions = text.indexOf("This week's sessions");
-    expect(textSessions).toBeGreaterThan(-1);
+    const textWays = text.indexOf("## Ways to play");
+    expect(textWays).toBeGreaterThan(-1);
     for (const url of [WHATSAPP_NGA_GROUP_URL, WHATSAPP_LD_GROUP_URL]) {
-      expect(text.indexOf(url)).toBeLessThan(textSessions);
+      expect(text.indexOf(url)).toBeLessThan(textWays);
     }
   });
 
@@ -563,254 +562,116 @@ test.describe("weekly newsletter — community WhatsApp invites", () => {
 });
 
 test.describe("weekly newsletter — fall season block", () => {
-  // Mirrors what the cron builds from the season data files, so a change to
-  // dates, price, venue, or seat math shows up here rather than in a parent's
-  // inbox. Seat counts are the only hand-set values (they're a live roster read).
-  const fallSeason = {
-    title: FALL_SEASON_TITLE,
-    seasonLabel: FALL_SEASON_LABEL,
-    weeks: FALL_SEASON_WEEKS,
-    venueLine: "Earle B. Wood Middle School, Rockville, MD",
-    priceUsd: FALL_SEASON_PRICE_USD,
-    groups: FALL_SEASON_GROUPS.map((g) => ({
-      label: g.label,
-      timeLabel: g.timeLabel,
-      spotsLeft: fallSeasonSlotsFor(g.group),
-    })),
-    url: `${ORIGIN}/fall`,
-  };
-
   test("hides the block entirely when the season isn't being promoted", () => {
-    const html = weeklyNewsletterHtml(baseInput);
-    const text = weeklyNewsletterText(baseInput);
-    expect(html).not.toContain("Fall season");
-    expect(text).not.toContain("Fall season");
+    expect(weeklyNewsletterHtml(baseInput)).not.toContain(FALL_SEASON_TITLE);
+    expect(weeklyNewsletterText(baseInput)).not.toContain(FALL_SEASON_TITLE);
   });
 
-  test("renders dates, venue, both groups, price, and the register CTA", () => {
-    const input: WeeklyNewsletterInput = { ...baseInput, fallSeason };
-    for (const rendered of [
-      weeklyNewsletterHtml(input),
-      weeklyNewsletterText(input),
-    ]) {
-      expect(rendered).toContain("Fall season");
+  test("before the first Sunday: dates, venue, both groups, price and the register CTA under Ways to play", () => {
+    const input: WeeklyNewsletterInput = { ...baseInput, fallSeason: fallOpen };
+    for (const rendered of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
+      expect(rendered).toContain(FALL_SEASON_TITLE);
       expect(rendered).toContain(FALL_SEASON_LABEL);
-      expect(rendered).toContain("Earle B. Wood Middle School");
+      expect(rendered).toContain("Walter Johnson High School");
       expect(rendered).toContain("Green Ball");
       expect(rendered).toContain("Yellow Ball");
       expect(rendered).toContain(`$${FALL_SEASON_PRICE_USD}`);
       expect(rendered).toContain(`${ORIGIN}/fall`);
+      expect(rendered).toContain("Register for the season");
     }
+    const html = weeklyNewsletterHtml(input);
+    expect(html.indexOf(FALL_SEASON_TITLE)).toBeGreaterThan(html.indexOf(">Ways to play</h2>"));
+    expect(html.indexOf(FALL_SEASON_TITLE)).toBeLessThan(html.indexOf("Open drop-in sessions this week</h3>"));
+    expect(html).not.toContain(">For families enrolled now</h2>");
+  });
+
+  test("once underway: remaining dates and the playoff for enrolled families, no price, no sales pitch", () => {
+    const input: WeeklyNewsletterInput = { ...baseInput, issueDate: "2026-10-29", fallSeason: fallUnderway };
+    for (const rendered of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
+      expect(rendered).toContain("2 Sundays remaining: Sun, Nov 1; Sun, Nov 8.");
+      expect(rendered).toContain("Playoff: Sunday, November 8.");
+      expect(rendered).toContain("View remaining dates and weather calls");
+      expect(rendered).not.toContain(`$${FALL_SEASON_PRICE_USD}`);
+      expect(rendered).not.toContain("Register for the season");
+    }
+    const html = weeklyNewsletterHtml(input);
+    expect(html.indexOf(FALL_SEASON_TITLE)).toBeGreaterThan(html.indexOf(">For families enrolled now</h2>"));
+    expect(html.indexOf(FALL_SEASON_TITLE)).toBeLessThan(html.indexOf(">Ways to play</h2>"));
+  });
+
+  test("a passed playoff is not announced", () => {
+    const input: WeeklyNewsletterInput = { ...baseInput, issueDate: "2026-11-09", fallSeason: fallUnderway };
+    expect(weeklyNewsletterHtml(input)).not.toContain("Playoff");
   });
 
   test("the season the email advertises is the season in the data files", () => {
-    // Load-bearing: the Aug 20 2026 issue shipped with no fall block at all
-    // while /fall was live with 16 unsold seats. These constants are what the
-    // cron passes through, so drift between the page and the email fails here.
     expect(FALL_SUNDAYS).toHaveLength(FALL_SEASON_WEEKS);
     expect(FALL_SEASON_LABEL).toContain("September 20");
-    expect(FALL_SEASON_GROUPS.map((g) => g.label)).toEqual([
-      "Green Ball",
-      "Yellow Ball",
-    ]);
-  });
-
-  test("leads the issue — above this week's sessions", () => {
-    const html = weeklyNewsletterHtml({ ...baseInput, fallSeason });
-    const fallAt = html.indexOf("Fall season");
-    expect(fallAt).toBeGreaterThan(-1);
-    expect(fallAt).toBeLessThan(html.indexOf("This week&rsquo;s sessions"));
+    expect(FALL_SEASON_GROUPS.map((g) => g.label)).toEqual(["Green Ball", "Yellow Ball"]);
   });
 
   test("a full group reads as full, never as a phantom open seat", () => {
-    const input: WeeklyNewsletterInput = {
+    const html = weeklyNewsletterHtml({
       ...baseInput,
-      fallSeason: {
-        ...fallSeason,
-        groups: [
-          { ...fallSeason.groups[0], spotsLeft: 3 },
-          { ...fallSeason.groups[1], spotsLeft: 0 },
-        ],
-      },
-    };
-    const html = weeklyNewsletterHtml(input);
+      fallSeason: { ...fallOpen, groups: [{ ...fallGroups[0], spotsLeft: 3 }, { ...fallGroups[1], spotsLeft: 0 }] },
+    });
     expect(html).toContain("Filling up");
-    expect(html).toContain("Full — ask about the sub list");
+    expect(html).toContain("Full, ask about the sub list");
   });
 
   test("the seat line never publishes the group's capacity", () => {
-    // Capacity is a court booking that moves, and Green and Yellow no longer
-    // hold the same number — one printed figure would be wrong for a group.
-    const html = weeklyNewsletterHtml({ ...baseInput, fallSeason });
+    const html = weeklyNewsletterHtml({ ...baseInput, fallSeason: fallOpen });
     expect(html).toContain("Spots open");
     expect(html).not.toMatch(/\d+ of \d+ spots left/);
     expect(html).not.toMatch(/\d+ spots open/);
   });
 
   test("an unreadable roster says nothing rather than inventing a count", () => {
-    // countFallRegistrations returns null on a Notion miss. Printing "0 spots
-    // left" there would close a season that is actually wide open, and the old
-    // fallback printed the group size — the number this email no longer quotes.
-    expect(
-      fallSpotsLabel({
-        label: "Green Ball",
-        timeLabel: "1:00–2:30 PM",
-        spotsLeft: null,
-      }),
-    ).toBe("");
+    expect(fallSpotsLabel({ label: "Green Ball", timeLabel: "1:00–2:30 PM", spotsLeft: null })).toBe("");
   });
 });
 
-test.describe("weekly newsletter — Pickl Park season block", () => {
-  // The second fall option (Saturdays, indoors, Frederick). Mirrors what the
-  // cron builds from picklpark-2026.ts + picklpark-leagues-2026.ts.
-  //
-  // REBUILT 2026-09-07: no `priceUsd` and every `spotsLeft` is null, because
-  // The Pickl Park sells the league and owns both numbers. The fixture keeps
-  // them absent on purpose — if the template ever starts rendering a price or
-  // a seat count for Frederick again, the assertions below go red.
-  const picklParkSeason = {
-    title: "Pickl Park Saturday Leagues",
-    seasonLabel: PICKLPARK_SEASON_LABEL,
-    weeks: PICKLPARK_SEASON_WEEKS,
-    venueLine: "The Pickl Park, Frederick, MD",
-    sessionFormat: PICKLPARK_LEAGUES_FORMAT_LINE,
-    indoorNote: PICKLPARK_INDOOR_NOTE,
-    groups: PICKLPARK_LEAGUES.map((l) => ({
-      label: `${l.title} (${l.ageLabel})`,
-      timeLabel: l.timeLabel,
-      spotsLeft: null,
-    })),
-    url: `${ORIGIN}/picklpark`,
-  };
-  const fallSeason = {
-    title: FALL_SEASON_TITLE,
-    seasonLabel: FALL_SEASON_LABEL,
-    weeks: FALL_SEASON_WEEKS,
-    venueLine: "Walter Johnson High School, Bethesda, MD",
-    priceUsd: FALL_SEASON_PRICE_USD,
-    groups: FALL_SEASON_GROUPS.map((g) => ({
-      label: g.label,
-      timeLabel: g.timeLabel,
-      spotsLeft: fallSeasonSlotsFor(g.group),
-    })),
-    url: `${ORIGIN}/fall`,
-  };
-
-  test("hides the block when the season isn't being promoted — absent or null", () => {
-    for (const input of [
-      baseInput,
-      { ...baseInput, picklParkSeason: null },
-    ] as WeeklyNewsletterInput[]) {
+test.describe("weekly newsletter — Pickl Park line", () => {
+  // The partnership ends after the Oct 31 session (Sam, 2026-10-18), so the
+  // issue carries one line for the families still playing there and never
+  // pitches the season (Sam, 2026-10-23).
+  test("absent or null renders nothing", () => {
+    for (const input of [baseInput, { ...baseInput, picklParkSeason: null }] as WeeklyNewsletterInput[]) {
       expect(weeklyNewsletterHtml(input)).not.toContain("Pickl Park");
       expect(weeklyNewsletterText(input)).not.toContain("Pickl Park");
     }
   });
 
-  test("renders dates, venue, the league, the drills/games split, the indoor promise and CTA — and NO price", () => {
-    const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason };
-    for (const rendered of [
-      weeklyNewsletterHtml(input),
-      weeklyNewsletterText(input),
-    ]) {
-      expect(rendered).toContain("Pickl Park Saturday Leagues");
-      expect(rendered).toContain(PICKLPARK_SEASON_LABEL);
-      expect(rendered).toContain("The Pickl Park, Frederick, MD");
-      // HTML escapes the apostrophe, plain text does not — either is the title.
-      expect(
-        rendered.includes("Kid&rsquo;s Drill and Play") ||
-          rendered.includes("Kid&#39;s Drill and Play") ||
-          rendered.includes("Kid's Drill and Play"),
-      ).toBe(true);
-      expect(rendered).not.toContain("Youth League");
-      expect(rendered).toContain("Saturdays 2:00–3:00 PM");
-      expect(rendered).not.toContain("Saturdays 3:00–4:30 PM");
-      expect(rendered).toContain("Ages 8–13");
-      expect(rendered).not.toContain("Ages 10+");
-      expect(rendered).toContain(PICKLPARK_LEAGUES_FORMAT_LINE);
-      expect(rendered).toContain(PICKLPARK_INDOOR_NOTE);
-      expect(rendered).toContain(`${ORIGIN}/picklpark`);
-      // The Pickl Park quotes at the point of sale. A price here is a second
-      // copy that can only go stale, and it is not ours to publish.
+  test("the final week names the last Saturday, under enrolled families, with no pitch", () => {
+    const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason: picklPark("2026-10-29") };
+    for (const rendered of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
+      expect(rendered).toContain("Pickl Park Saturdays in Frederick: the last session is Saturday, October 31.");
+      expect(rendered).not.toContain("Drill and Play");
+      expect(rendered).not.toContain(PICKLPARK_INDOOR_NOTE);
+      expect(rendered).not.toContain(`${ORIGIN}/picklpark`);
       expect(rendered).not.toMatch(/\$\s*\d/);
-      // And no invented seat count from a roster we no longer hold.
-      expect(rendered).not.toMatch(/spots? left/i);
+      expect(rendered).not.toMatch(/spots? (left|open)/i);
     }
-  });
-
-  test("the season the email advertises is the season in the data files", () => {
-    expect(PICKLPARK_SATURDAYS).toHaveLength(PICKLPARK_SEASON_WEEKS);
-    expect(PICKLPARK_SEASON_LABEL).toContain("September 26");
-    expect(PICKLPARK_LEAGUES.map((l) => l.title)).toEqual([
-      "Kid's Drill and Play",
-    ]);
-    expect(PICKLPARK_SESSION_FORMAT).toContain("30 minutes of coached drills");
-  });
-
-  test("sits directly under the fall block and above this week's sessions", () => {
-    const html = weeklyNewsletterHtml({ ...baseInput, fallSeason, picklParkSeason });
-    const fallAt = html.indexOf("Fall season");
-    const picklParkAt = html.indexOf("Pickl Park Saturdays in Frederick");
-    const sessionsAt = html.indexOf("This week&rsquo;s sessions");
-    expect(fallAt).toBeGreaterThan(-1);
-    expect(picklParkAt).toBeGreaterThan(fallAt);
-    expect(picklParkAt).toBeLessThan(sessionsAt);
-  });
-
-  test("leads the issue on its own when the fall season is not promoted", () => {
-    const html = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
-    expect(html).not.toContain("Fall season");
-    const picklParkAt = html.indexOf("Pickl Park Saturdays in Frederick");
-    expect(picklParkAt).toBeGreaterThan(-1);
-    expect(picklParkAt).toBeLessThan(html.indexOf("This week&rsquo;s sessions"));
-  });
-
-  test("a full band reads as full and the seat line never publishes capacity", () => {
-    const html = weeklyNewsletterHtml({
-      ...baseInput,
-      picklParkSeason: {
-        ...picklParkSeason,
-        groups: [{ ...picklParkSeason.groups[0], spotsLeft: 0 }],
-      },
-    });
-    expect(html).toContain("Full — ask about the sub list");
-    expect(html).not.toMatch(/\d+ of \d+ spots left/);
-    expect(html).not.toMatch(/\d+ spots open/);
-  });
-
-  test("the HTML eyebrow matches the text branch and claims no NGA registration", () => {
-    // The HTML said "Pickl Park Saturday season — registration is open" while
-    // the text branch said something else, and NGA registration for this
-    // Saturday returns 410. BRAND_GUIDELINES requires plain-text parity.
-    const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason };
     const html = weeklyNewsletterHtml(input);
-    const text = weeklyNewsletterText(input);
-    expect(html).not.toContain("Pickl Park Saturday season");
-    expect(html).toContain("Drill and Play");
-    expect(text).toContain("Drill and Play");
-    expect(html).not.toContain("the league is registering now");
-    expect(text).not.toContain("the league is registering now");
+    // lastIndexOf: the same sentence also leads At a glance and the inbox preview.
+    expect(html.lastIndexOf("the last session is")).toBeGreaterThan(html.indexOf(">For families enrolled now</h2>"));
   });
 
-  test("the block quotes no minute count — the split is described as a half", () => {
-    // The shared sentence says "half" rather than a minute count so it can't
-    // go stale if the split changes.
-    const rendered = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
-    expect(rendered).not.toMatch(/\d+ minutes of coached drills/);
-    expect(rendered).toContain("first half");
+  test("earlier weeks count the Saturdays left", () => {
+    const html = weeklyNewsletterHtml({ ...baseInput, picklParkSeason: picklPark("2026-10-15") });
+    expect(html).toContain("3 Saturdays left, the last one Saturday, October 31.");
   });
 
-  test("no seat status is printed for a league — we don't hold that roster", () => {
-    // `spotsLeft: null` was the "Notion roster unreadable" case when NGA held
-    // the roster. Since 2026-09-07 it is the PERMANENT state for Frederick:
-    // The Pickl Park owns registration, so there is no count to read and
-    // silence beats a guess. Same rendering path, different reason.
-    const html = weeklyNewsletterHtml({ ...baseInput, picklParkSeason });
-    expect(picklParkSeason.groups.every((g) => g.spotsLeft === null)).toBe(true);
-    expect(html).toContain("Saturdays 2:00–3:00 PM");
-    expect(html).not.toContain("Saturdays 3:00–4:30 PM");
-    expect(html).not.toContain("Spots open");
-    expect(html).not.toContain("Full — ask about the sub list");
+  test("retires itself after the last Saturday, even if the cron still passes it", () => {
+    const input: WeeklyNewsletterInput = { ...baseInput, picklParkSeason: picklPark("2026-11-01") };
+    expect(weeklyNewsletterHtml(input)).not.toContain("Pickl Park");
+    expect(weeklyNewsletterText(input)).not.toContain("Pickl Park");
+  });
+
+  test("the dates come from the data file", () => {
+    expect(PICKLPARK_SATURDAYS).toHaveLength(PICKLPARK_SEASON_WEEKS);
+    expect(PICKLPARK_SATURDAYS[PICKLPARK_SATURDAYS.length - 1]).toBe("2026-10-31");
+    expect(PICKLPARK_SESSION_FORMAT).toContain("30 minutes of coached drills");
   });
 });
 

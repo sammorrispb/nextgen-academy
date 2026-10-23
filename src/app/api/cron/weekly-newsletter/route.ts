@@ -7,14 +7,12 @@ import { newsletterEditorial } from "@/lib/newsletter-editorial";
 import { pickWeeklyTip } from "@/lib/newsletter-tips";
 import { signUnsubscribeToken } from "@/lib/newsletter-token";
 import { fetchOpenPolls, fetchPollResponses } from "@/lib/notion-crew-polls";
-import { fetchApprovedNews, setNewsStatus } from "@/lib/notion-news";
 import {
   fetchApprovedNewsletterDrafts,
   stampDraftsSentAt,
   type NewsletterDraftsResult,
 } from "@/lib/notion-newsletter-drafts";
 import { fetchWeatherForSessions, type DayWeather } from "@/lib/weather";
-import { fillGoal } from "@/lib/fill-meter";
 import { c } from "@/lib/email/brand";
 import { appendUtm } from "@/lib/email/utm";
 import { CAMP_AGE_MIN, CAMP_OPTIONS, upcomingCamps } from "@/data/camps";
@@ -23,6 +21,7 @@ import {
   FALL_SEASON_LABEL,
   FALL_SEASON_WEEKS,
   FALL_RAIN_DATES,
+  FALL_PLAYOFF_DATE,
   FALL_VENUE_SHORT,
 } from "@/data/fall-2026";
 import {
@@ -48,6 +47,7 @@ import {
 import { picklParkLeaguesOpen } from "@/lib/picklpark-registration-window";
 import {
   weeklyNewsletterHtml,
+  weeklyNewsletterSubject,
   weeklyNewsletterText,
   type NewsletterFallGroup,
   type NewsletterOpenPoll,
@@ -144,7 +144,7 @@ function groupSessions(
       s.startTime && s.endTime
         ? `${s.startTime}–${s.endTime}`
         : s.startTime || "";
-    const slot = { label, registered: s.registeredCount, goal: fillGoal(s) };
+    const slot = { label };
     const existing = groups.get(key);
     if (existing) {
       if (label) existing.slots.push(slot);
@@ -204,10 +204,10 @@ async function loadOpenPolls(): Promise<NewsletterOpenPoll[]> {
 function weatherNote(dw: DayWeather): string {
   const temp = dw.tempHigh != null ? `, ${dw.tempHigh}°` : "";
   if (dw.risk === "cancel") {
-    return `${dw.maxRain}% chance of rain — watch for a cancellation note`;
+    return `${dw.maxRain}% chance of rain, watch for a cancellation note`;
   }
   if (dw.risk === "watch") {
-    return `${dw.summary} — ${dw.maxRain}% chance of rain${temp}`;
+    return `${dw.summary}, ${dw.maxRain}% chance of rain${temp}`;
   }
   return `${dw.summary}${temp}`;
 }
@@ -235,6 +235,7 @@ async function loadFallSeason(
   groups: NewsletterFallGroup[];
   url: string;
   progress: FallNewsletterProgress;
+  playoffDate: string;
 } | null> {
   if (process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN !== "true") return null;
   if (todayIso > FALL_RAIN_DATES[FALL_RAIN_DATES.length - 1]) return null;
@@ -261,6 +262,7 @@ async function loadFallSeason(
     groups,
     url: appendUtm(`${SITE_ORIGIN}/fall`, "fall-season", utmCampaign),
     progress,
+    playoffDate: FALL_PLAYOFF_DATE,
   };
 }
 
@@ -315,14 +317,6 @@ async function loadPicklParkSeason(
     url: appendUtm(`${SITE_ORIGIN}/picklpark`, "picklpark-leagues", utmCampaign),
     progress: picklParkNewsletterProgress(todayIso),
   };
-}
-
-/** True while at least one group in a season still has a seat we know about. */
-function seasonHasOpenSeats(
-  season: { groups: NewsletterFallGroup[] } | null,
-): boolean {
-  if (!season) return false;
-  return season.groups.some((g) => g.spotsLeft === null || g.spotsLeft > 0);
 }
 
 export const GET = withCronAlert("weekly-newsletter", async () => {
@@ -401,17 +395,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   // weekly send.
   const openPolls = await loadOpenPolls();
 
-  // Approved news items from the scraper queue (max 4 per issue so the
-  // email stays scannable). Fails soft — no news just hides the block.
-  // Keep the original rows so we can flip them to Used after a successful
-  // send (avoids a race with anything Sam approves mid-broadcast).
-  const newsRows = await fetchApprovedNews(4);
-  const news = newsRows.map((n) => ({
-    title: n.title,
-    url: n.url,
-    source: n.source,
-    summary: n.summary,
-  }));
+  // The scraped youth-news block came out on 2026-10-23 (Sam's go): it sat
+  // between families and the parts of the issue about their own player. The
+  // scraper cron still fills its Notion queue.
 
   // "From Coach Sam" lead block — sourced from EVERY Approved row in the
   // newsletter-drafts Notion DB within the freshness window (the Wednesday
@@ -494,40 +480,31 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
     };
   }
 
-  // The fall season outranks even "open courts this week" — the one thing here
-  // a family can't get a second chance at. Eight seats a group, sold once, and
-  // the door shuts when the first Sunday arrives; a drop-in they skip this week
-  // simply runs again next week. It steps aside the moment both groups fill.
-  // Below that, camp outranks polls/plan-ahead/tip but never open courts — a
-  // bookable session in the next 9 days is the more urgent ask.
-  //
-  // The Pickl Park Saturday season is the same kind of one-shot buy, so it
-  // owns the subject on the same terms: both open → say so; only one open →
-  // that one. Bethesda families who can't do Sundays and Frederick families
-  // who never heard of the Sunday season each get a subject that names theirs.
-  const fallOpen = seasonHasOpenSeats(fallSeason);
-  // NOT seasonHasOpenSeats: every Pickl Park group now carries
-  // `spotsLeft: null` permanently, because The Pickl Park holds that roster,
-  // and that helper reads null as "has seats". Running the subject through it
-  // would make this branch unconditionally true and mail a weekly subject
-  // claiming an NGA season is open for a checkout that returns 410. The
-  // leagues ARE promotable while they run — they just aren't ours to "open".
-  const picklParkPromotable = picklParkSeason !== null;
-  const subject = editorial?.subject ?? (fallOpen && picklParkPromotable
-    ? "Fall season is open, and Saturdays are on in Frederick"
-    : fallOpen
-      ? "Fall season registration is open — Next Gen"
-      : picklParkPromotable
-        ? "Saturday Drill and Play at The Pickl Park — Next Gen"
-        : sessions.length
-      ? "Open courts this week — Next Gen"
-      : camps.length
-        ? "Camp is coming up — Next Gen"
-        : openPolls.length
-          ? "Crews forming this week — Next Gen"
-          : laterSessions.length
-            ? "New dates on the calendar — Next Gen"
-            : `Coach tip of the week — ${tip.title}`);
+  // Built from the issue's "At a glance" lines (or an approved editorial), so
+  // the subject always names what this issue actually leads with. The old
+  // fixed cascade kept saying "Fall season is open" weeks into the season.
+  const subjectInput = {
+    parentFirst: "there",
+    issueDate: todayIso,
+    editorial,
+    programs,
+    fallSeason,
+    picklParkSeason,
+    sessions,
+    laterSessions,
+    openPolls,
+    tip,
+    scheduleUrl,
+    crewInterestUrl,
+    unsubscribeUrl: `${SITE_ORIGIN}/newsletter`,
+    origin: SITE_ORIGIN,
+    utmCampaign,
+    camps,
+    campUrl,
+    campAgeMin: CAMP_AGE_MIN,
+    campPriceFromUsd,
+  };
+  const subject = weeklyNewsletterSubject(subjectInput);
 
   let sent = 0;
   let failed = 0;
@@ -542,27 +519,11 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       : `${SITE_ORIGIN}/newsletter`;
 
     const input = {
+      ...subjectInput,
       parentFirst,
-      editorial,
-      programs,
-      fallSeason,
-      picklParkSeason,
-      sessions,
-      laterSessions,
-      openPolls,
-      news,
       newsletterLeadHtml,
       newsletterLeadText,
-      tip,
-      scheduleUrl,
-      crewInterestUrl,
       unsubscribeUrl,
-      origin: SITE_ORIGIN,
-      utmCampaign,
-      camps,
-      campUrl,
-      campAgeMin: CAMP_AGE_MIN,
-      campPriceFromUsd,
     };
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -593,27 +554,10 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   if (dayOffset === 0) {
     try {
     const adminInput = {
+      ...subjectInput,
       parentFirst: "Coach",
-      editorial,
-      programs,
-      fallSeason,
-      picklParkSeason,
-      sessions,
-      laterSessions,
-      openPolls,
-      news,
       newsletterLeadHtml,
       newsletterLeadText,
-      tip,
-      scheduleUrl,
-      crewInterestUrl,
-      unsubscribeUrl: `${SITE_ORIGIN}/newsletter`,
-      origin: SITE_ORIGIN,
-      utmCampaign,
-      camps,
-      campUrl,
-      campAgeMin: CAMP_AGE_MIN,
-      campPriceFromUsd,
     };
     await resend.emails.send({
       from: FROM_EMAIL,
@@ -637,26 +581,9 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
   }
   }
 
-  // Flip the rows we actually included to Used so they don't reappear in
-  // next week's issue. Only fire after the LAST cohort of the issue has gone
-  // out — flipping earlier would give later cohorts a different issue than
-  // the first. Failed broadcasts leave the queue intact so the next run can
-  // retry the same items.
-  let newsMarkedUsed = 0;
+  // Only after the LAST cohort of the issue has gone out, so every cohort
+  // reads the same drafts.
   if (isLastCohort && sent > 0) {
-    for (const row of newsRows) {
-      // A false return = the Used flip didn't stick → the same news item
-      // repeats in next week's issue. Surface it instead of dropping it.
-      const marked = await setNewsStatus(row.pageId, "Used");
-      if (marked) newsMarkedUsed++;
-      else
-        failures.push({
-          signature: "news_status_write_failed",
-          ref: row.pageId,
-          detail:
-            "news row not flipped to Used; it will repeat in next week's issue",
-        });
-    }
     // Stamp "Sent At" on every draft row that shipped so the Notion DB shows
     // exactly when each issue went out (fire-and-forget, never throws).
     if (newsletterDrafts.length > 0) {
@@ -722,8 +649,6 @@ export const GET = withCronAlert("weekly-newsletter", async () => {
       ? picklParkSeason.groups.map((g) => `${g.label}:${g.spotsLeft ?? "unknown"}`).join(" ")
       : "",
     open_polls: openPolls.length,
-    news_items: news.length,
-    news_marked_used: newsMarkedUsed,
     has_newsletter_lead: newsletterDrafts.length > 0,
     newsletter_lead_rows: newsletterDrafts.length,
     newsletter_lead_sections: newsletterLeadSections,
