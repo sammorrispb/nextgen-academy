@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 import { FakeStripeInvoicing } from "./fixtures/fake-stripe-invoices";
@@ -8,6 +8,14 @@ import { getStripe } from "../src/lib/stripe";
 import { validateMvfJuniorTournament, type MvfJuniorTournamentData } from "../src/lib/validate-mvf-junior-tournament";
 import { WAIVER_VERSION } from "../src/data/waiver";
 import { POST } from "../src/app/api/admin/mvf-registration/route";
+
+// getStripe retains its client after env restoration. A unique worker fixture
+// keeps that singleton out of other specs, including missing-config checks.
+const test = base.extend<object, { preventCachedStripeLeakage: string }>({
+  preventCachedStripeLeakage: [async ({ browserName }, use) => {
+    await use(browserName);
+  }, { scope: "worker", auto: true }],
+});
 
 // An admin exception keeps the truthful DOB, and cannot invoice a child until
 // signed consent and a capacity-backed, same-session preview authorize it.
