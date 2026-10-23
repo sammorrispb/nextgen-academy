@@ -1,7 +1,6 @@
 import { c, s } from "./brand";
 import { appendUtm } from "./utm";
 import type { CoachTip } from "@/lib/newsletter-tips";
-import { fillLabel, fillBar } from "@/lib/fill-meter";
 import { seatStatusLabel } from "@/lib/seat-status";
 import type { NewsletterProgram } from "@/lib/newsletter-programs";
 import type { NewsletterEditorial } from "@/lib/newsletter-editorial";
@@ -13,19 +12,31 @@ import {
   whatsappGroupsTopText,
 } from "./signature";
 
-// Evergreen invitations remain visible in quiet weeks, alongside seasonal programs.
+// Layout (2026-10-23). Parents increasingly read this email through an
+// assistant's summary (Apple Mail, Gmail) rather than top to bottom, and both
+// skim the opening and drop the rest. So the issue leads with "At a glance":
+// one dated sentence per thing a family can act on, built from the same data
+// as the sections below so the two cannot disagree. Then the detail, grouped by
+// who it is for: families enrolled now, ways to play, what is coming. Real
+// h2/h3 headings and lists in the HTML, and the text part mirrors them section
+// for section, because many readers and agents only ever see text/plain.
+//
+// No em dashes anywhere in this template's copy (Sam's rule for public copy);
+// e2e/weekly-newsletter.spec.ts renders a full issue and fails on one.
+
 const LESSONS_HEADING = "Private, semi-private and small-group lessons";
 const YOUTH_LESSONS_COPY = "Help your player build a more consistent serve, rally or match plan with focused coaching. Choose one-on-one, semi-private (two players), or a small group at a similar level. Choose up to three available times for your player. Sam confirms the time and sends an invoice; there is no charge when you request.";
 const PARENT_LESSONS_COPY = "Want coaching for your own game? Request a private lesson, a semi-private lesson with a partner, or a small-group lesson with friends. Choose up to three available times and enter your player count. Sam confirms the time and sends an invoice; there is no charge when you request.";
 const SAM_LESSON_REQUEST_URL = "https://coach.sammorrispb.com/book/private-lesson";
+const FORWARD_COPY = "Know a kid who'd love this? Forward this email. The community grows because parents like you make the introduction.";
+const SIGNOFF = "See you on the court. Better than yesterday, together.";
+const MAX_GLANCE = 6;
+const MAX_SUBJECT = 78;
+const MAX_PREVIEW = 150;
 
 /** One open time slot within a date+location group. */
 export interface NewsletterSessionSlot {
   label: string; // "4:30–5:30 PM"
-  /** Players signed up so far — the meter fills toward `goal`. */
-  registered: number;
-  /** Full build-out of the session (maxCourts × 4) — the meter's target. */
-  goal: number;
 }
 
 /** A date+location group with one or more open slots that week. */
@@ -35,14 +46,6 @@ export interface NewsletterSessionGroup {
   slots: NewsletterSessionSlot[];
   /** Short, pre-rendered weather note for the date (county-level). Empty if unavailable. */
   weatherNote?: string;
-}
-
-/** A youth-pickleball news item surfaced inside the newsletter. */
-export interface NewsletterNewsItem {
-  title: string;
-  url: string;
-  source: string;
-  summary: string;
 }
 
 /** An Open Crew Poll surfaced inside the newsletter. */
@@ -70,6 +73,8 @@ export interface NewsletterFallGroup {
 
 export interface WeeklyNewsletterInput {
   parentFirst: string;
+  /** ISO date the issue goes out (America/New_York). Dates the issue for readers and agents. */
+  issueDate?: string;
   editorial?: NewsletterEditorial | null;
   programs?: NewsletterProgram[];
   /**
@@ -79,7 +84,7 @@ export interface WeeklyNewsletterInput {
    */
   fallSeason: {
     title: string;
-    /** "September 20 – October 25, 2026" */
+    /** "September 20 – November 8, 2026" */
     seasonLabel: string;
     weeks: number;
     /** "Walter Johnson High School, Bethesda, MD" */
@@ -89,35 +94,25 @@ export interface WeeklyNewsletterInput {
     /** UTM-stamped /fall registration URL. */
     url: string;
     progress?: FallNewsletterProgress;
+    /** ISO date of the season's playoff Sunday, when it has one. */
+    playoffDate?: string;
   } | null;
   /**
-   * Pickl Park Saturday season — the SECOND fall option (Frederick, indoors),
-   * rendered directly under the fall block while its registration is open.
-   * The Pickl Park owns registration, fees and availability. The cron gates
-   * on the public leagues window and carries date-derived progress.
-   * Optional rather than required so existing fixtures and callers keep
-   * type-checking; absent means "not promoted", exactly like null.
+   * Pickl Park Saturdays. The partnership ends after the Oct 31 session, so the
+   * issue carries one line for the families still playing there, never a
+   * season pitch (Sam, 2026-10-23). The Pickl Park owns registration and price.
+   * Absent or null renders nothing.
    */
   picklParkSeason?: {
     title: string;
-    /** "September 19 – October 24, 2026" */
     seasonLabel: string;
     weeks: number;
     /** "The Pickl Park, Frederick, MD" */
     venueLine: string;
-    /**
-     * OMITTED since 2026-09-07 — The Pickl Park sells the league itself and
-     * quotes at the point of sale, so this email publishes no Frederick price.
-     * Kept optional rather than deleted so the MoCo season block, which does
-     * quote, can keep sharing this shape.
-     */
     priceUsd?: number;
-    /** "30 minutes of coached drills, then 30 minutes of game play" */
     sessionFormat: string;
-    /** PICKLPARK_INDOOR_NOTE — all six Saturdays actually run. */
     indoorNote: string;
     groups: NewsletterFallGroup[];
-    /** UTM-stamped /picklpark URL. */
     url: string;
     progress?: ReturnType<typeof picklParkNewsletterProgress>;
   } | null;
@@ -125,19 +120,11 @@ export interface WeeklyNewsletterInput {
   /**
    * Open sessions beyond the weekly window, so parents can plan ahead.
    * Empty hides the block. Registration for any given date still opens 30 days
-   * out on /schedule; this block is the heads-up + sign-up nudge.
-   *
-   * Was `summerSessions` with "Summer sessions are live" copy and a June/July/
-   * August date filter. Both went stale on their own: the Aug 20 2026 issue
-   * pitched "lock in your summer spot" for a single Aug 30 date with school
-   * starting the 25th, and the month filter would have hidden every September
-   * date outright. A season word in a template that ships every week is a bug
-   * with a delay on it — keep this block's copy season-neutral.
+   * out on /schedule. Keep this block's copy season-neutral: a season word in
+   * a template that ships every week is a bug with a delay on it.
    */
   laterSessions: NewsletterSessionGroup[];
   openPolls: NewsletterOpenPoll[];
-  /** Approved youth-pickleball news items from the scraper queue. Empty hides the block. */
-  news: NewsletterNewsItem[];
   /**
    * Pre-rendered HTML for the "From Coach Sam" lead block, sourced from an
    * Approved row in the newsletter-drafts Notion DB. Null/undefined hides
@@ -155,33 +142,62 @@ export interface WeeklyNewsletterInput {
   origin: string;
   /**
    * UTM campaign label for first-party click attribution (e.g. "weekly-2026-06-04").
-   * Stamps the same-origin CTAs built inside this template (poll, eval). The
-   * scheduleUrl/crewInterestUrl passed in are already UTM-stamped by the cron.
+   * Stamps the same-origin CTAs built inside this template. The scheduleUrl /
+   * crewInterestUrl passed in are already UTM-stamped by the cron.
    */
   utmCampaign: string;
   /**
-   * Upcoming summer-camp weeks for the dedicated camp block. Empty hides the
-   * block. Camp pricing is real (a concrete bookable product), so this block
-   * may quote it — unlike the teased drop-in price. `publicArea` travels per
-   * row because camps move venues between weeks; it is the broad area only,
-   * never `exactLocation` (child-safety policy in camps.ts).
+   * Upcoming camp weeks. Empty hides the block. `publicArea` is the broad area
+   * only, never `exactLocation` (child-safety policy in camps.ts).
    */
   camps: { weekLabel: string; publicArea: string }[];
   /** UTM-stamped /camp link. */
   campUrl: string;
   /** Minimum camp age (8) — the day-camp runs older than the 6–16 academy range. */
   campAgeMin: number;
-  /** Lowest camp-option price (USD) for the "from $X/week" tease. */
+  /** Lowest camp-option price (USD) for the "from $X/day" line. */
   campPriceFromUsd: number;
 }
 
-/** Email-safe segmented meter: lime filled blocks, muted empty blocks. */
-function meterHtml(registered: number, goal: number): string {
-  if (goal <= 0) return "";
-  const r = Math.min(Math.max(0, registered), goal);
-  const filled = r > 0 ? `<span style="color:${c.accentLime};">${"▰".repeat(r)}</span>` : "";
-  const empty = r < goal ? `<span style="color:${c.muted};">${"▱".repeat(goal - r)}</span>` : "";
-  return `<span style="letter-spacing:2px;">${filled}${empty}</span>`;
+/** One line of "At a glance": a full sentence for the issue, a few words for the subject. */
+export interface NewsletterGlance {
+  text: string;
+  short: string;
+}
+
+/**
+ * Seat line for one fall group, or "" when the roster read failed. A null
+ * count used to fall back to the group size, but the group size is exactly the
+ * number this email no longer publishes, and silence beats a stale cap.
+ */
+export function fallSpotsLabel(g: NewsletterFallGroup): string {
+  return seatStatusLabel(g.spotsLeft, { fullLabel: "Full, ask about the sub list" }) ?? "";
+}
+
+function fallGroupLine(g: NewsletterFallGroup): string {
+  const spots = fallSpotsLabel(g);
+  return `Sundays ${g.timeLabel} ET${spots ? ` · ${spots}` : ""}`;
+}
+
+/** "Sunday, November 8" from an ISO date, read in UTC so no zone can shift it. */
+function longDay(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric", timeZone: "UTC",
+  });
+}
+
+/** "Nov 8" */
+function monthDay(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "short", day: "numeric", timeZone: "UTC",
+  });
+}
+
+/** "October 29, 2026" */
+function issueDateLabel(iso: string): string {
+  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
+  });
 }
 
 function pollTimeRange(p: NewsletterOpenPoll): string {
@@ -191,316 +207,311 @@ function pollTimeRange(p: NewsletterOpenPoll): string {
 
 function pollProgressLabel(p: NewsletterOpenPoll): string {
   const need = Math.max(0, p.minPartySize - p.yesCount);
-  if (need <= 0) return "Locked in — Sam will text the WhatsApp group";
+  if (need <= 0) return "Locked in. Sam will text the WhatsApp group.";
   return `${p.yesCount} in · need ${need} more to lock it in`;
 }
 
+function visiblePrograms(input: WeeklyNewsletterInput): NewsletterProgram[] {
+  const excluded = input.editorial?.excludedProgramKeys ?? [];
+  return (input.programs ?? []).filter(p => !p.key || !excluded.includes(p.key));
+}
+
+function fallUnderway(input: WeeklyNewsletterInput): boolean {
+  return input.fallSeason?.progress?.underway ?? false;
+}
+
+function upcomingPlayoff(input: WeeklyNewsletterInput): string | null {
+  const playoff = input.fallSeason?.playoffDate;
+  if (!playoff) return null;
+  if (input.issueDate && playoff < input.issueDate) return null;
+  return playoff;
+}
+
+/** The single Pickl Park line, or null once its last Saturday has passed. */
+function picklParkLine(input: WeeklyNewsletterInput): NewsletterGlance | null {
+  const season = input.picklParkSeason;
+  const dates = season?.progress?.remainingDates ?? [];
+  if (!season || !season.progress?.underway || dates.length === 0) return null;
+  const last = dates[dates.length - 1];
+  return dates.length === 1
+    ? {
+      text: `Pickl Park Saturdays in Frederick: the last session is ${longDay(last)}.`,
+      short: `last Pickl Park Saturday ${monthDay(last)}`,
+    }
+    : {
+      text: `Pickl Park Saturdays in Frederick: ${dates.length} Saturdays left, the last one ${longDay(last)}.`,
+      short: `${dates.length} Pickl Park Saturdays left`,
+    };
+}
+
+/** The fall season's glance line. */
+function fallGlance(input: WeeklyNewsletterInput): NewsletterGlance | null {
+  const fall = input.fallSeason;
+  if (!fall) return null;
+  if (!fallUnderway(input)) {
+    return {
+      text: `Fall Sunday season registration is open: ${fall.seasonLabel} at ${fall.venueLine}.`,
+      short: "fall registration open",
+    };
+  }
+  const playoff = upcomingPlayoff(input);
+  const remaining = fall.progress?.scheduleNotes[0] ?? "";
+  return {
+    text: `Fall Sunday season at ${fall.venueLine}: ${remaining}${playoff ? ` Playoff ${longDay(playoff)}.` : ""}`.replace(/\s+$/, ""),
+    short: playoff ? `fall playoff ${monthDay(playoff)}` : "fall Sundays continue",
+  };
+}
+
 /**
- * Seat line for one fall group, or "" when the roster read failed — a null
- * count used to fall back to the group size, but the group size is exactly the
- * number this email no longer publishes, and silence beats a stale cap.
+ * "At a glance", in reading priority: what enrolled families need to know,
+ * then what anyone can join this week, then what is coming. Capped so the
+ * summary stays a summary.
  */
-export function fallSpotsLabel(g: NewsletterFallGroup): string {
-  return seatStatusLabel(g.spotsLeft, { fullLabel: "Full — ask about the sub list" }) ?? "";
+export function newsletterHighlights(input: WeeklyNewsletterInput): NewsletterGlance[] {
+  const programs = visiblePrograms(input);
+  const glances = (section: NewsletterProgram["section"]) =>
+    programs.filter(p => p.section === section && p.glance).map(p => p.glance!);
+  const out: NewsletterGlance[] = [];
+  const fall = fallGlance(input);
+  if (fall && fallUnderway(input)) out.push(fall);
+  const pickl = picklParkLine(input);
+  if (pickl) out.push(pickl);
+  out.push(...glances("enrolled"));
+  if (fall && !fallUnderway(input)) out.push(fall);
+  if (input.sessions.length) {
+    out.push({
+      text: `Open drop-in sessions this week: ${input.sessions.map(g => `${g.dateLong} at ${g.location}`).join("; ")}.`,
+      short: "open sessions this week",
+    });
+  }
+  out.push(...glances("join"));
+  if (input.camps.length) {
+    out.push({ text: `Camp: ${input.camps[0].weekLabel}, ${input.camps[0].publicArea}.`, short: "camp coming up" });
+  }
+  out.push(...glances("next"));
+  return out.slice(0, MAX_GLANCE);
 }
 
-function seasonGroupLine(g: NewsletterFallGroup, dayWord: string): string {
-  const spots = fallSpotsLabel(g);
-  return `${dayWord} ${g.timeLabel} ET${spots ? ` · ${spots}` : ""}`;
+/** Subject line: the approved editorial's, else built from the issue's top two items. */
+export function weeklyNewsletterSubject(input: WeeklyNewsletterInput): string {
+  if (input.editorial?.subject) return input.editorial.subject;
+  const shorts = newsletterHighlights(input).map(h => h.short);
+  if (shorts.length === 0) return `Next Gen this week: ${input.tip.title}`;
+  const two = `Next Gen this week: ${shorts.slice(0, 2).join(" and ")}`;
+  return shorts.length > 1 && two.length <= MAX_SUBJECT ? two : `Next Gen this week: ${shorts[0]}`;
 }
 
-function fallGroupLine(g: NewsletterFallGroup): string {
-  return seasonGroupLine(g, "Sundays");
+/** Inbox preview text: the editorial's, else the opening glance lines, cut at a word. */
+export function weeklyNewsletterPreview(input: WeeklyNewsletterInput): string {
+  if (input.editorial?.previewText) return input.editorial.previewText;
+  const joined = newsletterHighlights(input).map(h => h.text).join(" ");
+  if (joined.length <= MAX_PREVIEW) return joined;
+  const cut = joined.slice(0, MAX_PREVIEW);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}...`;
 }
 
-function picklParkGroupLine(g: NewsletterFallGroup): string {
-  return seasonGroupLine(g, "Saturdays");
+function headline(input: WeeklyNewsletterInput): string {
+  return input.editorial?.headline ?? "Next Gen Pickleball Academy this week";
+}
+
+function intro(input: WeeklyNewsletterInput): string {
+  return input.editorial?.intro
+    ?? `Hi ${input.parentFirst}. The short version comes first, then the details for each program. Questions? Reply to this email and it goes straight to Coach Sam.`;
+}
+
+const FALL_UNDERWAY_JOIN = "Want your player to join the remaining sessions or the sub list? Reply to this email and Coach Sam will help you check availability and registration options.";
+
+function fallJoinCopy(fall: NonNullable<WeeklyNewsletterInput["fallSeason"]>, underway: boolean): string {
+  return underway
+    ? FALL_UNDERWAY_JOIN
+    : `$${fall.priceUsd} per player for the full season, first come, first served. Can't make all ${fall.weeks}? Reply and we'll put you on the sub list.`;
+}
+
+function fallDescription(fall: NonNullable<WeeklyNewsletterInput["fallSeason"]>, underway: boolean): string {
+  return underway
+    ? "Coached practice, then games with rotating partners."
+    : `${fall.weeks} Sundays. Coached practice first, then a rotating-partner round robin, so your player plays with everyone in their group across the season, not just the friend they came with. One registration covers every Sunday.`;
+}
+
+function fallNotes(input: WeeklyNewsletterInput): string[] {
+  const fall = input.fallSeason;
+  if (!fall) return [];
+  const playoff = upcomingPlayoff(input);
+  return [
+    ...(fall.progress?.scheduleNotes ?? []),
+    ...(fall.progress?.makeupNotes ?? []),
+    ...(playoff ? [`Playoff: ${longDay(playoff)}.`] : []),
+  ];
+}
+
+// ---- HTML -------------------------------------------------------------------
+
+const h2 = (text: string) =>
+  `<h2 style="margin:36px 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:19px;color:${c.accentLime};">${text}</h2>`;
+const h3 = (text: string) =>
+  `<h3 style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${text}</h3>`;
+const para = (html: string, muted = false) =>
+  `<p style="margin:0 0 10px 0;color:${muted ? c.muted : c.text};font-size:14px;line-height:1.6;">${html}</p>`;
+const list = (items: string[]) =>
+  `<ul style="margin:0 0 10px 0;padding-left:20px;color:${c.text};font-size:14px;line-height:1.6;">${items.map(i => `<li style="margin:0 0 4px 0;">${i}</li>`).join("")}</ul>`;
+const action = (href: string, label: string) =>
+  `<p style="margin:12px 0 0 0;"><a href="${escape(href)}" style="${s.link}font-weight:700;">${escape(label)}</a></p>`;
+
+function programCardHtml(p: NewsletterProgram): string {
+  return `<div style="${s.card}">${h3(escape(p.title))}${para(escape(p.body))}${p.url ? action(p.url, p.linkLabel ?? "View details") : ""}</div>`;
+}
+
+function fallCardHtml(input: WeeklyNewsletterInput): string {
+  const fall = input.fallSeason;
+  if (!fall) return "";
+  const underway = fallUnderway(input);
+  return `<div style="${s.cardAccent}">
+      ${h3(`${escape(fall.title)}: ${escape(fall.venueLine)}`)}
+      ${para(escape(`${fall.seasonLabel}. ${fallDescription(fall, underway)}`))}
+      ${list([
+        ...fallNotes(input).map(escape),
+        ...fall.groups.map(g => `<strong>${escape(g.label)}:</strong> ${escape(fallGroupLine(g))}`),
+      ])}
+      ${para(escape(fallJoinCopy(fall, underway)), true)}
+      ${action(fall.url, underway ? "View remaining dates and weather calls" : "Register for the season")}
+    </div>`;
 }
 
 export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
-  const editorial = input.editorial;
-  const programs = (input.programs ?? []).filter(p => !p.key || !editorial?.excludedProgramKeys?.includes(p.key));
-  const {
-    parentFirst,
-    fallSeason,
-    picklParkSeason,
-    sessions,
-    laterSessions,
-    openPolls,
-    news,
-    newsletterLeadHtml,
-    tip,
-    scheduleUrl,
-    crewInterestUrl,
-    unsubscribeUrl,
-    origin,
-    utmCampaign,
-    camps,
-    campUrl,
-    campAgeMin,
-    campPriceFromUsd,
-  } = input;
-  const hasSessions = sessions.length > 0;
-  const hasLater = laterSessions.length > 0;
-  const hasCamps = camps.length > 0;
-  const hasPolls = openPolls.length > 0;
-  const hasNews = news.length > 0;
-  const hasLead = !!(newsletterLeadHtml && newsletterLeadHtml.trim());
-  const enrollingPrograms = programs.filter(program => program.enrolling);
-  const otherPrograms = programs.filter(program => !program.enrolling);
-  const programCards = (items: NewsletterProgram[]) => items.map(p => `<div style="${s.card}"><h2 style="margin:0 0 8px;font-size:16px;color:${c.text};">${escape(p.title)}</h2><p style="margin:0;color:${c.text};line-height:1.6;">${escape(p.body)}</p>${p.url ? `<p style="margin:12px 0 0;"><a href="${escape(p.url)}" style="${s.link}">${escape(p.linkLabel ?? "View details")}</a></p>` : ""}</div>`).join("\n");
-  const fallUnderway = fallSeason?.progress?.underway ?? false;
-  const fallDescription = fallSeason ? fallUnderway
-    ? `The Sunday season is underway at ${fallSeason.venueLine}. Your player builds through coached practice and games with rotating partners.`
-    : `${fallSeason.weeks} Sundays at ${fallSeason.venueLine}. Coached practice first, then a rotating-partner round robin — so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.` : "";
-  const fallJoinCopy = fallSeason ? fallUnderway
-    ? "Want your player to join the remaining sessions or the sub list? Reply to this email and Coach Sam will help you check availability and registration options."
-    : `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.` : "";
-  const picklParkUnderway = picklParkSeason?.progress?.underway ?? false;
-  const picklParkDescription = picklParkSeason ? `${picklParkUnderway ? "The Saturday season is underway" : `${picklParkSeason.weeks} Saturdays indoors`} at ${picklParkSeason.venueLine} — ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.` : "";
-  const picklParkNote = picklParkUnderway ? "Sessions are indoors. Ask The Pickl Park about joining the remaining dates, current fees and availability." : picklParkSeason?.indoorNote ?? "";
+  const programs = visiblePrograms(input);
+  const bySection = (section: NewsletterProgram["section"]) => programs.filter(p => p.section === section);
+  const underway = fallUnderway(input);
+  const pickl = picklParkLine(input);
+  const highlights = newsletterHighlights(input);
+  const hasLead = !!input.newsletterLeadHtml?.trim();
+  // An approved editorial is the issue's headline story, so its lead opens the
+  // issue. In an ordinary week the lead keeps its place below the tip.
+  const leadFirst = hasLead && !!input.editorial;
+  const leadHtml = hasLead ? `${h2("From Coach Sam this week")}<div style="${s.cardAccent}">${input.newsletterLeadHtml}</div>` : "";
 
-  // Fall season — current dates and joining options. Derived from the
-  // season data files by the cron, so (like camps) it can't fall off the issue
-  // the way a hand-drafted Notion row can.
-  const fallBlock = fallSeason
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Fall season &mdash; ${fallUnderway ? "underway" : "registration is open"}</p>
-      <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(fallSeason.title)} &mdash; ${escape(fallSeason.seasonLabel)}</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(fallDescription)}</p>
-      ${[...(fallSeason.progress?.scheduleNotes ?? []), ...(fallSeason.progress?.makeupNotes ?? [])].map(note => `<p style="margin:0 0 8px;color:${c.text};font-size:14px;line-height:1.55;">${escape(note)}</p>`).join("")}
-      ${fallSeason.groups
-        .map(
-          (g) =>
-            `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;"><strong>${escape(g.label)}</strong> &mdash; <span style="color:${c.muted};">${escape(fallGroupLine(g))}</span></p>`,
-        )
-        .join("")}
-      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(fallJoinCopy)}</p>
-      <p style="margin:14px 0 0 0;"><a href="${fallSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">${fallUnderway ? "View remaining dates and weather calls" : "Register for the season →"}</a></p>
+  const enrolled = [
+    underway ? fallCardHtml(input) : "",
+    pickl && input.picklParkSeason
+      ? `<div style="${s.card}">${h3(`Pickl Park Saturdays: ${escape(input.picklParkSeason.venueLine)}`)}${para(escape(pickl.text))}${para("The Pickl Park handles registration and fees for these sessions.", true)}</div>`
+      : "",
+    ...bySection("enrolled").map(programCardHtml),
+  ].filter(Boolean);
+
+  const sessionsHtml = input.sessions.length
+    ? `<div style="${s.cardAccent}">
+      ${h3("Open drop-in sessions this week")}
+      ${para("One hour, drop-in. All times Eastern.", true)}
+      ${input.sessions.map(g => `${para(`<strong>${escape(g.dateLong)}</strong>, ${escape(g.location)}`)}${list([
+        ...g.slots.map(slot => escape(slot.label)),
+        ...(g.weatherNote ? [`Forecast: ${escape(g.weatherNote)}`] : []),
+      ])}`).join("")}
+      ${action(input.scheduleUrl, "Book a spot on the schedule")}
+    </div>`
+    : `<div style="${s.card}">${para(`No open drop-in sessions this week. New dates post on the <a href="${escape(input.scheduleUrl)}" style="${s.link}font-weight:700;">schedule</a>.`)}</div>`;
+
+  const laterHtml = input.laterSessions.length
+    ? `<div style="${s.card}">
+      ${h3("Further out on the calendar")}
+      ${para("These dates are already on the calendar. Registration for each one opens 30 days out.")}
+      ${list(input.laterSessions.map(g => `${escape(g.dateLong)}, ${escape(g.location)}`))}
+      ${action(input.scheduleUrl, "See the full schedule")}
     </div>`
     : "";
 
-  // Pickl Park Saturday season — the other fall option, right under the fall
-  // block. Derived from picklpark-2026.ts + picklpark-season-2026.ts by the
-  // cron for the same reason: a season that a family can only buy once must
-  // never fall off the issue the way an Approved Notion row can.
-  const picklParkBlock = picklParkSeason
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Pickl Park Saturdays in Frederick &mdash; Drill and Play</p>
-      <p style="margin:0 0 8px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(picklParkSeason.title)} &mdash; ${escape(picklParkSeason.seasonLabel)}</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(picklParkDescription)}</p>
-      ${picklParkSeason.progress ? `<p style="margin:0 0 8px;color:${c.text};font-size:14px;line-height:1.55;">${escape(picklParkSeason.progress.scheduleNote)}</p>` : ""}
-      ${picklParkSeason.groups
-        .map(
-          (g) =>
-            `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;"><strong>${escape(g.label)}</strong> &mdash; <span style="color:${c.muted};">${escape(picklParkGroupLine(g))}</span></p>`,
-        )
-        .join("")}
-      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">${escape(picklParkNote)}</p>
-      ${picklParkSeason.priceUsd ? `<p style="margin:8px 0 0 0;color:${c.muted};font-size:13px;">$${picklParkSeason.priceUsd} per player for the full season.</p>` : ""}
-      <p style="margin:14px 0 0 0;"><a href="${picklParkSeason.url}" style="${s.link}font-weight:700;text-decoration:none;">View Saturday sessions</a></p>
+  const campHtml = input.camps.length
+    ? `<div style="${s.card}">
+      ${h3("Camp")}
+      ${para(`Next Gen Pickleball Camp: ages ${input.campAgeMin}+, half-day mornings, small groups. Come for a single morning or the full week.`)}
+      ${list(input.camps.map(w => `${escape(w.weekLabel)}, ${escape(w.publicArea)}`))}
+      ${para(`From $${input.campPriceFromUsd}/day · $150 full week.`, true)}
+      ${action(input.campUrl, "See camp dates and book")}
     </div>`
     : "";
 
-  const sessionBlock = hasSessions
-    ? `
-    <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">This week&rsquo;s sessions</p>
-    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">All times Eastern. Every signup fills the meter &mdash; full courts make the best games. Grab a slot and move it.</p>
-    ${sessions
-      .map(
-        (g) => `<div style="${s.card}">
-      <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;font-weight:900;color:${c.text};">${escape(g.dateLong)}</p>
-      <p style="margin:0 0 ${g.weatherNote ? "2px" : "8px"} 0;color:${c.muted};font-size:13px;">${escape(g.location)}</p>
-      ${g.weatherNote ? `<p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;">Forecast: ${escape(g.weatherNote)}</p>` : ""}
-      ${g.slots
-        .map(
-          (slot) =>
-            `<p style="margin:0 0 2px 0;color:${c.text};font-size:14px;">${escape(slot.label)} &mdash; ${meterHtml(slot.registered, slot.goal)} <span style="color:${c.accentLime};font-weight:700;">${escape(fillLabel(slot.registered, slot.goal))}</span></p>`,
-        )
-        .join("")}
-    </div>`,
-      )
-      .join("")}
-    <div style="${s.actionCallout}">
-      <p style="${s.actionLabel}">Book a spot</p>
-      <p style="margin:14px 0 0 0;">
-        <a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">See this week&rsquo;s sessions &rarr;</a>
-      </p>
+  const pollsHtml = input.openPolls.length
+    ? `<div style="${s.card}">
+      ${h3("Forming groups now")}
+      ${para("Vote in the slots that work and Sam locks the group in when it hits the headcount.", true)}
+      ${input.openPolls.map(p => `${para(`<strong>${escape(p.title)}</strong>`)}${list([
+        escape([p.day, pollTimeRange(p), p.location, p.level].filter(Boolean).join(" · ")),
+        escape(pollProgressLabel(p)),
+        `<a href="${escape(appendUtm(`${input.origin}/poll/${encodeURIComponent(p.slug)}`, "poll", input.utmCampaign))}" style="${s.link}font-weight:700;">Vote on this slot</a>`,
+      ])}`).join("")}
     </div>`
-    : `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">This week</p>
-      <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">No open sessions this week &mdash; but new ones post regularly. <a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">Check the schedule &rarr;</a></p>
+    : "";
+
+  const crewHtml = `<div style="${s.card}">
+      ${h3(input.openPolls.length ? "None of these fit?" : "Want a regular group?")}
+      ${para("Tell us your player's level and the days that work. Sam looks for 3 more kids who match and texts the WhatsApp link when the slot has takers.")}
+      ${action(input.crewInterestUrl, "Find your player's group")}
     </div>`;
 
-  // Open sessions past the weekly window. Lists each date+location so parents
-  // can plan ahead, with a single sign-up CTA to the schedule. Spots aren't
-  // shown (registration opens 30 days out, so the count isn't meaningful yet).
-  // Copy stays season-neutral on purpose — see `laterSessions` above.
-  const laterBlock = hasLater
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Further out on the calendar</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Planning ahead? These dates are already on the calendar. Registration for each one opens 30 days out.</p>
-      ${laterSessions
-        .map(
-          (g) => `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;">${escape(g.dateLong)} &mdash; <span style="color:${c.muted};">${escape(g.location)}</span></p>`,
-        )
-        .join("")}
-      <p style="margin:14px 0 0 0;"><a href="${scheduleUrl}" style="${s.link}font-weight:700;text-decoration:none;">See the full schedule &rarr;</a></p>
-    </div>`
-    : "";
-
-  // Summer camp block — a distinct product from drop-in sessions (multi-day,
-  // flat weekly price). Camp pricing is real, so we quote a "from $X" tease and
-  // link to /camp for dates + booking. Hidden when no upcoming camp weeks.
-  const campBlock = hasCamps
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Summer camp</p>
-      <p style="margin:0 0 12px 0;color:${c.text};font-size:14px;line-height:1.55;">Next Gen Summer Pickleball Camp &mdash; ages ${campAgeMin}+, half-day mornings, small groups. Come for a single morning or the full week. Real reps, real coaching, a ton of fun.</p>
-      ${camps
-        .map(
-          (w) => `<p style="margin:0 0 4px 0;color:${c.text};font-size:14px;">${escape(w.weekLabel)} &mdash; <span style="color:${c.muted};">${escape(w.publicArea)}</span></p>`,
-        )
-        .join("")}
-      <p style="margin:10px 0 0 0;color:${c.muted};font-size:13px;">From $${campPriceFromUsd}/day &middot; $150 full week.</p>
-      <p style="margin:14px 0 0 0;"><a href="${campUrl}" style="${s.link}font-weight:700;text-decoration:none;">See camp dates &amp; book &rarr;</a></p>
-    </div>`
-    : "";
-
-  const pollsBlock = hasPolls
-    ? `
-    <h2 style="margin:32px 0 6px 0;font-family:Montserrat,Arial,sans-serif;font-size:18px;color:${c.text};">Forming groups now</h2>
-    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">Vote in the slots that work and Sam locks the group in when it hits the headcount.</p>
-    ${openPolls
-      .map(
-        (p) => `<div style="${s.card}">
-      <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:15px;font-weight:900;color:${c.text};">${escape(p.title)}</p>
-      <p style="margin:0 0 6px 0;color:${c.muted};font-size:13px;">${escape([p.day, pollTimeRange(p), p.location, p.level].filter(Boolean).join(" · "))}</p>
-      <p style="margin:0 0 10px 0;color:${c.accentLime};font-size:13px;font-weight:700;">${escape(pollProgressLabel(p))}</p>
-      <p style="margin:0;"><a href="${appendUtm(`${origin}/poll/${encodeURIComponent(p.slug)}`, "poll", utmCampaign)}" style="${s.link}font-weight:700;text-decoration:none;">Vote on this slot &rarr;</a></p>
-    </div>`,
-      )
-      .join("")}`
-    : "";
-
-  // Crew Interest CTA — surfaced when no polls match, or as a low-pressure
-  // "tell us what you want" anchor when polls are open. Always render.
-  const crewBlock = `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 6px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">${hasPolls ? "None of these fit?" : "Want a regular group?"}</p>
-      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">Tell us your kid&rsquo;s level and the days that work &mdash; Sam looks for 3 more kids who match and texts the WhatsApp link when the slot has takers.</p>
-      <p style="margin:0;"><a href="${crewInterestUrl}" style="${s.link}font-weight:700;text-decoration:none;">Find your kid&rsquo;s group &rarr;</a></p>
+  const lessonsHtml = `<div style="${s.card}">
+      <h3 style="margin:0 0 6px 0;font-size:15px;color:${c.text};">For your player</h3>
+      ${para(escape(YOUTH_LESSONS_COPY))}
+      <p style="margin:0 0 18px 0;"><a href="${escape(appendUtm(`${input.origin}/lessons/book`, "youth-lessons", input.utmCampaign))}" style="${s.link}font-weight:700;">Request a youth lesson</a> &middot; <a href="sms:+13013254731" style="${s.link}">Text Coach Sam</a></p>
+      <h3 style="margin:0 0 6px 0;font-size:15px;color:${c.text};">For parents who play</h3>
+      ${para(escape(PARENT_LESSONS_COPY))}
+      <p style="margin:0;"><a href="${escape(appendUtm(SAM_LESSON_REQUEST_URL, "parent-lessons", input.utmCampaign))}" style="${s.link}font-weight:700;">Request a private or group lesson with Sam</a></p>
     </div>`;
 
-  // An issue-specific editorial moves the approved lead above the programs.
-  // Hidden by default; only renders when Sam has flipped a draft to Approved
-  // for this week's send.
-  const leadBlock = hasLead
-    ? `
-    <div style="${s.cardAccent}">
-      <p style="margin:0 0 10px 0;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">From Coach Sam this week</p>
-      ${newsletterLeadHtml}
-    </div>`
+  const next = bySection("next");
+  const dateLine = input.issueDate
+    ? ` · <time datetime="${escape(input.issueDate)}">Week of ${escape(issueDateLabel(input.issueDate))}</time>`
     : "";
-
-  // News block — only renders items Sam has Approved in the news Notion DB.
-  // Each title links to the original source so parents can read in context.
-  const newsBlock = hasNews
-    ? `
-    <h2 style="margin:32px 0 6px 0;font-family:Montserrat,Arial,sans-serif;font-size:18px;color:${c.text};">In the news: youth pickleball</h2>
-    <p style="margin:0 0 14px 0;color:${c.muted};font-size:13px;">A few stories Sam thought you&rsquo;d want to see.</p>
-    ${news
-      .map(
-        (n) => `<div style="${s.card}">
-      <p style="margin:0 0 4px 0;font-family:Montserrat,Arial,sans-serif;font-size:15px;font-weight:900;color:${c.text};"><a href="${n.url}" style="color:${c.text};text-decoration:none;">${escape(n.title)}</a></p>
-      <p style="margin:0 0 8px 0;color:${c.muted};font-size:12px;letter-spacing:0.05em;text-transform:uppercase;font-weight:700;">${escape(n.source)}</p>
-      ${n.summary ? `<p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(n.summary)}</p>` : ""}
-      <p style="margin:0;"><a href="${n.url}" style="${s.link}font-weight:700;text-decoration:none;">Read the story &rarr;</a></p>
-    </div>`,
-      )
-      .join("")}`
-    : "";
-
-  // Always present, including weeks without sessions or an approved draft.
-  const privateBlock = `
-    <div style="${s.card}">
-      <h2 style="margin:0 0 12px 0;font-size:16px;color:${c.text};">${LESSONS_HEADING}</h2>
-      <p style="margin:0 0 6px 0;color:${c.text};font-weight:700;">For your player</p>
-      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(YOUTH_LESSONS_COPY)}</p>
-      <p style="margin:0;"><a href="${escape(appendUtm(`${origin}/lessons/book`, "youth-lessons", utmCampaign))}" style="${s.link}font-weight:700;">Request a youth lesson</a> &middot; <a href="sms:+13013254731" style="${s.link}">Text Coach Sam</a></p>
-      <p style="margin:20px 0 6px 0;color:${c.text};font-weight:700;">For parents who play</p>
-      <p style="margin:0 0 10px 0;color:${c.text};font-size:14px;line-height:1.55;">${escape(PARENT_LESSONS_COPY)}</p>
-      <p style="margin:0;"><a href="${escape(appendUtm(SAM_LESSON_REQUEST_URL, "parent-lessons", utmCampaign))}" style="${s.link}font-weight:700;">Request a private or group lesson with Sam</a></p>
-    </div>`;
-
-  // Forward card — a plain ask, on purpose. The personalized referral link
-  // ("you both get 50% off") came out 2026-09-03: the referral program isn't
-  // set up, and a perk this email can't honor is a promise, not a nudge.
-  const forwardBlock = `
-    <div style="${s.cardAccent}">
-      <p style="margin:0;color:${c.text};font-size:14px;line-height:1.55;">Know a kid who&rsquo;d love this? Forward this email &mdash; the community grows because parents like you make the introduction.</p>
-    </div>`;
 
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Next Gen this week</title>
+  <title>${escape(weeklyNewsletterSubject(input))}</title>
 </head>
 <body style="margin:0;padding:0;background:${c.bgDark};">
-  ${editorial ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escape(editorial.previewText)}</div>` : ""}
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escape(weeklyNewsletterPreview(input))}</div>
   <div style="${s.wrapper}">
-    <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Next Gen this week</p>
-    <h1 style="${s.heading} margin:0 0 16px 0;">${editorial ? escape(editorial.headline) : `Where to play, ${escape(parentFirst)}.`}</h1>
-    <p style="margin:0 0 20px 0;color:${c.text};line-height:1.55;">${editorial ? escape(editorial.intro) : "Short, useful, worth opening &mdash; where to play this week, what&rsquo;s new at Next Gen, and one thing to work on between sessions."}</p>
+    <p style="margin:0 0 6px 0;font-size:12px;letter-spacing:0.15em;text-transform:uppercase;color:${c.accentLime};font-weight:700;">Next Gen this week${dateLine}</p>
+    <h1 style="${s.heading} margin:0 0 14px 0;">${escape(headline(input))}</h1>
+    ${para(escape(intro(input)))}
+
+    ${leadFirst ? leadHtml : ""}
+
+    ${highlights.length ? `${h2("At a glance")}${list(highlights.map(h => escape(h.text)))}` : ""}
 
     ${whatsappGroupsTopHtml()}
 
-    ${editorial ? leadBlock : ""}
+    ${enrolled.length ? `${h2("For families enrolled now")}${enrolled.join("\n")}` : ""}
 
-    ${programCards(enrollingPrograms)}
+    ${h2("Ways to play")}
+    ${underway ? "" : fallCardHtml(input)}
+    ${bySection("join").map(programCardHtml).join("\n")}
+    ${sessionsHtml}
+    ${laterHtml}
+    ${campHtml}
+    ${pollsHtml}
+    ${crewHtml}
 
-    ${fallBlock}
+    ${next.length ? `${h2("Coming up")}${next.map(programCardHtml).join("\n")}` : ""}
 
-    ${picklParkBlock}
+    ${h2(`Coach tip: ${escape(input.tip.title)}`)}
+    ${para(escape(input.tip.body))}
 
-    ${programCards(otherPrograms)}
+    ${leadFirst ? "" : leadHtml}
 
-    ${sessionBlock}
+    ${h2(LESSONS_HEADING)}
+    ${lessonsHtml}
 
-    ${laterBlock}
-
-    ${campBlock}
-
-    ${pollsBlock}
-
-    ${crewBlock}
-
-    <h2 style="margin:28px 0 10px 0;font-family:Montserrat,Arial,sans-serif;font-size:16px;color:${c.text};">Coach tip: ${escape(tip.title)}</h2>
-    <p style="margin:0;color:${c.text};line-height:1.7;">${escape(tip.body)}</p>
-
-    ${editorial ? "" : leadBlock}
-
-    ${newsBlock}
-
-    ${privateBlock}
-
-    ${forwardBlock}
+    <div style="${s.card}">${para(escape(FORWARD_COPY))}</div>
 
     <div style="${s.footer}">
       <p style="margin:0 0 8px 0;color:${c.muted};font-size:13px;line-height:1.6;">
-        See you on the court &mdash; better than yesterday, together.<br>
+        ${escape(SIGNOFF)}<br>
         <strong style="color:${c.text};">Coach Sam &middot; Next Gen Pickleball Academy</strong>
       </p>
       ${phoneLineHtml()}
       <p style="margin:0;color:${c.muted};font-size:11px;line-height:1.5;">
         You&rsquo;re receiving Next Gen updates because you signed up for the newsletter or connected with us through an inquiry or program.
-        <a href="${unsubscribeUrl}" style="color:${c.muted};text-decoration:underline;">Unsubscribe</a>.
+        <a href="${input.unsubscribeUrl}" style="color:${c.muted};text-decoration:underline;">Unsubscribe</a>.
       </p>
     </div>
   </div>
@@ -508,206 +519,146 @@ export function weeklyNewsletterHtml(input: WeeklyNewsletterInput): string {
 </html>`;
 }
 
+// ---- Plain text -------------------------------------------------------------
+// Markdown-style headings and bullets: readable as-is, and the structure an
+// assistant or agent reading text/plain can parse into sections.
+
+function programLines(p: NewsletterProgram): string[] {
+  return [`### ${p.title}`, p.body, ...(p.url ? [`${p.linkLabel ?? "View details"}: ${p.url}`] : []), ""];
+}
+
+function fallLines(input: WeeklyNewsletterInput): string[] {
+  const fall = input.fallSeason;
+  if (!fall) return [];
+  const underway = fallUnderway(input);
+  return [
+    `### ${fall.title}: ${fall.venueLine}`,
+    `${fall.seasonLabel}. ${fallDescription(fall, underway)}`,
+    ...fallNotes(input).map(n => `- ${n}`),
+    ...fall.groups.map(g => `- ${g.label}: ${fallGroupLine(g)}`),
+    fallJoinCopy(fall, underway),
+    `${underway ? "View remaining dates and weather calls" : "Register for the season"}: ${fall.url}`,
+    "",
+  ];
+}
+
 export function weeklyNewsletterText(input: WeeklyNewsletterInput): string {
-  const editorial = input.editorial;
-  const programs = (input.programs ?? []).filter(p => !p.key || !editorial?.excludedProgramKeys?.includes(p.key));
-  const {
-    parentFirst,
-    fallSeason,
-    picklParkSeason,
-    sessions,
-    laterSessions,
-    openPolls,
-    news,
-    newsletterLeadText,
-    tip,
-    scheduleUrl,
-    crewInterestUrl,
-    unsubscribeUrl,
-    origin,
-    utmCampaign,
-    camps,
-    campUrl,
-    campAgeMin,
-    campPriceFromUsd,
-  } = input;
-  const fallUnderway = fallSeason?.progress?.underway ?? false;
-  const picklParkUnderway = picklParkSeason?.progress?.underway ?? false;
-  const programLines = (program: NewsletterProgram): string[] => [program.title, program.body,
-    ...(program.url ? [`${program.linkLabel ?? "View details"}: ${program.url}`] : []), ""];
+  const programs = visiblePrograms(input);
+  const bySection = (section: NewsletterProgram["section"]) => programs.filter(p => p.section === section);
+  const underway = fallUnderway(input);
+  const pickl = picklParkLine(input);
+  const highlights = newsletterHighlights(input);
   const lines: string[] = [
-    editorial?.headline ?? `Where to play, ${parentFirst}.`,
+    `# ${headline(input)}`,
+    ...(input.issueDate ? [`Week of ${issueDateLabel(input.issueDate)}`] : []),
     "",
-    editorial?.intro ?? `Short, useful, worth opening — where to play this week, what's new at Next Gen, and one thing to work on between sessions.`,
-    "",
-    whatsappGroupsTopText(),
+    intro(input),
     "",
   ];
 
-  if (editorial && newsletterLeadText?.trim()) {
-    lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
+  const lead = input.newsletterLeadText?.trim()
+    ? ["## From Coach Sam this week", "", input.newsletterLeadText.trim(), ""]
+    : [];
+  const leadFirst = lead.length > 0 && !!input.editorial;
+  if (leadFirst) lines.push(...lead);
+
+  if (highlights.length) lines.push("## At a glance", ...highlights.map(h => `- ${h.text}`), "");
+
+  lines.push(whatsappGroupsTopText(), "");
+
+  const enrolled: string[] = [
+    ...(underway ? fallLines(input) : []),
+    ...(pickl && input.picklParkSeason
+      ? [`### Pickl Park Saturdays: ${input.picklParkSeason.venueLine}`, pickl.text, "The Pickl Park handles registration and fees for these sessions.", ""]
+      : []),
+    ...bySection("enrolled").flatMap(programLines),
+  ];
+  if (enrolled.length) lines.push("## For families enrolled now", "", ...enrolled);
+
+  lines.push("## Ways to play", "");
+  if (!underway) lines.push(...fallLines(input));
+  for (const p of bySection("join")) lines.push(...programLines(p));
+
+  if (input.sessions.length) {
+    lines.push("### Open drop-in sessions this week", "One hour, drop-in. All times Eastern.");
+    for (const g of input.sessions) {
+      lines.push(`${g.dateLong}, ${g.location}`);
+      for (const slot of g.slots) lines.push(`- ${slot.label}`);
+      if (g.weatherNote) lines.push(`- Forecast: ${g.weatherNote}`);
+    }
+    lines.push(`Book a spot on the schedule: ${input.scheduleUrl}`, "");
+  } else {
+    lines.push(`No open drop-in sessions this week. New dates post on the schedule: ${input.scheduleUrl}`, "");
   }
 
-  for (const program of programs.filter(program => program.enrolling)) lines.push(...programLines(program));
-
-  if (fallSeason) {
+  if (input.laterSessions.length) {
     lines.push(
-      `Fall season — ${fallUnderway ? "underway" : "registration is open"}:`,
-      `${fallSeason.title} — ${fallSeason.seasonLabel}`,
-      fallUnderway ? `The Sunday season is underway at ${fallSeason.venueLine}. Your player builds through coached practice and games with rotating partners.` : `${fallSeason.weeks} Sundays at ${fallSeason.venueLine}. Coached practice first, then a rotating-partner round robin — so your kid plays with everyone in their group across the season, not just the friend they came with. One registration covers all ${fallSeason.weeks} Sundays.`,
-      ...(fallSeason.progress?.scheduleNotes ?? []),
-      ...(fallSeason.progress?.makeupNotes ?? []),
-      "",
-    );
-    for (const g of fallSeason.groups) {
-      lines.push(`  ${g.label} — ${fallGroupLine(g)}`);
-    }
-    lines.push(
-      "",
-      fallUnderway ? "Want your player to join the remaining sessions or the sub list? Reply to this email and Coach Sam will help you check availability and registration options." : `$${fallSeason.priceUsd} per player for the full season · first come, first serve. Can't make all ${fallSeason.weeks}? Reply and we'll put you on the sub list.`,
-      `${fallUnderway ? "View remaining dates and weather calls" : "Register for the season"}: ${fallSeason.url}`,
+      "### Further out on the calendar",
+      "These dates are already on the calendar. Registration for each one opens 30 days out.",
+      ...input.laterSessions.map(g => `- ${g.dateLong}, ${g.location}`),
+      `See the full schedule: ${input.scheduleUrl}`,
       "",
     );
   }
 
-  if (picklParkSeason) {
+  if (input.camps.length) {
     lines.push(
-      "Pickl Park Saturdays in Frederick — Drill and Play:",
-      `${picklParkSeason.title} — ${picklParkSeason.seasonLabel}`,
-      `${picklParkUnderway ? "The Saturday season is underway" : `${picklParkSeason.weeks} Saturdays indoors`} at ${picklParkSeason.venueLine} — ${picklParkSeason.sessionFormat}. Coached by Next Gen; The Pickl Park handles registration.`,
-      ...(picklParkSeason.progress ? [picklParkSeason.progress.scheduleNote] : []),
+      "### Camp",
+      `Next Gen Pickleball Camp: ages ${input.campAgeMin}+, half-day mornings, small groups. Come for a single morning or the full week.`,
+      ...input.camps.map(w => `- ${w.weekLabel}, ${w.publicArea}`),
+      `From $${input.campPriceFromUsd}/day · $150 full week.`,
+      `See camp dates and book: ${input.campUrl}`,
       "",
     );
-    for (const g of picklParkSeason.groups) {
-      lines.push(`  ${g.label} — ${picklParkGroupLine(g)}`);
-    }
-    lines.push("", picklParkUnderway ? "Sessions are indoors. Ask The Pickl Park about joining the remaining dates, current fees and availability." : picklParkSeason.indoorNote);
-    if (picklParkSeason.priceUsd) {
+  }
+
+  if (input.openPolls.length) {
+    lines.push("### Forming groups now", "Vote in the slots that work and Sam locks the group in when it hits the headcount.");
+    for (const p of input.openPolls) {
       lines.push(
-        `$${picklParkSeason.priceUsd} per player for the full season.`,
+        p.title,
+        `- ${[p.day, pollTimeRange(p), p.location, p.level].filter(Boolean).join(" · ")}`,
+        `- ${pollProgressLabel(p)}`,
+        `- Vote: ${appendUtm(`${input.origin}/poll/${encodeURIComponent(p.slug)}`, "poll", input.utmCampaign)}`,
       );
     }
-    lines.push(`View Saturday sessions: ${picklParkSeason.url}`, "");
-  }
-
-  for (const program of programs.filter(program => !program.enrolling)) lines.push(...programLines(program));
-
-  if (sessions.length > 0) {
-    lines.push(
-      "This week's sessions (all times Eastern):",
-      "Every signup fills the meter — full courts make the best games. Grab a slot and move it.",
-      "",
-    );
-    for (const g of sessions) {
-      lines.push(`${g.dateLong} — ${g.location}`);
-      if (g.weatherNote) lines.push(`  Forecast: ${g.weatherNote}`);
-      for (const slot of g.slots) {
-        lines.push(
-          `  ${slot.label} — ${fillBar(slot.registered, slot.goal)} ${fillLabel(slot.registered, slot.goal)}`,
-        );
-      }
-      lines.push("");
-    }
-    lines.push(`Book a spot: ${scheduleUrl}`, "");
-  } else {
-    lines.push(
-      `No open sessions this week — but new ones post regularly.`,
-      `Check the schedule: ${scheduleUrl}`,
-      "",
-    );
-  }
-
-  if (laterSessions.length > 0) {
-    lines.push(
-      "Further out on the calendar:",
-      "Planning ahead? These dates are already on the calendar. Registration for each one opens 30 days out.",
-      "",
-    );
-    for (const g of laterSessions) {
-      lines.push(`  ${g.dateLong} — ${g.location}`);
-    }
-    lines.push("", `See the full schedule: ${scheduleUrl}`, "");
-  }
-
-  if (camps.length > 0) {
-    lines.push(
-      "Summer camp:",
-      `Next Gen Summer Pickleball Camp — ages ${campAgeMin}+, half-day mornings, small groups. Single morning or full week. From $${campPriceFromUsd}/day · $150 full week.`,
-      "",
-    );
-    for (const w of camps) {
-      lines.push(`  ${w.weekLabel} — ${w.publicArea}`);
-    }
-    lines.push("", `See camp dates & book: ${campUrl}`, "");
-  }
-
-  if (openPolls.length > 0) {
-    lines.push("Forming groups now:");
-    lines.push("Vote in the slots that work and Sam locks the group in when it hits the headcount.");
     lines.push("");
-    for (const p of openPolls) {
-      lines.push(`- ${p.title}`);
-      const meta = [p.day, pollTimeRange(p), p.location, p.level]
-        .filter(Boolean)
-        .join(" · ");
-      if (meta) lines.push(`  ${meta}`);
-      lines.push(`  ${pollProgressLabel(p)}`);
-      lines.push(`  Vote: ${appendUtm(`${origin}/poll/${encodeURIComponent(p.slug)}`, "poll", utmCampaign)}`);
-      lines.push("");
-    }
   }
 
   lines.push(
-    openPolls.length > 0
-      ? `None of those fit? Tell us your kid's level and the days that work — Sam looks for 3 more kids who match.`
-      : `Want a regular group? Tell us your kid's level and the days that work — Sam looks for 3 more kids who match.`,
-    `Find your kid's group: ${crewInterestUrl}`,
-    "",
-    `Coach tip: ${tip.title}`,
-    tip.body,
+    `### ${input.openPolls.length ? "None of these fit?" : "Want a regular group?"}`,
+    "Tell us your player's level and the days that work. Sam looks for 3 more kids who match and texts the WhatsApp link when the slot has takers.",
+    `Find your player's group: ${input.crewInterestUrl}`,
     "",
   );
 
-  if (!editorial && newsletterLeadText && newsletterLeadText.trim()) {
-    lines.push("From Coach Sam this week", "", newsletterLeadText.trim(), "");
-  }
-
-  if (news.length > 0) {
-    lines.push("In the news: youth pickleball", "A few stories Sam thought you'd want to see.", "");
-    for (const n of news) {
-      lines.push(`- ${n.title} (${n.source})`);
-      if (n.summary) lines.push(`  ${n.summary}`);
-      lines.push(`  ${n.url}`);
-      lines.push("");
-    }
-  }
+  const next = bySection("next");
+  if (next.length) lines.push("## Coming up", "", ...next.flatMap(programLines));
 
   lines.push(
-    LESSONS_HEADING,
-    "For your player",
+    `## Coach tip: ${input.tip.title}`,
+    input.tip.body,
+    "",
+    ...(leadFirst ? [] : lead),
+    `## ${LESSONS_HEADING}`,
+    "### For your player",
     YOUTH_LESSONS_COPY,
-    `Request a youth lesson: ${appendUtm(`${origin}/lessons/book`, "youth-lessons", utmCampaign)}`,
+    `Request a youth lesson: ${appendUtm(`${input.origin}/lessons/book`, "youth-lessons", input.utmCampaign)}`,
     "Text Coach Sam: sms:+13013254731",
     "",
-    "For parents who play",
+    "### For parents who play",
     PARENT_LESSONS_COPY,
-    `Request a private or group lesson with Sam: ${appendUtm(SAM_LESSON_REQUEST_URL, "parent-lessons", utmCampaign)}`,
+    `Request a private or group lesson with Sam: ${appendUtm(SAM_LESSON_REQUEST_URL, "parent-lessons", input.utmCampaign)}`,
     "",
-  );
-
-  lines.push(
-    `Know a kid who'd love this? Forward this email — the community grows because parents like you make the introduction.`,
+    FORWARD_COPY,
     "",
-  );
-
-  lines.push(
-    `See you on the court — better than yesterday, together.`,
-    `Coach Sam · Next Gen Pickleball Academy`,
+    SIGNOFF,
+    "Coach Sam · Next Gen Pickleball Academy",
     "",
     phoneLineText(),
     "",
-    `You're receiving Next Gen updates because you signed up for the newsletter or connected with us through an inquiry or program.`,
-    `Unsubscribe: ${unsubscribeUrl}`,
+    "You're receiving Next Gen updates because you signed up for the newsletter or connected with us through an inquiry or program.",
+    `Unsubscribe: ${input.unsubscribeUrl}`,
   );
 
   return lines.join("\n");
