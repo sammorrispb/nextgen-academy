@@ -186,6 +186,7 @@ const ALLOWLIST = new Set([
 const CSRF_COMPARE_FILES = new Set([
   "src/app/api/admin/mvf-roster-sync/route.ts",
   "src/app/api/admin/mvf-registration/route.ts",
+  "src/app/api/admin/mvf-capacity-export/route.ts",
 ]);
 const CSRF_COMPARE_LINE = 'if (req.headers.get("origin") !== siteOrigin()) return json(403, { ok: false, error: "bad_origin" });';
 
