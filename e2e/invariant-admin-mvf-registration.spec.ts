@@ -212,6 +212,41 @@ for (const key of ["NOTION_API_KEY", "NOTION_WAIVERS_DB_ID", "NOTION_MVF_TOURNAM
     expect(stub.calls).toHaveLength(0); expect(accountReads).toBe(0); expect(fakeStripe.all()).toHaveLength(0);
   });
 }
+for (const [label, key] of [
+  ["restricted live", "rk_live_synthetic_only"],
+  ["standard live with boundary whitespace", " \tsk_live_synthetic_only\n"],
+  ["restricted live with boundary whitespace", "\nrk_live_synthetic_only \t"],
+] as const) {
+  test(`configured guard accepts ${label} Stripe key and verifies the account`, async () => {
+    process.env.STRIPE_SECRET_KEY = key;
+    expect((await call(input())).response.status).toBe(200);
+    expect(accountReads).toBe(1); expect(fakeStripe.all()).toHaveLength(0); expect(mutationCalls()).toHaveLength(0);
+  });
+}
+for (const key of ["NOTION_API_KEY", "NGA_SYNC_SECRET", "COACH_SIGNING_SECRET"]) {
+  test(`configured guard allows boundary whitespace on synthetic ${key}`, async () => {
+    process.env[key] = ` \t${process.env[key]}\n`;
+    adminCookie = createAdminSessionValue("admin@example.com");
+    expect((await call(input())).response.status).toBe(200);
+    expect(accountReads).toBe(1); expect(fakeStripe.all()).toHaveLength(0); expect(mutationCalls()).toHaveLength(0);
+  });
+}
+for (const key of ["NOTION_API_KEY", "NOTION_WAIVERS_DB_ID", "NOTION_MVF_TOURNAMENT_REGS_DB_ID",
+  "NGA_SYNC_SECRET", "STRIPE_SECRET_KEY", "COACH_SIGNING_SECRET"]) {
+  test(`configured guard rejects whitespace-only ${key} before providers`, async () => {
+    process.env[key] = " \t\n";
+    adminCookie = createAdminSessionValue("admin@example.com");
+    expect((await call(input())).response.status).toBe(503);
+    expect(stub.calls).toHaveLength(0); expect(accountReads).toBe(0); expect(fakeStripe.all()).toHaveLength(0);
+  });
+}
+for (const key of ["sk_test_synthetic_only", "rk_test_synthetic_only"]) {
+  test(`configured guard rejects ${key.split("_").slice(0, 2).join("_")} credentials`, async () => {
+    process.env.STRIPE_SECRET_KEY = key;
+    expect((await call(input())).response.status).toBe(503);
+    expect(stub.calls).toHaveLength(0); expect(accountReads).toBe(0); expect(fakeStripe.all()).toHaveLength(0);
+  });
+}
 for (const mode of ["preview", "development", "unset", "test key"]) {
   test(`unsafe environment ${mode} never touches production`, async () => {
     if (mode === "unset") delete process.env.VERCEL_ENV;

@@ -3,6 +3,13 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+## 2026-10-23 — MVF admin configuration compatibility
+
+- **Situation:** After Sam authorized merging/deploying #433 and completing the real registration, its live preview returned `not_configured` before any invoice/seat write. Required variable names exist and Vercel exposes system variables; no credential values were read, so the specific failing variable is not established. The new guard rejects restricted live Stripe keys and any surrounding whitespace even when the native clients may authenticate successfully.
+- **Decision:** Permit both documented live secret/restricted prefixes (`sk_live_` / `rk_live_`) when inspecting the trimmed key format, and remove the blanket raw-versus-trimmed equality check. Keep required nonblank variables, production-only execution, fixed roster destination and exact Stripe account verification. Credentials are not normalized or changed; native clients still authenticate the original bytes before writes. Stripe reference: https://docs.stripe.com/keys/restricted-api-keys.
+- **Risk:** Guard compatibility is not proof that a malformed credential or restricted key has provider access. Provider/auth failures still refuse the preview; retain truthful DOB, strict waiver, capacity/invoice binding, exact amount and protected roster checks. No production environment values, credentials or policy permissions are changed by this fix.
+- **Change and validation:** Only `admin-mvf-registration.ts`, its invariant spec and this log. Fourteen new tests: six positive compatibility cases fail against the original guard, then all 89 admin registration invariants pass; whitespace-only values and both test-key formats remain rejected. Independent hostile review found no actionable regression. Full suite/lint/UTC build are recorded in the PR. The real registration still requires successful live preview/apply and destination readbacks.
+
 ## 2026-10-23 — MVF admin registration with an explicit age exception
 
 - **Situation:** An organizer-approved older junior cannot use the public 14U checkout without falsifying DOB. A signed waiver alone does not create the NGA invoice/registration or protected Link & Dink tournament entry. Sam approved an admin registration fix and PR, preserving the real DOB and non-resident $60 fee.

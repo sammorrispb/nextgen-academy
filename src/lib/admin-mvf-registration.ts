@@ -66,11 +66,12 @@ function configured() {
   const keys = ["STRIPE_SECRET_KEY", "NOTION_API_KEY", "NOTION_WAIVERS_DB_ID", "NOTION_MVF_TOURNAMENT_REGS_DB_ID",
     "NGA_SYNC_SECRET", "COACH_SIGNING_SECRET"] as const;
   if (process.env.VERCEL_ENV !== "production" || keys.some(key => !process.env[key]?.trim()) ||
-    !process.env.STRIPE_SECRET_KEY?.startsWith("sk_live_") ||
-    keys.some(key => process.env[key] !== process.env[key]?.trim()) ||
+    !/^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY?.trim() ?? "") ||
     (process.env.LINKDINK_BASE_URL && process.env.LINKDINK_BASE_URL !== "https://www.linkanddink.com")) {
     throw new AdminMvfRegistrationError("not_configured", 503);
   }
+  // Check presence and live mode here; leave credential bytes untouched so
+  // native clients authenticate them and the exact-account check still gates writes.
 }
 
 function validate(raw: unknown): Validated {
