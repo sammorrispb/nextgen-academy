@@ -19,14 +19,14 @@ export async function POST(req: NextRequest) {
   const body = input as Record<string, unknown>;
   const keys = Object.keys(body);
   if (typeof body.invoiceId !== "string" || !/^in_[A-Za-z0-9]{1,100}$/.test(body.invoiceId) ||
-    (body.action !== "preview" && body.action !== "replay") ||
+    typeof body.action !== "string" || !["preview", "replay", "payment_preview", "payment_sync"].includes(body.action) ||
     keys.some((key) => !["invoiceId", "action", "previewToken"].includes(key)) ||
-    (body.action === "preview" && "previewToken" in body) ||
-    (body.action === "replay" && (typeof body.previewToken !== "string" || body.previewToken.length > 100))) {
+    (["preview", "payment_preview"].includes(String(body.action)) && "previewToken" in body) ||
+    (["replay", "payment_sync"].includes(String(body.action)) && (typeof body.previewToken !== "string" || body.previewToken.length > 100))) {
     return json(400, { ok: false, error: "bad_input" });
   }
   try {
-    return json(200, await resendMvfRoster({ invoiceId: body.invoiceId, action: body.action,
+    return json(200, await resendMvfRoster({ invoiceId: body.invoiceId, action: body.action as "preview" | "replay" | "payment_preview" | "payment_sync",
       previewToken: body.previewToken as string | undefined }, req.cookies.get(ADMIN_SESSION_COOKIE)!.value));
   } catch (error) {
     // Never return/log upstream bodies or exception messages: Notion and L&D

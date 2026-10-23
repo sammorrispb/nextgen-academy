@@ -5,6 +5,8 @@ import { FetchStub } from "./fixtures/fetch-stub";
 import { signedHeader, TEST_WEBHOOK_SECRET } from "./fixtures/stripe-sessions";
 import { markMvfSeatPaid } from "../src/lib/mvf-capacity";
 import { POST as webhook } from "../src/app/api/stripe/webhook/route";
+import { DenyProviderNetwork } from "./fixtures/deny-provider-network";
+import { installMvfPaymentProvider, mvfPaymentAcknowledgement, mvfPaymentNotionPage } from "./fixtures/mvf-payment-provider";
 
 // A historical hold acknowledges only the paid ledger receipt. It must not
 // repair a roster, announce an old payment or schedule background work.
@@ -20,8 +22,28 @@ const paidReceipt = {
 };
 let originalAfter: typeof nextServer.after;
 let afterCalls: number;
+const network = new DenyProviderNetwork();
+let restoreStripe: (() => void) | undefined;
+const invoiceId = "in_QAHistoricalHold";
+const normalPageId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+const metadata = {
+  kind: "mvf-junior-tournament", division: "10u", division_label: "10U",
+  event_date: "2026-10-24", parent_name: "Synthetic Parent", payment_owner: "nga_site",
+  resident: "true", amount_usd: "50.00", nga_capacity_submission_id: "00000000-0000-4000-8000-000000000001",
+  parent_email: "synthetic@example.invalid", child_first_name: "Synthetic",
+  child_last_name: "Fixture", child_dob: "2017-05-01",
+};
+function normalPaymentServices() {
+  restoreStripe = installMvfPaymentProvider(() => ({ invoiceId, metadata, amount: 5000 }));
+  stub.onDynamic("capacity.example.invalid/play/api/internal/nga-roster-payment", call =>
+    mvfPaymentAcknowledgement(call, invoiceId, "mvf-junior-tournament-10u-2026-10-24"));
+}
+function normalPage(paid: boolean) {
+  return mvfPaymentNotionPage({ id: normalPageId, databaseId: "qa_historical_hold", invoiceId, metadata, paid });
+}
 
 test.beforeEach(() => {
+  network.install();
   for (const key of KEYS) delete process.env[key];
   Object.assign(process.env, {
     STRIPE_SECRET_KEY: "sk_test_offline_historical_hold",
@@ -42,7 +64,10 @@ test.beforeEach(() => {
 });
 test.afterEach(() => {
   nextServer.after = originalAfter;
+  restoreStripe?.(); restoreStripe = undefined;
   stub.uninstall();
+  network.uninstall();
+  expect(network.attempts).toEqual([]);
 });
 test.afterAll(() => {
   for (const key of KEYS) {
@@ -57,12 +82,7 @@ async function deliver(type: typeof aliases[number]) {
     data: { object: {
       id: "in_QAHistoricalHold", object: "invoice", amount_paid: 5000,
       customer_email: "synthetic@example.invalid",
-      metadata: {
-        kind: "mvf-junior-tournament", division: "10u", division_label: "10U",
-        event_date: "2026-10-24", parent_name: "Synthetic Parent",
-        parent_email: "synthetic@example.invalid", child_first_name: "Synthetic",
-        child_last_name: "Fixture", child_dob: "2017-05-01",
-      },
+      metadata,
     } },
   });
   return webhook(new NextRequest("http://localhost/api/stripe/webhook", {
@@ -144,27 +164,30 @@ test("the capacity adapter exposes the explicit hold and preserves acknowledged 
 });
 
 test("an explicit false hold retains normal already-paid processing", async () => {
+  normalPaymentServices();
   stub.on(capacity, { ...paidReceipt, admin_notified: true, parent_notified: true, notification_retry_allowed: true, legacy_callback_deferred: false });
-  stub.on("api.notion.com", { results: [{ id: "qa-normal-row", properties: { Paid: { checkbox: true } } }] });
+  stub.on("api.notion.com", { results: [normalPage(true)], has_more: false });
   const response = await deliver("invoice.paid");
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ received: true, mvfTournament: true });
-  expect(stub.callsTo("api.notion.com")).toHaveLength(1);
+  expect(stub.callsTo("api.notion.com")).toHaveLength(2);
   expect(stub.callsTo("api.resend.com")).toHaveLength(0);
   expect(stub.callsTo("brain.example.invalid")).toHaveLength(0);
   expect(afterCalls).toBe(0);
 });
 
 test("normal newly-marked payment still schedules its existing background work", async () => {
+  normalPaymentServices();
   stub.on(capacity, { ...paidReceipt, admin_notified: true, parent_notified: true, notification_retry_allowed: true, legacy_callback_deferred: false });
-  stub.onDynamic("api.notion.com", call => ({ status: 200, json: call.method === "PATCH"
-    ? { id: "qa-normal-row" }
-    : { results: [{ id: "qa-normal-row", properties: { Paid: { checkbox: false } } }] },
-  }));
+  let paid = false;
+  stub.onDynamic("api.notion.com", call => {
+    if (call.method === "PATCH") { paid = true; return { status: 200, json: { id: normalPageId } }; }
+    return { status: 200, json: { results: [normalPage(paid)], has_more: false } };
+  });
   const response = await deliver("invoice.payment_succeeded");
   expect(response.status).toBe(200);
   expect(await response.json()).toEqual({ received: true, mvfTournament: true });
-  expect(stub.callsTo("api.notion.com").map(call => call.method)).toEqual(["POST", "PATCH"]);
+  expect(stub.callsTo("api.notion.com").map(call => call.method)).toEqual(["POST", "PATCH", "POST"]);
   expect(afterCalls).toBe(1); // Positive control for the deferred tests' after() spy.
   expect(stub.callsTo("api.resend.com")).toHaveLength(0);
   expect(stub.callsTo("brain.example.invalid")).toHaveLength(0);
