@@ -56,9 +56,10 @@ export function newsletterPrograms(today: string, origin: string, campaign: stri
     url: link("/monday-girls", "monday-girls"), linkLabel: "View the girls group",
   });
   // Sam requested these interest checks on 2026-09-28. They have no paid
-  // registration or confirmed winter calendar. Review before the target
-  // November opening rather than mailing an unconfirmed launch forever.
-  if (today >= "2026-09-28" && today <= "2026-11-08") programs.push({
+  // registration or confirmed winter calendar. Retired on 2026-10-18: Sam ended
+  // the MVF and Pickl Park partnerships after Fall, so neither winter league
+  // this card names will run.
+  if (today >= "2026-09-28" && today <= "2026-10-17") programs.push({
     key: "winter-interest",
     title: "Winter league interest — Montgomery Village and Frederick",
     body: "Planning ahead for your player? We're working toward indoor winter leagues at Lake Marion Community Center through MVF and The Pickl Park in Frederick. The proposed Green Ball and Yellow Ball format pairs coached practice with games where partners rotate. Dates, times and host agreements are still being finalized; registration is not open. Reply with ‘winter’ and your preferred location to express interest.",
