@@ -4,7 +4,7 @@ import { isMvfParentContactRequest, mvfParentContactsConfigured, readMvfParentCo
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const MAX_BODY_BYTES = 8192;
+const MAX_BODY_BYTES = 16384;
 
 function json(status: number, body: unknown) {
   return NextResponse.json(body, { status, headers: {
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   if (status !== 200) return json(status, { error: status === 413 ? "body_too_large" : "bad_input" });
   if (!isMvfParentContactRequest(input)) return json(400, { error: "bad_input" });
   try {
-    return json(200, await readMvfParentContacts(input.event_key, input.sync_keys));
+    return json(200, await readMvfParentContacts(input.event_key, input.sync_keys, input.registration_refs));
   } catch {
     return json(502, { error: "contact_lookup_failed" });
   }

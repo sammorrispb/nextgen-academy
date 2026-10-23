@@ -9,6 +9,18 @@ import { EMAIL_RE, NOTION_API, NOTION_VERSION, readPlainText } from "@/lib/notio
 const MAX_PAGES = 20;
 const LOOKUP_TIMEOUT_MS = 8000;
 const SYNC_KEY_RE = /^nga:[A-Za-z0-9_-]{22}$/;
+const REGISTRATION_REF_RE = /^nga-notion-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+export interface MvfParentContactReference {
+  sync_key: string;
+  registration_ref: string;
+}
+
+interface MvfParentContactRequest {
+  event_key: string;
+  sync_keys: string[];
+  registration_refs?: MvfParentContactReference[];
+}
 
 export interface MvfParentContacts {
   contacts: { sync_key: string; email: string }[];
@@ -38,11 +50,29 @@ function divisionFor(eventKey: string): "10u" | "14u" | null {
   return null;
 }
 
-export function isMvfParentContactRequest(input: unknown): input is { event_key: string; sync_keys: string[] } {
-  if (!record(input) || Object.keys(input).length !== 2 || typeof input.event_key !== "string" ||
+function registrationPageId(reference: string): string | null {
+  return REGISTRATION_REF_RE.exec(reference)?.[1].replaceAll("-", "").toLowerCase() ?? null;
+}
+
+export function isMvfParentContactRequest(input: unknown): input is MvfParentContactRequest {
+  if (!record(input) || Object.keys(input).some((key) => !["event_key", "sync_keys", "registration_refs"].includes(key)) ||
+    typeof input.event_key !== "string" ||
     !divisionFor(input.event_key) || !Array.isArray(input.sync_keys) || input.sync_keys.length > 100) return false;
-  return input.sync_keys.every((key) => typeof key === "string" && SYNC_KEY_RE.test(key)) &&
-    new Set(input.sync_keys).size === input.sync_keys.length;
+  const keys = new Set(input.sync_keys);
+  if (!input.sync_keys.every((key) => typeof key === "string" && SYNC_KEY_RE.test(key)) || keys.size !== input.sync_keys.length) return false;
+  if (!Object.hasOwn(input, "registration_refs")) return true;
+  if (!Array.isArray(input.registration_refs) || input.registration_refs.length > 100) return false;
+  const seenKeys = new Set<string>();
+  const seenPages = new Set<string>();
+  for (const reference of input.registration_refs) {
+    if (!record(reference) || Object.keys(reference).length !== 2 || typeof reference.sync_key !== "string" ||
+      !keys.has(reference.sync_key) || typeof reference.registration_ref !== "string") return false;
+    const pageId = registrationPageId(reference.registration_ref);
+    if (!pageId || seenKeys.has(reference.sync_key) || seenPages.has(pageId)) return false;
+    seenKeys.add(reference.sync_key);
+    seenPages.add(pageId);
+  }
+  return true;
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -67,23 +97,39 @@ function parentContact(page: unknown, dbId: string, division: "10u" | "14u", sec
   if (email.length > 254 || !EMAIL_RE.test(email)) return null;
   const body = buildMvfRosterSyncBody({ division, parentEmail: email,
     childFirstName: readPlainText(p["Child First Name"]), childLastName: readPlainText(p["Child Last Name"]) });
-  if (!body?.first_name) return null;
   // Exact counterpart of L&D's ngaSyncKey. Clean names first, as the original
   // sync did, then use its email/first/last normalization and domain separation.
-  const material = [body.email, body.first_name, body.last_name].map((part) => part.trim().toLowerCase()).join("|");
-  const digest = createHmac("sha256", secret).update(`nga-roster-sync:${material}`).digest("base64url");
-  return { sync_key: `nga:${digest.slice(0, 22)}`, email };
+  // A stable private page reference needs no child's spelling to deliver to
+  // that registration's parent; an unusable name still cannot match a legacy key.
+  let syncKey: string | null = null;
+  if (body?.first_name) {
+    const material = [body.email, body.first_name, body.last_name].map((part) => part.trim().toLowerCase()).join("|");
+    const digest = createHmac("sha256", secret).update(`nga-roster-sync:${material}`).digest("base64url");
+    syncKey = `nga:${digest.slice(0, 22)}`;
+  }
+  return { page_id: page.id.replaceAll("-", "").toLowerCase(), sync_key: syncKey, email };
 }
 
-export async function readMvfParentContacts(eventKey: string, syncKeys: string[]): Promise<MvfParentContacts> {
+export async function readMvfParentContacts(
+  eventKey: string,
+  syncKeys: string[],
+  registrationRefs: MvfParentContactReference[] = [],
+): Promise<MvfParentContacts> {
   const config = configuration();
   const division = divisionFor(eventKey);
-  if (!config || !division || !isMvfParentContactRequest({ event_key: eventKey, sync_keys: syncKeys })) {
+  if (!config || !division || !isMvfParentContactRequest({ event_key: eventKey, sync_keys: syncKeys, registration_refs: registrationRefs })) {
     throw new MvfParentContactLookupError();
   }
   if (syncKeys.length === 0) return { contacts: [], missing_sync_keys: [] };
   const requested = new Set(syncKeys);
+  const referencedKeys = new Set(registrationRefs.map((reference) => reference.sync_key));
+  const keyByPage = new Map(registrationRefs.map((reference) => [registrationPageId(reference.registration_ref)!, reference.sync_key]));
   const contacts = new Map<string, string>();
+  const addContact = (key: string, email: string) => {
+    const existing = contacts.get(key);
+    if (existing && existing !== email) throw new MvfParentContactLookupError();
+    contacts.set(key, email);
+  };
   const cursors = new Set<string>();
   const signal = AbortSignal.timeout(LOOKUP_TIMEOUT_MS);
   let cursor: string | undefined;
@@ -104,10 +150,14 @@ export async function readMvfParentContacts(eventKey: string, syncKeys: string[]
         typeof data.has_more !== "boolean") throw new MvfParentContactLookupError();
       for (const page of data.results) {
         const contact = parentContact(page, config.dbId, division, config.syncSecret);
-        if (!contact || !requested.has(contact.sync_key)) continue;
-        const existing = contacts.get(contact.sync_key);
-        if (existing && existing !== contact.email) throw new MvfParentContactLookupError();
-        contacts.set(contact.sync_key, contact.email);
+        if (!contact) continue;
+        const referenceKey = keyByPage.get(contact.page_id);
+        if (referenceKey) addContact(referenceKey, contact.email);
+        // Explicit provenance is authoritative for this key. If its row is
+        // missing/ineligible, never fall back to a coincident legacy match.
+        if (contact.sync_key && requested.has(contact.sync_key) && !referencedKeys.has(contact.sync_key)) {
+          addContact(contact.sync_key, contact.email);
+        }
       }
       if (!data.has_more) {
         return { contacts: syncKeys.flatMap((sync_key) => {

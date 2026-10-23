@@ -13,6 +13,10 @@ const KEY = "nga:WrMPV86DAj8AR_fm-Cjk-9";
 const SIBLING = "nga:_FF9B_ehpSq3KH0QDuQY4n";
 const SECOND = "nga:sLLqwHyrk55jZinfHuGVRI";
 const UNKNOWN = "nga:aaaaaaaaaaaaaaaaaaaaaa";
+const PAGE_ID = "11111111-2222-3333-4444-555555555555";
+const OTHER_PAGE_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+const REF = `nga-notion-${PAGE_ID}`;
+const OTHER_REF = `nga-notion-${OTHER_PAGE_ID}`;
 const stub = new FetchStub();
 let rows: ReturnType<typeof registration>[];
 let captured: RequestInit[];
@@ -132,6 +136,107 @@ test("the maximum 100 requested keys is valid and never widens to all source con
   expect((await call({ event_key: EVENT, sync_keys: keys })).json).toEqual({ contacts: [], missing_sync_keys: keys });
   expect(stub.calls).toHaveLength(1);
 });
+test("a stable registration reference resolves a renamed child under the original roster key", async () => {
+  rows[0].id = PAGE_ID;
+  rows[0].properties["Child First Name"].rich_text[0].plain_text = "Corrected";
+  rows[0].properties["Child Last Name"].rich_text[0].plain_text = "Spelling";
+  const result = await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] });
+  expect(result.response.status).toBe(200);
+  expect(result.json).toEqual({ contacts: [{ sync_key: KEY, email: "parent@example.com" }], missing_sync_keys: [] });
+  expect(JSON.stringify(result.json)).not.toMatch(/Corrected|Spelling|nga-notion|11111111|child|page_id/);
+});
+test("the same renamed child remains missing without the explicit stable reference", async () => {
+  rows[0].id = PAGE_ID;
+  rows[0].properties["Child First Name"].rich_text[0].plain_text = "Corrected";
+  expect((await call()).json).toEqual({ contacts: [], missing_sync_keys: [KEY] });
+});
+test("a stable source identity does not require a printable child name for parent delivery", async () => {
+  rows[0].id = PAGE_ID;
+  rows[0].properties["Child First Name"].rich_text[0].plain_text = "!!!";
+  expect((await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] })).json)
+    .toEqual({ contacts: [{ sync_key: KEY, email: "parent@example.com" }], missing_sync_keys: [] });
+});
+test("reference UUID/prefix case normalizes without changing the response contract", async () => {
+  rows[0].id = OTHER_PAGE_ID.toUpperCase();
+  expect((await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: OTHER_REF.toUpperCase() }] })).json)
+    .toEqual({ contacts: [{ sync_key: KEY, email: "parent@example.com" }], missing_sync_keys: [] });
+});
+test("mixed stable references and legacy keys preserve caller order and family separation", async () => {
+  rows[0].id = PAGE_ID;
+  rows[0].properties["Child First Name"].rich_text[0].plain_text = "Corrected";
+  rows.push(registration("Second", "second@example.com"));
+  expect((await call({ event_key: EVENT, sync_keys: [SECOND, KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] })).json)
+    .toEqual({ contacts: [{ sync_key: SECOND, email: "second@example.com" }, { sync_key: KEY, email: "parent@example.com" }], missing_sync_keys: [] });
+});
+test("an explicit missing reference never falls back to a matching legacy key", async () => {
+  rows[0].id = OTHER_PAGE_ID;
+  expect((await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] })).json)
+    .toEqual({ contacts: [], missing_sync_keys: [KEY] });
+});
+for (const fault of ["wrong division", "Cancelled", "Refunded", "archived", "trashed", "invalid email", "missing email"]) {
+  test(`referenced ${fault} registration cannot fall back to a matching legacy registration`, async () => {
+    const explicit = registration("Corrected");
+    explicit.id = PAGE_ID;
+    if (fault === "wrong division") explicit.properties.Division.select.name = "14U";
+    if (fault === "Cancelled" || fault === "Refunded") explicit.properties.Status.select.name = fault;
+    if (fault === "archived") explicit.archived = true;
+    if (fault === "trashed") explicit.in_trash = true;
+    if (fault === "invalid email") explicit.properties["Parent Email"].email = "bad email";
+    if (fault === "missing email") explicit.properties["Parent Email"].email = "";
+    rows.push(explicit);
+    expect((await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] })).json)
+      .toEqual({ contacts: [], missing_sync_keys: [KEY] });
+  });
+}
+test("a referenced source row from another database fails closed without any parent response", async () => {
+  rows[0].id = PAGE_ID;
+  rows[0].parent.database_id = "aaaaaaaa222233334444555555555555";
+  const result = await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] });
+  expect(result.response.status).toBe(502);
+  expect(result.json).toEqual({ error: "contact_lookup_failed" });
+});
+test("a conflicting repeated page identity cannot silently choose one family's email", async () => {
+  rows[0].id = PAGE_ID;
+  const conflict = registration("Corrected", "another@example.com");
+  conflict.id = PAGE_ID;
+  rows.push(conflict);
+  const result = await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] });
+  expect(result.response.status).toBe(502);
+  expect(result.json).toEqual({ error: "contact_lookup_failed" });
+});
+for (const [index, registration_refs] of [null, "all", [{}], [{ sync_key: KEY }], [{ registration_ref: REF }],
+  [{ sync_key: UNKNOWN, registration_ref: REF }], [{ sync_key: KEY, registration_ref: PAGE_ID }],
+  [{ sync_key: KEY, registration_ref: "nga-notion-not-a-uuid" }],
+  [{ sync_key: KEY, registration_ref: REF, parent_email: "evil@example.com" }],
+  [{ sync_key: KEY, registration_ref: REF }, { sync_key: KEY, registration_ref: OTHER_REF }],
+  [{ sync_key: KEY, registration_ref: REF }, { sync_key: SECOND, registration_ref: REF.toUpperCase() }]].entries()) {
+  test(`malformed/duplicate/unrequested stable mapping ${index} reads nothing`, async () => {
+    const result = await call({ event_key: EVENT, sync_keys: [KEY, SECOND], registration_refs });
+    expect(result.response.status).toBe(400);
+    expect(stub.calls).toHaveLength(0);
+  });
+}
+test("an empty explicit-reference list preserves the legacy request behavior", async () => {
+  expect((await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [] })).json)
+    .toEqual({ contacts: [{ sync_key: KEY, email: "parent@example.com" }], missing_sync_keys: [] });
+});
+test("100 references plus keys fit the bounded 16 KiB request", async () => {
+  const sync_keys = Array.from({ length: 100 }, (_, index) => `nga:${String(index).padStart(22, "0")}`);
+  const registration_refs = sync_keys.map((sync_key, index) => ({ sync_key,
+    registration_ref: `nga-notion-11111111-2222-3333-4444-${index.toString(16).padStart(12, "0")}` }));
+  const body = { event_key: EVENT, sync_keys, registration_refs };
+  const bytes = Buffer.byteLength(JSON.stringify(body));
+  expect(bytes).toBeGreaterThan(8192);
+  expect(bytes).toBeLessThanOrEqual(16384);
+  const result = await call(body);
+  expect(result.response.status).toBe(200);
+  expect(result.json).toEqual({ contacts: [], missing_sync_keys: sync_keys });
+});
+test("stable references do not bypass the service credential gate", async () => {
+  const result = await call({ event_key: EVENT, sync_keys: [KEY], registration_refs: [{ sync_key: KEY, registration_ref: REF }] }, { secret: "wrong" });
+  expect(result.response.status).toBe(401);
+  expect(stub.calls).toHaveLength(0);
+});
 for (const secret of ["", "wrong", "sync-syntheticX"]) {
   test(`invalid server credential (${secret || "absent"}) rejects before reading`, async () => {
     expect((await call(undefined, { secret })).response.status).toBe(401);
@@ -177,7 +282,7 @@ for (const options of [{ contentType: "text/plain" }, { raw: "{" }, { length: "b
     expect(stub.calls).toHaveLength(0);
   });
 }
-for (const [index, options] of [{ length: "10000" }, { raw: " ".repeat(8193) }, { raw: "é".repeat(4097) }].entries()) {
+for (const [index, options] of [{ length: "20000" }, { raw: " ".repeat(16385) }, { raw: "é".repeat(8193) }].entries()) {
   test(`oversize input ${index} is bounded before source read`, async () => {
     expect((await call(undefined, options)).response.status).toBe(413);
     expect(stub.calls).toHaveLength(0);
