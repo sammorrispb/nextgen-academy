@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 import { NextRequest } from "next/server";
 import { FetchStub, type RecordedFetch } from "./fixtures/fetch-stub";
 import { FakeStripeInvoicing } from "./fixtures/fake-stripe-invoices";
@@ -8,6 +8,14 @@ import { getStripe } from "../src/lib/stripe";
 import { validateMvfJuniorTournament, type MvfJuniorTournamentData } from "../src/lib/validate-mvf-junior-tournament";
 import { WAIVER_VERSION } from "../src/data/waiver";
 import { POST } from "../src/app/api/admin/mvf-registration/route";
+
+// getStripe retains its client after env restoration. A unique worker fixture
+// keeps that singleton out of other specs, including missing-config checks.
+const test = base.extend<object, { preventCachedStripeLeakage: string }>({
+  preventCachedStripeLeakage: [async ({ browserName }, use) => {
+    await use(browserName);
+  }, { scope: "worker", auto: true }],
+});
 
 // An admin exception keeps the truthful DOB, and cannot invoice a child until
 // signed consent and a capacity-backed, same-session preview authorize it.
@@ -208,6 +216,41 @@ for (const key of ["NOTION_API_KEY", "NOTION_WAIVERS_DB_ID", "NOTION_MVF_TOURNAM
   "NGA_SYNC_SECRET", "STRIPE_SECRET_KEY"]) {
   test(`missing ${key} fails closed before network or money`, async () => {
     delete process.env[key];
+    expect((await call(input())).response.status).toBe(503);
+    expect(stub.calls).toHaveLength(0); expect(accountReads).toBe(0); expect(fakeStripe.all()).toHaveLength(0);
+  });
+}
+for (const [label, key] of [
+  ["restricted live", "rk_live_synthetic_only"],
+  ["standard live with boundary whitespace", " \tsk_live_synthetic_only\n"],
+  ["restricted live with boundary whitespace", "\nrk_live_synthetic_only \t"],
+] as const) {
+  test(`configured guard accepts ${label} Stripe key and verifies the account`, async () => {
+    process.env.STRIPE_SECRET_KEY = key;
+    expect((await call(input())).response.status).toBe(200);
+    expect(accountReads).toBe(1); expect(fakeStripe.all()).toHaveLength(0); expect(mutationCalls()).toHaveLength(0);
+  });
+}
+for (const key of ["NOTION_API_KEY", "NGA_SYNC_SECRET", "COACH_SIGNING_SECRET"]) {
+  test(`configured guard allows boundary whitespace on synthetic ${key}`, async () => {
+    process.env[key] = ` \t${process.env[key]}\n`;
+    adminCookie = createAdminSessionValue("admin@example.com");
+    expect((await call(input())).response.status).toBe(200);
+    expect(accountReads).toBe(1); expect(fakeStripe.all()).toHaveLength(0); expect(mutationCalls()).toHaveLength(0);
+  });
+}
+for (const key of ["NOTION_API_KEY", "NOTION_WAIVERS_DB_ID", "NOTION_MVF_TOURNAMENT_REGS_DB_ID",
+  "NGA_SYNC_SECRET", "STRIPE_SECRET_KEY", "COACH_SIGNING_SECRET"]) {
+  test(`configured guard rejects whitespace-only ${key} before providers`, async () => {
+    process.env[key] = " \t\n";
+    adminCookie = createAdminSessionValue("admin@example.com");
+    expect((await call(input())).response.status).toBe(503);
+    expect(stub.calls).toHaveLength(0); expect(accountReads).toBe(0); expect(fakeStripe.all()).toHaveLength(0);
+  });
+}
+for (const key of ["sk_test_synthetic_only", "rk_test_synthetic_only"]) {
+  test(`configured guard rejects ${key.split("_").slice(0, 2).join("_")} credentials`, async () => {
+    process.env.STRIPE_SECRET_KEY = key;
     expect((await call(input())).response.status).toBe(503);
     expect(stub.calls).toHaveLength(0); expect(accountReads).toBe(0); expect(fakeStripe.all()).toHaveLength(0);
   });
