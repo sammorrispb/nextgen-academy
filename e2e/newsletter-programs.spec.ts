@@ -19,6 +19,14 @@ test("ended programs and unconfirmed interest announcements retire instead of re
   expect(afterFallI.map(p => p.body).join(" ")).not.toContain("Sept 3 – Oct 8");
 });
 
+test("the Lake Marion and Pickl Park winter card stops once both partnerships ended (2026-10-18)", () => {
+  for (const day of ["2026-10-18", "2026-10-23", "2026-10-29"]) {
+    const content = newsletterPrograms(day, "https://nextgenpbacademy.com", "wk").map(p => `${p.title} ${p.body}`).join("\n");
+    expect(content, day).not.toContain("Lake Marion Community Center through MVF");
+    expect(content, day).not.toContain("Winter league interest");
+  }
+});
+
 
 test("tournament card gives both conditional venues, event hours and 15-minute check-in", () => {
   const card = newsletterPrograms("2026-10-08", "https://nextgenpbacademy.com", "wk")
