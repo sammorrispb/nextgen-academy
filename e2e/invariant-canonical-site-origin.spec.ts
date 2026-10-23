@@ -183,7 +183,10 @@ const ALLOWLIST = new Set([
 
 // This read compares an Origin to trusted server configuration for CSRF; it
 // builds no URL. Only this exact comparison may bypass the link-origin scanner.
-const CSRF_COMPARE_FILE = "src/app/api/admin/mvf-roster-sync/route.ts";
+const CSRF_COMPARE_FILES = new Set([
+  "src/app/api/admin/mvf-roster-sync/route.ts",
+  "src/app/api/admin/mvf-registration/route.ts",
+]);
 const CSRF_COMPARE_LINE = 'if (req.headers.get("origin") !== siteOrigin()) return json(403, { ok: false, error: "bad_origin" });';
 
 // This exact Referer predicate only drops credential-bearing telemetry. It
@@ -235,12 +238,19 @@ test.describe("source guard — request-derived origins", () => {
       if (ALLOWLIST.has(rel)) continue;
       const hits = findRequestOriginReads(readFileSync(file, "utf8"));
       for (const h of hits) {
-        if (rel === CSRF_COMPARE_FILE && h === CSRF_COMPARE_LINE) continue;
+        if (CSRF_COMPARE_FILES.has(rel) && h === CSRF_COMPARE_LINE) continue;
         if (rel === ANALYTICS_PRIVACY_FILE && h === ANALYTICS_PRIVACY_LINE) continue;
         offenders.push(`${rel}: ${h}`);
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  test("the admin CSRF exceptions only reject a foreign origin and cannot construct one", () => {
+    for (const rel of CSRF_COMPARE_FILES) {
+      const source = readFileSync(join(__dirname, "..", rel), "utf8");
+      expect(findRequestOriginReads(source)).toEqual([CSRF_COMPARE_LINE]);
+    }
   });
 
   test("the analytics header exception only rejects an event and cannot construct an origin", () => {

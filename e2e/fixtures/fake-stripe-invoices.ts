@@ -28,6 +28,7 @@ export type FakeStripeEndpoint =
 export interface FakeInvoice {
   id: string;
   customer: string;
+  currency: string;
   status: "draft" | "open";
   auto_advance: boolean;
   metadata: Record<string, string>;
@@ -128,6 +129,7 @@ export class FakeStripeInvoicing {
         const invoice: FakeInvoice = {
           id: `in_fake${++this.seq}`,
           customer: params.customer,
+          currency: "usd",
           status: "draft",
           auto_advance: params.auto_advance === true,
           metadata: { ...(params.metadata ?? {}) },
@@ -204,6 +206,8 @@ export class FakeStripeInvoicing {
       id: invoice.id,
       object: "invoice",
       customer: invoice.customer,
+      currency: invoice.currency,
+      total: invoice.lines.reduce((sum, line) => sum + line.amount, 0),
       status: invoice.status,
       metadata: invoice.metadata,
       hosted_invoice_url: invoice.hosted_invoice_url,
