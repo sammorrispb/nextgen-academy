@@ -8,6 +8,7 @@ import { getStripe } from "@/lib/stripe";
 import { invoiceSafeName } from "@/lib/invoice-text";
 import { hasForeignPaymentOwner, nativePaymentOwned } from "@/lib/payment-ownership";
 import { deliverNativeInvoiceEmail, verifiedNativeInvoiceContext, type NativeInvoiceDeliveryContext } from "@/lib/native-invoice-deliveries";
+import { syncMvfPaymentToLinkDink } from "@/lib/mvf-linkdink-payment-sync";
 import { markMvfSeatPaid, markMvfNotification } from "@/lib/mvf-capacity";
 import { incrementSessionRegistered } from "@/lib/notion-sessions";
 import {
@@ -384,7 +385,7 @@ export async function POST(req: NextRequest) {
     // roster row to Paid so the per-division cap and the 80/20 NGA/MVF split
     // both run off paid rows.
     if (kind === "mvf-junior-tournament") {
-      return handleMvfTournamentPaid(receiptFromInvoice(invoice));
+      return handleMvfTournamentPaid(receiptFromInvoice(invoice), event.account);
     }
     return NextResponse.json({ received: true, skipped: "not_a_signup_invoice" });
   }
@@ -1751,7 +1752,7 @@ async function handleLessonPaid(r: PaidReceipt, context: NativeInvoiceDeliveryCo
 // If the route's row write failed (Notion blip at
 // checkout), the row is backfilled here from the invoice metadata so a paid
 // family is never missing from the roster.
-async function handleMvfTournamentPaid(r: PaidReceipt) {
+async function handleMvfTournamentPaid(r: PaidReceipt, eventAccount?: string) {
   const m = r.metadata;
   const division = metaString(m, "division") === "14u" ? "14u" : "10u";
   const resident = metaString(m, "resident") === "true";
@@ -1826,6 +1827,12 @@ async function handleMvfTournamentPaid(r: PaidReceipt) {
   // Keep mutable roster status in operational logs: a retry must send exactly
   // the same immutable invoice payload under the same provider idempotency key.
   if (marked === "permanent") console.error("[stripe-webhook] mvf tournament roster reconciliation required", r.stripeRef);
+
+  // Payment propagation is independent of Notion/email idempotency. Both paid
+  // event aliases and already-paid retries refresh provider evidence. L&D keeps
+  // a durable fact if the protected junior import has not arrived yet.
+  try { await syncMvfPaymentToLinkDink(r.stripeRef, eventAccount); }
+  catch { return NextResponse.json({ error: "mvf tournament payment sync retry required" }, { status: 503 }); }
 
   // Resend retains idempotency keys for 24 hours. An unacknowledged send
   // beyond the conservative 23-hour window needs manual reconciliation; never

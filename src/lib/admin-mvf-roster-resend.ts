@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { buildMvfRosterSyncBody, LD_TIMEOUT_MS, type MvfRosterSyncBody } from "@/lib/linkdink-roster-sync";
 import { EMAIL_RE, NOTION_API, NOTION_VERSION, readPlainText } from "@/lib/notion-utils";
+import { prepareMvfLinkDinkPayment, sendMvfLinkDinkPayment, MvfPaymentSyncRefusal } from "@/lib/mvf-linkdink-payment-sync";
 import { secretEquals } from "@/lib/secret-compare";
 
 // Reuse the existing server credentials, never a client-provided credential,
@@ -107,7 +108,33 @@ async function send(reg: Registration, dryRun: boolean) {
   }
   return result.alreadyOnRoster ? "already_on_roster" : "added";
 }
-export async function resendMvfRoster(input: { invoiceId: string; action: "preview" | "replay"; previewToken?: string }, session: string) {
+export async function resendMvfRoster(input: { invoiceId: string; action: "preview" | "replay" | "payment_preview" | "payment_sync"; previewToken?: string }, session: string) {
+  if (input.action === "payment_preview" || input.action === "payment_sync") {
+    configured();
+    // Never follow a deployment override from this production-only admin tool.
+    if (process.env.LINKDINK_BASE_URL && process.env.LINKDINK_BASE_URL !== "https://www.linkanddink.com") throw new ResendRefusal("not_configured", 503);
+    try {
+      const proof = await prepareMvfLinkDinkPayment(input.invoiceId);
+      const signature = (expiry: string) => createHmac("sha256", configured().signingSecret)
+        .update(JSON.stringify(["mvf-payment-reconcile-v1", input.invoiceId, proof.sourceRevision, proof.body, session, expiry])).digest("base64url");
+      if (input.action === "payment_sync") {
+        const [expiry, supplied, extra] = (input.previewToken ?? "").split(".");
+        const now = Math.floor(Date.now() / 1000);
+        if (extra !== undefined || !/^\d{10}$/.test(expiry ?? "") || Number(expiry) <= now || Number(expiry) > now + PREVIEW_TTL_SECONDS || !secretEquals(supplied, signature(expiry))) {
+          throw new ResendRefusal("preview_expired_or_changed", 409);
+        }
+        const outcome = await sendMvfLinkDinkPayment(proof, false);
+        return { ok: true, outcome: outcome === "paid" ? "payment_synced" : "payment_pending_roster", eventKey: proof.body.event_key };
+      }
+      const outcome = await sendMvfLinkDinkPayment(proof, true);
+      const expiry = String(Math.floor(Date.now() / 1000) + PREVIEW_TTL_SECONDS);
+      return { ok: true, outcome: outcome === "paid" ? "would_sync_payment" : "would_record_payment", eventKey: proof.body.event_key,
+        previewToken: `${expiry}.${signature(expiry)}` };
+    } catch (error) {
+      if (error instanceof MvfPaymentSyncRefusal) throw new ResendRefusal(error.code, error.status);
+      throw error;
+    }
+  }
   const reg = await readRegistration(input.invoiceId);
   if (input.action === "replay") {
     const [expiry, signature, extra] = (input.previewToken ?? "").split(".");

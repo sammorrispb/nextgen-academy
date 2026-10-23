@@ -4,10 +4,11 @@ import { FetchStub, type RecordedFetch } from "./fetch-stub";
 import { signedHeader, TEST_WEBHOOK_SECRET } from "./stripe-sessions";
 import { POST as webhook } from "../../src/app/api/stripe/webhook/route";
 import { DenyProviderNetwork } from "./deny-provider-network";
+import { installMvfPaymentProvider, mvfPaymentAcknowledgement, mvfPaymentNotionPage } from "./mvf-payment-provider";
 
 // Synthetic signed callbacks exercise the real route and Resend serializer.
-// Stripe signature verification is offline; no Stripe SDK request is needed on
-// this MVF branch. All fetches must match these exact test-provider endpoints.
+// Stripe signature verification and fresh payment reads are offline. All SDK
+// methods are replaced; fetches must match exact test-provider endpoints.
 export const MVF_NOTIFICATION_ENV = [
   "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "NOTION_API_KEY",
   "NOTION_MVF_TOURNAMENT_REGS_DB_ID", "NOTION_WAIVERS_DB_ID", "RESEND_API_KEY",
@@ -34,6 +35,8 @@ export function assertMvfNotificationCommand(call: RecordedFetch) {
 }
 export const MVF_NOTIFICATION_METADATA = {
   kind: "mvf-junior-tournament", event_date: "2026-10-24", division: "10u",
+  payment_owner: "nga_site", amount_usd: "50.00",
+  nga_capacity_submission_id: "00000000-0000-4000-8000-000000000001",
   division_label: "10U", resident: "true", parent_name: "Synthetic Parent",
   parent_email: "synthetic.parent@example.invalid", parent_phone: "3015550101",
   child_first_name: "Synthetic", child_last_name: "Junior", child_dob: "2017-05-01",
@@ -55,7 +58,10 @@ export function mvfNotificationProbe() {
   const unexpected: string[] = [];
   const network = new DenyProviderNetwork();
   let providerFetch: typeof fetch | undefined;
+  let restoreStripe = () => {};
+  let currentMetadata: Record<string, string> = { ...MVF_NOTIFICATION_METADATA };
   const capacity = "https://capacity.example.invalid/play/api/internal/nga-tournament-capacity";
+  const paymentSync = "https://capacity.example.invalid/play/api/internal/nga-roster-payment";
   const notion = "https://api.notion.com/v1/databases/mvf_notification_output/query";
   const resend = "https://api.resend.com/emails";
 
@@ -73,6 +79,8 @@ export function mvfNotificationProbe() {
         NGA_SYNC_SECRET: "synthetic-notification-capacity",
         LINKDINK_BASE_URL: "https://capacity.example.invalid",
       });
+      currentMetadata = { ...MVF_NOTIFICATION_METADATA };
+      restoreStripe = installMvfPaymentProvider(() => ({ invoiceId: MVF_NOTIFICATION_INVOICE, metadata: currentMetadata, amount: 5000 }));
       stub.reset(); mail.length = 0; unexpected.length = 0; acknowledged.clear();
       stub.onDynamic(capacity, call => {
         let body: ReturnType<typeof assertMvfNotificationCommand>;
@@ -90,15 +98,19 @@ export function mvfNotificationProbe() {
       });
       // Existing paid roster: isolate notification behavior from backfill;
       // invariant-mvf-tournament-payloads owns actual Notion writes.
-      stub.on(notion, { results: [{ id: "synthetic-paid-row", properties: { Paid: { checkbox: true } } }] });
+      stub.onDynamic(notion, () => ({ status: 200, json: { results: [mvfPaymentNotionPage({
+        id: "11111111-2222-4333-8444-555555555551", databaseId: "mvf_notification_output",
+        invoiceId: MVF_NOTIFICATION_INVOICE, metadata: currentMetadata, paid: true,
+      })], has_more: false } }));
+      stub.onDynamic(paymentSync, call => mvfPaymentAcknowledgement(call, MVF_NOTIFICATION_INVOICE, eventKey));
       stub.on(resend, { id: "synthetic-provider-mail" });
       stub.install();
       providerFetch = globalThis.fetch;
       globalThis.fetch = async (input, init) => {
         const url = input instanceof Request ? input.url : String(input);
-        if (![capacity, notion, resend].includes(url)) unexpected.push(url);
+        if (![capacity, paymentSync, notion, resend].includes(url)) unexpected.push(url);
         const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
-        if ([capacity, notion, resend].includes(url) && method !== "POST") {
+        if ([capacity, paymentSync, notion, resend].includes(url) && method !== "POST") {
           unexpected.push("invalid provider method");
           throw new Error("MVF notification probe expected POST");
         }
@@ -112,16 +124,18 @@ export function mvfNotificationProbe() {
     uninstall() {
       if (providerFetch) globalThis.fetch = providerFetch;
       stub.uninstall(); providerFetch = undefined;
+      restoreStripe();
       network.uninstall();
       // A provider SDK can bypass fetch. Preserve the denied attempt even if
       // fail-soft application code catches the transport exception.
       unexpected.push(...network.attempts.map(() => "denied provider transport"));
     },
     async paid(type: "invoice.paid" | "invoice.payment_succeeded" = "invoice.paid", overrides: Record<string, string> = {}) {
+      currentMetadata = { ...MVF_NOTIFICATION_METADATA, ...overrides };
       const payload = JSON.stringify({ id: `evt_Synthetic_${type}`, object: "event", livemode: true, type,
         data: { object: { id: MVF_NOTIFICATION_INVOICE, object: "invoice", amount_paid: 5000,
           customer_email: MVF_NOTIFICATION_METADATA.parent_email,
-          metadata: { ...MVF_NOTIFICATION_METADATA, ...overrides } } } });
+          metadata: currentMetadata } } });
       return webhook(new NextRequest("http://localhost/api/stripe/webhook", {
         method: "POST", body: payload, headers: { "stripe-signature": signedHeader(payload) },
       }));
