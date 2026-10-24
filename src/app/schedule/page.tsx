@@ -340,7 +340,10 @@ export default async function SchedulePage() {
 
           {sessions.length === 0 && (
             <>
-              <EmptyStateWaitlist source="schedule_empty" />
+              <EmptyStateWaitlist
+                heading="No drop-in sessions are listed right now."
+                source="schedule_empty"
+              />
               <OpenNowOffers />
             </>
           )}
