@@ -17,9 +17,23 @@ export interface NgaProgramAgeRule {
   additionalEligibility: "no_additional_restrictions" | "requires_coach_confirmation";
 }
 
-// No exact program mappings have been reviewed yet. An empty registry is an
-// explicit lack of authority, never an invitation to infer rules from copy.
-export const NGA_PROGRAM_AGE_REGISTRY: readonly NgaProgramAgeRule[] = Object.freeze([]);
+// One isolated synthetic session has an explicitly reviewed test policy.
+// Every other program still requires its own exact reviewed source rule.
+export const NGA_PROGRAM_AGE_REGISTRY: readonly NgaProgramAgeRule[] = Object.freeze([
+  Object.freeze({
+    sessionsDbId: "bea3d534-4dc1-407b-a413-aee04ddaf69e",
+    programId: "403fa3ac-27dc-8196-968a-f51ea29ac8c3",
+    reviewStatus: "reviewed" as const,
+    ageRange: Object.freeze({ min: 8, max: 12 }),
+    policySourceUrl: "https://app.notion.com/p/402fa3ac27dc814596c1c03fe2c62ff9",
+    policyRevision: "664f-synthetic-session-v1",
+    reviewedBy: "Codex release review (root 1a0c)",
+    reviewedAt: "2026-10-24T14:51:20.000Z",
+    effectiveFrom: "2026-10-25",
+    effectiveThrough: "2026-10-25",
+    additionalEligibility: "no_additional_restrictions" as const,
+  }),
+]);
 
 export interface NgaReviewedProgramAgePolicy {
   ageRange: { min: number; max: number };
