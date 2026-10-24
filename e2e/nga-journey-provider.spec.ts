@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { resolveNgaJourneyProvider } from "../src/lib/nga-journey-provider";
 import { readNgaAssessmentEvidence, readNgaProgramInventory, runNgaJourneyPreview } from "../src/lib/nga-journey-source";
 import { runCoachParentCapability, runParentJourneyPreview } from "../src/lib/nga-parent-preview-source";
+import type { NgaProgramAgeRule } from "../src/data/nga-program-age-registry";
 
 const playerId = "00000000-0000-4000-8000-000000000001";
 const registrationId = "00000000-0000-4000-8000-000000000004";
@@ -205,4 +206,32 @@ test("NGA hosted provider: parent association and preview use the same pinned so
   expect(result).toMatchObject({ status: 200, body: { state: "no_match", assessment: { level: "Green", age: 10 } } });
   expect(JSON.stringify(result.body)).not.toMatch(/SyntheticChild|synthetic-parent|3015550100/);
   expect(calls.every((c) => c.method === "GET" || (c.method === "POST" && c.url.endsWith(`/v1/databases/${sessionsDb}/query`)))).toBe(true);
+});
+
+test("NGA reviewed registry: inventory binds one exact source rule without extra provider calls", async () => {
+  fixtureConfig();
+  const sessionId = "ab000000-0000-4000-8000-000000000020";
+  const rule: NgaProgramAgeRule = { sessionsDbId: sessionsDb, programId: sessionId.toUpperCase().replaceAll("-", ""), reviewStatus: "reviewed", ageRange: { min: 8, max: 12 }, policySourceUrl: "https://example.invalid/synthetic-policy", policyRevision: "synthetic-policy-1", reviewedBy: "synthetic-reviewer", reviewedAt: "2026-10-23T12:00:00Z", effectiveFrom: "2026-10-25", effectiveThrough: "2026-10-25", additionalEligibility: "no_additional_restrictions" };
+  respond = () => Response.json({ results: [{ id: sessionId, parent: { database_id: sessionsDb }, last_edited_time: "2026-10-24T10:00:00Z", properties: { Session: rt("Synthetic program ages 6-16"), Date: { date: { start: "2026-10-25" } }, Level: { select: { name: "Green" } } } }], has_more: false });
+  const provider = resolveNgaJourneyProvider();
+  const [program] = await readNgaProgramInventory(now, provider, [rule]);
+  expect(program).toMatchObject({ ageRange: { min: 8, max: 12 }, eligibilityPolicy: { revision: "synthetic-policy-1", additionalEligibility: "no_additional_restrictions" } });
+  expect(calls).toHaveLength(1);
+  const [changed] = await readNgaProgramInventory(now, provider, [{ ...rule, policyRevision: "synthetic-policy-2" }]);
+  expect(changed.revision).not.toBe(program.revision);
+  const [restricted] = await readNgaProgramInventory(now, provider, [{ ...rule, additionalEligibility: "requires_coach_confirmation" }]);
+  expect(restricted.revision).not.toBe(program.revision);
+  expect(restricted.eligibilityPolicy?.additionalEligibility).toBe("requires_coach_confirmation");
+  expect(calls).toHaveLength(3);
+  expect(calls.every((call) => call.method === "POST" && call.url === `${baseUrl}/v1/databases/${sessionsDb}/query`)).toBe(true);
+});
+
+test("NGA reviewed registry: unknown source rules cannot fall back to titles or provider configuration", async () => {
+  fixtureConfig();
+  const sessionId = "00000000-0000-4000-8000-000000000020";
+  respond = () => Response.json({ results: [{ id: sessionId, parent: { database_id: sessionsDb }, last_edited_time: "2026-10-24T10:00:00Z", properties: { Session: rt("Reviewed program ages 6-16"), Date: { date: { start: "2026-10-25" } }, "Age Min": { number: 6 }, "Age Max": { number: 16 } } }], has_more: false });
+  const provider = resolveNgaJourneyProvider();
+  for (const registry of [undefined, []]) expect(await readNgaProgramInventory(now, provider, registry)).toMatchObject([{ ageRange: null, eligibilityPolicy: null }]);
+  expect(calls).toHaveLength(2);
+  expect(calls.every((call) => call.method === "POST" && call.url === `${baseUrl}/v1/databases/${sessionsDb}/query`)).toBe(true);
 });

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { REGISTRATION_WINDOW_DAYS } from "@/data/schedule";
+import { NGA_PROGRAM_AGE_REGISTRY, resolveNgaProgramAgePolicy, type NgaProgramAgeRule } from "@/data/nga-program-age-registry";
 import { isPlayerLevel } from "@/lib/notion-player-bracket";
 import { readPlainText } from "@/lib/notion-utils";
 import { NgaJourneyProviderError, resolveNgaJourneyProvider, type NgaJourneyProvider } from "@/lib/nga-journey-provider";
@@ -48,10 +49,10 @@ export async function readNgaAssessment(playerId: string, provider: NgaJourneyPr
 }
 /** Strict inventory projection intentionally omits roster enrichment. The public
  * schedule's fail-soft empty list and capacity defaults cannot prove eligibility.
- * Sessions currently have no canonical typed age-range property. Global youth
- * policy cannot replace program-specific restrictions in freeform copy: keep
- * ageRange unknown until that evidence exists. Never infer it from a title. */
-export async function readNgaProgramInventory(now: string, provider: NgaJourneyProvider = resolveNgaJourneyProvider()): Promise<NgaProgram[]> {
+ * Program policy comes only from the reviewed exact-source registry. A missing
+ * rule leaves both age and additional eligibility unknown; titles, freeform
+ * copy and global youth policy cannot supply that authority. */
+export async function readNgaProgramInventory(now: string, provider: NgaJourneyProvider = resolveNgaJourneyProvider(), registry: readonly NgaProgramAgeRule[] = NGA_PROGRAM_AGE_REGISTRY): Promise<NgaProgram[]> {
   const db = provider.sessionsDbId;
   const from = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(now));
   const end = new Date(`${from}T12:00:00Z`); end.setUTCDate(end.getUTCDate() + REGISTRATION_WINDOW_DAYS);
@@ -67,7 +68,8 @@ export async function readNgaProgramInventory(now: string, provider: NgaJourneyP
       const date = object(dateProp) && object(dateProp.date) && typeof dateProp.date.start === "string" ? dateProp.date.start : "";
       const title = readPlainText(props.Session);
       const rawStatus = select(props.Status);
-      const data: Omit<NgaProgram, "revision"> = { ageRange: null, id: p.id, title, date, startTime: readPlainText(props["Start time"]), endTime: readPlainText(props["End time"]), level: isPlayerLevel(level) || level === "All Levels" ? level : null, location: readPlainText(props.Location) || readPlainText(props["Public Area"]), status: rawStatus && ["Open", "Full", "Cancelled", "Completed", "Passed"].includes(rawStatus) ? rawStatus : null, capacity: number(props.Capacity, true), registeredCount: number(props["Registered count"]), url: `/schedule/${sessionToSlug({ title, date })}` };
+      const policy = resolveNgaProgramAgePolicy({ sessionsDbId: db, programId: p.id, eventDate: date, now }, registry);
+      const data: Omit<NgaProgram, "revision"> = { ageRange: policy?.ageRange ?? null, eligibilityPolicy: policy ? { revision: policy.revision, additionalEligibility: policy.additionalEligibility } : null, id: p.id, title, date, startTime: readPlainText(props["Start time"]), endTime: readPlainText(props["End time"]), level: isPlayerLevel(level) || level === "All Levels" ? level : null, location: readPlainText(props.Location) || readPlainText(props["Public Area"]), status: rawStatus && ["Open", "Full", "Cancelled", "Completed", "Passed"].includes(rawStatus) ? rawStatus : null, capacity: number(props.Capacity, true), registeredCount: number(props["Registered count"]), url: `/schedule/${sessionToSlug({ title, date })}` };
       programs.push({ ...data, revision: digest([data, p.last_edited_time]) });
     }
     if (!value.has_more) return programs;

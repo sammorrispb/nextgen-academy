@@ -3,7 +3,7 @@ import { chooseNgaPrograms, type NgaAssessment, type NgaProgram } from "../src/l
 
 const now = "2026-10-23T16:00:00.000Z";
 const assessment: NgaAssessment = { playerId: "00000000-0000-4000-8000-000000000001", revision: "assessment-1", level: "Green", age: 10 };
-const program: NgaProgram = { ageRange: { min: 6, max: 16 }, id: "00000000-0000-4000-8000-000000000002", revision: "program-1", title: "Synthetic Green session", date: "2026-10-25", startTime: "1:00 PM", endTime: "2:00 PM", level: "Green", location: "Synthetic court", status: "Open", capacity: 8, registeredCount: 3, url: "/schedule/synthetic-2026-10-25" };
+const program: NgaProgram = { ageRange: { min: 6, max: 16 }, eligibilityPolicy: { revision: "synthetic-reviewed-policy-1", additionalEligibility: "no_additional_restrictions" }, id: "00000000-0000-4000-8000-000000000002", revision: "program-1", title: "Synthetic Green session", date: "2026-10-25", startTime: "1:00 PM", endTime: "2:00 PM", level: "Green", location: "Synthetic court", status: "Open", capacity: 8, registeredCount: 3, url: "/schedule/synthetic-2026-10-25" };
 const reviewed = { assessmentRevision: "assessment-1", focusId: "skill-6", confirmed: true as const, ageConfirmed: true };
 function choose(programs: NgaProgram[], changes: Partial<NgaAssessment> = {}, preferences = {}) {
   return chooseNgaPrograms({ assessment: { ...assessment, ...changes }, programs, review: reviewed, preferences, now });
@@ -105,4 +105,30 @@ test("NGA-C9: invalid program age ranges and invalid recorded ages stay unverifi
     expect(choose([{ ...program, ageRange }])).toMatchObject({ state: "needs_confirmation", programs: [{ fit: "needs_confirmation", reasons: ["program_age_policy_unknown"] }] });
   }
   for (const age of [NaN, Infinity, 10.5]) expect(choose([program], { age })).toMatchObject({ state: "needs_confirmation", programs: [{ fit: "needs_confirmation", reasons: ["age_confirmation_required"] }] });
+});
+
+test("NGA-C9: age eligibility cannot clear missing or restrictive reviewed program policy", () => {
+  for (const eligibilityPolicy of [undefined, null, { revision: "", additionalEligibility: "no_additional_restrictions" as const }, { revision: " invalid ", additionalEligibility: "no_additional_restrictions" as const }, { revision: "valid", additionalEligibility: "no_additional_restrictions" as const, inferred: true }]) expect(choose([{ ...program, eligibilityPolicy }])).toMatchObject({ state: "needs_confirmation", programs: [{ fit: "needs_confirmation", reasons: ["program_eligibility_policy_unknown"] }] });
+  expect(choose([{ ...program, eligibilityPolicy: { revision: "review-1", additionalEligibility: "requires_coach_confirmation" } }])).toMatchObject({ state: "needs_confirmation", programs: [{ fit: "needs_confirmation", reasons: ["program_eligibility_confirmation_required"] }] });
+  expect(choose([{ ...program, eligibilityPolicy: { revision: "review-1", additionalEligibility: "requires_coach_confirmation" }, ageRange: { min: 12, max: 16 } }])).toMatchObject({ state: "no_match", programs: [] });
+});
+
+test("NGA-C9: reviewed exact program age bounds include both endpoints", () => {
+  const exactProgram = { ...program, ageRange: { min: 8, max: 12 } };
+  for (const age of [8, 12]) expect(choose([exactProgram], { age }).state).toBe("recommendation");
+  for (const age of [7, 13]) expect(choose([exactProgram], { age })).toMatchObject({ state: "no_match", programs: [] });
+  for (const age of [8, 10, 12]) expect(choose([{ ...exactProgram, eligibilityPolicy: { revision: "invitation-policy-1", additionalEligibility: "requires_coach_confirmation" } }], { age }).state).toBe("needs_confirmation");
+});
+
+test("NGA-C9: reviewed program policy remains part of destination authority", () => {
+  const unrestricted = { ...program, eligibilityPolicy: { revision: "review-1", additionalEligibility: "no_additional_restrictions" as const } };
+  const reordered = { ...unrestricted, id: "another-session", eligibilityPolicy: { additionalEligibility: "no_additional_restrictions" as const, revision: "review-1" } };
+  expect(choose([unrestricted, reordered])).toEqual(choose([unrestricted]));
+  const restrictive = { ...program, id: "another-session", eligibilityPolicy: { revision: "review-1", additionalEligibility: "requires_coach_confirmation" as const } };
+  const newer = { ...unrestricted, id: "another-session", eligibilityPolicy: { ...unrestricted.eligibilityPolicy, revision: "review-2" } };
+  for (const second of [restrictive, newer]) {
+    const first = choose([unrestricted, second]);
+    expect(first).toMatchObject({ state: "needs_confirmation", programs: [{ fit: "needs_confirmation", reasons: ["conflicting_destination_evidence"] }] });
+    expect(choose([second, unrestricted])).toEqual(first);
+  }
 });

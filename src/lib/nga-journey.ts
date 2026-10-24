@@ -10,6 +10,9 @@ export interface NgaProgram {
   capacity: number | null; registeredCount: number | null; url: string;
   /** Null when the canonical source does not publish program-specific ages. */
   ageRange: { min: number; max: number } | null;
+  /** Only a reviewed exact-program rule can clear additional eligibility.
+   * Absent for older callers; absence still requires coach confirmation. */
+  eligibilityPolicy?: { revision: string; additionalEligibility: "no_additional_restrictions" | "requires_coach_confirmation" } | null;
 }
 export interface NgaReview { assessmentRevision: string; focusId: string; confirmed: true; ageConfirmed?: boolean }
 type Mode = "required" | "preferred";
@@ -34,6 +37,10 @@ const validDate = (v: string) => { const parsed = new Date(`${v}T00:00:00Z`); re
 function knownAgeRange(p: NgaProgram): NgaProgram["ageRange"] {
   const range = p.ageRange;
   return range && Number.isInteger(range.min) && Number.isInteger(range.max) && range.min >= 0 && range.max >= range.min ? range : null;
+}
+function knownEligibilityPolicy(p: NgaProgram): NonNullable<NgaProgram["eligibilityPolicy"]> | null {
+  const policy = p.eligibilityPolicy;
+  return object(policy) && keys(policy, ["revision", "additionalEligibility"]) && typeof policy.revision === "string" && policy.revision.length > 0 && policy.revision.length <= 128 && policy.revision === policy.revision.trim() && !/[\u0000-\u001f\u007f]/.test(policy.revision) && (policy.additionalEligibility === "no_additional_restrictions" || policy.additionalEligibility === "requires_coach_confirmation") ? { revision: policy.revision, additionalEligibility: policy.additionalEligibility } : null;
 }
 function keys(v: Record<string, unknown>, allowed: string[]) { return Object.keys(v).every((k) => allowed.includes(k)); }
 
@@ -82,6 +89,9 @@ export function chooseNgaPrograms(input: { assessment: NgaAssessment; programs: 
     const end = validDate(p.date) ? sessionStartUtcMs(p.date, p.endTime) : null;
     if (start !== null && start <= Date.parse(now)) continue;
     if (!ageRange) reasons.push("program_age_policy_unknown");
+    const eligibilityPolicy = knownEligibilityPolicy(p);
+    if (!eligibilityPolicy) reasons.push("program_eligibility_policy_unknown");
+    else if (eligibilityPolicy.additionalEligibility === "requires_coach_confirmation") reasons.push("program_eligibility_confirmation_required");
     if (currentAge === null) reasons.push("age_confirmation_required");
     if (!p.level) reasons.push("program_level_unknown");
     if (!p.status) reasons.push("program_status_unknown");
@@ -109,7 +119,7 @@ export function chooseNgaPrograms(input: { assessment: NgaAssessment; programs: 
   const destinations = new Map<string, typeof choices>();
   for (const choice of choices) destinations.set(choice.program.url, [...destinations.get(choice.program.url) ?? [], choice]);
   const deduplicated: typeof choices = [];
-  const authority = (p: NgaProgram) => JSON.stringify([p.date, p.startTime, p.endTime, p.level, p.location, p.status, p.capacity, p.registeredCount, knownAgeRange(p)?.min ?? null, knownAgeRange(p)?.max ?? null]);
+  const authority = (p: NgaProgram) => JSON.stringify([p.date, p.startTime, p.endTime, p.level, p.location, p.status, p.capacity, p.registeredCount, knownAgeRange(p)?.min ?? null, knownAgeRange(p)?.max ?? null, knownEligibilityPolicy(p)]);
   for (const [url, versions] of [...destinations].sort(([a], [b]) => a.localeCompare(b))) {
     versions.sort((a, b) => a.program.id.localeCompare(b.program.id) || a.program.revision.localeCompare(b.program.revision) || a.program.title.localeCompare(b.program.title));
     const first = versions[0];
