@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import Reporter, { HOSTED_STORIES, checkConfigEnvironment, checkSource, clearPrivateFailure, coachCookie, createHostedNgaAdapter,
-  hostedCasesEnabled, nearExpiryCode, privateOutput, type Checkout } from "./fixtures/player-journey-hosted-adapter";
+  hostedCasesEnabled, nearExpiryCode, privateOutput, classifyHostedBrowserRequest, validateHostedAnalyticsNoop, advanceHostedAuxiliary, createHostedAuxiliaryLedger, type Checkout } from "./fixtures/player-journey-hosted-adapter";
 import { verifySessionCookieValue } from "../src/lib/coach-auth";
 import { issueParentPreviewCode, verifyParentPreviewCode } from "../src/lib/nga-parent-preview";
 
@@ -93,19 +93,20 @@ test("near-expiry parent code retains actual purpose/scope validation and expire
 });
 
 test("sole hosted reporter drops raw credential-bearing errors, steps, stdout and attachments", async () => temporary(async (root) => {
-  const reportPath = join(root, "report.json"), outputDir = join(root, "output"); mkdirSync(outputDir, { mode: 0o700 });
+  const reportPath = join(root, "report.json"), auxiliaryRoot = join(root, "output"), outputDir = join(auxiliaryRoot, "playwright"); mkdirSync(auxiliaryRoot, { mode: 0o700 }); mkdirSync(outputDir, { mode: 0o700 });
   const reporter = new Reporter({ reportPath });
   const proof = { run_id: "synthetic-test", owner_thread: "01a16b03-1a0c-7203-8da3-2312df3280bf", ...pin,
     ld_commit: "e".repeat(40), nga_commit: pin.commit, config_digest: "f".repeat(64), schema_digest: "1".repeat(64), provider_digest: "2".repeat(64), expires_at: "2026-10-24T10:00:00.000Z",
     origin: "https://pj-synthetic-test-nga.vercel.app", provider_origin: "https://abcdefghijklmnopqrst.supabase.co/functions/v1/player-journey-fixture",
     provenance: "hosted-next-ui-api-synthetic-notion-projection", native_database_proven: false };
+  createHostedAuxiliaryLedger(auxiliaryRoot, { run_id: proof.run_id, ld_commit: proof.ld_commit, nga_commit: proof.nga_commit });
   const tests = ["desktop", "mobile"].flatMap((view) => HOSTED_STORIES.map((title) => ({ title, expectedStatus: "passed", annotations: [], parent: { project: () => ({ name: view }) } } as unknown as TestCase)));
   reporter.onBegin({ projects: [{ retries: 0, repeatEach: 1, outputDir }, { retries: 0, repeatEach: 1, outputDir }], workers: 1, fullyParallel: false, forbidOnly: true } as FullConfig, { allTests: () => tests });
   const credential = "ngaj1.synthetic-private-report-probe.synthetic-signature";
   for (const [index, testCase] of tests.entries()) {
     const dir = join(outputDir, String(index)); mkdirSync(dir, { mode: 0o700 });
     const evidence = join(dir, "hosted-safe-evidence.json"), png = join(dir, "hosted-safe-view.png");
-    writeFileSync(evidence, JSON.stringify(proof), { mode: 0o600 });
+    writeFileSync(evidence, JSON.stringify({ ...proof, actual: { auxiliary: { analytics_noop_statuses: [], blocked_prefetches: 0 } } }), { mode: 0o600 });
     reporter.onTestEnd(testCase, { status: "passed", retry: 0, startTime: new Date(), duration: 1, errors: [{ message: credential }], stdout: [credential], stderr: [credential], steps: [{ title: credential }],
       attachments: [{ name: "hosted-safe-evidence", path: evidence }, { name: "hosted-safe-screenshot", path: png }, { name: "raw-private", body: Buffer.from(credential) }] } as unknown as TestResult);
   }
@@ -118,6 +119,7 @@ test("sole hosted reporter drops raw credential-bearing errors, steps, stdout an
   const report = readFileSync(reportPath, "utf8"); expect(report.includes(credential)).toBe(false);
   const value = JSON.parse(report); expect(value.passed_cases).toBe(22); expect(value.skipped).toBe(0); expect(value.flaky).toBe(0);
   expect(value.proof).toEqual(proof);
+  expect(value.auxiliary).toEqual({ analytics_noop_calls: 0, analytics_noop_limit: 32, blocked_prefetches: 0, blocked_prefetch_limit: 64 });
   expect(value.config).toEqual({ retries: 0, repeat_each: 1, workers: 1, fully_parallel: false, forbid_only: true });
   expect(value.cases.every((record: object) => !Object.hasOwn(record, "errors") && !Object.hasOwn(record, "steps"))).toBe(true);
 }));
@@ -135,3 +137,69 @@ test("worker failure guard prevents the pinned error-context builder's first cre
   expect(buildErrorContext({ ...options, errors: info.errors })).toBeUndefined();
   expect(info.status).toBe("failed"); expect(info.annotations).toEqual([{ type: "hosted-private-failure", description: "assertion-or-transport-failed" }]);
 });
+
+
+test("hosted browser policy permits only fixed local assets and exact coach analytics", () => {
+  const origin = environment().PLAYWRIGHT_BASE_URL;
+  const request = { origin, url: `${origin}/api/analytics`, method: "POST", frameUrl: `${origin}/coach/journey`,
+    headers: { "content-type": "application/json", referer: `${origin}/coach/journey` },
+    body: JSON.stringify({ event_name: "page_view", page: "/coach/journey", props: { referrer: "", visitor_id: "00000000-0000-4000-8000-000000000001", business: "nga" } }) };
+  expect(classifyHostedBrowserRequest(request)).toBe("analytics-noop");
+  for (const change of [{ frameUrl: `${origin}/parent/next` }, { url: "https://nextgenpbacademy.com/api/analytics" }, { method: "GET" },
+    { body: request.body.replace('"page_view"', '"cta_click"') }, { body: request.body.replace('"referrer":""', '"referrer":"https://foreign.invalid"') },
+    { body: request.body.replace('"business":"nga"', '"business":"nga","code":"private"') },
+    { body: request.body.replace('"business":"nga"', '"business":"nga","child":"private"') }, { body: "x".repeat(2049) }])
+    expect(classifyHostedBrowserRequest({ ...request, ...change })).toBe("refuse");
+  for (const path of ["/images/og-image.png", "/favicon.ico", "/_next/static/chunks/synthetic.js", "/_next/image?url=%2Fimages%2Flogo.png&w=384&q=75"])
+    expect(classifyHostedBrowserRequest({ ...request, method: "GET", url: `${origin}${path}`, body: null })).toBe("static");
+  for (const path of ["/_next/image?url=https%3A%2F%2Fforeign.invalid%2Fchild.png&w=384&q=75", "/images/foreign.png", "/api/lead", "/_next/anything", "/coach/journey?code=private"])
+    expect(classifyHostedBrowserRequest({ ...request, method: "GET", url: `${origin}${path}`, body: null })).toBe("refuse");
+  expect(() => checkConfigEnvironment({ ...environment(), OPEN_BRAIN_ANALYTICS_URL: "https://foreign.invalid" })).toThrow("nga_hosted_admission_refused");
+  expect(() => checkConfigEnvironment({ ...environment(), LEAD_INGEST_TOKEN: "synthetic-private" })).toThrow("nga_hosted_admission_refused");
+});
+
+test("only source-owned Next prefetch is aborted as bounded auxiliary work", () => {
+  const origin = environment().PLAYWRIGHT_BASE_URL;
+  const request = { origin, url: `${origin}/schedule?_rsc=abc123`, method: "GET", frameUrl: `${origin}/coach/journey`,
+    headers: { "next-router-prefetch": "1", rsc: "1" }, body: null };
+  expect(classifyHostedBrowserRequest(request)).toBe("blocked-prefetch");
+  for (const change of [{ headers: {} }, { headers: { "next-router-prefetch": "0", rsc: "1" } }, { method: "POST" },
+    { url: `${origin}/api/lead?_rsc=abc123` }, { url: `${origin}/schedule?code=private` }, { frameUrl: `${origin}/foreign` },
+    { url: "https://foreign.invalid/schedule?_rsc=abc123" }])
+    expect(classifyHostedBrowserRequest({ ...request, ...change })).toBe("refuse");
+  expect(classifyHostedBrowserRequest({ ...request, url: `${origin}/coach/journey`, headers: {} })).toBe("page");
+  expect(classifyHostedBrowserRequest({ ...request, method: "POST", url: `${origin}/api/coach/journey-preview`, headers: {} })).toBe("preview");
+});
+
+test("auxiliary receipts require real empty 204 responses and hard phase bounds", () => {
+  expect(() => validateHostedAnalyticsNoop(204, Buffer.alloc(0))).not.toThrow();
+  for (const [status, body] of [[200, Buffer.alloc(0)], [204, Buffer.from("private")], [302, Buffer.alloc(0)]] as const)
+    expect(() => validateHostedAnalyticsNoop(status, body)).toThrow("nga_hosted_auxiliary_refused");
+  expect(advanceHostedAuxiliary({ analytics_noop_calls: 31, blocked_prefetches: 63 }, "analytics-noop")).toEqual({ analytics_noop_calls: 32, blocked_prefetches: 63 });
+  expect(advanceHostedAuxiliary({ analytics_noop_calls: 32, blocked_prefetches: 63 }, "blocked-prefetch")).toEqual({ analytics_noop_calls: 32, blocked_prefetches: 64 });
+  for (const [counts, kind] of [[{ analytics_noop_calls: 32, blocked_prefetches: 0 }, "analytics-noop"], [{ analytics_noop_calls: 0, blocked_prefetches: 64 }, "blocked-prefetch"],
+    [{ analytics_noop_calls: -1, blocked_prefetches: 0 }, "analytics-noop"]] as const)
+    expect(() => advanceHostedAuxiliary(counts, kind)).toThrow("nga_hosted_auxiliary_refused");
+});
+
+
+test("private phase ledger persists across workers and refuses replacement, foreign pins and capacity overflow", async () => temporary(root => {
+  const pins = { run_id: "synthetic-test", ld_commit: "a".repeat(40), nga_commit: "b".repeat(40) };
+  const first = createHostedAuxiliaryLedger(root, pins);
+  first.reserve("analytics-noop"); first.reserve("blocked-prefetch");
+  const second = createHostedAuxiliaryLedger(root, pins);
+  expect(second.snapshot()).toEqual({ analytics_noop_calls: 1, blocked_prefetches: 1 });
+  expect(() => createHostedAuxiliaryLedger(root, { ...pins, nga_commit: "c".repeat(40) }).snapshot()).toThrow("nga_hosted_auxiliary_refused");
+  for (let index = 1; index < 32; index++) second.reserve("analytics-noop");
+  expect(() => first.reserve("analytics-noop")).toThrow("nga_hosted_auxiliary_refused");
+  expect(second.snapshot()).toEqual({ analytics_noop_calls: 32, blocked_prefetches: 1 });
+  const serialized = readFileSync(join(root, "nga-hosted-auxiliary.json"), "utf8");
+  expect(Object.keys(JSON.parse(serialized)).sort()).toEqual(["counts", "ld_commit", "nga_commit", "run_id"]);
+  writeFileSync(join(root, "nga-hosted-auxiliary.lock"), "", { mode: 0o600 });
+  expect(() => second.reserve("blocked-prefetch")).toThrow("nga_hosted_auxiliary_refused");
+  expect(readFileSync(join(root, "nga-hosted-auxiliary.json"), "utf8")).toBe(serialized);
+  rmSync(join(root, "nga-hosted-auxiliary.lock"));
+  rmSync(join(root, "nga-hosted-auxiliary.json"));
+  symlinkSync(join(root, "outside"), join(root, "nga-hosted-auxiliary.json"));
+  expect(() => second.snapshot()).toThrow("nga_hosted_auxiliary_refused");
+}));

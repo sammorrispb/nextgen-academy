@@ -13,7 +13,7 @@ if (hostedCasesEnabled(process.env)) {
   test.beforeAll(async () => { app = await createHostedNgaAdapter(root); await app.control.attach(); });
   test.beforeEach(async ({ context }) => {
     app.guard(); await app.control.setState(app.fullState()); before = await app.control.observe();
-    app.resetEvidence(); issued = []; screenshot = undefined;
+    await app.resetEvidence(); issued = []; screenshot = undefined;
     await app.wire(context);
     await context.addCookies([{ name: "coach_session", value: coachCookie(app.coachEmail, process.env.COACH_SIGNING_SECRET!),
       domain: new URL(app.origin).hostname, path: "/", httpOnly: true, secure: true, sameSite: "Lax" }]);
@@ -40,7 +40,8 @@ if (hostedCasesEnabled(process.env)) {
   }
   test.afterEach(async ({ page }, info) => {
     if (!app || !before) return;
-    const after = await app.control.observe(), boundary = app.evidence();
+    if (!screenshot) await shot(page, info);
+    const after = await app.control.observe(), boundary = await app.evidence();
     expect(boundary.boundary_violations).toBe(0);
     expect(Object.keys(after.counters).every((key) => ["player", "registration", "inventory", "model", "tournaments", "geocode", "transport"].includes(key))).toBe(true);
     const delta = Object.fromEntries(Object.keys(after.counters).map((key) => [key, after.counters[key] - (before.counters[key] ?? 0)]));
@@ -48,7 +49,6 @@ if (hostedCasesEnabled(process.env)) {
     const readCount = ["player", "registration", "inventory"].reduce((total, key) => total + (delta[key] ?? 0), 0);
     expect(info.title.startsWith("NGA-H03") ? readCount === 0 : readCount > 0).toBe(true);
     expect(boundary.http_statuses.length > 0).toBe(true);
-    if (!screenshot) await shot(page, info);
     const file = info.outputPath("hosted-safe-evidence.json"), id = /^NGA-H\d{2}/.exec(info.title)![0];
     const evidence = { schema_version: 1, ...app.proof, case_id: id, title: info.title, viewport: info.project.use.viewport,
       expected: ["current-source-and-authority", "honest-ui-api-result", "preview-only-no-enrollment-or-attendance", "no-retained-preview-credential"],

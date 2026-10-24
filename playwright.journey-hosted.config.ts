@@ -17,7 +17,7 @@ if (!listing && process.env.PLAYER_JOURNEY_LD_CHECKOUT) privateOutput(output, pr
 export default defineConfig({
   testDir: "./e2e", testMatch: "player-journey-hosted.spec.ts", workers: 1,
   fullyParallel: false, retries: 0, forbidOnly: true, maxFailures: 0, timeout: 60000,
-  outputDir: output,
+  outputDir: join(output, "playwright"),
   reporter: [["./e2e/fixtures/player-journey-hosted-adapter.ts", { listing, reportPath: listing ? undefined : process.env.PLAYER_JOURNEY_HOSTED_REPORT_PATH }]],
   use: { baseURL: origin, headless: true, trace: "off", screenshot: "off", video: "off", serviceWorkers: "block" },
   projects: [

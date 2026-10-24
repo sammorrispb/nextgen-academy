@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "codex/nga-journey-preview-20261024": false
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/dropin-reminder",
