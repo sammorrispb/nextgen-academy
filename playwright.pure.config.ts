@@ -9,6 +9,8 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   testIgnore: [
+    "**/nga-journey-browser.spec.ts",
+    "**/nga-parent-preview-browser.spec.ts",
     "**/cluster-attribution.spec.ts",
     "**/clusters-pages.spec.ts",
     "**/contact-form.spec.ts",

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { containsStandingsCapability } from "@/lib/analytics-privacy";
 import { trackEvent } from "@/lib/funnelClient";
 
-const SKIP_PREFIXES = ["/api", "/og", "/admin"];
+const SKIP_PREFIXES = ["/api", "/og", "/admin", "/parent/next"];
 
 function shouldSkip(pathname: string | null): boolean {
   if (!pathname || containsStandingsCapability(pathname)) return true;

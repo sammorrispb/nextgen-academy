@@ -184,6 +184,9 @@ const ALLOWLIST = new Set([
 // This read compares an Origin to trusted server configuration for CSRF; it
 // builds no URL. Only this exact comparison may bypass the link-origin scanner.
 const CSRF_COMPARE_FILES = new Set([
+  "src/app/api/coach/journey-parent-capability/route.ts",
+  "src/app/api/parent/journey-preview/route.ts",
+  "src/app/api/coach/journey-preview/route.ts",
   "src/app/api/admin/mvf-roster-sync/route.ts",
   "src/app/api/admin/mvf-registration/route.ts",
   "src/app/api/admin/mvf-capacity-export/route.ts",

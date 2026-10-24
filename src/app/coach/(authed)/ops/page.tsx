@@ -29,6 +29,8 @@ export default async function CoachOpsPage() {
         path.
       </p>
 
+      <p className="mb-6"><Link href="/coach/journey" className="btn btn-secondary min-h-12">Review a player’s next step</Link></p>
+
       <OpsConsole isAdmin={isAdmin} />
 
       <p className="mt-8 text-sm text-ngpa-white/55">
