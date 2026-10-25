@@ -4,14 +4,17 @@
 // only ever name a configured season, one of its play weeks, a UUID game id or
 // a registration ref the endpoint will look up.
 
+import { randomUUID } from "node:crypto";
 import {
   findRotationLeagueSeason,
   parsePlayoffWeek,
   parsePlayWeek,
+  ROTATION_LEAGUE_SEASONS,
   type RotationLeagueSeason,
 } from "@/data/rotation-league-seasons";
+import { CHILD_LAST_NAME_RE, cleanChildLastName } from "@/lib/child-last-name";
 import { callRotationLeague, type LeagueResult } from "@/lib/rotation-league/client";
-import { buildRosterPlayers, readSeasonRegistrations } from "@/lib/rotation-league/roster";
+import { buildRosterPlayers, readSeasonRegistrations, type RosterPlayer } from "@/lib/rotation-league/roster";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REF = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}$/;
@@ -27,6 +30,8 @@ export interface WeekPlayer {
   name: string;
   status: "active" | "withdrawn";
   present: boolean;
+  /** Added by the coach for a night: plays, never ranked (older L&D builds omit it). */
+  guest?: boolean;
 }
 
 export interface WeekGame {
@@ -40,6 +45,9 @@ export interface WeekGame {
   timed: boolean;
   side_a: string[];
   side_b: string[];
+  /** Registration refs in the same order as the names (older L&D builds send none). */
+  side_a_refs?: string[];
+  side_b_refs?: string[];
 }
 
 export interface PlanRound {
@@ -78,12 +86,17 @@ const MESSAGES: Record<string, string> = {
   not_a_play_week: "That week isn't a league week for this season.",
   player_not_found: "That player isn't on the Link & Dink roster. Tap \"Sync roster\" and try again.",
   player_withdrawn: "That player is withdrawn (not Confirmed), so they can't be checked in.",
+  player_erased: "That player's details were erased, so they can't be added back.",
+  bad_roster: "Link & Dink refused that name. Use letters only.",
   game_not_found: "That game is gone. Refresh the page.",
   game_void: "That game was removed. Refresh the page.",
   night_cancelled: "This week is marked cancelled on Link & Dink.",
   player_not_present: "Someone in the plan isn't checked in any more. Refresh and preview again.",
   court_taken: "Those rounds were already saved (maybe from another phone). Refresh the page.",
-  player_double_booked: "The plan put a player on two courts. Preview again.",
+  player_double_booked: "That puts one player on two courts in the same round.",
+  round_changed: "This round changed on another phone. Refresh the page and try again.",
+  later_round_scored: "A later round already has a score, so those rounds can't be re-planned.",
+  nothing_to_replan: "There are no rounds after this one to re-plan.",
   bad_plan: "Link & Dink refused the plan. Preview again.",
   bad_side_size: "Link & Dink refused the plan. Preview again.",
   bad_input: "Link & Dink refused the request as malformed.",
@@ -229,6 +242,196 @@ export async function planWeek(input: {
     season_slug: season.slug,
     week: w,
     rounds,
+    attempt,
+    dry_run: !input.save,
+  });
+  if (!res.ok) return fail(res);
+  return {
+    ok: true,
+    saved: res.data.saved === true,
+    present: Number(res.data.present) || 0,
+    rounds: Array.isArray(res.data.rounds) ? res.data.rounds : [],
+  };
+}
+
+// --------------------------------------------------------------- guests
+
+export interface GuestCandidate {
+  external_ref: string;
+  name: string;
+  group: string;
+}
+
+/** Seasons whose registrations a guest for `season` may come from: the same
+ * registration DB, a different group (Kobe from Green, for Yellow). */
+function otherGroups(season: RotationLeagueSeason): RotationLeagueSeason[] {
+  const seen = new Set<string>();
+  return ROTATION_LEAGUE_SEASONS.filter((s) => {
+    if (s.rosterSource !== season.rosterSource || s.rosterGroup === season.rosterGroup) return false;
+    if (seen.has(s.rosterGroup)) return false;
+    seen.add(s.rosterGroup);
+    return true;
+  });
+}
+
+/** Confirmed children registered in the other groups, as the roster sync
+ * would send them. Fails loud like the roster read. */
+async function otherGroupPlayers(
+  season: RotationLeagueSeason,
+): Promise<Outcome<{ players: (RosterPlayer & { group: string })[] }>> {
+  const players: (RosterPlayer & { group: string })[] = [];
+  for (const other of otherGroups(season)) {
+    const read = await readSeasonRegistrations(other);
+    if (read.status === "config_missing") {
+      return { ok: false, message: "The registration database isn't configured on this deploy." };
+    }
+    if (read.status === "query_failed") {
+      return { ok: false, message: "Couldn't read registrations from Notion. Try again." };
+    }
+    for (const p of buildRosterPlayers(read.rows).players) {
+      if (p.status === "active") players.push({ ...p, group: other.rosterGroup });
+    }
+  }
+  return { ok: true, players };
+}
+
+/** The coach's "Add a player" picker: other groups' Confirmed children by name. */
+export async function guestCandidates(slug: unknown): Promise<Outcome<{ candidates: GuestCandidate[] }>> {
+  const season = needSeason(slug);
+  if ("ok" in season) return season;
+  const found = await otherGroupPlayers(season);
+  if (!found.ok) return found;
+  const candidates = found.players
+    .map((p) => ({
+      external_ref: p.external_ref,
+      name: p.last_name ? `${p.first_name} ${p.last_name}` : p.first_name,
+      group: p.group,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return { ok: true, candidates };
+}
+
+/**
+ * Add a guest for one week: a Confirmed child from another group (by their
+ * registration ref; the names come from Notion, never from the browser) or a
+ * typed first name for anyone else (the coach filling a court). A guest is
+ * checked in and plays, and is never ranked.
+ */
+export async function addGuest(input: {
+  slug: unknown;
+  week: unknown;
+  externalRef?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
+}): Promise<Outcome> {
+  const season = needSeason(input.slug);
+  if ("ok" in season) return season;
+  const w = parsePlayWeek(season, input.week);
+  if (w === null) return { ok: false, message: "That week isn't a league week for this season." };
+
+  let guest: { external_ref: string; first_name: string; last_name: string | null };
+  if (input.externalRef !== undefined && input.externalRef !== null && input.externalRef !== "") {
+    if (typeof input.externalRef !== "string" || !REF.test(input.externalRef)) {
+      return { ok: false, message: "Unknown player." };
+    }
+    const found = await otherGroupPlayers(season);
+    if (!found.ok) return found;
+    const pick = found.players.find((p) => p.external_ref === input.externalRef);
+    if (!pick) return { ok: false, message: "That player isn't a Confirmed registration in another group." };
+    guest = { external_ref: pick.external_ref, first_name: pick.first_name, last_name: pick.last_name };
+  } else {
+    const first = typeof input.firstName === "string" ? cleanChildLastName(input.firstName) : "";
+    const lastRaw = typeof input.lastName === "string" ? cleanChildLastName(input.lastName) : "";
+    if (!CHILD_LAST_NAME_RE.test(first)) return { ok: false, message: "Type a first name (letters only)." };
+    if (lastRaw !== "" && !CHILD_LAST_NAME_RE.test(lastRaw)) {
+      return { ok: false, message: "The last name can only be letters." };
+    }
+    guest = { external_ref: `guest-${randomUUID()}`, first_name: first, last_name: lastRaw || null };
+  }
+
+  const res = await callRotationLeague({
+    action: "add_guest",
+    season_slug: season.slug,
+    week: w,
+    external_ref: guest.external_ref,
+    first_name: guest.first_name,
+    last_name: guest.last_name,
+  });
+  return res.ok ? { ok: true } : fail(res);
+}
+
+/** One game's new sides, as registration refs, from the coach's dropdowns. */
+export interface RoundEditGame {
+  gameId: string;
+  sideA: string[];
+  sideB: string[];
+}
+
+/** Save the players for every game in one round (a swap between courts included). */
+export async function editRound(input: {
+  slug: unknown;
+  week: unknown;
+  round: unknown;
+  games: unknown;
+}): Promise<Outcome> {
+  const season = needSeason(input.slug);
+  if ("ok" in season) return season;
+  const w = parsePlayWeek(season, input.week);
+  if (w === null) return { ok: false, message: "That week isn't a league week for this season." };
+  const round = Number(input.round);
+  if (!(Number.isInteger(round) && round >= 1 && round <= 99)) return { ok: false, message: "Unknown round." };
+  if (!Array.isArray(input.games) || input.games.length < 1 || input.games.length > 12) {
+    return { ok: false, message: "Unknown round." };
+  }
+  const side = (v: unknown) =>
+    Array.isArray(v) && v.length >= 1 && v.length <= 2 && v.every((r) => typeof r === "string" && REF.test(r))
+      ? [...(v as string[])]
+      : null;
+  const games: { game_id: string; side_a: string[]; side_b: string[] }[] = [];
+  const everyone: string[] = [];
+  for (const g of input.games as Partial<RoundEditGame>[]) {
+    const a = side(g?.sideA);
+    const b = side(g?.sideB);
+    if (typeof g?.gameId !== "string" || !UUID.test(g.gameId) || !a || !b || a.length !== b.length) {
+      return { ok: false, message: "Every game needs a full set of players." };
+    }
+    games.push({ game_id: g.gameId, side_a: a, side_b: b });
+    everyone.push(...a, ...b);
+  }
+  if (new Set(everyone).size !== everyone.length) return { ok: false, message: MESSAGES.player_double_booked };
+  const res = await callRotationLeague({
+    action: "edit_round",
+    season_slug: season.slug,
+    week: w,
+    round,
+    games,
+  });
+  return res.ok ? { ok: true } : fail(res);
+}
+
+/** Preview (dryRun) or save new rounds for everything after `afterRound`. */
+export async function replanAfter(input: {
+  slug: unknown;
+  week: unknown;
+  afterRound: unknown;
+  attempt: unknown;
+  save: boolean;
+}): Promise<Outcome<PlanResult>> {
+  const season = needSeason(input.slug);
+  if ("ok" in season) return season;
+  const w = parsePlayWeek(season, input.week);
+  if (w === null) return { ok: false, message: "That week isn't a league week for this season." };
+  const after = Number(input.afterRound);
+  if (!(Number.isInteger(after) && after >= 1 && after <= 99)) return { ok: false, message: "Unknown round." };
+  const attempt = Number(input.attempt ?? 1);
+  if (!(Number.isInteger(attempt) && attempt >= 1 && attempt <= 99)) {
+    return { ok: false, message: "Bad plan attempt." };
+  }
+  const res = await callRotationLeague<PlanResult>({
+    action: "replan_after",
+    season_slug: season.slug,
+    week: w,
+    after_round: after,
     attempt,
     dry_run: !input.save,
   });

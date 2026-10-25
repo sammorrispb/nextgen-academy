@@ -8,6 +8,7 @@ interface Player {
   external_ref: string;
   name: string;
   present: boolean;
+  guest?: boolean;
 }
 
 // Tap a name to check them in, tap again to take them out. Optimistic: the
@@ -62,6 +63,7 @@ export default function CheckInList({ slug, week, players }: { slug: string; wee
             >
               {on ? "✓ " : ""}
               {p.name}
+              {p.guest && <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wider opacity-70">guest</span>}
             </button>
           );
         })}

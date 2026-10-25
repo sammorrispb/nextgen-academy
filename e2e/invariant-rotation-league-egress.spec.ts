@@ -6,7 +6,7 @@ process.env.NOTION_FALL_REGS_DB_ID = "fall-regs-rotation-league";
 
 import { buildRosterPlayers, readSeasonRegistrations } from "../src/lib/rotation-league/roster";
 import { callRotationLeague, rotationLeagueTarget } from "../src/lib/rotation-league/client";
-import { syncSeason } from "../src/lib/rotation-league/view";
+import { addGuest, editRound, guestCandidates, replanAfter, syncSeason } from "../src/lib/rotation-league/view";
 import { ROTATION_LEAGUE_SEASONS } from "../src/data/rotation-league-seasons";
 
 // The rotation-league coach screens send child data to Link & Dink (Sam,
@@ -215,5 +215,187 @@ test.describe("when and where it sends", () => {
     stub.on(LD, { error: 'relation "ld.x" does not exist', reason: "DB internals" }, 500).install();
     const r = await callRotationLeague({ action: "standings", season_slug: SEASON.slug });
     expect(r).toEqual({ ok: false, code: "http_500" });
+  });
+});
+
+test.describe("round edits and re-plans (2026-10-25)", () => {
+  const WEEK = SEASON.playWeeks[0];
+  const G1 = "aaaaaaaa-bbbb-4ccc-8ddd-000000000001";
+  const G2 = "aaaaaaaa-bbbb-4ccc-8ddd-000000000002";
+  const games = [
+    { gameId: G1, sideA: ["r1", "r2"], sideB: ["r3", "r4"] },
+    { gameId: G2, sideA: ["r5"], sideB: ["r6"] },
+  ];
+
+  test("an edit sends only ids, refs and numbers, in the exact command shape", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true, games: 2 }).install();
+    const r = await editRound({ slug: SEASON.slug, week: WEEK, round: 2, games });
+    expect(r).toEqual({ ok: true });
+    expect(stub.calls).toHaveLength(1);
+    expect(stub.calls[0].url.startsWith(LD)).toBe(true);
+    expect(JSON.parse(stub.calls[0].body)).toEqual({
+      action: "edit_round",
+      season_slug: SEASON.slug,
+      week: WEEK,
+      round: 2,
+      games: [
+        { game_id: G1, side_a: ["r1", "r2"], side_b: ["r3", "r4"] },
+        { game_id: G2, side_a: ["r5"], side_b: ["r6"] },
+      ],
+    });
+    expect(stub.calls[0].body).not.toContain("s3cret");
+  });
+
+  test("a bad edit is refused before anything is sent", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true }).install();
+    const bad: unknown[] = [
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], sideB: ["r1", "r4"] }] },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], gameId: "not-a-uuid" }] },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], sideB: ["r3"] }] },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], sideA: ["parent@example.com", "r2"] }] },
+      { slug: SEASON.slug, week: WEEK, round: 0, games },
+      { slug: SEASON.slug, week: 999, round: 2, games },
+      { slug: "not-a-season", week: WEEK, round: 2, games },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [] },
+    ];
+    for (const input of bad) {
+      const r = await editRound(input as Parameters<typeof editRound>[0]);
+      expect(r.ok, JSON.stringify(input)).toBe(false);
+    }
+    expect(stub.calls).toHaveLength(0);
+  });
+
+  test("a re-plan sends the round, attempt and dry-run flag, and nothing else", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true, saved: false, present: 6, rounds: [] }).install();
+    const r = await replanAfter({ slug: SEASON.slug, week: WEEK, afterRound: 2, attempt: 3, save: false });
+    expect(r).toEqual({ ok: true, saved: false, present: 6, rounds: [] });
+    expect(JSON.parse(stub.calls[0].body)).toEqual({
+      action: "replan_after",
+      season_slug: SEASON.slug,
+      week: WEEK,
+      after_round: 2,
+      attempt: 3,
+      dry_run: true,
+    });
+  });
+
+  test("the new refusals reach the coach as plain sentences", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    for (const code of ["round_changed", "later_round_scored", "nothing_to_replan"]) {
+      stub.reset();
+      stub.on(LD, { error: code }, 409).install();
+      const r = await replanAfter({ slug: SEASON.slug, week: WEEK, afterRound: 1, attempt: 1, save: true });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.message, code).not.toContain("answered");
+      stub.uninstall();
+    }
+  });
+});
+
+test.describe("guests (2026-10-25)", () => {
+  const WEEK = SEASON.playWeeks[0];
+  const OTHER = ROTATION_LEAGUE_SEASONS.find((x) => x.rosterGroup !== SEASON.rosterGroup);
+  const KOBE_REF = "22222222-3333-4444-8555-666666666666";
+
+  /** Notion answers by the Group the query asks for: Kobe in the other group, a refunded kid too. */
+  function notionByGroup() {
+    return (call: { body: string }) => {
+      const group = JSON.parse(call.body)?.filter?.select?.equals;
+      if (group !== OTHER?.rosterGroup) return { results: [notionRow()], has_more: false };
+      return {
+        results: [
+          notionRow({
+            "Child First Name": { rich_text: [{ plain_text: "Kobe" }] },
+            "Child Last Name": { rich_text: [{ plain_text: "Lane" }] },
+            Group: { select: { name: OTHER?.rosterGroup } },
+          }),
+          {
+            ...notionRow({
+              "Child First Name": { rich_text: [{ plain_text: "Refundedkid" }] },
+              Status: { select: { name: "Refunded" } },
+            }),
+            id: "99999999-3333-4444-8555-666666666666",
+          },
+        ].map((r, i) => (i === 0 ? { ...r, id: KOBE_REF } : r)),
+        has_more: false,
+      };
+    };
+  }
+
+  test("the picker lists only Confirmed children from the other group, by name", async () => {
+    expect(OTHER).toBeTruthy();
+    stub.on("api.notion.com", notionByGroup()).install();
+    const r = await guestCandidates(SEASON.slug);
+    expect(r).toEqual({
+      ok: true,
+      candidates: [{ external_ref: KOBE_REF, name: "Kobe Lane", group: OTHER?.rosterGroup }],
+    });
+    const queried = stub.calls.map((c) => JSON.parse(c.body)?.filter?.select?.equals);
+    expect(queried).toEqual([OTHER?.rosterGroup]);
+  });
+
+  test("a picked child goes over with Notion's names and the projection, nothing else", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on("api.notion.com", notionByGroup()).on(LD, { ok: true }).install();
+    const r = await addGuest({
+      slug: SEASON.slug,
+      week: WEEK,
+      externalRef: KOBE_REF,
+      firstName: "Spoofed",
+      lastName: "Name",
+    });
+    expect(r).toEqual({ ok: true });
+    const ld = stub.calls.filter((c) => c.url.startsWith(LD));
+    expect(ld).toHaveLength(1);
+    expect(JSON.parse(ld[0].body)).toEqual({
+      action: "add_guest",
+      season_slug: SEASON.slug,
+      week: WEEK,
+      external_ref: KOBE_REF,
+      first_name: "Kobe",
+      last_name: "Lane",
+    });
+    for (const leak of [PII.allergies, PII.emergency, PII.parentEmail, PII.parentPhone, String(PII.birthYear), "Spoofed"]) {
+      expect(ld[0].body).not.toContain(leak);
+    }
+  });
+
+  test("a ref that isn't a Confirmed child in the other group sends nothing to L&D", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on("api.notion.com", notionByGroup()).on(LD, { ok: true }).install();
+    for (const ref of ["99999999-3333-4444-8555-666666666666", "11111111-2222-4333-8444-555555555555", "bad ref"]) {
+      expect((await addGuest({ slug: SEASON.slug, week: WEEK, externalRef: ref })).ok, ref).toBe(false);
+    }
+    expect(stub.calls.filter((c) => c.url.startsWith(LD))).toHaveLength(0);
+  });
+
+  test("a typed guest is a first (and optional last) name under a fresh opaque ref", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true }).install();
+    expect(await addGuest({ slug: SEASON.slug, week: WEEK, firstName: "  Sam ", lastName: "" })).toEqual({ ok: true });
+    const body = JSON.parse(stub.calls[0].body);
+    expect(Object.keys(body).sort()).toEqual(["action", "external_ref", "first_name", "last_name", "season_slug", "week"]);
+    expect(body).toMatchObject({ action: "add_guest", first_name: "Sam", last_name: null, week: WEEK });
+    expect(body.external_ref).toMatch(/^guest-[0-9a-f-]{36}$/);
+  });
+
+  test("a typed name that isn't a name is refused before anything is sent", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true }).install();
+    const bad = [
+      { firstName: "" },
+      { firstName: "sam@example.com" },
+      { firstName: "3015550199" },
+      { firstName: "Sam", lastName: "parent@example.com" },
+    ];
+    for (const b of bad) {
+      expect((await addGuest({ slug: SEASON.slug, week: WEEK, ...b })).ok, JSON.stringify(b)).toBe(false);
+    }
+    expect((await addGuest({ slug: SEASON.slug, week: 999, firstName: "Sam" })).ok).toBe(false);
+    expect((await addGuest({ slug: "nope", week: WEEK, firstName: "Sam" })).ok).toBe(false);
+    expect(stub.calls).toHaveLength(0);
   });
 });
