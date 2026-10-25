@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addGuestAction, guestCandidatesAction } from "../../actions";
 import type { GuestCandidate } from "@/lib/rotation-league/view";
+import { LEAGUE_PLAYER_CHANGES_ENABLED, PLAYER_CHANGES_UNAVAILABLE } from "@/lib/rotation-league/capabilities";
 
 // Add someone for tonight who isn't on this group's roster: a child from the
 // other ball group, or anyone by first name (the coach filling a court). They
@@ -57,6 +58,10 @@ export default function AddPlayer({ slug, week, onRoster }: { slug: string; week
   const button = "px-4 py-2 rounded-full text-sm font-bold transition-all disabled:opacity-50 min-h-[44px]";
   const field =
     "rounded-lg border border-ngpa-slate/60 bg-ngpa-deep/60 px-3 py-2 text-sm text-ngpa-white min-h-[44px] w-full sm:w-auto";
+
+  if (!LEAGUE_PLAYER_CHANGES_ENABLED) {
+    return <p role="status" className="mt-3 text-sm text-ngpa-white/70">{PLAYER_CHANGES_UNAVAILABLE.message}</p>;
+  }
 
   if (!open) {
     return (

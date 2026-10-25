@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
+import { LEAGUE_PLAYER_CHANGES_ENABLED, PLAYER_CHANGES_UNAVAILABLE } from "@/lib/rotation-league/capabilities";
 import {
   addGuest,
   checkIn,
@@ -74,6 +75,7 @@ export async function guestCandidatesAction(input: {
   slug: string;
 }): Promise<Outcome<{ candidates: GuestCandidate[] }>> {
   if (!(await requireCoach())) return UNAUTHORIZED;
+  if (!LEAGUE_PLAYER_CHANGES_ENABLED) return PLAYER_CHANGES_UNAVAILABLE;
   return guestCandidates(input.slug);
 }
 
@@ -85,6 +87,7 @@ export async function addGuestAction(input: {
   lastName?: string;
 }): Promise<Outcome> {
   if (!(await requireCoach())) return UNAUTHORIZED;
+  if (!LEAGUE_PLAYER_CHANGES_ENABLED) return PLAYER_CHANGES_UNAVAILABLE;
   const result = await addGuest(input);
   revalidate(input.slug, input.week);
   return result;
@@ -97,6 +100,7 @@ export async function editRoundAction(input: {
   games: RoundEditGame[];
 }): Promise<Outcome> {
   if (!(await requireCoach())) return UNAUTHORIZED;
+  if (!LEAGUE_PLAYER_CHANGES_ENABLED) return PLAYER_CHANGES_UNAVAILABLE;
   const result = await editRound(input);
   revalidate(input.slug, input.week);
   return result;
@@ -110,6 +114,7 @@ export async function replanAfterAction(input: {
   save: boolean;
 }): Promise<Outcome<PlanResult>> {
   if (!(await requireCoach())) return UNAUTHORIZED;
+  if (!LEAGUE_PLAYER_CHANGES_ENABLED) return PLAYER_CHANGES_UNAVAILABLE;
   const result = await replanAfter(input);
   if (input.save) revalidate(input.slug, input.week);
   return result;
