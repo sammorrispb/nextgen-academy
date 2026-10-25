@@ -4,14 +4,17 @@
 // only ever name a configured season, one of its play weeks, a UUID game id or
 // a registration ref the endpoint will look up.
 
+import { randomUUID } from "node:crypto";
 import {
   findRotationLeagueSeason,
   parsePlayoffWeek,
   parsePlayWeek,
+  ROTATION_LEAGUE_SEASONS,
   type RotationLeagueSeason,
 } from "@/data/rotation-league-seasons";
+import { CHILD_LAST_NAME_RE, cleanChildLastName } from "@/lib/child-last-name";
 import { callRotationLeague, type LeagueResult } from "@/lib/rotation-league/client";
-import { buildRosterPlayers, readSeasonRegistrations } from "@/lib/rotation-league/roster";
+import { buildRosterPlayers, readSeasonRegistrations, type RosterPlayer } from "@/lib/rotation-league/roster";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REF = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}$/;
@@ -27,6 +30,8 @@ export interface WeekPlayer {
   name: string;
   status: "active" | "withdrawn";
   present: boolean;
+  /** Added by the coach for a night: plays, never ranked (older L&D builds omit it). */
+  guest?: boolean;
 }
 
 export interface WeekGame {
@@ -81,6 +86,8 @@ const MESSAGES: Record<string, string> = {
   not_a_play_week: "That week isn't a league week for this season.",
   player_not_found: "That player isn't on the Link & Dink roster. Tap \"Sync roster\" and try again.",
   player_withdrawn: "That player is withdrawn (not Confirmed), so they can't be checked in.",
+  player_erased: "That player's details were erased, so they can't be added back.",
+  bad_roster: "Link & Dink refused that name. Use letters only.",
   game_not_found: "That game is gone. Refresh the page.",
   game_void: "That game was removed. Refresh the page.",
   night_cancelled: "This week is marked cancelled on Link & Dink.",
@@ -245,6 +252,112 @@ export async function planWeek(input: {
     present: Number(res.data.present) || 0,
     rounds: Array.isArray(res.data.rounds) ? res.data.rounds : [],
   };
+}
+
+// --------------------------------------------------------------- guests
+
+export interface GuestCandidate {
+  external_ref: string;
+  name: string;
+  group: string;
+}
+
+/** Seasons whose registrations a guest for `season` may come from: the same
+ * registration DB, a different group (Kobe from Green, for Yellow). */
+function otherGroups(season: RotationLeagueSeason): RotationLeagueSeason[] {
+  const seen = new Set<string>();
+  return ROTATION_LEAGUE_SEASONS.filter((s) => {
+    if (s.rosterSource !== season.rosterSource || s.rosterGroup === season.rosterGroup) return false;
+    if (seen.has(s.rosterGroup)) return false;
+    seen.add(s.rosterGroup);
+    return true;
+  });
+}
+
+/** Confirmed children registered in the other groups, as the roster sync
+ * would send them. Fails loud like the roster read. */
+async function otherGroupPlayers(
+  season: RotationLeagueSeason,
+): Promise<Outcome<{ players: (RosterPlayer & { group: string })[] }>> {
+  const players: (RosterPlayer & { group: string })[] = [];
+  for (const other of otherGroups(season)) {
+    const read = await readSeasonRegistrations(other);
+    if (read.status === "config_missing") {
+      return { ok: false, message: "The registration database isn't configured on this deploy." };
+    }
+    if (read.status === "query_failed") {
+      return { ok: false, message: "Couldn't read registrations from Notion. Try again." };
+    }
+    for (const p of buildRosterPlayers(read.rows).players) {
+      if (p.status === "active") players.push({ ...p, group: other.rosterGroup });
+    }
+  }
+  return { ok: true, players };
+}
+
+/** The coach's "Add a player" picker: other groups' Confirmed children by name. */
+export async function guestCandidates(slug: unknown): Promise<Outcome<{ candidates: GuestCandidate[] }>> {
+  const season = needSeason(slug);
+  if ("ok" in season) return season;
+  const found = await otherGroupPlayers(season);
+  if (!found.ok) return found;
+  const candidates = found.players
+    .map((p) => ({
+      external_ref: p.external_ref,
+      name: p.last_name ? `${p.first_name} ${p.last_name}` : p.first_name,
+      group: p.group,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return { ok: true, candidates };
+}
+
+/**
+ * Add a guest for one week: a Confirmed child from another group (by their
+ * registration ref; the names come from Notion, never from the browser) or a
+ * typed first name for anyone else (the coach filling a court). A guest is
+ * checked in and plays, and is never ranked.
+ */
+export async function addGuest(input: {
+  slug: unknown;
+  week: unknown;
+  externalRef?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
+}): Promise<Outcome> {
+  const season = needSeason(input.slug);
+  if ("ok" in season) return season;
+  const w = parsePlayWeek(season, input.week);
+  if (w === null) return { ok: false, message: "That week isn't a league week for this season." };
+
+  let guest: { external_ref: string; first_name: string; last_name: string | null };
+  if (input.externalRef !== undefined && input.externalRef !== null && input.externalRef !== "") {
+    if (typeof input.externalRef !== "string" || !REF.test(input.externalRef)) {
+      return { ok: false, message: "Unknown player." };
+    }
+    const found = await otherGroupPlayers(season);
+    if (!found.ok) return found;
+    const pick = found.players.find((p) => p.external_ref === input.externalRef);
+    if (!pick) return { ok: false, message: "That player isn't a Confirmed registration in another group." };
+    guest = { external_ref: pick.external_ref, first_name: pick.first_name, last_name: pick.last_name };
+  } else {
+    const first = typeof input.firstName === "string" ? cleanChildLastName(input.firstName) : "";
+    const lastRaw = typeof input.lastName === "string" ? cleanChildLastName(input.lastName) : "";
+    if (!CHILD_LAST_NAME_RE.test(first)) return { ok: false, message: "Type a first name (letters only)." };
+    if (lastRaw !== "" && !CHILD_LAST_NAME_RE.test(lastRaw)) {
+      return { ok: false, message: "The last name can only be letters." };
+    }
+    guest = { external_ref: `guest-${randomUUID()}`, first_name: first, last_name: lastRaw || null };
+  }
+
+  const res = await callRotationLeague({
+    action: "add_guest",
+    season_slug: season.slug,
+    week: w,
+    external_ref: guest.external_ref,
+    first_name: guest.first_name,
+    last_name: guest.last_name,
+  });
+  return res.ok ? { ok: true } : fail(res);
 }
 
 /** One game's new sides, as registration refs, from the coach's dropdowns. */

@@ -3,8 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
 import {
+  addGuest,
   checkIn,
   editRound,
+  guestCandidates,
+  type GuestCandidate,
   lockPlayoffTeams,
   planWeek,
   previewPlayoff,
@@ -64,6 +67,26 @@ export async function planAction(input: {
   if (!(await requireCoach())) return UNAUTHORIZED;
   const result = await planWeek(input);
   if (input.save) revalidate(input.slug, input.week);
+  return result;
+}
+
+export async function guestCandidatesAction(input: {
+  slug: string;
+}): Promise<Outcome<{ candidates: GuestCandidate[] }>> {
+  if (!(await requireCoach())) return UNAUTHORIZED;
+  return guestCandidates(input.slug);
+}
+
+export async function addGuestAction(input: {
+  slug: string;
+  week: number;
+  externalRef?: string;
+  firstName?: string;
+  lastName?: string;
+}): Promise<Outcome> {
+  if (!(await requireCoach())) return UNAUTHORIZED;
+  const result = await addGuest(input);
+  revalidate(input.slug, input.week);
   return result;
 }
 

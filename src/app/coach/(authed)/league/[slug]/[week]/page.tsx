@@ -7,6 +7,7 @@ import { LeagueStandings } from "@/components/rotation-league/LeagueStandings";
 import CheckInList from "./CheckInList";
 import PlanPanel from "./PlanPanel";
 import RoundBlock from "./RoundBlock";
+import AddPlayer from "./AddPlayer";
 
 export const dynamic = "force-dynamic";
 
@@ -69,8 +70,9 @@ export default async function LeagueWeekPage({ params }: { params: Promise<{ slu
               week={week}
               players={data.players
                 .filter((p) => p.status === "active" || p.present)
-                .map((p) => ({ external_ref: p.external_ref, name: p.name, present: p.present }))}
+                .map((p) => ({ external_ref: p.external_ref, name: p.name, present: p.present, guest: p.guest === true }))}
             />
+            <AddPlayer slug={season.slug} week={week} onRoster={data.players.map((p) => p.external_ref)} />
           </section>
 
           <section>
