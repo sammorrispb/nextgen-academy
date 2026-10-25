@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { planAction } from "../../actions";
 import type { PlanRound } from "@/lib/rotation-league/view";
+import PlanPreview from "./PlanPreview";
 
 // Preview the next rounds for whoever is checked in, try another shuffle, then
 // save. Preview and save send the same attempt number, and the engine is
@@ -101,26 +102,7 @@ export default function PlanPanel({ slug, week, hasGames }: { slug: string; week
       </div>
       {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
 
-      {preview && (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {preview.map((r) => (
-            <div key={r.round} className="rounded-2xl border border-ngpa-slate/40 bg-ngpa-panel/40 p-4">
-              <p className="text-xs font-bold uppercase tracking-wider text-ngpa-teal mb-2">Round {r.round}</p>
-              <ul className="space-y-1.5 text-sm text-ngpa-white">
-                {r.games.map((g) => (
-                  <li key={g.court}>
-                    <span className="text-ngpa-white/50 text-xs mr-2">
-                      Court {g.court} · {g.format}
-                    </span>
-                    {g.side_a.join(" & ")} <span className="text-ngpa-white/45">vs</span> {g.side_b.join(" & ")}
-                  </li>
-                ))}
-              </ul>
-              {r.sitting.length > 0 && <p className="text-xs text-ngpa-white/55 mt-2">Sitting: {r.sitting.join(", ")}</p>}
-            </div>
-          ))}
-        </div>
-      )}
+      {preview && <PlanPreview rounds={preview} />}
     </div>
   );
 }

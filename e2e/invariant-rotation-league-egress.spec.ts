@@ -6,7 +6,7 @@ process.env.NOTION_FALL_REGS_DB_ID = "fall-regs-rotation-league";
 
 import { buildRosterPlayers, readSeasonRegistrations } from "../src/lib/rotation-league/roster";
 import { callRotationLeague, rotationLeagueTarget } from "../src/lib/rotation-league/client";
-import { syncSeason } from "../src/lib/rotation-league/view";
+import { editRound, replanAfter, syncSeason } from "../src/lib/rotation-league/view";
 import { ROTATION_LEAGUE_SEASONS } from "../src/data/rotation-league-seasons";
 
 // The rotation-league coach screens send child data to Link & Dink (Sam,
@@ -215,5 +215,82 @@ test.describe("when and where it sends", () => {
     stub.on(LD, { error: 'relation "ld.x" does not exist', reason: "DB internals" }, 500).install();
     const r = await callRotationLeague({ action: "standings", season_slug: SEASON.slug });
     expect(r).toEqual({ ok: false, code: "http_500" });
+  });
+});
+
+test.describe("round edits and re-plans (2026-10-25)", () => {
+  const WEEK = SEASON.playWeeks[0];
+  const G1 = "aaaaaaaa-bbbb-4ccc-8ddd-000000000001";
+  const G2 = "aaaaaaaa-bbbb-4ccc-8ddd-000000000002";
+  const games = [
+    { gameId: G1, sideA: ["r1", "r2"], sideB: ["r3", "r4"] },
+    { gameId: G2, sideA: ["r5"], sideB: ["r6"] },
+  ];
+
+  test("an edit sends only ids, refs and numbers, in the exact command shape", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true, games: 2 }).install();
+    const r = await editRound({ slug: SEASON.slug, week: WEEK, round: 2, games });
+    expect(r).toEqual({ ok: true });
+    expect(stub.calls).toHaveLength(1);
+    expect(stub.calls[0].url.startsWith(LD)).toBe(true);
+    expect(JSON.parse(stub.calls[0].body)).toEqual({
+      action: "edit_round",
+      season_slug: SEASON.slug,
+      week: WEEK,
+      round: 2,
+      games: [
+        { game_id: G1, side_a: ["r1", "r2"], side_b: ["r3", "r4"] },
+        { game_id: G2, side_a: ["r5"], side_b: ["r6"] },
+      ],
+    });
+    expect(stub.calls[0].body).not.toContain("s3cret");
+  });
+
+  test("a bad edit is refused before anything is sent", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true }).install();
+    const bad: unknown[] = [
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], sideB: ["r1", "r4"] }] },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], gameId: "not-a-uuid" }] },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], sideB: ["r3"] }] },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [{ ...games[0], sideA: ["parent@example.com", "r2"] }] },
+      { slug: SEASON.slug, week: WEEK, round: 0, games },
+      { slug: SEASON.slug, week: 999, round: 2, games },
+      { slug: "not-a-season", week: WEEK, round: 2, games },
+      { slug: SEASON.slug, week: WEEK, round: 2, games: [] },
+    ];
+    for (const input of bad) {
+      const r = await editRound(input as Parameters<typeof editRound>[0]);
+      expect(r.ok, JSON.stringify(input)).toBe(false);
+    }
+    expect(stub.calls).toHaveLength(0);
+  });
+
+  test("a re-plan sends the round, attempt and dry-run flag, and nothing else", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    stub.on(LD, { ok: true, saved: false, present: 6, rounds: [] }).install();
+    const r = await replanAfter({ slug: SEASON.slug, week: WEEK, afterRound: 2, attempt: 3, save: false });
+    expect(r).toEqual({ ok: true, saved: false, present: 6, rounds: [] });
+    expect(JSON.parse(stub.calls[0].body)).toEqual({
+      action: "replan_after",
+      season_slug: SEASON.slug,
+      week: WEEK,
+      after_round: 2,
+      attempt: 3,
+      dry_run: true,
+    });
+  });
+
+  test("the new refusals reach the coach as plain sentences", async () => {
+    setEnv({ LINKDINK_BASE_URL: LD, NGA_SYNC_SECRET: "s3cret" });
+    for (const code of ["round_changed", "later_round_scored", "nothing_to_replan"]) {
+      stub.reset();
+      stub.on(LD, { error: code }, 409).install();
+      const r = await replanAfter({ slug: SEASON.slug, week: WEEK, afterRound: 1, attempt: 1, save: true });
+      expect(r.ok).toBe(false);
+      if (!r.ok) expect(r.message, code).not.toContain("answered");
+      stub.uninstall();
+    }
   });
 });
