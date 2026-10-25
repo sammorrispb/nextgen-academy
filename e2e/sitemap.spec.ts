@@ -24,13 +24,20 @@ test.describe("sitemap", () => {
       "/levels",
       "/youth-pickleball-frederick",
       "/montgomery-county-youth-pickleball",
-      "/mvf-junior-tournament",
     ]) {
       expect(urls, path).toContain(`${BASE}${path}`);
     }
     for (const post of blogPosts) {
-      expect(urls, post.slug).toContain(`${BASE}/blog/${post.slug}`);
+      if (post.slug === "mvf-junior-tournament-october-24-2026") {
+        expect(urls, post.slug).not.toContain(`${BASE}/blog/${post.slug}`);
+      } else {
+        expect(urls, post.slug).toContain(`${BASE}/blog/${post.slug}`);
+      }
     }
+  });
+
+  test("keeps the historical tournament out of public discovery", () => {
+    expect(urls).not.toContain(`${BASE}/mvf-junior-tournament`);
   });
 
   test("blog entries carry their publish date; nothing else claims a date", () => {

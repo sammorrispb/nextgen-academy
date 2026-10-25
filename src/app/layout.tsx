@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat, Inter, Roboto_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
-import TournamentBanner from "@/components/TournamentBanner";
 import Footer from "@/components/Footer";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
 import JsonLd from "@/components/JsonLd";
@@ -92,7 +91,6 @@ export default function RootLayout({
           Skip to content
         </a>
         <Navbar />
-        <TournamentBanner />
         <main id="main" className="pb-16 md:pb-0">{children}</main>
         <Footer />
         <StickyMobileCTA />

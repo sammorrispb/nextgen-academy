@@ -3,6 +3,13 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+## 2026-10-25 — Retire public MVF tournament promotion
+
+- **Situation:** Sam's two screenshots identify the sitewide MVF Junior Tournament banner on `/admin/fall` and the first promotional card on `/schedule`, after the October 24 event.
+- **Decision:** Remove the global banner and schedule callout. Keep the tournament and parent-guide URLs working but unlist them from public discovery (blog index/schema and sitemap, with noindex metadata). Preserve the historical policy text while removing its registration-page link. Desktop/mobile navbar and footer already have no tournament entry.
+- **Risk:** Existing direct links still reach the retained page; this change does not disable registration endpoints or alter tournament records, admin functionality, payments, auth, permissions, environment configuration or migrations. Revert this commit to restore promotion.
+- **Validation:** Required production build, TypeScript, funnel verification and lint pass (zero errors; two existing internal-navigation warnings). Whole pure suite: 3,412 passed, one existing skip. Focused desktop/mobile browser checks: 20 passed, including navigation, homepage/schedule promotion removal, historical URLs returning 200 with noindex, and 375px overflow checks. Existing homepage/SEO smoke: 326 passed, seven viewport-specific skips; focused historical-guide/SEO rerun: 10 passed. Local desktop/mobile screenshots inspected. New sitemap expectations first failed against the old listing (two failures), then passed. No live family/provider actions were performed.
+
 ## 2026-10-23 — Review the combined MVF capacity bootstrap without exporting family data
 
 - **Situation:** The authenticated registration preview passes the strict waiver and exact current NGA Stripe-account checks, but admission stops before invoice creation because the capacity ledger remains dark and empty. The combined 14U field already has nine paid registrations, including two invoices originally issued for 10U, plus two fully refunded histories. The old review generator would enable both divisions and omit historical callback quarantine.

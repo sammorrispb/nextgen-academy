@@ -56,6 +56,8 @@ export interface BlogPost {
   headline: string;
   description: string;
   datePublished: string;
+  /** Retain historical URLs without promoting them in the index or sitemap. */
+  unlisted?: boolean;
   sections: BlogSection[];
   /** Optional related links rendered after the article body. External links
    * to family sites should be built with familySiteUrl at render time. */
@@ -122,6 +124,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "mvf-junior-tournament-october-24-2026",
+    unlisted: true,
     title: "October 24 MVF Junior Pickleball: Parent Guide",
     headline: "October 24 MVF junior pickleball: your family's guide",
     description: "NGA's October 24 Montgomery Village junior tournament: ages, fees, indoor rain backup, 15-minute check-in and invoice payment.",

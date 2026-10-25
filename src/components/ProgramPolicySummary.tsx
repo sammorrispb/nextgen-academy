@@ -16,7 +16,6 @@ export default function ProgramPolicySummary() {
     },
     {
       title: `MVF Junior Tournament · ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}`,
-      href: "/mvf-junior-tournament",
       detail: `For existing registrations, the supplied tournament terms state: ${NO_REFUNDS_TEXT} ${RAIN_OR_SHINE_TEXT} NGA sends an invoice after registration; payment locks the spot. The Walter Johnson make-up policy does not apply to this tournament. New NGA-controlled offers using these terms follow the case-by-case refund review above.`,
     },
     {
@@ -47,10 +46,14 @@ export default function ProgramPolicySummary() {
       <p>{EXISTING_AGREEMENTS_POLICY_TEXT} This summary does not replace those terms.</p>
       <ul className="space-y-5">
         {policies.map((policy) => (
-          <li key={policy.href}>
-            <Link href={policy.href} className="text-ngpa-teal-bright font-bold underline underline-offset-4 hover:text-ngpa-teal">
-              {policy.title}
-            </Link>
+          <li key={policy.title}>
+            {policy.href ? (
+              <Link href={policy.href} className="text-ngpa-teal-bright font-bold underline underline-offset-4 hover:text-ngpa-teal">
+                {policy.title}
+              </Link>
+            ) : (
+              <span className="font-bold">{policy.title}</span>
+            )}
             <p className="mt-1">{policy.detail}</p>
           </li>
         ))}
