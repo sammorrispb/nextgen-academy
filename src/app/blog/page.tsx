@@ -27,6 +27,7 @@ export const metadata: Metadata = {
 };
 
 export default function BlogIndexPage() {
+  const listedPosts = blogPosts.filter((post) => !post.unlisted);
   return (
     <>
       <JsonLd
@@ -43,7 +44,7 @@ export default function BlogIndexPage() {
           description: DESCRIPTION,
           url: `${SITE_URL}/blog`,
           publisher: orgRef(),
-          blogPost: blogPosts.map((post) => ({
+          blogPost: listedPosts.map((post) => ({
             "@type": "BlogPosting",
             headline: post.headline,
             url: `${SITE_URL}/blog/${post.slug}`,
@@ -73,7 +74,7 @@ export default function BlogIndexPage() {
 
       <section className="bg-ngpa-navy py-14 sm:py-16 px-4 sm:px-6 lg:px-10">
         <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {blogPosts.map((post) => (
+          {listedPosts.map((post) => (
             <Link
               key={post.slug}
               href={`/blog/${post.slug}`}

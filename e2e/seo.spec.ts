@@ -17,6 +17,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 interface RouteSpec {
   path: string;
+  unlisted?: boolean;
   /** Title prefix Google would see — used to disambiguate per-page metadata. */
   titleContains?: RegExp;
   /** If set, asserts the H1 text includes this. */
@@ -27,7 +28,7 @@ interface RouteSpec {
 
 const ROUTES: RouteSpec[] = [
   { path: "/blog/walter-johnson-youth-pickleball-fall-2026", titleContains: /Walter Johnson/, h1Contains: /Walter Johnson/ },
-  { path: "/blog/mvf-junior-tournament-october-24-2026", titleContains: /October 24/, h1Contains: /October 24/ },
+  { path: "/blog/mvf-junior-tournament-october-24-2026", unlisted: true, titleContains: /October 24/, h1Contains: /October 24/ },
   {
     path: "/",
     titleContains: /Next Gen PB Academy/,
@@ -193,9 +194,16 @@ test.describe("parent guide publication", () => {
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       });
     }
-    test(`${guide.slug}: discoverable from the public blog`, async ({ page }) => {
+    test(`${guide.slug}: public blog listing respects historical status`, async ({ page }) => {
       await page.goto("/blog");
-      await expect(page.locator(`a[href="/blog/${guide.slug}"]`)).toBeVisible();
+      const link = page.locator(`a[href="/blog/${guide.slug}"]`);
+      if (guide.slug === "mvf-junior-tournament-october-24-2026") {
+        await expect(link).toHaveCount(0);
+        const structuredData = await page.locator('script[type="application/ld+json"]').allTextContents();
+        expect(structuredData.join("\n")).not.toContain(guide.slug);
+      } else {
+        await expect(link).toBeVisible();
+      }
     });
   }
   test("unknown parent guides return 404", async ({ page }) => {
@@ -420,7 +428,7 @@ test.describe("SEO foundations — site-wide", () => {
       // Sitemap may render with or without trailing slash — accept either.
       const present =
         xml.includes(expected) || xml.includes(expected.replace(/\/$/, ""));
-      expect(present, `sitemap missing ${route.path}`).toBe(true);
+      expect(present, `sitemap listing for ${route.path}`).toBe(!route.unlisted);
     }
   });
 

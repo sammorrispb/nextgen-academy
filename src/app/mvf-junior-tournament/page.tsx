@@ -28,12 +28,10 @@ import {
 // a venue move is a one-file change there. Revenue splits 80/20 NGA/MVF
 // (metadata-tracked, remitted manually).
 //
-// INDEXED, deliberately — the opposite call from /monday-girls. This is a
-// public tournament at a public commercial facility: Montgomery Village
-// parents should find "youth pickleball tournament Montgomery Village" in
-// search. The venue is a public facility, not a child-safety exposure.
+// Keep historical links working after retiring public promotion.
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title: `Junior Pickleball Tournament — ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}`,
   description: `Next Gen Pickleball Academy's ${MVF_JUNIOR_TOURNAMENT_TITLE} at ${MVF_JUNIOR_TOURNAMENT_VENUE} in ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}. Rotating partner round robin, ${GUARANTEED_GAMES_TEXT.toLowerCase()} ${MEDALS_TEXT} $${RESIDENT_PRICE_USD} resident / $${NONRESIDENT_PRICE_USD} non-resident.`,
   alternates: { canonical: "https://nextgenpbacademy.com/mvf-junior-tournament" },
