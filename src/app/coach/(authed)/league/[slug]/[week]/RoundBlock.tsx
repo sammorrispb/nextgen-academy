@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { editRoundAction, replanAfterAction } from "../../actions";
 import type { PlanRound, WeekGame } from "@/lib/rotation-league/view";
+import { LEAGUE_PLAYER_CHANGES_ENABLED } from "@/lib/rotation-league/capabilities";
 import {
   assignSlot,
   lineupChanged,
@@ -127,7 +128,7 @@ export default function RoundBlock(props: Props) {
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-2">
         <p className="text-xs font-bold uppercase tracking-wider text-ngpa-teal mr-auto">Round {round}</p>
-        {original && !lineup && (
+        {LEAGUE_PLAYER_CHANGES_ENABLED && original && !lineup && (
           <button
             type="button"
             onClick={startEdit}
@@ -137,7 +138,7 @@ export default function RoundBlock(props: Props) {
             Change players
           </button>
         )}
-        {props.canReplanAfter && !lineup && (
+        {LEAGUE_PLAYER_CHANGES_ENABLED && props.canReplanAfter && !lineup && (
           <button
             type="button"
             onClick={() => runReplan(false, 1)}
