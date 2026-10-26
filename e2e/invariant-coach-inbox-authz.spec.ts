@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 import { FetchStub } from "./fixtures/fetch-stub";
@@ -51,9 +51,10 @@ test.describe("inbox actions are coach-gated (wiring pins)", () => {
   test("every exported action awaits requireCoach and fails closed", () => {
     const src = actionsSrc();
     const exported = src.match(/export async function \w+Action/g) ?? [];
-    // 4 actions: news triage, draft decide (approve/skip collapsed into
-    // decideDraftAction), crew review, commit re-activate.
-    expect(exported.length).toBeGreaterThanOrEqual(4);
+    // 3 actions: draft decide (approve/skip collapsed into
+    // decideDraftAction), crew review, commit re-activate. News triage was
+    // retired with the scraper (2026-10-26).
+    expect(exported.length).toBeGreaterThanOrEqual(3);
     const gates = src.match(/await requireCoach\(\)/g) ?? [];
     expect(
       gates.length,
@@ -71,7 +72,6 @@ test.describe("inbox actions are coach-gated (wiring pins)", () => {
     expect(src).not.toContain("api.notion.com");
     // and only vocabulary-pinned decisions, via the shared maps:
     expect(src).toContain('from "@/lib/coach-inbox"');
-    expect(src).toContain("NEWS_DECISION_TO_STATUS");
     expect(src).toContain("CREW_DECISION_TO_STATUS");
     expect(src).toContain("DRAFT_DECISION_TO_STATUS");
   });
@@ -171,11 +171,13 @@ test.describe("verification residues — wiring pins", () => {
     expect(page).not.toMatch(/6:00\s?PM|6pm/i);
   });
 
-  test("news triage anchors go through the scheme check (newsLinkHref)", () => {
+  test("the retired news triage queue stays gone (scraper retired 2026-10-26)", () => {
     const page = pageSrc();
-    expect(page).toContain("newsLinkHref(");
-    // No bare scraper-URL anchor: every href on the news rows is the checked one.
-    expect(page).not.toContain("href={n.url}");
+    expect(page).not.toContain("News triage");
+    expect(actionsSrc()).not.toContain("triageNewsAction");
+    expect(existsSync(join(process.cwd(), "src", "lib", "notion-news.ts"))).toBe(false);
+    expect(existsSync(join(process.cwd(), "src", "app", "api", "cron", "scrape-news"))).toBe(false);
+    expect(readFileSync(join(process.cwd(), "vercel.json"), "utf-8")).not.toContain("scrape-news");
   });
 });
 

@@ -1424,3 +1424,11 @@ Append-only. One entry per consequential decision, newest first. Format:
 - **Decision:** Set `LEAGUE_PLAYER_CHANGES_ENABLED` to true and keep it as a kill switch. The release-gate spec now pins the enabled behavior: the four actions delegate to the view, coach authentication is still checked first, and the week page shows the three controls with no unavailable notice.
 - **Risk:** The controls write to Link & Dink (round sides, re-planned rounds, guest roster rows). Rollback is setting the switch back to false; existing check-in, full-week planning, scoring, removal and standings are unchanged either way.
 - **Validation:** Release-gate, authorization, egress and round-edit specs: 43 passed. Mutation: the switch set back to false fails 7 release-gate cases. Full pure suite, lint and build recorded in the PR.
+
+
+## 2026-10-26 — Retire the youth-news scraper and the inbox News triage queue
+
+- **Situation:** On 2026-10-23 (#431) the weekly newsletter stopped rendering the scraped youth-news block, so the daily `scrape-news` cron filled a Notion queue nothing read. The coach inbox still listed those stories in a "News triage" queue, counted them in the `/coach` badge, and told Sam an approved story "ships in Thursday's newsletter", which was no longer true. Sam: "retire the news scraper".
+- **Decision:** Remove the cron schedule (`vercel.json`), its route, `src/lib/news-scraper.ts`, `src/lib/notion-news.ts`, the inbox's News triage queue/action/row component and the `+` badge label that only the capped news fetch needed. The inbox now has three queues. The NGA Youth Pickleball News DB is left in Notion as an archive (no reader, no writer); the `NOTION_NEWS_DB_ID` Vercel env var is now unused. The Tuesday NGA News Radar routine is a separate cloud routine and still feeds the Wednesday drafter.
+- **Risk:** None to parents: the newsletter already ignored the queue. Rollback is a revert of this PR.
+- **Validation:** Full pure suite 3,422 passed, 1 existing skip; lint 0 errors (2 existing warnings); TypeScript and production build pass. New pin in `e2e/invariant-coach-inbox-authz.spec.ts` (the queue, action, lib, route and cron entry stay gone) fails when the `vercel.json` cron entry is restored.

@@ -3,14 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
 import {
-  NEWS_DECISION_TO_STATUS,
   DRAFT_DECISION_TO_STATUS,
   CREW_DECISION_TO_STATUS,
-  type NewsDecision,
   type DraftDecision,
   type CrewDecision,
 } from "@/lib/coach-inbox";
-import { setNewsStatus } from "@/lib/notion-news";
 import {
   setDraftStatus,
   fetchDraftShipFields,
@@ -19,9 +16,8 @@ import {
 import { setCrewInterestStatus } from "@/lib/notion-crew-interest";
 import { updateCommit } from "@/lib/notion-crew-commits";
 
-// Coach Inbox actions — cookie-authed one-tap decisions over the four Notion
-// queues. Every write goes through the existing vetted lib (setNewsStatus /
-// setDraftStatus / setCrewInterestStatus / updateCommit) and every status
+// Coach Inbox actions — cookie-authed one-tap decisions over the three Notion
+// queues. Every write goes through the existing vetted lib (setDraftStatus / setCrewInterestStatus / updateCommit) and every status
 // value comes from the decision maps in @/lib/coach-inbox, which are pinned
 // against each DB's existing vocabulary — nothing here can invent a status.
 // Red lines held server-side (never just in the UI):
@@ -58,40 +54,6 @@ function validPageId(pageId: unknown): pageId is string {
   return typeof pageId === "string" && pageId.trim().length > 0;
 }
 
-export async function triageNewsAction(
-  pageId: string,
-  decision: NewsDecision,
-): Promise<InboxActionResult> {
-  const email = await requireCoach();
-  if (!email) return UNAUTHORIZED;
-  if (!validPageId(pageId)) return { ok: false, message: "Missing row id." };
-  const status = NEWS_DECISION_TO_STATUS[decision];
-  if (!status) return { ok: false, message: "Unknown decision." };
-
-  const ok = await setNewsStatus(pageId, status);
-  if (!ok) return { ok: false, message: "Notion update failed — try again." };
-  refreshInbox();
-  return {
-    ok: true,
-    message:
-      status === "Approved"
-        ? "Approved — ships in Thursday's newsletter."
-        : "Rejected.",
-  };
-}
-
-/**
- * One action for both draft decisions (F8) — the decision value maps through
- * DRAFT_DECISION_TO_STATUS so nothing here can invent a Notion status.
- *
- * Approve additionally re-checks the Thursday ship window SERVER-SIDE (F4):
- * the row's Drafted At / Expires At are re-fetched (never trusted from the
- * client) and run through willRideThursdaySend — the same helper that mirrors
- * the cron's own query filter. Out-of-window (or unverifiable) approvals are
- * REFUSED by default with needsForce set; a second, explicit force tap
- * approves anyway with a message that never claims the draft rides the send
- * unless the cron filter would actually include it.
- */
 export async function decideDraftAction(
   pageId: string,
   decision: DraftDecision,

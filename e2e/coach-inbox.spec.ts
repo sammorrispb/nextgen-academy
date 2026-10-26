@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { FetchStub } from "./fixtures/fetch-stub";
 
-// Pure + offline-behavioral specs for the Coach Inbox (Phase 1b) — the four
+// Pure + offline-behavioral specs for the Coach Inbox (Phase 1b) — the three
 // queue fetchers' query builders, the decision→Notion-status maps (vocabulary
 // pins: the inbox may only write status values that already exist in each
 // DB's documented union), the pending-count badge math, the draft-body
@@ -13,7 +13,6 @@ import { FetchStub } from "./fixtures/fetch-stub";
 // Env BEFORE any fetcher call (read at call time; pattern matches
 // invariant-coach-inbox-authz.spec.ts).
 process.env.NOTION_API_KEY = "test-notion-key-inbox";
-process.env.NOTION_NEWS_DB_ID = "test-news-db";
 process.env.NOTION_NEWSLETTER_DRAFTS_DB_ID = "test-drafts-db";
 process.env.NOTION_CREW_INTEREST_DB_ID = "test-crew-db";
 process.env.NOTION_CREW_COMMITS_DB_ID = "test-commits-db";
@@ -21,19 +20,12 @@ process.env.NOTION_CREW_COMMITS_DB_ID = "test-commits-db";
 import {
   inboxPendingCount,
   inboxCountsTotal,
-  pendingBadgeLabel,
   fetchInboxCounts,
   filterCrewInboxRows,
-  NEWS_DECISION_TO_STATUS,
   DRAFT_DECISION_TO_STATUS,
   CREW_DECISION_TO_STATUS,
   type InboxQueues,
 } from "../src/lib/coach-inbox";
-import {
-  buildNewNewsQuery,
-  fetchNewNews,
-  newsLinkHref,
-} from "../src/lib/notion-news";
 import {
   blocksToHtml,
   blocksToText,
@@ -79,18 +71,10 @@ function crewRow(
 // ---------------------------------------------------------------------------
 // Decision → status maps. NEVER invent status values: each target must be a
 // value already present in the lib's union / documented vocabulary.
-//   news:   NewsStatus = "New" | "Approved" | "Used" | "Rejected"
 //   drafts: Pending | Approved | Skip (lib doc + CLAUDE.md drafter pipeline)
 //   crew:   Status select — actionable New/Reviewed, terminal Polled/Closed…
 // ---------------------------------------------------------------------------
 test.describe("inbox decision maps pin the existing Notion status vocabulary", () => {
-  test("news: approve→Approved, reject→Rejected — and nothing else", () => {
-    expect(NEWS_DECISION_TO_STATUS).toEqual({
-      approve: "Approved",
-      reject: "Rejected",
-    });
-  });
-
   test("drafts: approve→Approved, skip→Skip — no auto-approve alias, no Used", () => {
     expect(DRAFT_DECISION_TO_STATUS).toEqual({
       approve: "Approved",
@@ -112,28 +96,6 @@ test.describe("inbox decision maps pin the existing Notion status vocabulary", (
 // precedent) — pin the Status filter each fetcher sends to Notion.
 // ---------------------------------------------------------------------------
 test.describe("queue fetcher query builders", () => {
-  test("news triage queue queries Status=New, newest discovered first", () => {
-    const q = buildNewNewsQuery(20);
-    expect(q.filter).toEqual({
-      property: "Status",
-      select: { equals: "New" },
-    });
-    expect(q.page_size).toBe(20);
-    expect(q.sorts).toEqual([
-      { property: "Discovered At", direction: "descending" },
-    ]);
-  });
-
-  test("news query clamps a nonsense limit to at least 1", () => {
-    expect(buildNewNewsQuery(0).page_size).toBe(1);
-    expect(buildNewNewsQuery(-5).page_size).toBe(1);
-  });
-
-  test("news query carries the pagination cursor only when one is given (F5)", () => {
-    expect(buildNewNewsQuery(20)).not.toHaveProperty("start_cursor");
-    expect(buildNewNewsQuery(20, "cursor-abc").start_cursor).toBe("cursor-abc");
-  });
-
   test("newsletter queue queries Status=Pending only", () => {
     expect(buildPendingDraftsQueryFilter()).toEqual({
       property: "Status",
@@ -169,8 +131,6 @@ test.describe("queue fetcher query builders", () => {
 // ---------------------------------------------------------------------------
 test.describe("inboxPendingCount / badge labeling", () => {
   const empty: InboxQueues = {
-    news: [],
-    newsHasMore: false,
     drafts: [],
     crew: [],
     cardFailed: [],
@@ -180,33 +140,23 @@ test.describe("inboxPendingCount / badge labeling", () => {
     expect(inboxPendingCount(empty)).toBe(0);
   });
 
-  test("sums all four queues", () => {
+  test("sums all three queues", () => {
     const queues = {
-      news: [{}, {}] ,
-      newsHasMore: false,
       drafts: [{}],
       crew: [{}, {}, {}],
       cardFailed: [{}],
     } as unknown as InboxQueues;
-    expect(inboxPendingCount(queues)).toBe(7);
+    expect(inboxPendingCount(queues)).toBe(5);
   });
 
   test("inboxCountsTotal sums the count-only shape", () => {
     expect(
       inboxCountsTotal({
-        news: 2,
-        newsHasMore: false,
         drafts: 1,
         crew: 3,
         cardFailed: 1,
       }),
-    ).toBe(7);
-  });
-
-  test("pendingBadgeLabel is honest about a capped news fetch (F5)", () => {
-    expect(pendingBadgeLabel(7, false)).toBe("7");
-    expect(pendingBadgeLabel(104, true)).toBe("104+");
-    expect(pendingBadgeLabel(0, false)).toBe("0");
+    ).toBe(5);
   });
 });
 
@@ -423,29 +373,6 @@ test.describe("residue 1 — formatNewsletterDeadline renders the fire in ET, DS
 });
 
 // ---------------------------------------------------------------------------
-// Residue 2 — scraper-sourced news URLs are untrusted input rendered as
-// anchors in the triage queue: same scheme-allowlist posture as the draft
-// renderer. null = the page renders plain text, no anchor.
-// ---------------------------------------------------------------------------
-test.describe("residue 2 — newsLinkHref scheme-checks scraper URLs", () => {
-  test("unsafe or empty URL → null (no anchor)", () => {
-    expect(newsLinkHref("javascript:alert(1)")).toBeNull();
-    expect(newsLinkHref("  JAVASCRIPT:alert(1)")).toBeNull();
-    expect(newsLinkHref("data:text/html,x")).toBeNull();
-    expect(newsLinkHref("")).toBeNull();
-  });
-
-  test("http(s) URLs pass through unchanged", () => {
-    expect(newsLinkHref("https://example.com/story")).toBe(
-      "https://example.com/story",
-    );
-    expect(newsLinkHref("http://example.com/story")).toBe(
-      "http://example.com/story",
-    );
-  });
-});
-
-// ---------------------------------------------------------------------------
 // F1 — href scheme allowlist in the SHARED draft renderer (inbox preview and
 // the Thursday email both render blocksToHtml, so the fix guards both).
 // ---------------------------------------------------------------------------
@@ -563,51 +490,6 @@ test.describe("F3/F5/F6 — offline behavioral (FetchStub)", () => {
     expect(rows[1].html).toBe("");
   });
 
-  test("F5: fetchNewNews follows next_cursor up to the ceiling and reports hasMore", async () => {
-    const page = (n: number) => ({
-      results: Array.from({ length: n }, (_, i) => ({
-        id: `news-${i}`,
-        properties: {
-          Title: { title: [{ plain_text: `Story ${i}` }] },
-          URL: { url: "https://example.com" },
-          Status: { select: { name: "New" } },
-        },
-      })),
-      has_more: true,
-      next_cursor: "cursor-2",
-    });
-    stub.on("/databases/test-news-db/query", page(4));
-
-    const { rows, hasMore } = await fetchNewNews(10);
-    expect(rows).toHaveLength(10); // capped at the ceiling, never more
-    expect(hasMore).toBe(true);
-    const calls = stub.callsTo("/databases/test-news-db/query");
-    expect(calls.length).toBe(3); // 4 + 4 + 2(sliced)
-    expect(calls[0].body).not.toContain("start_cursor");
-    expect(calls[1].body).toContain('"start_cursor":"cursor-2"');
-  });
-
-  test("F5: a single short page reports hasMore=false", async () => {
-    stub.on("/databases/test-news-db/query", {
-      results: [
-        {
-          id: "news-solo",
-          properties: {
-            Title: { title: [{ plain_text: "Solo" }] },
-            Status: { select: { name: "New" } },
-          },
-        },
-      ],
-      has_more: false,
-      next_cursor: null,
-    });
-    const { rows, hasMore } = await fetchNewNews();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].title).toBe("Solo");
-    expect(hasMore).toBe(false);
-    expect(stub.callsTo("/databases/test-news-db/query")).toHaveLength(1);
-  });
-
   test("F6: fetchPendingDraftCount counts WITHOUT any blocks fetch", async () => {
     stub.on("/databases/test-drafts-db/query", {
       results: [draftRow("a"), draftRow("b"), draftRow("c")],
@@ -617,19 +499,7 @@ test.describe("F3/F5/F6 — offline behavioral (FetchStub)", () => {
     expect(stub.callsTo("/databases/test-drafts-db/query")).toHaveLength(1);
   });
 
-  test("F6: fetchInboxCounts is O(4) queries and NEVER hydrates draft bodies", async () => {
-    stub.on("/databases/test-news-db/query", {
-      results: [
-        {
-          id: "n1",
-          properties: {
-            Title: { title: [{ plain_text: "Story" }] },
-            Status: { select: { name: "New" } },
-          },
-        },
-      ],
-      has_more: false,
-    });
+  test("F6: fetchInboxCounts is O(3) queries and NEVER hydrates draft bodies", async () => {
     stub.on("/databases/test-drafts-db/query", {
       results: [draftRow("d1"), draftRow("d2")],
     });
@@ -647,14 +517,12 @@ test.describe("F3/F5/F6 — offline behavioral (FetchStub)", () => {
     const counts = await fetchInboxCounts();
     // crew counts ONLY Status=New (same filter the inbox rows use).
     expect(counts).toEqual({
-      news: 1,
-      newsHasMore: false,
       drafts: 2,
       crew: 1,
       cardFailed: 1,
     });
-    expect(inboxCountsTotal(counts)).toBe(5);
+    expect(inboxCountsTotal(counts)).toBe(4);
     expect(stub.callsTo("/blocks/")).toHaveLength(0); // the N+1 this fix removes
-    expect(stub.calls).toHaveLength(4); // O(4) — one query per queue
+    expect(stub.calls).toHaveLength(3); // O(3) — one query per queue
   });
 });

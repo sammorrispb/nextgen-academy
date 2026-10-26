@@ -12,7 +12,6 @@ import { isSessionEnded } from "@/lib/session-time";
 import {
   fetchInboxCounts,
   inboxCountsTotal,
-  pendingBadgeLabel,
 } from "@/lib/coach-inbox";
 import { formatLongDate } from "@/lib/format-date";
 
@@ -111,7 +110,7 @@ export default async function CoachDashboard() {
           Inbox
           {inboxPending > 0 && (
             <span className="inline-flex items-center justify-center min-w-[1.375rem] h-[1.375rem] px-1 rounded-full bg-amber-400 text-ngpa-navy text-xs font-black">
-              {pendingBadgeLabel(inboxPending, inboxCounts.newsHasMore)}
+              {inboxPending}
             </span>
           )}
           →
