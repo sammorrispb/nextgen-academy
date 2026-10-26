@@ -2,14 +2,13 @@
 
 import { useState, useTransition } from "react";
 import {
-  triageNewsAction,
   decideDraftAction,
   reviewCrewInterestAction,
   reactivateCommitAction,
   type InboxActionResult,
 } from "./actions";
 
-// Client shells for the four queues' one-tap actions. All gates are
+// Client shells for the three queues' one-tap actions. All gates are
 // server-side in actions.ts — these components only provide pending states,
 // the CardFailed confirm step, and optimistic row dismissal (revalidatePath
 // re-renders the server lists right after, so the local state is cosmetic).
@@ -80,17 +79,6 @@ function TwoDecisionRow({
       </button>
       <ResultLine result={result} />
     </div>
-  );
-}
-
-export function NewsRowActions({ pageId }: { pageId: string }) {
-  return (
-    <TwoDecisionRow
-      goLabel="Approve"
-      quietLabel="Reject"
-      onGo={() => triageNewsAction(pageId, "approve")}
-      onQuiet={() => triageNewsAction(pageId, "reject")}
-    />
   );
 }
 

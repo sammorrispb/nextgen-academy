@@ -1,8 +1,9 @@
 /**
- * Coach Inbox (admin-reduction Phase 1b) — assembly layer for the four
+ * Coach Inbox (admin-reduction Phase 1b) — assembly layer for the three
  * decision queues Sam previously worked as scattered Notion status flips:
- * news triage, newsletter-draft approval, crew-interest review, and
- * CardFailed crew-commit re-activation.
+ * newsletter-draft approval, crew-interest review, and CardFailed
+ * crew-commit re-activation. (News triage was retired with the news scraper
+ * on 2026-10-26: the weekly newsletter stopped rendering approved stories.)
  *
  * This lib owns (a) the one fetch that both /coach/inbox and the /coach
  * home-page badge share, so the badge count always equals the rows the inbox
@@ -11,7 +12,6 @@
  * NEVER invents a Notion status value. Pinned by e2e/coach-inbox.spec.ts.
  */
 
-import { fetchNewNews, type NewsRow, type NewsStatus } from "@/lib/notion-news";
 import {
   fetchPendingDrafts,
   fetchPendingDraftCount,
@@ -28,11 +28,6 @@ import {
   type CrewCommit,
 } from "@/lib/notion-crew-commits";
 
-export const NEWS_DECISION_TO_STATUS = {
-  approve: "Approved",
-  reject: "Rejected",
-} as const satisfies Record<string, NewsStatus>;
-
 export const DRAFT_DECISION_TO_STATUS = {
   approve: "Approved",
   skip: "Skip",
@@ -43,14 +38,10 @@ export const CREW_DECISION_TO_STATUS = {
   closed: "Closed",
 } as const satisfies Record<string, CrewInterestReviewStatus>;
 
-export type NewsDecision = keyof typeof NEWS_DECISION_TO_STATUS;
 export type DraftDecision = keyof typeof DRAFT_DECISION_TO_STATUS;
 export type CrewDecision = keyof typeof CREW_DECISION_TO_STATUS;
 
 export interface InboxQueues {
-  news: NewsRow[];
-  /** True when Status=New rows remain in Notion beyond the fetch ceiling (F5). */
-  newsHasMore: boolean;
   drafts: PendingNewsletterDraft[];
   crew: ActionableCrewInterest[];
   cardFailed: CrewCommit[];
@@ -58,8 +49,6 @@ export interface InboxQueues {
 
 /** Count-only mirror of InboxQueues for the /coach home badge (F6). */
 export interface InboxCounts {
-  news: number;
-  newsHasMore: boolean;
   drafts: number;
   crew: number;
   cardFailed: number;
@@ -85,7 +74,6 @@ export function filterCrewInboxRows(
 /** Badge math: one number = everything waiting on a decision. */
 export function inboxPendingCount(queues: InboxQueues): number {
   return (
-    queues.news.length +
     queues.drafts.length +
     queues.crew.length +
     queues.cardFailed.length
@@ -94,34 +82,22 @@ export function inboxPendingCount(queues: InboxQueues): number {
 
 /** Same badge math over the count-only shape (F6). */
 export function inboxCountsTotal(counts: InboxCounts): number {
-  return counts.news + counts.drafts + counts.crew + counts.cardFailed;
+  return counts.drafts + counts.crew + counts.cardFailed;
 }
 
 /**
- * Honest badge label (F5): when the news fetch hit its ceiling with rows
- * still in Notion, the count is a floor — say so ("104+"), never present a
- * truncated fetch as the whole backlog.
- */
-export function pendingBadgeLabel(total: number, hasMore: boolean): string {
-  return hasMore ? `${total}+` : `${total}`;
-}
-
-/**
- * Fetch all four queues in parallel. Every underlying fetcher fails soft to
+ * Fetch all three queues in parallel. Every underlying fetcher fails soft to
  * [] (missing env or a Notion blip), so a single dead DB never blanks the
  * whole inbox — and the extra allSettled guard keeps an unexpected throw in
  * one queue from taking down the others.
  */
 export async function fetchInboxQueues(): Promise<InboxQueues> {
-  const [news, drafts, crew, cardFailed] = await Promise.allSettled([
-    fetchNewNews(),
+  const [drafts, crew, cardFailed] = await Promise.allSettled([
     fetchPendingDrafts(),
     fetchActionableCrewInterest(),
     fetchCardFailedCommits(),
   ]);
   return {
-    news: news.status === "fulfilled" ? news.value.rows : [],
-    newsHasMore: news.status === "fulfilled" ? news.value.hasMore : false,
     drafts: drafts.status === "fulfilled" ? drafts.value : [],
     crew:
       crew.status === "fulfilled" ? filterCrewInboxRows(crew.value) : [],
@@ -130,7 +106,7 @@ export async function fetchInboxQueues(): Promise<InboxQueues> {
 }
 
 /**
- * Count-only fetch for the /coach home badge (F6): O(4) Notion queries, and
+ * Count-only fetch for the /coach home badge (F6): O(3) Notion queries, and
  * crucially NO draft-body hydration — fetchPendingDrafts fetches each
  * pending row's blocks (an N+1 the badge never needs), so the home page uses
  * fetchPendingDraftCount instead. The full body-hydrating fetchInboxQueues
@@ -140,15 +116,12 @@ export async function fetchInboxQueues(): Promise<InboxQueues> {
  * every non-degenerate case.)
  */
 export async function fetchInboxCounts(): Promise<InboxCounts> {
-  const [news, draftCount, crew, cardFailed] = await Promise.allSettled([
-    fetchNewNews(),
+  const [draftCount, crew, cardFailed] = await Promise.allSettled([
     fetchPendingDraftCount(),
     fetchActionableCrewInterest(),
     fetchCardFailedCommits(),
   ]);
   return {
-    news: news.status === "fulfilled" ? news.value.rows.length : 0,
-    newsHasMore: news.status === "fulfilled" ? news.value.hasMore : false,
     drafts: draftCount.status === "fulfilled" ? draftCount.value : 0,
     crew:
       crew.status === "fulfilled"
