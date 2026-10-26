@@ -13,9 +13,10 @@ import {
 } from "@/data/mvf-junior-tournament-2026";
 import { orgRef, SITE_URL } from "@/lib/seo";
 import { formatSessionDateTimeIso } from "@/lib/session-time";
+import { isMvfTournamentRegistrationClosed } from "@/lib/mvf-registration-window";
 
 /** Public event facts only; registration data does not feed this node. */
-export function mvfTournamentJsonLd() {
+export function mvfTournamentJsonLd(now = Date.now()) {
   const url = `${SITE_URL}/mvf-junior-tournament`;
   const divisions = MVF_JUNIOR_TOURNAMENT_DIVISIONS.map(
     (division) => `${division.label} (${division.ageLabel})`,
@@ -53,23 +54,24 @@ export function mvfTournamentJsonLd() {
     },
     organizer: orgRef(),
     image: [`${SITE_URL}/images/og-image.png`],
-    // Residency determines price. Inventory and registration opening dates
-    // are not verified by these static public facts, so neither is asserted.
-    offers: [
-      {
-        "@type": "Offer",
-        name: "Montgomery Village resident entry",
-        price: RESIDENT_PRICE_USD,
-        priceCurrency: "USD",
-        url: `${url}#register`,
-      },
-      {
-        "@type": "Offer",
-        name: "Non-resident entry",
-        price: NONRESIDENT_PRICE_USD,
-        priceCurrency: "USD",
-        url: `${url}#register`,
-      },
-    ],
+    // Preserve historical event facts without advertising admission after it ends.
+    ...(!isMvfTournamentRegistrationClosed(now) ? {
+      offers: [
+        {
+          "@type": "Offer",
+          name: "Montgomery Village resident entry",
+          price: RESIDENT_PRICE_USD,
+          priceCurrency: "USD",
+          url: `${url}#register`,
+        },
+        {
+          "@type": "Offer",
+          name: "Non-resident entry",
+          price: NONRESIDENT_PRICE_USD,
+          priceCurrency: "USD",
+          url: `${url}#register`,
+        },
+      ],
+    } : {}),
   };
 }

@@ -22,6 +22,19 @@ const LIVE = upcomingMvfPrograms(today);
 const FINISHED = MVF_PROGRAMS.filter((p) => !LIVE.includes(p));
 
 test.describe("/mvf-junior-tournament rain plan", () => {
+  test("retained tournament page is noindex and closes registration after the event", async ({ page }) => {
+    const response = await page.goto("/mvf-junior-tournament");
+    expect(response?.status()).toBe(200);
+    await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    await expect(page.getByRole("status")).toHaveText("This tournament has ended. Registration is closed.");
+    await expect(page.locator("#main form")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /^Register/ })).toHaveCount(0);
+    const event = (await page.locator('script[type="application/ld+json"]').allTextContents())
+      .map(body => JSON.parse(body)).find(value => value["@type"] === "SportsEvent");
+    expect(event).not.toHaveProperty("offers");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
   test("shows the conditional indoor venue and earlier hours before registration", async ({ page }) => {
     const response = await page.goto("/mvf-junior-tournament");
     expect(response?.status()).toBe(200);

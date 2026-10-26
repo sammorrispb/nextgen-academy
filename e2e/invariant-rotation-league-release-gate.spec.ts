@@ -67,32 +67,29 @@ function harness(authorized = true) {
   return { load, actions, delegated, revalidated };
 }
 
-const unavailable = {
-  ok: false,
-  message: "Adding players, changing rounds and re-planning are temporarily unavailable. Check-in, planning and scoring are still available.",
-};
-const blocked = [
-  ["guestCandidatesAction", { slug }],
-  ["addGuestAction", { slug, week, externalRef: "r3" }],
-  ["addGuestAction", { slug, week, firstName: "Guest" }],
-  ["editRoundAction", { slug, week, round: 1, games: [{ gameId: game.id, sideA: ["r2"], sideB: ["r1"] }] }],
-  ["replanAfterAction", { slug, week, afterRound: 1, attempt: 1, save: false }],
-  ["replanAfterAction", { slug, week, afterRound: 1, attempt: 1, save: true }],
+const changes = [
+  ["guestCandidatesAction", { slug }, "guestCandidates"],
+  ["addGuestAction", { slug, week, externalRef: "r3" }, "addGuest"],
+  ["addGuestAction", { slug, week, firstName: "Guest" }, "addGuest"],
+  ["editRoundAction", { slug, week, round: 1, games: [{ gameId: game.id, sideA: ["r2"], sideB: ["r1"] }] }, "editRound"],
+  ["replanAfterAction", { slug, week, afterRound: 1, attempt: 1, save: false }, "replanAfter"],
+  ["replanAfterAction", { slug, week, afterRound: 1, attempt: 1, save: true }, "replanAfter"],
 ] as const;
 
-for (const [index, [name, input]] of blocked.entries()) {
-  test(`${name} case ${index + 1} refuses a stale client without delegation or revalidation`, async () => {
+// The backend shipped (community-os #1931, 2026-10-26), so the switch is on.
+// These pin that the four actions reach the view again, that coach login is
+// still checked first, and that the week page shows the three controls.
+for (const [index, [name, input, delegate]] of changes.entries()) {
+  test(`${name} case ${index + 1} delegates to the view now the backend is released`, async () => {
     const h = harness();
-    expect(await h.actions[name](input)).toEqual(unavailable);
-    expect(await h.actions[name](null)).toEqual(unavailable);
-    expect(h.delegated).toEqual([]);
-    expect(h.revalidated).toEqual([]);
+    expect(await h.actions[name](input)).toEqual({ ok: true });
+    expect(h.delegated).toEqual([delegate]);
   });
 }
 
-test("coach authentication remains first for every held operation", async () => {
+test("coach authentication remains first for every player-change operation", async () => {
   const h = harness(false);
-  for (const [name, input] of blocked) expect(await h.actions[name](input)).toEqual({ ok: false, message: "Unauthorized" });
+  for (const [name, input] of changes) expect(await h.actions[name](input)).toEqual({ ok: false, message: "Unauthorized" });
   expect(h.delegated).toEqual([]);
   expect(h.revalidated).toEqual([]);
 });
@@ -110,16 +107,16 @@ test("existing check-in, full-week planning, scoring and game removal still dele
   expect(h.revalidated).toContain(`/coach/league/${slug}/${week}`);
 });
 
-test("week renders current play and an unavailable notice even with refs and unscored later rounds", async () => {
+test("the week shows add a player, change players and re-plan, and no unavailable notice", async () => {
   const h = harness();
   const Page = h.load(`${weekDir}/page.tsx`).default as (p: unknown) => Promise<React.ReactNode>;
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ slug, week: String(week) }) }));
-  expect(html).toContain(unavailable.message);
-  expect(html).not.toMatch(/\+ Add a player|Change players|Re-plan rounds after this|Save players|Add and check in/);
+  expect(html).toContain("+ Add a player");
+  expect(html).toContain("Change players");
+  expect(html).toContain("Re-plan rounds after this");
+  expect(html).not.toContain("temporarily unavailable");
   expect(html).toContain("Player One");
   expect(html).toContain("Plan the rounds");
-  expect(html).toContain('aria-pressed="true"');
   expect(html).toContain('aria-label="Score, first side"');
-  expect(html).toContain("Standings");
   expect(h.delegated).toEqual(["readWeek", "readStandings"]);
 });
