@@ -43,7 +43,7 @@ function useRowAction() {
 
 /**
  * The shared two-tap decision row (F9): one primary "go" action, one quiet
- * secondary — news triage and crew review are the same interaction with
+ * secondary — crew review and any future two-way queue share the interaction, with
  * different labels/actions, so they render through this single component.
  */
 function TwoDecisionRow({
