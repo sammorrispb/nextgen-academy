@@ -5,13 +5,17 @@ import { FakeStripeInvoicing, type FakeStripeEndpoint } from "./fixtures/fake-st
 
 const TOUCHED_ENV = ["STRIPE_SECRET_KEY","NOTION_API_KEY","NOTION_MVF_TOURNAMENT_REGS_DB_ID","RESEND_API_KEY","NOTION_WAIVERS_DB_ID","VERCEL_ENV","LINKDINK_BASE_URL","NGA_SYNC_SECRET"] as const;
 const originalEnv = Object.fromEntries(TOUCHED_ENV.map(key => [key,process.env[key]]));
+const originalNow = Date.now;
 test.beforeEach(() => {
+  // Exercise historical signup contracts while the event was still open.
+  Date.now = () => Date.parse("2026-10-23T12:00:00Z");
   for (const key of TOUCHED_ENV) delete process.env[key];
   process.env.STRIPE_SECRET_KEY = "sk_test_dummy_offline";
   process.env.NOTION_API_KEY = "ntn_test_invoice_idempotency";
   process.env.NOTION_MVF_TOURNAMENT_REGS_DB_ID = "mvfregsdb";
   process.env.RESEND_API_KEY = "re_test_invoice_idempotency";
 });
+test.afterEach(() => { Date.now = originalNow; });
 test.afterAll(() => { for(const key of TOUCHED_ENV) { if(originalEnv[key] === undefined) delete process.env[key]; else process.env[key]=originalEnv[key]; } });
 
 import { getStripe } from "../src/lib/stripe";

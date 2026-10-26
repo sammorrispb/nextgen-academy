@@ -45,7 +45,7 @@ test.describe("public MVF tournament discovery", () => {
   });
 
   test("names resident eligibility instead of quoting the lower price to everyone", () => {
-    expect(mvfTournamentJsonLd().offers).toEqual([
+    expect(mvfTournamentJsonLd(Date.parse("2026-10-23T12:00:00Z")).offers).toEqual([
       {
         "@type": "Offer",
         name: "Montgomery Village resident entry",

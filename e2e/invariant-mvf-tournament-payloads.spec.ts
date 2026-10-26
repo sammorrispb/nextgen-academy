@@ -60,7 +60,10 @@ const CREATE_KEYS = [
 ];
 const PAID_KEYS = ["Paid", "Status", "Amount Paid", "Stripe Payment Intent ID"];
 
+const originalNow = Date.now;
 test.beforeEach(() => {
+  // Exercise historical signup contracts while the event was still open.
+  Date.now = () => Date.parse("2026-10-23T12:00:00Z");
   network.install();
   checkoutMailEnabled = false;
   for (const key of TOUCHED_ENV) delete process.env[key];
@@ -78,6 +81,7 @@ test.beforeEach(() => {
   stub.install();
 });
 test.afterEach(() => {
+  Date.now = originalNow;
   restoreStripe();
   stub.uninstall();
   network.uninstall();

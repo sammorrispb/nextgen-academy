@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isMvfTournamentRegistrationClosed, MVF_REGISTRATION_CLOSED_MESSAGE } from "@/lib/mvf-registration-window";
 import { randomUUID } from "node:crypto";
 import { bindMvfSeat, reserveMvfSeat, mvfAttendeeKey, mvfRequestKey, MvfCapacityError } from "@/lib/mvf-capacity";
 import { getStripe } from "@/lib/stripe";
@@ -70,6 +71,13 @@ const NOT_OPEN_MESSAGE =
   "Tournament sign-ups aren't open yet — text Coach Sam at 301-325-4731 and he'll get your player in.";
 
 export async function POST(req: NextRequest) {
+  if (isMvfTournamentRegistrationClosed()) {
+    return NextResponse.json(
+      { code: "registration_closed", error: MVF_REGISTRATION_CLOSED_MESSAGE },
+      { status: 409 },
+    );
+  }
+
   let body: Partial<MvfJuniorTournamentData> & { submissionId?: string };
   try {
     body = await req.json();

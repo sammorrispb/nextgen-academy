@@ -12,7 +12,10 @@ const saved = Object.fromEntries(KEYS.map(k => [k, process.env[k]]));
 const stub = new FetchStub();
 let fake: FakeStripeInvoicing;
 let restore = () => {};
+const originalNow = Date.now;
 test.beforeEach(() => {
+  // Capacity admission invariants describe the historical open event.
+  Date.now = () => Date.parse("2026-10-23T12:00:00Z");
   for (const k of KEYS) delete process.env[k];
   process.env.STRIPE_SECRET_KEY = "sk_test_capacity";
   process.env.NGA_SYNC_SECRET = "local-capacity";
@@ -20,7 +23,7 @@ test.beforeEach(() => {
   fake = new FakeStripeInvoicing(); restore = fake.install(getStripe());
   stub.reset(); stub.install();
 });
-test.afterEach(() => { restore(); stub.uninstall(); });
+test.afterEach(() => { Date.now = originalNow; restore(); stub.uninstall(); });
 test.afterAll(() => { for (const k of KEYS) { if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k]; } });
 const data = (id: string) => ({ division:"10u",resident:true,parentName:"Synthetic Parent",email:"synthetic@example.invalid",phone:"2025550100",childFirstName:"Synthetic",childLastName:"Fixture",childDob:"2017-03-15",emergencyName:"Synthetic Backup",emergencyPhone:"2025550110",allergies:"",smsConsent:false,submissionId:id });
 const req = (id: string) => new NextRequest("http://localhost/api/checkout-mvf-junior-tournament", { method:"POST",body:JSON.stringify(data(id)),headers:{"content-type":"application/json","x-forwarded-for":id} });

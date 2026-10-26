@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import MvfJuniorTournamentForm from "@/components/MvfJuniorTournamentForm";
 import { mvfTournamentJsonLd } from "@/lib/mvf-tournament-jsonld";
+import { isMvfTournamentRegistrationClosed, MVF_REGISTRATION_CLOSED_MESSAGE } from "@/lib/mvf-registration-window";
 import {
   COURTS_TEXT,
   GUARANTEED_GAMES_TEXT,
@@ -38,6 +39,7 @@ export const metadata: Metadata = {
 };
 
 export default function MvfJuniorTournamentPage() {
+  const registrationClosed = isMvfTournamentRegistrationClosed();
   return (
     <main className="bg-ngpa-navy min-h-screen">
       <JsonLd data={mvfTournamentJsonLd()} />
@@ -49,6 +51,11 @@ export default function MvfJuniorTournamentPage() {
         <h1 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white mt-3 leading-tight">
           {MVF_JUNIOR_TOURNAMENT_TITLE}
         </h1>
+        {registrationClosed && (
+          <p id="register" role="status" className="mt-5 rounded-2xl border border-ngpa-teal/40 bg-ngpa-panel p-5 font-bold text-ngpa-white scroll-mt-24">
+            {MVF_REGISTRATION_CLOSED_MESSAGE}
+          </p>
+        )}
         <p className="text-ngpa-white/80 text-lg mt-4">
           A one-day junior tournament: rotating partner round robin,{" "}
           {GUARANTEED_GAMES_TEXT.toLowerCase()} {MEDALS_TEXT} Coached by Next
@@ -142,20 +149,22 @@ export default function MvfJuniorTournamentPage() {
       </section>
 
       {/* Register */}
-      <section
-        id="register"
-        className="px-5 sm:px-8 pb-20 max-w-2xl mx-auto scroll-mt-24"
-      >
-        <h2 className="font-heading text-2xl font-black text-ngpa-white mb-5">
-          Register — ${RESIDENT_PRICE_USD} resident / ${NONRESIDENT_PRICE_USD}{" "}
-          non-resident
-        </h2>
-        <p className="text-ngpa-white/70 mb-6">
-          Fill this in and we&rsquo;ll email you an invoice — pay it online to
-          lock your player&rsquo;s spot. Each division is capped at 12 players.
-        </p>
-        <MvfJuniorTournamentForm />
-      </section>
+      {!registrationClosed && (
+        <section
+          id="register"
+          className="px-5 sm:px-8 pb-20 max-w-2xl mx-auto scroll-mt-24"
+        >
+          <h2 className="font-heading text-2xl font-black text-ngpa-white mb-5">
+            Register — ${RESIDENT_PRICE_USD} resident / ${NONRESIDENT_PRICE_USD}{" "}
+            non-resident
+          </h2>
+          <p className="text-ngpa-white/70 mb-6">
+            Fill this in and we&rsquo;ll email you an invoice — pay it online to
+            lock your player&rsquo;s spot. Each division is capped at 12 players.
+          </p>
+          <MvfJuniorTournamentForm />
+        </section>
+      )}
     </main>
   );
 }
