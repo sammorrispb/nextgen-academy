@@ -20,8 +20,14 @@ const admin = ["nextgenacademypb@gmail.com", "sam.morris2131@gmail.com"];
 const partner = "malvero@mvf.org";
 const from = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 
-test.beforeEach(() => probe.install());
+const originalNow = Date.now;
+test.beforeEach(() => {
+  // Paid callbacks for existing invoices remain valid after admission closes.
+  Date.now = () => Date.parse("2026-10-26T12:00:00Z");
+  probe.install();
+});
 test.afterEach(() => {
+  Date.now = originalNow;
   probe.uninstall();
   // Fail-soft application code cannot hide an accidental unstubbed egress.
   expect(probe.unexpected).toEqual([]);
@@ -72,7 +78,7 @@ test("both MVF partner notification sites remain the complete source inventory",
 });
 
 for (const type of ["invoice.paid", "invoice.payment_succeeded"] as const) {
-  test(`${type}: exact paid admin/partner and parent envelopes, then quiet redelivery`, async () => {
+  test(`${type}: post-event paid envelopes and quiet redelivery`, async () => {
     expect((await probe.paid(type)).status).toBe(200);
     expect(probe.mail).toEqual([
       { idempotencyKey: `mvf-paid-${MVF_NOTIFICATION_INVOICE}-admin`, payload: {

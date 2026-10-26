@@ -4,8 +4,22 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FetchStub } from "./fixtures/fetch-stub";
 
-process.env.STRIPE_SECRET_KEY = "sk_test_dummy_offline";
-process.env.NOTION_API_KEY = "ntn_test_invoice";
+const originalNow = Date.now;
+const TOUCHED_ENV = ["STRIPE_SECRET_KEY", "NOTION_API_KEY"] as const;
+const originalEnv = Object.fromEntries(TOUCHED_ENV.map(key => [key, process.env[key]]));
+test.beforeEach(() => {
+  // Rate limiting remains part of the pre-event admission path.
+  Date.now = () => Date.parse("2026-10-23T12:00:00Z");
+  process.env.STRIPE_SECRET_KEY = "sk_test_dummy_offline";
+  process.env.NOTION_API_KEY = "ntn_test_invoice";
+});
+test.afterEach(() => {
+  Date.now = originalNow;
+  for (const key of TOUCHED_ENV) {
+    if (originalEnv[key] === undefined) delete process.env[key];
+    else process.env[key] = originalEnv[key];
+  }
+});
 
 import { POST as lesson } from "../src/app/api/checkout-lesson/route";
 import { POST as mgDropin } from "../src/app/api/checkout-monday-girls-dropin/route";
