@@ -8,6 +8,7 @@ import {
   newsletterWelcomeHtml,
   newsletterWelcomeText,
 } from "@/lib/email/newsletter-welcome";
+import { newsletterAdminHtml } from "@/lib/email/newsletter-admin";
 import {
   signReferralToken,
   verifyReferralToken,
@@ -258,18 +259,7 @@ export async function POST(request: NextRequest) {
   // receive it.
   const shouldSendWelcome = !alreadyWelcomed;
 
-  const adminHtml = `
-<div style="font-family: Inter, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #05132B; color: #EEF2FF; padding: 32px; border-radius: 12px;">
-  <h1 style="font-family: Montserrat, Arial, sans-serif; color: #AADC00; font-size: 22px; margin-bottom: 24px;">
-    New Newsletter Signup
-  </h1>
-  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8; width: 140px;">Parent</td><td style="padding: 10px 8px; color: #EEF2FF;">${parentName}</td></tr>
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Email</td><td style="padding: 10px 8px;"><a href="mailto:${email}" style="color: #00D4FF;">${email}</a></td></tr>
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Child Age</td><td style="padding: 10px 8px; color: #EEF2FF;">${childAge}</td></tr>
-    <tr style="border-bottom: 1px solid #1A3060;"><td style="padding: 10px 8px; color: #7A88B8;">Notion DB</td><td style="padding: 10px 8px; color: #EEF2FF;">${notionStatus}</td></tr>
-  </table>
-</div>`;
+  const adminHtml = newsletterAdminHtml({ parentName, email, childAge, notionStatus });
 
   try {
     const resend = getResend();
