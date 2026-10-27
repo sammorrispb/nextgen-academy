@@ -22,22 +22,22 @@ test("NGA reviewed registry: the isolated session has one finite exact reviewed 
   const synthetic = {
     sessionsDbId: "bea3d534-4dc1-407b-a413-aee04ddaf69e",
     programId: "403fa3ac-27dc-8196-968a-f51ea29ac8c3",
-    eventDate: "2026-10-25",
-    now: "2026-10-24T15:00:00.000Z",
+    eventDate: "2026-10-29",
+    now: "2026-10-27T17:00:24.000Z",
   };
   expect(resolveNgaProgramAgePolicy(synthetic)).toEqual({
     ageRange: { min: 8, max: 12 },
-    revision: "664f-synthetic-session-v1",
+    revision: "4691-synthetic-session-20261029-v2",
     additionalEligibility: "no_additional_restrictions",
   });
-  for (const eventDate of ["2026-10-24", "2026-10-26"]) {
+  for (const eventDate of ["2026-10-25", "2026-10-28", "2026-10-30"]) {
     expect(resolveNgaProgramAgePolicy({ ...synthetic, eventDate })).toBeNull();
   }
   expect(resolveNgaProgramAgePolicy({ ...synthetic, programId: input.programId })).toBeNull();
   expect(resolveNgaProgramAgePolicy({ ...synthetic, sessionsDbId: input.sessionsDbId })).toBeNull();
-  expect(resolveNgaProgramAgePolicy({ ...synthetic, now: "2026-10-24T14:51:19.999Z" })).toBeNull();
-  expect(resolveNgaProgramAgePolicy({ ...synthetic, now: "2026-10-26T03:59:59.999Z" })).not.toBeNull();
-  expect(resolveNgaProgramAgePolicy({ ...synthetic, now: "2026-10-26T04:00:00.000Z" })).toBeNull();
+  expect(resolveNgaProgramAgePolicy({ ...synthetic, now: "2026-10-27T17:00:23.999Z" })).toBeNull();
+  expect(resolveNgaProgramAgePolicy({ ...synthetic, now: "2026-10-30T03:59:59.999Z" })).not.toBeNull();
+  expect(resolveNgaProgramAgePolicy({ ...synthetic, now: "2026-10-30T04:00:00.000Z" })).toBeNull();
   const result = resolveNgaProgramAgePolicy(synthetic)!;
   result.ageRange.min = 1;
   expect(resolveNgaProgramAgePolicy(synthetic)?.ageRange).toEqual({ min: 8, max: 12 });
