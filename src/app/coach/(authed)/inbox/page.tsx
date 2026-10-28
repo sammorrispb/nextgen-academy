@@ -2,17 +2,14 @@ import Link from "next/link";
 import {
   fetchInboxQueues,
   inboxPendingCount,
-  pendingBadgeLabel,
 } from "@/lib/coach-inbox";
 import {
   willRideThursdaySend,
   nextNewsletterFire,
   formatNewsletterDeadline,
 } from "@/lib/notion-newsletter-drafts";
-import { newsLinkHref } from "@/lib/notion-news";
 import { formatLongDate } from "@/lib/format-date";
 import {
-  NewsRowActions,
   DraftCard,
   CrewRowActions,
   CommitReactivate,
@@ -71,8 +68,8 @@ export default async function CoachInboxPage() {
       </h1>
       <p className="text-base text-ngpa-white/70 leading-relaxed mb-10 max-w-2xl">
         {pending === 0
-          ? "Nothing waiting — all four queues are clear."
-          : `${pendingBadgeLabel(pending, queues.newsHasMore)} item${pending === 1 && !queues.newsHasMore ? "" : "s"} across news triage, newsletter drafts, crew interest, and failed card commits. One tap each, no Notion tabs.`}
+          ? "Nothing waiting — all three queues are clear."
+          : `${pending} item${pending === 1 ? "" : "s"} across newsletter drafts, crew interest, and failed card commits. One tap each, no Notion tabs.`}
       </p>
 
       {/* 1 — Newsletter drafts first: the only queue with a hard deadline. */}
@@ -102,65 +99,7 @@ export default async function CoachInboxPage() {
         )}
       </section>
 
-      {/* 2 — News triage */}
-      <section className="mb-12">
-        <SectionHeader
-          title="News triage"
-          count={queues.news.length}
-          hint="Scraped youth-pickleball stories. Approve = eligible for the next newsletter's news block (up to 4 ship); Reject = never resurfaces."
-        />
-        {queues.news.length === 0 ? (
-          <EmptyQueue label="No new stories. The scraper runs every morning." />
-        ) : (
-          <div className="space-y-3">
-            {queues.news.map((n) => {
-              // Scraper-sourced URL: scheme-checked before it becomes an
-              // anchor (same allowlist as the draft renderer). Unsafe or
-              // empty → plain text, no link.
-              const href = newsLinkHref(n.url);
-              return (
-                <div
-                  key={n.pageId}
-                  className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 px-5 py-5 sm:px-6"
-                >
-                  <p className="text-xs font-bold uppercase tracking-wider text-ngpa-white/55 mb-1">
-                    {n.source || "Unknown source"}
-                    {n.published ? ` · ${formatLongDate(n.published)}` : ""}
-                  </p>
-                  <p className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-1">
-                    {href ? (
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-ngpa-teal transition-colors underline decoration-ngpa-slate/60 underline-offset-4"
-                      >
-                        {n.title || href}
-                      </a>
-                    ) : (
-                      n.title || n.url
-                    )}
-                  </p>
-                  {n.summary && (
-                    <p className="text-sm text-ngpa-white/70 leading-relaxed mb-3">
-                      {n.summary}
-                    </p>
-                  )}
-                  <NewsRowActions pageId={n.pageId} />
-                </div>
-              );
-            })}
-            {queues.newsHasMore && (
-              <p className="text-sm text-ngpa-white/55 pt-1">
-                Showing the {queues.news.length} newest — more stories are
-                waiting in Notion.
-              </p>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* 3 — Crew interest */}
+      {/* 2 — Crew interest */}
       <section className="mb-12">
         <SectionHeader
           title="Crew interest"
@@ -196,7 +135,7 @@ export default async function CoachInboxPage() {
         )}
       </section>
 
-      {/* 4 — CardFailed commits */}
+      {/* 3 — CardFailed commits */}
       <section className="mb-12">
         <SectionHeader
           title="Failed card commits"

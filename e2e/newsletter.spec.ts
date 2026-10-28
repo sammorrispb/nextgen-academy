@@ -1,5 +1,45 @@
 import { test, expect } from "@playwright/test";
 
+test.describe("retired tournament promotion", () => {
+  for (const path of ["/", "/schedule", "/newsletter", "/blog", "/terms", "/admin/fall"]) {
+    test(`${path} has no tournament banner or public entry`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator('a[href="/mvf-junior-tournament"]')).toHaveCount(0);
+      await expect(page.locator('a[href="/blog/mvf-junior-tournament-october-24-2026"]')).toHaveCount(0);
+      await expect(page.getByText("See tournament details", { exact: false })).toHaveCount(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    });
+  }
+
+  test("desktop and mobile menus still reach the schedule", async ({ page }, testInfo) => {
+    await page.goto("/");
+    await expect(page.locator("h1")).toBeVisible();
+    if (testInfo.project.name === "mobile") {
+      await page.getByRole("button", { name: "Toggle menu" }).click();
+      await expect(page.getByRole("dialog", { name: "Navigation menu" })).toBeVisible();
+    }
+    const nav = page.locator("nav");
+    await expect(nav.getByRole("link", { name: /tournament/i })).toHaveCount(0);
+    await nav.getByRole("link", { name: "Schedule", exact: true }).filter({ visible: true }).click();
+    await expect(page).toHaveURL(/\/schedule$/);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Youth Pickleball Schedule");
+    await expect(page.getByRole("link", { name: "See both leagues" })).toBeVisible();
+    await expect(page.locator('a[href="/mvf-junior-tournament"]')).toHaveCount(0);
+    if (testInfo.project.name === "mobile") {
+      await expect(page.getByRole("button", { name: "Toggle menu" })).toHaveAttribute("aria-expanded", "false");
+    }
+  });
+
+  for (const path of ["/mvf-junior-tournament", "/blog/mvf-junior-tournament-october-24-2026"]) {
+    test(`${path} remains available by historical URL and is noindex`, async ({ page }) => {
+      const response = await page.goto(path);
+      expect(response?.status()).toBe(200);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+    });
+  }
+});
+
 // ─── /newsletter landing page ─────────────────────
 
 test.describe("Newsletter page", () => {
@@ -26,9 +66,7 @@ test.describe("Newsletter page", () => {
     await expect(offer).toContainText("Free Newsletter");
     await expect(offer.getByRole("button", { name: "Join the Free Newsletter" })).toBeVisible();
     expect(await offer.innerText()).not.toMatch(/\$\d/);
-    // A priced tournament banner outside the newsletter offer is legitimate.
-    const banner = page.getByRole("link", { name: /MVF Junior Tournament/ }).first();
-    await expect(banner).toHaveAttribute("href", "/mvf-junior-tournament");
+    await expect(page.locator('a[href="/mvf-junior-tournament"]')).toHaveCount(0);
   });
 });
 

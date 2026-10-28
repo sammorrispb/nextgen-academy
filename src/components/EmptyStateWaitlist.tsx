@@ -7,7 +7,11 @@ import { LEAD_AREAS } from "@/data/lead-areas";
 const AREAS = LEAD_AREAS;
 
 interface EmptyStateWaitlistProps {
-  /** Optional heading override. Default: "No sessions open right now." */
+  /**
+   * Optional heading override. Name the drop-in schedule specifically: this
+   * form renders beside OpenNowOffers ("Open right now"), so a bare "No
+   * sessions open" contradicts the seasons listed under it.
+   */
   heading?: string;
   /** Optional source label for analytics. */
   source?: string;
@@ -18,7 +22,7 @@ const LEVELS = ["Red", "Orange", "Green", "Yellow"];
 type Status = "idle" | "submitting" | "success" | "error";
 
 export default function EmptyStateWaitlist({
-  heading = "No sessions open right now.",
+  heading = "No drop-in sessions are listed right now.",
   source = "schedule_empty",
 }: EmptyStateWaitlistProps) {
   const [parentName, setParentName] = useState("");

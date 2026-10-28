@@ -202,7 +202,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | /api/cron/mark-passed-sessions | 0 * * * * | mark past Notion sessions Passed |
 | /api/cron/weekly-newsletter | 0 22 * * 4 | Thursday parent newsletter from Notion content loop |
 | /api/cron/crew-autoreserve | 0 12 * * * | **charges saved cards off-session** + registers crew kids |
-| /api/cron/scrape-news | 0 11 * * * | scrapes youth-PB news → Notion News DB (consumed by weekly-newsletter — KEEP) |
+| ~~/api/cron/scrape-news~~ | — | RETIRED 2026-10-26: the newsletter news block it fed came out 2026-10-23 |
 | /api/cron/seed-tuesday-sessions | 0 8 * * 1 | seeds Tuesday sessions 8 weeks ahead |
 
 ## 6. Classification
@@ -212,7 +212,7 @@ Non-page app files: layout.tsx, opengraph-image.tsx, robots.ts, sitemap.ts, glob
 | drop-in funnel (/schedule, checkout, webhook, dropin crons, cancel) | MOUSE-CATCHER | Stripe checkout + webhook → Notion roster + Player CRM + email/SMS |
 | camps | MOUSE-CATCHER | live Stripe products, booked courts, refund tooling |
 | crew/commit/poll/autoreserve | MOUSE-CATCHER | off-session Stripe charges daily at noon |
-| weekly newsletter + news scraper | MOUSE-CATCHER | real Thursday sends; Notion approval loop active |
+| weekly newsletter (news scraper retired 2026-10-26) | MOUSE-CATCHER | real Thursday sends; Notion approval loop active |
 | coach portal + admin portal | MOUSE-CATCHER (internal) | only authed child-data readers; active through 06-12 |
 | clusters | PROTOTYPE→MOUSE-CATCHER | pilot live 06-11; staged rollout |
 | league | PROTOTYPE | ships dark by design (503 until price env) |

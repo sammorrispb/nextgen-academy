@@ -35,7 +35,6 @@ const TEST_ENV = {
   NOTION_SESSIONS_DB_ID: "sessions-db",
   NOTION_NEWSLETTER_DB_ID: "subs-db",
   NOTION_PLAYER_CRM_DB_ID: "crm-db",
-  NOTION_NEWS_DB_ID: "news-db",
   NOTION_NEWSLETTER_DRAFTS_DB_ID: "drafts-db",
   RESEND_API_KEY: "re_test",
   NGA_ADMIN_SECRET: "admin-secret",
@@ -121,10 +120,9 @@ function wire(opts: {
     return { status: 200, json: entry };
   });
 
-  // No open sessions and no news → a tip-only issue. Keeps the fixture small
+  // No open sessions → a tip-only issue. Keeps the fixture small
   // and (with zero sessions) keeps the weather API off the wire entirely.
   stub.on(/databases\/sessions-db\/query/, { results: [] });
-  stub.on(/databases\/news-db\/query/, { results: [] });
   stub.on(/databases\/subs-db\/query/, {
     has_more: false,
     results: [

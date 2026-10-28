@@ -56,6 +56,8 @@ const INTERNAL = new Set([
   "eval-booking-notify.ts",
   "coach-pre-event.ts",
   "camp-checklist-reminder.ts",
+  // Newsletter signup notice to Sam/admin — an internal alert, not parent mail.
+  "newsletter-admin.ts",
 ]);
 
 const files = fs

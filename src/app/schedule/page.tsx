@@ -41,14 +41,6 @@ import {
   PICKLPARK_LEAGUES,
   PICKLPARK_LEAGUES_FORMAT_LINE,
 } from "@/data/picklpark-leagues-2026";
-import {
-  MVF_JUNIOR_TOURNAMENT_DATE_LABEL,
-  MVF_JUNIOR_TOURNAMENT_TIME_LABEL,
-  MVF_JUNIOR_TOURNAMENT_TITLE,
-  MVF_JUNIOR_TOURNAMENT_VENUE,
-  NONRESIDENT_PRICE_USD,
-  RESIDENT_PRICE_USD,
-} from "@/data/mvf-junior-tournament-2026";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -191,40 +183,8 @@ export default async function SchedulePage() {
       </section>
 
       {/* ─── Sessions ─────────────────────────── */}
-      {/* ─── MVF Junior Tournament callout ──── */}
-      {/* NGA-sold (Sam 2026-09-23): registration + payment live on
-          /mvf-junior-tournament. This is the first callout so parents land on
-          the paid NGA registration path, not the free Link & Dink RSVP. */}
-      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16">
-        <div className="max-w-3xl mx-auto">
-          <Link
-            href="/mvf-junior-tournament"
-            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/10 p-5 sm:p-6 hover:border-ngpa-lime transition-colors"
-          >
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
-                One-day tournament &middot; {MVF_JUNIOR_TOURNAMENT_DATE_LABEL}
-              </p>
-              <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                {MVF_JUNIOR_TOURNAMENT_TITLE} at {MVF_JUNIOR_TOURNAMENT_VENUE}
-              </p>
-              <p className="text-sm text-ngpa-muted mt-0.5">
-                {MVF_JUNIOR_TOURNAMENT_TIME_LABEL} &middot; 10U &amp; 14U
-                divisions &middot; rotating-partner round robin &middot; $
-                {RESIDENT_PRICE_USD} MV resident / ${NONRESIDENT_PRICE_USD}{" "}
-                non-resident. Register here; pay the invoice to lock your
-                player&rsquo;s spot.
-              </p>
-            </div>
-            <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              See tournament details &rarr;
-            </span>
-          </Link>
-        </div>
-      </section>
-
       {/* ─── Fall 2026 season callout ──── */}
-      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-6">
+      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16">
         <div className="max-w-3xl mx-auto">
           <Link
             href="/fall"
@@ -340,7 +300,10 @@ export default async function SchedulePage() {
 
           {sessions.length === 0 && (
             <>
-              <EmptyStateWaitlist source="schedule_empty" />
+              <EmptyStateWaitlist
+                heading="No drop-in sessions are listed right now."
+                source="schedule_empty"
+              />
               <OpenNowOffers />
             </>
           )}

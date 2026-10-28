@@ -28,9 +28,11 @@ test.afterEach(() => Object.assign(runtime, originalRuntime));
 
 test("Terms distinguishes season, tournament and host-managed policies", () => {
   const html = renderToStaticMarkup(TermsPage());
-  for (const route of ["/fall", "/mvf-junior-tournament", "/montgomery-village-youth-pickleball", "/picklpark", "/lessons"]) {
+  for (const route of ["/fall", "/montgomery-village-youth-pickleball", "/picklpark", "/lessons"]) {
     expect(html).toContain(`href="${route}"`);
   }
+  expect(html).not.toContain('href="/mvf-junior-tournament"');
+  expect(html).toContain("MVF Junior Tournament");
   expect(html).toContain("11:00 AM");
   expect(html).toContain("12:30 PM");
   expect(html).toContain("WhatsApp");

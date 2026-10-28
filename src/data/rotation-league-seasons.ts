@@ -48,9 +48,6 @@ const FALL_WEEK_DATES: Record<number, string> = Object.fromEntries(
   FALL_PLAY_DATES.map((date, i) => [i + 1, date]),
 );
 
-const TRIAL_NOTE =
-  "Trial run beside the Notion season play. Nothing here changes the Fall standings link parents already have; this season's own parent link is separate and only reaches families you send it to.";
-
 export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
   {
     slug: "nga-fall-2026-green-trial",
@@ -68,7 +65,6 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     winBy: 2,
     status: "draft",
     weekDates: FALL_WEEK_DATES,
-    note: TRIAL_NOTE,
     parentTitle: "Fall Season standings · Green Ball",
   },
   {
@@ -87,7 +83,6 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     winBy: 2,
     status: "draft",
     weekDates: FALL_WEEK_DATES,
-    note: TRIAL_NOTE,
     parentTitle: "Fall Season standings · Yellow Ball",
   },
 ];
