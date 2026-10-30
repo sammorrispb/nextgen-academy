@@ -21,6 +21,31 @@ const today = new Date().toLocaleDateString("en-CA", {
 const LIVE = upcomingMvfPrograms(today);
 const FINISHED = MVF_PROGRAMS.filter((p) => !LIVE.includes(p));
 
+test.describe("new MVF junior tournament month pages", () => {
+  for (const event of ["november-2026", "january-2027", "february-2027"]) {
+    test(`${event} keeps registration closed and fits mobile`, async ({ page }) => {
+      const providerRequests: string[] = [];
+      page.on("request", (request) => {
+        if (/\/api\/(?:checkout|admin|internal)|stripe\.com|api\.notion\.com|resend\.com/.test(request.url())) {
+          providerRequests.push(request.url());
+        }
+      });
+      const response = await page.goto(`/mvf-junior-tournament/${event}`);
+      expect(response?.status()).toBe(200);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://nextgenpbacademy.com/mvf-junior-tournament/${event}`);
+      await expect(page.getByRole("heading", { name: "Registration is not open yet." })).toBeVisible();
+      await expect(page.getByRole("status")).toContainText("Date and time to be confirmed");
+      await expect(page.getByRole("heading", { name: "12U" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "16U" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "Tentative schedule" })).toBeVisible();
+      await expect(page.locator("#main form, #main input")).toHaveCount(0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(providerRequests).toEqual([]);
+    });
+  }
+});
+
 test.describe("/mvf-junior-tournament rain plan", () => {
   test("retained tournament page is noindex and closes registration after the event", async ({ page }) => {
     const response = await page.goto("/mvf-junior-tournament");
