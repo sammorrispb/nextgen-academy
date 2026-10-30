@@ -1,4 +1,5 @@
 import PagePhoto from "@/components/PagePhoto";
+import MvfJuniorSeriesOverview from "@/components/MvfJuniorSeriesOverview";
 import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import MvfJuniorTournamentForm from "@/components/MvfJuniorTournamentForm";
@@ -33,8 +34,8 @@ import {
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
-  title: `Junior Pickleball Tournament — ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}`,
-  description: `Next Gen Pickleball Academy's ${MVF_JUNIOR_TOURNAMENT_TITLE} at ${MVF_JUNIOR_TOURNAMENT_VENUE} in ${MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA}: ${MVF_JUNIOR_TOURNAMENT_DATE_LABEL}, ${MVF_JUNIOR_TOURNAMENT_TIME_LABEL}. Rotating partner round robin, ${GUARANTEED_GAMES_TEXT.toLowerCase()} ${MEDALS_TEXT} $${RESIDENT_PRICE_USD} resident / $${NONRESIDENT_PRICE_USD} non-resident.`,
+  title: { absolute: "MVF Junior Tournaments — Montgomery Village, MD" },
+  description: "Schedule updates for the November 2026, January 2027 and February 2027 MVF junior tournaments. Registration is not open yet. Includes the October 24 tournament archive.",
   alternates: { canonical: "https://nextgenpbacademy.com/mvf-junior-tournament" },
 };
 
@@ -43,14 +44,16 @@ export default function MvfJuniorTournamentPage() {
   return (
     <main className="bg-ngpa-navy min-h-screen">
       <JsonLd data={mvfTournamentJsonLd()} />
+      <MvfJuniorSeriesOverview />
       {/* Hero */}
       <section className="px-5 sm:px-8 pt-16 pb-10 max-w-3xl mx-auto">
+        <p className="text-ngpa-white/70 mb-3">October 24, 2026 archive — the details and policies below apply only to that past tournament.</p>
         <p className="font-heading text-sm font-bold uppercase tracking-widest text-ngpa-teal-bright">
           {MVF_JUNIOR_TOURNAMENT_PUBLIC_AREA} · At {MVF_JUNIOR_TOURNAMENT_VENUE}
         </p>
-        <h1 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white mt-3 leading-tight">
+        <h2 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white mt-3 leading-tight">
           {MVF_JUNIOR_TOURNAMENT_TITLE}
-        </h1>
+        </h2>
         {registrationClosed && (
           <p id="register" role="status" className="mt-5 rounded-2xl border border-ngpa-teal/40 bg-ngpa-panel p-5 font-bold text-ngpa-white scroll-mt-24">
             {MVF_REGISTRATION_CLOSED_MESSAGE}

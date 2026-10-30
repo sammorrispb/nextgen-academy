@@ -6,9 +6,8 @@ import {
   MVF_JUNIOR_TOURNAMENT_RAIN_VENUE,
 } from "@/data/mvf-junior-tournament-2026";
 
-// Sam's October 30 call establishes months, venues, fees and bracket caps.
-// Exact dates/times, age boundaries and November's rain plan await confirmation.
-// These are informational pages only; October's checkout and ledger stay closed.
+// October 30 MVF emails confirm winter main dates/times. November's earlier
+// start and the remaining policies are pending. This copy creates no release.
 const divisions = [
   { slug: "12u", label: "12U", ageLabel: "12 and under", capacity: 10 },
   { slug: "16u", label: "16U", ageLabel: "16 and under", capacity: 10 },
@@ -27,24 +26,38 @@ const lakeMarion = {
   environmentLabel: "Indoors",
 };
 
+export const MVF_JUNIOR_SERIES_ENROLLMENT = "A minimum of 8 players across both brackets is needed to run each tournament.";
+export const MVF_JUNIOR_SERIES_SHORT_BRACKET = "A short bracket may be combined or canceled. Final handling will be confirmed before registration opens.";
+export const MVF_JUNIOR_SERIES_ELIGIBILITY = "The age cutoff and playing-up rules will be confirmed before registration opens.";
+export const MVF_JUNIOR_SERIES_WEATHER_TERMS = "Weather cancellation, refund and credit terms are still being finalized and will be published before registration opens.";
+
 export const MVF_JUNIOR_SERIES = [
   {
     slug: "november-2026", monthLabel: "November 2026", venue: northCreek, divisions, prices,
-    proposedDates: [{ iso: "2026-11-14", label: "Saturday, November 14, 2026" }],
-    proposedTime: "4:00–7:00 PM ET",
+    dates: [{ iso: "2026-11-14", label: "Saturday, November 14, 2026" }],
+    timeLabel: "Earlier daytime start — exact time to be confirmed",
+    scheduleConfirmed: false,
+    scheduleNote: "November 14 is planned outdoors. An earlier daytime start is being arranged because it gets dark early.",
+    weatherBackup: { venue: lakeMarion, timeLabel: "3:00–6:00 PM ET" },
+    makeup: null,
   },
   {
     slug: "january-2027", monthLabel: "January 2027", venue: lakeMarion, divisions, prices,
-    proposedDates: [{ iso: "2027-01-16", label: "Saturday, January 16, 2027" }],
-    proposedTime: "10:00 AM–1:00 PM ET",
+    dates: [{ iso: "2027-01-17", label: "Sunday, January 17, 2027" }],
+    timeLabel: "10:00 AM–1:00 PM ET",
+    scheduleConfirmed: true,
+    scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
+    weatherBackup: null,
+    makeup: { date: { iso: "2027-01-23", label: "Saturday, January 23, 2027" }, timeLabel: "3:30–6:30 PM ET" },
   },
   {
     slug: "february-2027", monthLabel: "February 2027", venue: lakeMarion, divisions, prices,
-    proposedDates: [
-      { iso: "2027-02-13", label: "Saturday, February 13, 2027" },
-      { iso: "2027-02-20", label: "Saturday, February 20, 2027" },
-    ],
-    proposedTime: null,
+    dates: [{ iso: "2027-02-14", label: "Sunday, February 14, 2027" }],
+    timeLabel: "10:00 AM–1:00 PM ET",
+    scheduleConfirmed: true,
+    scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
+    weatherBackup: null,
+    makeup: { date: { iso: "2027-02-20", label: "Saturday, February 20, 2027" }, timeLabel: "3:30–6:30 PM ET" },
   },
 ] as const;
 

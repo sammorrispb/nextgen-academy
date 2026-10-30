@@ -7,6 +7,8 @@ import {
   findMvfJuniorSeriesEvent,
   mvfJuniorSeriesUrl,
 } from "../src/data/mvf-junior-series";
+import MvfJuniorSeriesOverview from "../src/components/MvfJuniorSeriesOverview";
+import { publicSeriesRelease } from "../src/data/mvf-series-registration";
 import Page, { generateMetadata, generateStaticParams } from "../src/app/mvf-junior-tournament/[event]/page";
 
 const require = createRequire(`${process.cwd()}/package.json`);
@@ -33,11 +35,21 @@ test("unknown, inherited and historical keys cannot resolve a new event", () => 
   }
 });
 
+const expectedDates: Record<string, string> = { "november-2026": "2026-11-14", "january-2027": "2027-01-17", "february-2027": "2027-02-14" };
+const expectedMakeups: Record<string, string> = { "january-2027": "2027-01-23", "february-2027": "2027-02-20" };
 for (const event of ["november-2026", "january-2027", "february-2027"]) {
   test(`${event}: no registration or unconfirmed event promises in the page`, async () => {
     const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ event }) }));
     expect(html).toContain("Registration is not open yet.");
-    expect(html).toContain("Date and time to be confirmed");
+    expect(html).toContain("Registration remains closed while eligibility and event policies are finalized");
+    expect(publicSeriesRelease(event)).toBeUndefined();
+    expect(findMvfJuniorSeriesEvent(event)!.dates[0].iso).toBe(expectedDates[event]);
+    expect(html).toContain("A minimum of 8 players across both brackets");
+    expect(html).toContain("A short bracket may be combined or canceled");
+    expect(html).toContain("Final handling will be confirmed before registration opens");
+    expect(html).toContain("The age cutoff and playing-up rules will be confirmed");
+    expect(html).toContain("Weather cancellation, refund and credit terms are still being finalized");
+    expect(html).not.toMatch(/2027-01-16|2027-02-13|4:00–7:00 PM/);
     expect(html).toContain("Maximum 10 players per bracket");
     expect(html).toContain("12 and under");
     expect(html).toContain("16 and under");
@@ -51,16 +63,26 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     expect(html).toContain('width="1200" height="1600"');
     expect(html).not.toContain("object-cover");
     expect(html).not.toMatch(/<form|<input|checkout-mvf|application\/ld\+json|Oct(?:ober)? 24|3:45|2:45|No refunds|guaranteed|merged into|rain or shine/i);
-    expect(html).toContain("Tentative schedule");
-    expect(html).toContain("Proposed dates and times may change.");
+    expect(html).toContain(event === "november-2026" ? "Schedule — start time pending" : "Tournament schedule");
     const selected = findMvfJuniorSeriesEvent(event)!;
-    for (const date of selected.proposedDates) expect(html).toContain(`<time dateTime="${date.iso}">`);
-    expect(html).toContain(selected.proposedTime ?? "Time to be confirmed");
+    for (const date of selected.dates) expect(html).toContain(`<time dateTime="${date.iso}">`);
+    expect(html).toContain(selected.timeLabel);
     expect(html).toContain(event === "november-2026" ? "North Creek Community Center" : "Lake Marion Community Center");
-    if (event !== "november-2026") expect(html).toContain("Indoors");
+    if (event !== "november-2026") {
+      expect(html).toContain("Indoors");
+      expect(html).toContain("10:00 AM–1:00 PM ET");
+      expect(html).toContain("The main event date, time and indoor location are confirmed with MVF");
+      expect(html).toContain("Offered makeup date");
+      expect(html).toContain(`<time dateTime="${expectedMakeups[event]}">`);
+      expect(html).toContain("3:30–6:30 PM ET");
+      expect(html).toContain("The makeup venue is still to be confirmed");
+    }
     else {
       expect(html).toContain("Outdoors");
-      expect(html).toContain("November rain plan: to be confirmed.");
+      expect(html).toContain("Earlier daytime start — exact time to be confirmed");
+      expect(html).toContain("Weather backup");
+      expect(html).toContain("Lake Marion Community Center gymnasium available on November 14, 3:00–6:00 PM ET");
+      expect(html).not.toContain("Offered makeup date");
     }
   });
 
@@ -69,9 +91,23 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     expect(meta.robots).toEqual({ index: false, follow: false });
     expect(meta.alternates?.canonical).toBe(`https://nextgenpbacademy.com/mvf-junior-tournament/${event}`);
     expect(meta.description).toContain("Registration is not open yet");
-    expect(JSON.stringify(meta)).not.toMatch(/November 14\b|January 16\b|February (13|20)\b|October 24/);
+    expect(meta.description).toContain(findMvfJuniorSeriesEvent(event)!.dates[0].label);
+    expect(JSON.stringify(meta)).not.toMatch(/January 16\b|February 13\b|October 24|4:00–7:00 PM/);
   });
 }
+
+test("overview separates current updates from the October archive and keeps stable links", () => {
+  const html = renderToStaticMarkup(MvfJuniorSeriesOverview());
+  expect(html).toContain("Registration is not open yet");
+  expect(html).toContain("A minimum of 8 players across both brackets");
+  for (const event of MVF_JUNIOR_SERIES) {
+    expect(html).toContain(`href="${mvfJuniorSeriesUrl(event)}"`);
+    expect(html).toContain(event.dates[0].label);
+  }
+  expect(html).toContain("Earlier daytime start — exact time to be confirmed");
+  expect(html).toContain("Venue to be confirmed");
+  expect(html).not.toMatch(/No refunds|4:00–7:00 PM|January 16|February 13|<form|<input/);
+});
 
 test("unknown pages and metadata return not found", async () => {
   await expect(Page({ params: Promise.resolve({ event: "unknown" }) })).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
