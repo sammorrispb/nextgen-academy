@@ -8,7 +8,7 @@ import { createAndSendSignupInvoice, type CreateSignupInvoiceArgs, type SignupIn
 import { PAYMENT_OWNER, hasForeignPaymentOwner } from "./payment-ownership";
 import { normalizeEmailTypos } from "./email-typo";
 import { invoiceSafeName } from "./invoice-text";
-import { baseSeriesMetadata, checkSeriesRosterSchema, ensureSeriesRoster, updateSeriesRoster, strictSeriesWaiver, seriesCommand, seriesIdentity, seriesSecret, sendSeriesNotice, SeriesError } from "./mvf-series-store";
+import { baseSeriesMetadata, checkSeriesRosterSchema, ensureSeriesRoster, updateSeriesRoster, seriesRosterNeedsReview, strictSeriesWaiver, seriesCommand, seriesIdentity, seriesSecret, sendSeriesNotice, SeriesError } from "./mvf-series-store";
 
 const INVOICE = /^in_[A-Za-z0-9]{1,250}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,6 +47,7 @@ export interface SeriesServices {
   waiver: typeof strictSeriesWaiver;
   roster: typeof ensureSeriesRoster;
   updateRoster: typeof updateSeriesRoster;
+  rosterNeedsReview: typeof seriesRosterNeedsReview;
   invoice: (args: CreateSignupInvoiceArgs) => Promise<SignupInvoiceResult>;
   notice: typeof sendSeriesNotice;
   financialWritesAllowed: () => boolean;
@@ -54,7 +55,7 @@ export interface SeriesServices {
 export class SeriesInputError extends SeriesError {
   constructor(readonly errors: Record<string, string>) { super("invalid_registration", 400); }
 }
-const defaults: SeriesServices = { stripe: getStripe, active: activeSeriesRelease, release: findSeriesRelease, now: Date.now, command: seriesCommand, schema: checkSeriesRosterSchema, waiver: strictSeriesWaiver, roster: ensureSeriesRoster, updateRoster: updateSeriesRoster, invoice: createAndSendSignupInvoice, notice: sendSeriesNotice, financialWritesAllowed: () => process.env.VERCEL_ENV === "production" && /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "") };
+const defaults: SeriesServices = { stripe: getStripe, active: activeSeriesRelease, release: findSeriesRelease, now: Date.now, command: seriesCommand, schema: checkSeriesRosterSchema, waiver: strictSeriesWaiver, roster: ensureSeriesRoster, updateRoster: updateSeriesRoster, rosterNeedsReview: seriesRosterNeedsReview, invoice: createAndSendSignupInvoice, notice: sendSeriesNotice, financialWritesAllowed: () => process.env.VERCEL_ENV === "production" && /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "") };
 
 export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
   const deps = { ...defaults, ...overrides };
@@ -69,6 +70,20 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     if (account.id !== MVF_SERIES_ACCOUNT || (admission && account.charges_enabled !== true) || (eventAccount && eventAccount !== account.id)) throw new SeriesError("merchant_unverified");
     return stripe;
   }
+  function invoiceRecipient(invoice: Stripe.Invoice, intended = invoice.metadata?.parent_email) {
+    if (typeof intended !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(intended) || intended !== intended.trim().toLowerCase() ||
+      invoice.metadata?.parent_email !== intended || invoice.customer_email?.trim().toLowerCase() !== intended) throw new SeriesError("recipient_unverified");
+    return intended;
+  }
+  async function verifyRecipient(stripe: Stripe, invoice: Stripe.Invoice, intended?: string) {
+    const email = invoiceRecipient(invoice, intended);
+    const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+    if (!customerId) throw new SeriesError("recipient_unverified");
+    // Finalized invoice email is a snapshot; the current Customer can drift
+    // independently. Neither address may redirect this guardian's invoice.
+    const customer = await stripe.customers.retrieve(customerId);
+    if (customer.id !== customerId || customer.deleted || customer.email?.trim().toLowerCase() !== email) throw new SeriesError("recipient_unverified");
+  }
   function invoiceRelease(invoice: Stripe.Invoice, scope?: Scope) {
     const m = invoice.metadata ?? {};
     const release = releaseFor(m.event_slug, m.policy_revision);
@@ -81,6 +96,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       !UUID.test(m.nga_capacity_submission_id ?? "") || invoice.currency !== "usd" || invoice.total !== amount || invoice.on_behalf_of ||
       (invoice as Stripe.Invoice & { transfer_data?: unknown }).transfer_data ||
       (scope && (scope.invoice !== invoice.id || scope.event !== release.event || scope.revision !== release.revision || scope.submission !== m.nga_capacity_submission_id))) throw new SeriesError("invoice_mismatch", 409);
+    invoiceRecipient(invoice);
     return { release, event, m, amount };
   }
   async function reservation(invoice: Stripe.Invoice) {
@@ -89,9 +105,22 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     if (seat.submission_id !== m.nga_capacity_submission_id || !["payable", "paid", "void"].includes(String(seat.state))) throw new SeriesError("invoice_mismatch", 409);
     return seat;
   }
+  async function verifyPayment(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
+    if (invoice.status !== "paid" || invoice.amount_paid !== amount || invoice.amount_due !== amount || invoice.amount_remaining !== 0 ||
+      invoice.pre_payment_credit_notes_amount !== 0 || invoice.post_payment_credit_notes_amount !== 0 || (invoice as Stripe.Invoice & { paid_out_of_band?: boolean }).paid_out_of_band === true) throw new SeriesError("payment_unverified");
+    const payments = await stripe.invoicePayments.list({ invoice: invoice.id, limit: 100 });
+    const paid = payments.data.filter(p => p.status === "paid");
+    if (payments.has_more || paid.length !== 1 || paid[0].livemode !== true || paid[0].invoice !== invoice.id || paid[0].currency !== "usd" || paid[0].amount_paid !== amount || paid[0].amount_requested !== amount || paid[0].payment.type !== "payment_intent" || typeof paid[0].payment.payment_intent !== "string") throw new SeriesError("payment_unverified");
+    const intent = await stripe.paymentIntents.retrieve(paid[0].payment.payment_intent);
+    if (intent.id !== paid[0].payment.payment_intent || intent.livemode !== true || intent.status !== "succeeded" || intent.amount !== amount || intent.amount_received !== amount || intent.currency !== "usd" || intent.customer !== invoice.customer || intent.on_behalf_of || intent.transfer_data || hasForeignPaymentOwner(intent.metadata) || typeof intent.latest_charge !== "string") throw new SeriesError("payment_unverified");
+    const charge = await stripe.charges.retrieve(intent.latest_charge);
+    if (charge.id !== intent.latest_charge || charge.livemode !== true || charge.payment_intent !== intent.id || !charge.paid || !charge.captured || charge.amount !== amount || charge.amount_captured !== amount || charge.amount_refunded !== 0 || charge.refunded || charge.disputed || charge.currency !== "usd" || charge.on_behalf_of || charge.transfer_data || hasForeignPaymentOwner(charge.metadata)) throw new SeriesError("payment_unverified");
+    const refunds = await stripe.refunds.list({ charge: charge.id, limit: 100 });
+    if (refunds.has_more || refunds.data.length) throw new SeriesError("payment_unverified");
+  }
   async function notices(invoice: Stripe.Invoice, phase: "pending" | "paid" | "void") {
     const { release, event, m, amount } = invoiceRelease(invoice);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m.parent_email ?? "") || m.parent_email !== invoice.customer_email?.trim().toLowerCase()) throw new SeriesError("recipient_unverified");
+    await verifyRecipient(deps.stripe(), invoice);
     const when = `${release.date}, ${release.startTime}–${release.endTime} ET`;
     const title = phase === "paid" ? "Payment received" : phase === "void" ? "Unpaid registration cancelled" : "Your invoice is ready";
     const text = [title, `MVF Junior Tournament — ${event.monthLabel} — ${m.division.toUpperCase()}`,
@@ -106,7 +135,51 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     await deps.notice(m.event_key, invoice.id, phase, "admin", { ...base, to: ["sam.morris2131@gmail.com", "nextgenacademypb@gmail.com"], text: `${text}\n\nParent: ${invoiceSafeName(m.parent_name)}\nEmail: ${m.parent_email}\nInvoice: ${invoice.id}` });
   }
 
+  async function paidStatus(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
+    try { await verifyPayment(stripe, invoice, amount); }
+    catch (error) {
+      if (!(error instanceof SeriesError) || error.code !== "payment_unverified") return "reconciliation_pending";
+      await deps.updateRoster(invoice.id, invoice.metadata!, "review");
+      return "review_required";
+    }
+    return await deps.rosterNeedsReview(invoice.id, invoice.metadata!) ? "review_required" : "paid";
+  }
+
   return {
+    async adjustment(event: Stripe.Event) {
+      const supported = ["charge.refunded", "charge.dispute.created", "charge.dispute.updated", "charge.dispute.closed", "credit_note.created", "credit_note.updated", "credit_note.voided", "invoice.updated"];
+      if (!supported.includes(event.type) || event.livemode !== true || !deps.financialWritesAllowed()) return null;
+      const stripe = deps.stripe();
+      const object = event.data.object as unknown as { id: string; invoice?: string | { id: string }; charge?: string | { id: string } };
+      let invoiceId: string | undefined;
+      if (event.type === "invoice.updated") invoiceId = object.id;
+      else if (event.type.startsWith("credit_note.")) invoiceId = typeof object.invoice === "string" ? object.invoice : object.invoice?.id;
+      else {
+        const chargeId = event.type === "charge.refunded" ? object.id : typeof object.charge === "string" ? object.charge : object.charge?.id;
+        if (!chargeId || !/^ch_[A-Za-z0-9_]{1,250}$/.test(chargeId)) return null;
+        const charge = await stripe.charges.retrieve(chargeId);
+        if (charge.id !== chargeId || charge.livemode !== true || hasForeignPaymentOwner(charge.metadata)) return null;
+        const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+        if (!pi) return null;
+        const payments = await stripe.invoicePayments.list({ payment: { type: "payment_intent", payment_intent: pi }, limit: 100 });
+        if (payments.has_more || payments.data.length > 1) throw new SeriesError("payment_unverified");
+        if (!payments.data.length) return null;
+        const payment = payments.data[0];
+        if (payment.livemode !== true || payment.payment.type !== "payment_intent" || payment.payment.payment_intent !== pi) throw new SeriesError("payment_unverified");
+        invoiceId = typeof payment.invoice === "string" ? payment.invoice : payment.invoice.id;
+      }
+      if (!invoiceId || !INVOICE.test(invoiceId)) return null;
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      if (invoice.metadata?.kind !== MVF_SERIES_KIND) return null;
+      await merchant(event.account);
+      const { amount } = invoiceRelease(invoice);
+      await verifyRecipient(stripe, invoice);
+      const seat = await reservation(invoice);
+      if (seat.state !== "paid") return { received: true, mvfSeries: true, reviewRequired: true };
+      const state = await paidStatus(stripe, invoice, amount);
+      if (state === "reconciliation_pending") throw new SeriesError("payment_unverified");
+      return { received: true, mvfSeries: true, reviewRequired: state === "review_required" };
+    },
     async register(eventSlug: string, input: unknown) {
       const release = deps.active(eventSlug);
       if (!release || releaseProblems(release).length || deps.now() >= Date.parse(release.registrationClosesAt)) throw new SeriesError("registration_closed", 409);
@@ -145,27 +218,38 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       if (held.invoice_id) {
         const existing = await stripe.invoices.retrieve(String(held.invoice_id));
         invoiceRelease(existing, { event: eventSlug, revision: release.revision, invoice: existing.id, submission: data.submissionId, purpose: "receipt", expires: 0 });
+        await verifyRecipient(stripe, existing, data.email);
       }
       const { invoice } = await deps.invoice({ customerEmail: data.email, customerName: invoiceSafeName(data.parentName, "Parent"),
         items: [{ description: `MVF Junior Tournament — ${event.monthLabel} — ${data.division.toUpperCase()} — ${invoiceSafeName(data.childFirstName)}`, amountCents: amount * 100 }],
         metadata, memo: `MVF Junior Tournament — ${release.date} — ${data.division.toUpperCase()}`,
         footer: `${release.cancellationPolicy} ${release.rainPolicy}`, daysUntilDue: release.invoiceDueDays,
         idempotencyKey: `nga-series-${eventSlug}-${data.submissionId}`, existingInvoiceId: held.invoice_id ? String(held.invoice_id) : undefined,
-        beforeFinalize: async invoiceId => { await deps.command(eventKey, "bind", { submission_id: data.submissionId, invoice_id: invoiceId }); await deps.roster(invoiceId, metadata); },
+        beforeFinalize: async invoiceId => {
+          await deps.command(eventKey, "bind", { submission_id: data.submissionId, invoice_id: invoiceId }); await deps.roster(invoiceId, metadata);
+          const draft = await stripe.invoices.retrieve(invoiceId);
+          invoiceRelease(draft, { event: eventSlug, revision: release.revision, invoice: invoiceId, submission: data.submissionId, purpose: "receipt", expires: 0 });
+          await verifyRecipient(stripe, draft, data.email);
+        },
         beforeSend: async payable => {
           invoiceRelease(payable, { event: eventSlug, revision: release.revision, invoice: payable.id, submission: data.submissionId, purpose: "receipt", expires: 0 });
           if (payable.status !== "open" || payable.amount_due !== amount * 100 || payable.amount_paid !== 0 || payable.amount_remaining !== amount * 100) throw new SeriesError("invoice_amount_unverified");
           const claim = await deps.command(eventKey, "send_claim", { invoice_id: payable.id });
           if (claim.state === "sent") return false;
           if (claim.state !== "leased") throw new SeriesError("invoice_send_reconciliation_required");
+          await verifyRecipient(stripe, payable, data.email);
         },
         afterSend: async invoiceId => { const result = await deps.command(eventKey, "send_done", { invoice_id: invoiceId }); if (result.recorded !== true) throw new SeriesError("invoice_send_reconciliation_required"); },
       });
       invoiceRelease(invoice);
+      await verifyRecipient(stripe, invoice, data.email);
       let notificationPending = false;
-      if (invoice.status === "open") { try { await notices(invoice, "pending"); } catch { notificationPending = true; } }
+      if (invoice.status === "open") {
+        try { await notices(invoice, "pending"); }
+        catch (error) { if (error instanceof SeriesError && error.code === "recipient_unverified") throw error; notificationPending = true; }
+      }
       const token = seriesToken({ event: eventSlug, revision: release.revision, invoice: invoice.id, submission: data.submissionId, purpose: "receipt" }, heldAt);
-      return { invoiceId: invoice.id, status: invoice.status === "paid" ? "paid" : "pending", receiptUrl: `/mvf-junior-tournament/${eventSlug}/status#receipt=${token}`, notificationPending };
+      return { invoiceId: invoice.id, status: invoice.status === "paid" ? await paidStatus(stripe, invoice, amount * 100) : "pending", receiptUrl: `/mvf-junior-tournament/${eventSlug}/status#receipt=${token}`, notificationPending };
     },
 
     async receipt(event: string, token: unknown) {
@@ -173,9 +257,9 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       const stripe = await merchant();
       const invoice = await stripe.invoices.retrieve(scope.invoice);
       const { m, amount } = invoiceRelease(invoice, scope);
+      await verifyRecipient(stripe, invoice);
       const seat = await reservation(invoice);
-      const paid = invoice.status === "paid" && invoice.amount_paid === amount && invoice.amount_remaining === 0;
-      const state = paid && seat.state === "paid" ? "paid" : invoice.status === "void" && seat.state === "void" ? "cancelled" : invoice.status === "open" && seat.state === "payable" && invoice.amount_due === amount && invoice.amount_paid === 0 ? "pending" : "reconciliation_pending";
+      const state = invoice.status === "paid" && seat.state === "paid" ? await paidStatus(stripe, invoice, amount) : invoice.status === "void" && seat.state === "void" ? "cancelled" : invoice.status === "open" && seat.state === "payable" && invoice.amount_due === amount && invoice.amount_paid === 0 ? "pending" : "reconciliation_pending";
       return { status: state, amountUsd: amount / 100, division: m.division.toUpperCase(),
         payUrl: state === "pending" ? seriesPayUrl(invoice.hosted_invoice_url) : null,
         cancelToken: state === "pending" ? seriesToken({ ...scope, purpose: "cancel" }, deps.now()) : null };
@@ -187,6 +271,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       const stripe = await merchant();
       let invoice = await stripe.invoices.retrieve(scope.invoice);
       const { m } = invoiceRelease(invoice, scope);
+      await verifyRecipient(stripe, invoice);
       const seat = await reservation(invoice);
       if (invoice.status === "paid" || invoice.amount_paid !== 0 || seat.state === "paid") throw new SeriesError("paid_cancellation_requires_review", 409);
       if (invoice.status !== "open" && invoice.status !== "void") throw new SeriesError("invoice_requires_review", 409);
@@ -208,25 +293,20 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       const stripe = await merchant(event.account);
       const invoice = await stripe.invoices.retrieve(input.id);
       const { m, amount } = invoiceRelease(invoice);
+      await verifyRecipient(stripe, invoice);
       if (invoice.livemode !== true) throw new SeriesError("invoice_unverified");
-      await reservation(invoice);
+      const seat = await reservation(invoice);
       if (event.type === "invoice.voided") {
         if (invoice.status !== "void" || invoice.amount_paid !== 0) throw new SeriesError("provider_void_unconfirmed");
         await deps.command(m.event_key, "void", { invoice_id: invoice.id });
         await deps.updateRoster(invoice.id, m, "void");
         await notices(invoice, "void");
       } else {
-        if (invoice.status !== "paid" || invoice.amount_paid !== amount || invoice.amount_due !== amount || invoice.amount_remaining !== 0 ||
-          invoice.pre_payment_credit_notes_amount !== 0 || invoice.post_payment_credit_notes_amount !== 0 || (invoice as Stripe.Invoice & { paid_out_of_band?: boolean }).paid_out_of_band === true) throw new SeriesError("payment_unverified");
-        const payments = await stripe.invoicePayments.list({ invoice: invoice.id, limit: 100 });
-        const paid = payments.data.filter(p => p.status === "paid");
-        if (payments.has_more || paid.length !== 1 || paid[0].livemode !== true || paid[0].invoice !== invoice.id || paid[0].currency !== "usd" || paid[0].amount_paid !== amount || paid[0].amount_requested !== amount || paid[0].payment.type !== "payment_intent" || typeof paid[0].payment.payment_intent !== "string") throw new SeriesError("payment_unverified");
-        const intent = await stripe.paymentIntents.retrieve(paid[0].payment.payment_intent);
-        if (intent.id !== paid[0].payment.payment_intent || intent.livemode !== true || intent.status !== "succeeded" || intent.amount !== amount || intent.amount_received !== amount || intent.currency !== "usd" || intent.customer !== invoice.customer || intent.on_behalf_of || intent.transfer_data || hasForeignPaymentOwner(intent.metadata) || typeof intent.latest_charge !== "string") throw new SeriesError("payment_unverified");
-        const charge = await stripe.charges.retrieve(intent.latest_charge);
-        if (charge.id !== intent.latest_charge || charge.livemode !== true || charge.payment_intent !== intent.id || !charge.paid || !charge.captured || charge.amount !== amount || charge.amount_captured !== amount || charge.amount_refunded !== 0 || charge.refunded || charge.disputed || charge.currency !== "usd" || charge.on_behalf_of || charge.transfer_data || hasForeignPaymentOwner(charge.metadata)) throw new SeriesError("payment_unverified");
-        const refunds = await stripe.refunds.list({ charge: charge.id, limit: 100 });
-        if (refunds.has_more || refunds.data.length) throw new SeriesError("payment_unverified");
+        try { await verifyPayment(stripe, invoice, amount); }
+        catch (error) {
+          if (seat.state === "paid" && error instanceof SeriesError && error.code === "payment_unverified") await deps.updateRoster(invoice.id, m, "review");
+          throw error;
+        }
         await deps.command(m.event_key, "paid", { invoice_id: invoice.id });
         await deps.updateRoster(invoice.id, m, "paid");
         await notices(invoice, "paid");

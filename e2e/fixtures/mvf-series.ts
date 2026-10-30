@@ -27,6 +27,10 @@ export class SeriesHarness {
   waiver = true;
   merchantId = "acct_1TU4iSBpXOfTC961";
   refunded = false;
+  disputed = false;
+  creditCents = 0;
+  refundEvidence = false;
+  paymentEvidenceUnavailable = false;
   ready = true;
   admission = true;
   bindFailure = false;
@@ -45,16 +49,16 @@ export class SeriesHarness {
     const read = this.stripe.invoices.retrieve.bind(this.stripe.invoices);
     patch(this.stripe.invoices, "retrieve", async (id: string) => {
       const invoice = await read(id); const amount = invoice.total;
-      return { ...invoice, status: this.statuses.get(id) ?? invoice.status, livemode: true, customer_email: invoice.metadata?.parent_email,
+      return { ...invoice, status: this.statuses.get(id) ?? invoice.status, livemode: true,
         amount_due: amount, amount_paid: this.statuses.get(id) === "paid" ? amount : 0, amount_remaining: this.statuses.get(id) ? 0 : amount,
-        pre_payment_credit_notes_amount: 0, post_payment_credit_notes_amount: 0, on_behalf_of: null,
+        pre_payment_credit_notes_amount: 0, post_payment_credit_notes_amount: this.creditCents, on_behalf_of: null,
         hosted_invoice_url: `https://invoice.stripe.com/i/${id}` };
     });
     patch(this.stripe.invoices, "voidInvoice", async (id: string) => { this.voids++; this.statuses.set(id, "void"); if (this.voidLoss) { this.voidLoss = false; throw new Error("synthetic lost response"); } return this.stripe.invoices.retrieve(id); });
-    patch(this.stripe.invoicePayments, "list", async ({ invoice }: { invoice: string }) => { const value = await this.stripe.invoices.retrieve(invoice); return { has_more: false, data: [{ invoice, livemode: true, status: "paid", currency: "usd", amount_paid: value.total, amount_requested: value.total, payment: { type: "payment_intent", payment_intent: `pi_${invoice}` } }] }; });
+    patch(this.stripe.invoicePayments, "list", async ({ invoice, payment }: { invoice?: string; payment?: { payment_intent: string } }) => { if (this.paymentEvidenceUnavailable) throw new Error("synthetic provider unavailable"); const id = invoice ?? payment!.payment_intent.slice(3); const value = await this.stripe.invoices.retrieve(id); return { has_more: false, data: [{ invoice: id, livemode: true, status: "paid", currency: "usd", amount_paid: value.total, amount_requested: value.total, payment: { type: "payment_intent", payment_intent: `pi_${id}` } }] }; });
     patch(this.stripe.paymentIntents, "retrieve", async (id: string) => { const value = await this.stripe.invoices.retrieve(id.slice(3)); return { id, livemode: true, status: "succeeded", currency: "usd", amount: value.total, amount_received: value.total, customer: value.customer, latest_charge: `ch_${id}`, metadata: {}, on_behalf_of: null, transfer_data: null }; });
-    patch(this.stripe.charges, "retrieve", async (id: string) => { const value = await this.stripe.invoices.retrieve(id.slice(6)); return { id, livemode: true, paid: true, captured: true, amount: value.total, amount_captured: value.total, amount_refunded: this.refunded ? value.total : 0, refunded: this.refunded, disputed: false, currency: "usd", payment_intent: id.slice(3), metadata: {}, on_behalf_of: null, transfer_data: null }; });
-    patch(this.stripe.refunds, "list", async () => ({ data: [], has_more: false }));
+    patch(this.stripe.charges, "retrieve", async (id: string) => { const value = await this.stripe.invoices.retrieve(id.slice(6)); return { id, livemode: true, paid: true, captured: true, amount: value.total, amount_captured: value.total, amount_refunded: this.refunded ? value.total : 0, refunded: this.refunded, disputed: this.disputed, currency: "usd", payment_intent: id.slice(3), metadata: {}, on_behalf_of: null, transfer_data: null }; });
+    patch(this.stripe.refunds, "list", async () => ({ data: this.refundEvidence ? [{ id: "re_synthetic", status: "pending" }] : [], has_more: false }));
     this.stub.onDynamic("/nga-series-registration", call => {
       const input = JSON.parse(call.body); const ok = (data: object) => ({ status: 200, json: { ok: true, event_key: input.event_key, ...data } });
       const bad = (error: string) => ({ status: 409, json: { error } });
@@ -100,7 +104,7 @@ export class SeriesHarness {
       if (call.url.includes("/waiver") || call.url.includes(process.env.NOTION_WAIVERS_DB_ID!)) return { status: 200, json: { results: this.waiver ? [{}] : [] } };
       if (call.method === "GET") {
         const types: Record<string, string> = { "Parent Name": "title", "Parent Email": "email", "Parent Phone": "phone_number", "Child First Name": "rich_text", "Child Last Name": "rich_text", "Child DOB": "date", "Event Key": "rich_text", "Policy Revision": "rich_text", Division: "select", Resident: "checkbox", Status: "select", Paid: "checkbox", "Amount Due": "number", "Amount Paid": "number", "Stripe Invoice ID": "rich_text", "Emergency Name": "rich_text", "Emergency Phone": "phone_number", Allergies: "rich_text", "SMS Consent": "checkbox", "SMS Consent Text": "rich_text" };
-        return { status: 200, json: { properties: Object.fromEntries(Object.entries(types).map(([key, type]) => [key, { type, ...(type === "select" ? { select: { options: (key === "Division" ? ["12U", "16U"] : ["Pending", "Confirmed", "Cancelled"]).map(name => ({ name })) } } : {}) }])) } };
+        return { status: 200, json: { properties: Object.fromEntries(Object.entries(types).map(([key, type]) => [key, { type, ...(type === "select" ? { select: { options: (key === "Division" ? ["12U", "16U"] : ["Pending", "Confirmed", "Cancelled", "Review required"]).map(name => ({ name })) } } : {}) }])) } };
       }
       if (call.url.endsWith("/query")) { const id = body.filter.rich_text.equals; return { status: 200, json: { results: this.pages.filter(p => (p.properties["Stripe Invoice ID"] as { rich_text: { plain_text: string }[] }).rich_text[0].plain_text === id), has_more: false } }; }
       const normalize = (properties: Record<string, unknown>) => Object.fromEntries(Object.entries(properties).map(([key, value]) => {
