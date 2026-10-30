@@ -281,6 +281,56 @@ test("uncertain paid publication stays serialized until explicit reconciliation,
   expect(h.mails).toHaveLength(2); expect(h.voids).toBe(0);
 });
 
+for (const failure of ["stripe-read", "notion-read"] as const) test(`a known ${failure} failure before any external write releases only its publication owner for safe retry`, async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid");
+  const original = globalThis.fetch; let failed = false;
+  globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
+    const url = String(args[0]), body = typeof args[1]?.body === "string" ? JSON.parse(args[1].body) : {};
+    if (failure === "notion-read" && !failed && url.includes("api.notion.com") && url.endsWith("/query") && [...h.seats.values()][0].publication) { failed = true; return new Response("{}", { status: 503 }); }
+    const response = await original(...args);
+    if (failure === "stripe-read" && !failed && body.action === "publication_claim" && body.phase === "paid") { failed = true; h.paymentEvidenceUnavailable = true; }
+    return response;
+  }) as typeof fetch;
+  try {
+    await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toBeTruthy();
+    expect(failed).toBe(true); expect([...h.seats.values()][0].publication).toBeUndefined();
+    expect(h.pages[0].properties.Status).toEqual({ select: { name: "Pending" } }); expect(h.mails).toHaveLength(2);
+    h.paymentEvidenceUnavailable = false; globalThis.fetch = original;
+    await h.service.webhook(h.event(result.invoiceId)); await h.service.webhook(h.event(result.invoiceId));
+    expect(h.pages[0].properties.Status).toEqual({ select: { name: "Confirmed" } }); expect(h.mails).toHaveLength(4);
+    expect([...h.seats.values()][0].state).toBe("paid"); expect(h.voids).toBe(0); expect(h.fake.all()).toHaveLength(1);
+  } finally { globalThis.fetch = original; h.paymentEvidenceUnavailable = false; }
+});
+
+test("an uncertain Notion PATCH retains ownership and refuses automatic replacement", async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid");
+  const original = globalThis.fetch; let lost = false;
+  globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
+    const response = await original(...args);
+    if (!lost && args[1]?.method === "PATCH" && String(args[1].body).includes('"Confirmed"')) { lost = true; throw new Error("synthetic lost PATCH acknowledgement"); }
+    return response;
+  }) as typeof fetch;
+  try { await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toBeTruthy(); }
+  finally { globalThis.fetch = original; }
+  expect(lost).toBe(true); expect([...h.seats.values()][0].publication).toBeTruthy();
+  await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toMatchObject({ code: "ledger_unavailable" });
+  expect(h.mails).toHaveLength(2); expect(h.voids).toBe(0);
+});
+
+test("a review read failure releases its unwritten owner but preserves the durable hold for repair", async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid"); await h.service.webhook(h.event(result.invoiceId)); h.refunded = true;
+  const original = globalThis.fetch; let failed = false;
+  globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
+    if (!failed && String(args[0]).includes("api.notion.com") && String(args[0]).endsWith("/query") && [...h.seats.values()][0].publication?.phase === "review") { failed = true; return new Response("{}", { status: 503 }); }
+    return original(...args);
+  }) as typeof fetch;
+  try { expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("reconciliation_pending"); }
+  finally { globalThis.fetch = original; }
+  const seat = [...h.seats.values()][0]; expect(failed).toBe(true); expect(seat.review_required).toBe(true); expect(seat.publication).toBeUndefined();
+  expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("review_required");
+  expect(h.pages[0].properties.Status).toEqual({ select: { name: "Review required" } }); expect(h.mails).toHaveLength(4); expect(seat.state).toBe("paid"); expect(h.voids).toBe(0);
+});
+
 for (const type of ["charge.refunded", "credit_note.created", "charge.dispute.created"] as const) test(`signed ${type} reconciles the series roster without legacy cancellation or another notice`, async () => {
   const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid"); await h.service.webhook(h.event(result.invoiceId));
   if (type === "charge.refunded") h.refunded = true;

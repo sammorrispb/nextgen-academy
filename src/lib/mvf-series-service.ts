@@ -126,7 +126,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     await verifyRecipient(stripe, fresh);
     await verifyPayment(stripe, fresh, amount);
   }
-  async function notices(invoice: Stripe.Invoice, phase: "pending" | "paid" | "void", publicationToken?: string) {
+  async function notices(invoice: Stripe.Invoice, phase: "pending" | "paid" | "void", publicationToken?: string, beforeWrite?: () => void) {
     const { release, event, m, amount } = invoiceRelease(invoice);
     await verifyRecipient(deps.stripe(), invoice);
     const when = `${release.date}, ${release.startTime}–${release.endTime} ET`;
@@ -147,9 +147,9 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       await freshPayment(deps.stripe(), invoice, amount);
     };
     await beforeNotice();
-    await deps.notice(m.event_key, invoice.id, phase, "parent", { ...base, to: [m.parent_email] }, publicationToken);
+    await deps.notice(m.event_key, invoice.id, phase, "parent", { ...base, to: [m.parent_email] }, publicationToken, beforeWrite);
     await beforeNotice();
-    await deps.notice(m.event_key, invoice.id, phase, "admin", { ...base, to: ["sam.morris2131@gmail.com", "nextgenacademypb@gmail.com"], text: `${text}\n\nParent: ${invoiceSafeName(m.parent_name)}\nEmail: ${m.parent_email}\nInvoice: ${invoice.id}` }, publicationToken);
+    await deps.notice(m.event_key, invoice.id, phase, "admin", { ...base, to: ["sam.morris2131@gmail.com", "nextgenacademypb@gmail.com"], text: `${text}\n\nParent: ${invoiceSafeName(m.parent_name)}\nEmail: ${m.parent_email}\nInvoice: ${invoice.id}` }, publicationToken, beforeWrite);
   }
 
   async function claimPublication(invoice: Stripe.Invoice, phase: "paid" | "review") {
@@ -163,38 +163,54 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     const done = await deps.command(invoice.metadata!.event_key, "publication_done", { invoice_id: invoice.id, publication_token: token });
     if (done.recorded !== true) throw new SeriesError("publication_unverified");
   }
-  async function publishReview(invoice: Stripe.Invoice, token?: string) {
+  async function publishReview(invoice: Stripe.Invoice, token?: string, beforeWrite?: () => void) {
     const owner = token ?? await claimPublication(invoice, "review");
     if (!owner) throw new SeriesError("publication_unverified");
-    if (token) {
-      const marked = await deps.command(invoice.metadata!.event_key, "publication_review", { invoice_id: invoice.id, publication_token: owner });
-      if (marked.recorded !== true) throw new SeriesError("publication_unverified");
+    let writeStarted = false;
+    const markWrite = () => { writeStarted = true; beforeWrite?.(); };
+    try {
+      if (token) {
+        const marked = await deps.command(invoice.metadata!.event_key, "publication_review", { invoice_id: invoice.id, publication_token: owner });
+        if (marked.recorded !== true) throw new SeriesError("publication_unverified");
+      }
+      await deps.updateRoster(invoice.id, invoice.metadata!, "review", owner, markWrite);
+      await finishPublication(invoice, owner);
+    } catch (error) {
+      if (!token && !writeStarted) await finishPublication(invoice, owner);
+      throw error;
     }
-    await deps.updateRoster(invoice.id, invoice.metadata!, "review", owner);
-    await finishPublication(invoice, owner);
   }
   async function publishPaid(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
     const token = await claimPublication(invoice, "paid");
-    if (!token) return true;
+    if (!token) { await publishReview(invoice); return true; }
+    let writeStarted = false;
+    const markWrite = () => { writeStarted = true; };
     try {
       await freshPayment(stripe, invoice, amount);
-      await deps.updateRoster(invoice.id, invoice.metadata!, "paid", token);
+      await deps.updateRoster(invoice.id, invoice.metadata!, "paid", token, markWrite);
       // An adjustment can happen during an external PATCH. Revalidate while
       // still owning publication before any confirmation notice can start.
       await freshPayment(stripe, invoice, amount);
-      await notices(invoice, "paid", token);
+      await notices(invoice, "paid", token, markWrite);
       await finishPublication(invoice, token);
       return false;
     } catch (error) {
-      if (error instanceof SeriesError && ["payment_unverified", "roster_reconciliation_required"].includes(error.code)) { await publishReview(invoice, token); return true; }
-      // Never expire/release an uncertain external write. A stale owner could
-      // otherwise overwrite a newer Notion review after its lease elapsed.
+      if (error instanceof SeriesError && ["payment_unverified", "roster_reconciliation_required"].includes(error.code)) {
+        try { await publishReview(invoice, token, markWrite); return true; }
+        catch (reviewError) { if (!writeStarted) await finishPublication(invoice, token); throw reviewError; }
+      }
+      // Only this known worker can release after a read-only failure. Once an
+      // external write starts, an unknown result retains ownership forever.
+      if (!writeStarted) await finishPublication(invoice, token);
       throw error;
     }
   }
   async function paidStatus(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
     const seat = await reservation(invoice);
-    if (seat.review_required === true) return "review_required";
+    if (seat.review_required === true) {
+      if (seat.publication_pending === true) return "review_required";
+      try { await publishReview(invoice); return "review_required"; } catch { return "reconciliation_pending"; }
+    }
     try { await verifyPayment(stripe, invoice, amount); }
     catch (error) {
       if (!(error instanceof SeriesError) || error.code !== "payment_unverified") return "reconciliation_pending";

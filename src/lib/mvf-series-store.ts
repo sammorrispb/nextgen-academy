@@ -112,11 +112,12 @@ async function findRow(invoiceId: string, metadata: Metadata): Promise<RosterPag
   return row;
 }
 
-export async function ensureSeriesRoster(invoiceId: string, m: Metadata): Promise<void> {
+export async function ensureSeriesRoster(invoiceId: string, m: Metadata, beforeWrite?: () => void): Promise<void> {
   if (await findRow(invoiceId, m)) return;
   const claim = await seriesCommand(m.event_key, "roster_claim", { invoice_id: invoiceId });
   if (claim.claimed !== true) throw new SeriesError("roster_reconciliation_required");
   const { db } = notionConfig();
+  beforeWrite?.();
   await notion("/pages", "POST", { parent: { database_id: db }, properties: {
     "Parent Name": { title: [{ text: { content: m.parent_name } }] }, "Parent Email": { email: m.parent_email }, "Parent Phone": { phone_number: m.parent_phone },
     "Child First Name": rich(m.child_first_name), "Child Last Name": rich(m.child_last_name), "Child DOB": { date: { start: m.child_dob } },
@@ -137,29 +138,30 @@ export async function seriesRosterNeedsReview(invoiceId: string, m: Metadata): P
   return false;
 }
 
-export async function updateSeriesRoster(invoiceId: string, m: Metadata, state: "paid" | "void" | "review", publicationToken?: string): Promise<void> {
+export async function updateSeriesRoster(invoiceId: string, m: Metadata, state: "paid" | "void" | "review", publicationToken?: string, beforeWrite?: () => void): Promise<void> {
   if (state !== "void") {
     if (!publicationToken || !UUID.test(publicationToken)) throw new SeriesError("publication_unverified");
     const check = await seriesCommand(m.event_key, "publication_check", { invoice_id: invoiceId, phase: state, publication_token: publicationToken });
     if (check.recorded !== true) throw new SeriesError("publication_unverified");
   }
   let row = await findRow(invoiceId, m);
-  if (!row && state === "paid") { await ensureSeriesRoster(invoiceId, m); row = await findRow(invoiceId, m); }
+  if (!row && state === "paid") { await ensureSeriesRoster(invoiceId, m, beforeWrite); row = await findRow(invoiceId, m); }
   if (!row) throw new SeriesError("roster_reconciliation_required");
   const status = row.properties.Status?.select?.name;
   if (state === "paid" && ["Cancelled", "Review required"].includes(status ?? "")) throw new SeriesError("roster_reconciliation_required");
   if (state === "review") {
     if (status === "Cancelled") throw new SeriesError("roster_reconciliation_required");
-    if (status !== "Review required" || row.properties.Paid?.checkbox !== false) await notion(`/pages/${row.id}`, "PATCH", { properties: { Status: { select: { name: "Review required" } }, Paid: { checkbox: false } } });
+    if (status !== "Review required" || row.properties.Paid?.checkbox !== false) { beforeWrite?.(); await notion(`/pages/${row.id}`, "PATCH", { properties: { Status: { select: { name: "Review required" } }, Paid: { checkbox: false } } }); }
     // Keep historical paid/due amounts; an adjustment is not a new invoice or
     // an approved cancellation. Only an operator can resolve this hold.
     return;
   }
   if ((state === "paid" && status === "Confirmed" && row.properties.Paid?.checkbox === true) || (state === "void" && status === "Cancelled")) return;
+  beforeWrite?.();
   await notion(`/pages/${row.id}`, "PATCH", { properties: { Status: { select: { name: state === "paid" ? "Confirmed" : "Cancelled" } }, Paid: { checkbox: state === "paid" }, "Amount Due": { number: 0 }, "Amount Paid": { number: state === "paid" ? Number(m.amount_usd) : 0 } } });
 }
 
-export async function sendSeriesNotice(eventKey: string, invoiceId: string, phase: "pending" | "paid" | "void", recipient: "parent" | "admin", payload: Record<string, unknown>, publicationToken?: string): Promise<void> {
+export async function sendSeriesNotice(eventKey: string, invoiceId: string, phase: "pending" | "paid" | "void", recipient: "parent" | "admin", payload: Record<string, unknown>, publicationToken?: string, beforeWrite?: () => void): Promise<void> {
   if (phase === "paid" && (!publicationToken || !UUID.test(publicationToken))) throw new SeriesError("publication_unverified");
   const publication: Record<string, string> = phase === "paid" ? { publication_token: publicationToken! } : {};
   const wire = JSON.stringify(payload);
@@ -169,6 +171,7 @@ export async function sendSeriesNotice(eventKey: string, invoiceId: string, phas
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new SeriesError("notification_pending");
   try {
+    beforeWrite?.();
     const response = await fetch("https://api.resend.com/emails", { method: "POST", redirect: "error", signal: AbortSignal.timeout(8000),
       headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "idempotency-key": claim.provider_key }, body: wire });
     const result = await response.json();
