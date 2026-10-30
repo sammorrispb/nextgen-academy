@@ -10,7 +10,7 @@ import { type SeriesRelease, type SeriesRegistration } from "../../src/data/mvf-
 export const syntheticRelease = (event = "november-2026"): SeriesRelease => ({ event, revision: "synthetic-v1", date: "2027-02-20", startTime: "10:00 AM", endTime: "1:00 PM", registrationClosesAt: "2027-02-10T15:00:00Z", eligibility: { "12u": { minAge: 6, maxAge: 12 }, "16u": { minAge: 13, maxAge: 16 } }, multipleBrackets: false, eligibilityText: "Synthetic eligibility for offline tests only.", minimumEnrollmentPolicy: "Synthetic operator review.", cancellationPolicy: "Synthetic cancellation policy.", rainPolicy: "Synthetic indoor plan.", invoiceDueDays: 7, ngaRevenueShare: 0.8 });
 export const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 export const registration = (n = 1, changes: Partial<SeriesRegistration> = {}): SeriesRegistration => ({ division: "12u", resident: true, parentName: "Synthetic Guardian", email: "guardian@example.invalid", phone: "2025550100", childFirstName: "Synthetic", childLastName: `Fixture ${n}`, childDob: "2016-02-20", emergencyName: "Synthetic Backup", emergencyPhone: "2025550101", allergies: "synthetic medical notes", smsConsent: false, policyAccepted: true, revision: "synthetic-v1", submissionId: uuid(n), ...changes });
-type Seat = { event_key: string; submission_id: string; attendee_key: string; request_key: string; invoice_id: string | null; state: string; rosterClaimed?: boolean };
+type Seat = { event_key: string; submission_id: string; attendee_key: string; request_key: string; invoice_id: string | null; state: string; created_at: string; rosterClaimed?: boolean; invoiceSent?: boolean };
 type Page = { id: string; parent: { database_id: string }; archived: boolean; properties: Record<string, unknown> };
 
 export class SeriesHarness {
@@ -33,6 +33,7 @@ export class SeriesHarness {
   noticeFailure = false;
   voidLoss = false;
   voids = 0;
+  sendExpired = false;
   accountReads = 0;
   readonly stripe = getStripe();
   private undo: Array<() => void> = [];
@@ -65,7 +66,7 @@ export class SeriesHarness {
         if (!seat) {
           if ([...this.seats.values()].some(s => s.event_key.replace(/-(12u|16u)$/, "") === input.event_key.replace(/-(12u|16u)$/, "") && s.attendee_key === input.attendee_key && s.state !== "void")) return bad("duplicate");
           if ([...this.seats.values()].filter(s => s.event_key === input.event_key && s.state !== "void").length >= 10) return bad("full");
-          seat = { ...input, invoice_id: null, state: "held" }; this.seats.set(identity, seat!);
+          seat = { ...input, invoice_id: null, state: "held", created_at: "2026-10-30T12:00:00Z" }; this.seats.set(identity, seat!);
         }
         return ok(seat!);
       }
@@ -77,6 +78,8 @@ export class SeriesHarness {
         seat.invoice_id = input.invoice_id; if (seat.state !== "paid") seat.state = "payable";
       }
       if (input.action === "roster_claim") { const claimed = !seat.rosterClaimed; seat.rosterClaimed = true; return ok({ invoice_id: seat.invoice_id, claimed }); }
+      if (input.action === "send_claim") { if (!seat.invoiceSent && this.sendExpired) return bad("delivery_uncertain"); return ok({ invoice_id: seat.invoice_id, state: seat.invoiceSent ? "sent" : "leased" }); }
+      if (input.action === "send_done") { seat.invoiceSent = true; return ok({ invoice_id: seat.invoice_id, recorded: true }); }
       if (input.action === "paid") { if (seat.state === "void") return bad("closed"); seat.state = "paid"; }
       if (input.action === "void") { if (seat.state === "paid") return bad("paid"); seat.state = "void"; }
       if (input.action.startsWith("notify_")) {

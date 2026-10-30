@@ -37,6 +37,7 @@ export default function MvfSeriesRegistrationForm({ release }: { release: Series
       const response = await fetch(`/api/mvf-series/${release.event}/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(form) });
       const result = await response.json();
       if (response.ok && typeof result.receiptUrl === "string" && result.receiptUrl.startsWith(`/mvf-junior-tournament/${release.event}/status#receipt=`)) {
+        try { sessionStorage.removeItem(storageKey); } catch { /* Successful invoice remains recoverable by email. */ }
         router.push(result.receiptUrl); return;
       }
       if (result.errors) setErrors(result.errors);

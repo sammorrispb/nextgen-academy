@@ -40,5 +40,6 @@ export default function MvfSeriesReceipt({ event }: { event: string }) {
     </>}
     <button type="button" disabled={busy} onClick={() => load(token)} className="underline min-h-12 py-3 disabled:opacity-50">Check payment status again</button>
     <p>For paid cancellations or help, contact nextgenacademypb@gmail.com or 301-325-4731. No refund is initiated from this page.</p>
+    <a href={`/mvf-junior-tournament/${event}`} className="inline-block underline min-h-12 py-3">Back to tournament details</a>
   </section>;
 }

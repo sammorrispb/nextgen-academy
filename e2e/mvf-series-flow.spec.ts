@@ -22,9 +22,9 @@ test.beforeEach(async ({ page }) => {
 });
 test.afterEach(() => { const attempts = h.network.attempts.slice(); h.close(); for (const [key,value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } expect(attempts).toEqual([]); });
 
-async function fill(page: import("@playwright/test").Page) {
+async function fill(page: import("@playwright/test").Page, lastName = "Fixture") {
   await page.goto("/browser-test-fixture/mvf-series");
-  for (const [name,value] of [["Parent or guardian name","Synthetic Guardian"],["Parent email","guardian@example.invalid"],["Parent phone","2025550100"],["Player first name","Synthetic"],["Player last name","Fixture"],["Player date of birth","2016-02-20"],["Emergency contact name","Synthetic Backup"],["Emergency contact phone","2025550101"]]) await page.getByLabel(name,{exact:true}).fill(value);
+  for (const [name,value] of [["Parent or guardian name","Synthetic Guardian"],["Parent email","guardian@example.invalid"],["Parent phone","2025550100"],["Player first name","Synthetic"],["Player last name",lastName],["Player date of birth","2016-02-20"],["Emergency contact name","Synthetic Backup"],["Emergency contact phone","2025550101"]]) await page.getByLabel(name,{exact:true}).fill(value);
   await page.getByLabel("I am the parent or guardian and accept these event policies.").check();
   await page.getByRole("button",{name:"Request invoice — $50",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Payment pending",exact:true})).toBeVisible();
@@ -48,4 +48,9 @@ test("guardian browser unpaid cancellation releases one seat and makes no refund
   await page.getByRole("button",{name:"Confirm unpaid cancellation"}).click();
   await expect(page.getByRole("heading",{name:"Unpaid registration cancelled"})).toBeVisible();
   expect(h.voids).toBe(1);expect([...h.seats.values()][0].state).toBe("void");expect(h.fake.all()).toHaveLength(1);
+});
+
+test("guardian browser can register a second child after the first invoice succeeds",async({page})=>{
+  await fill(page,"First Fixture"); await fill(page,"Second Fixture");
+  expect(h.fake.all()).toHaveLength(2); expect(h.pages).toHaveLength(2); expect(h.seats.size).toBe(2);
 });

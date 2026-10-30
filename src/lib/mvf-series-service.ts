@@ -77,6 +77,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     if (!INVOICE.test(invoice.id) || invoice.livemode !== true || hasForeignPaymentOwner(m) || m.payment_owner !== PAYMENT_OWNER || m.kind !== MVF_SERIES_KIND || m.nga_account !== MVF_SERIES_ACCOUNT ||
       !["12u", "16u"].includes(m.division) || m.event_key !== seriesEventKey(release.event, m.division as "12u" | "16u") || !["true", "false"].includes(m.resident) ||
       m.event_date !== release.date || m.event_start !== release.startTime || m.event_end !== release.endTime || m.amount_usd !== (amount / 100).toFixed(2) ||
+      !Number.isSafeInteger(Number(m.receipt_issued_at)) || Number(m.receipt_issued_at) <= 0 || Number(m.receipt_issued_at) > deps.now() + 300000 ||
       !UUID.test(m.nga_capacity_submission_id ?? "") || invoice.currency !== "usd" || invoice.total !== amount || invoice.on_behalf_of ||
       (invoice as Stripe.Invoice & { transfer_data?: unknown }).transfer_data ||
       (scope && (scope.invoice !== invoice.id || scope.event !== release.event || scope.revision !== release.revision || scope.submission !== m.nga_capacity_submission_id))) throw new SeriesError("invoice_mismatch", 409);
@@ -98,6 +99,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       phase === "paid" ? `Paid: $${(amount / 100).toFixed(2)}. Your registration is confirmed.` : phase === "void" ? "Your unpaid invoice is void and its seat has been released. No payment or refund was made by this cancellation." : `Entry fee: $${(amount / 100).toFixed(2)}. Payment is pending. Your invoice is due in ${release.invoiceDueDays} days; becoming overdue does not automatically cancel it.`,
       ...(phase === "pending" && seriesPayUrl(invoice.hosted_invoice_url) ? [`Pay your invoice: ${seriesPayUrl(invoice.hosted_invoice_url)}`] : []),
       `Cancellation policy: ${release.cancellationPolicy}`, `Weather policy: ${release.rainPolicy}`, `Minimum enrollment: ${release.minimumEnrollmentPolicy}`,
+      `${mvfJuniorSeriesUrl(event)}/status#receipt=${seriesToken({ event: release.event, revision: release.revision, invoice: invoice.id, submission: m.nga_capacity_submission_id, purpose: "receipt" }, Number(m.receipt_issued_at))}`,
       mvfJuniorSeriesUrl(event), "Questions: nextgenacademypb@gmail.com · 301-325-4731"].join("\n\n");
     const base = { from: "Next Gen PB Academy <noreply@nextgenpbacademy.com>", reply_to: "nextgenacademypb@gmail.com", subject: `${title} — MVF Junior Tournament — ${event.monthLabel}`, text };
     await deps.notice(m.event_key, invoice.id, phase, "parent", { ...base, to: [m.parent_email] });
@@ -128,11 +130,15 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       const identity = seriesIdentity(eventSlug, data, release.multipleBrackets);
       const held = await deps.command(eventKey, "reserve", { submission_id: data.submissionId, ...identity });
       if (held.submission_id !== data.submissionId || !["held", "payable", "paid"].includes(String(held.state)) || (held.invoice_id !== null && (typeof held.invoice_id !== "string" || !INVOICE.test(held.invoice_id)))) throw new SeriesError("ledger_unavailable");
+      const heldAt = typeof held.created_at === "string" ? Date.parse(held.created_at) : NaN;
+      if (!Number.isFinite(heldAt) || heldAt > deps.now() + 300000) throw new SeriesError("ledger_unavailable");
+      if (!held.invoice_id && deps.now() - heldAt >= 23 * 3600000) throw new SeriesError("invoice_reconciliation_required");
       const amount = data.resident ? event.prices.residentUsd : event.prices.nonresidentUsd;
       const ngaCents = Math.round(amount * 100 * release.ngaRevenueShare);
       const metadata = { ...baseSeriesMetadata(release), event_key: eventKey, division: data.division, resident: String(data.resident), amount_usd: amount.toFixed(2),
         nga_revenue_share: String(release.ngaRevenueShare), nga_share_usd: (ngaCents / 100).toFixed(2), mvf_share_usd: ((amount * 100 - ngaCents) / 100).toFixed(2),
         nga_capacity_submission_id: data.submissionId, parent_name: data.parentName, parent_email: data.email, parent_phone: data.phone,
+        receipt_issued_at: String(heldAt),
         child_first_name: data.childFirstName, child_last_name: data.childLastName, child_dob: data.childDob,
         emergency_name: data.emergencyName, emergency_phone: data.emergencyPhone, allergies: data.allergies,
         sms_consent: String(data.smsConsent), sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "", waiver_accepted: "true", policy_accepted: "true" };
@@ -149,12 +155,16 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
         beforeSend: async payable => {
           invoiceRelease(payable, { event: eventSlug, revision: release.revision, invoice: payable.id, submission: data.submissionId, purpose: "receipt", expires: 0 });
           if (payable.status !== "open" || payable.amount_due !== amount * 100 || payable.amount_paid !== 0 || payable.amount_remaining !== amount * 100) throw new SeriesError("invoice_amount_unverified");
+          const claim = await deps.command(eventKey, "send_claim", { invoice_id: payable.id });
+          if (claim.state === "sent") return false;
+          if (claim.state !== "leased") throw new SeriesError("invoice_send_reconciliation_required");
         },
+        afterSend: async invoiceId => { const result = await deps.command(eventKey, "send_done", { invoice_id: invoiceId }); if (result.recorded !== true) throw new SeriesError("invoice_send_reconciliation_required"); },
       });
       invoiceRelease(invoice);
       let notificationPending = false;
       if (invoice.status === "open") { try { await notices(invoice, "pending"); } catch { notificationPending = true; } }
-      const token = seriesToken({ event: eventSlug, revision: release.revision, invoice: invoice.id, submission: data.submissionId, purpose: "receipt" }, deps.now());
+      const token = seriesToken({ event: eventSlug, revision: release.revision, invoice: invoice.id, submission: data.submissionId, purpose: "receipt" }, heldAt);
       return { invoiceId: invoice.id, status: invoice.status === "paid" ? "paid" : "pending", receiptUrl: `/mvf-junior-tournament/${eventSlug}/status#receipt=${token}`, notificationPending };
     },
 

@@ -106,6 +106,26 @@ test("lost Stripe send response is retryable without another invoice or charge",
   await h.service.register("november-2026", registration()); expect(h.fake.all()).toHaveLength(1); expect(h.fake.all()[0].sends).toBe(1);
 });
 
+test("acknowledged invoice emails do not call Stripe send again after its key window", async () => {
+  const original = h.stripe.invoices.sendInvoice; let calls = 0;
+  h.stripe.invoices.sendInvoice = (async (...args: Parameters<typeof original>) => { calls++; return original.apply(h.stripe.invoices, args); }) as typeof original;
+  try { await h.service.register("november-2026", registration()); h.sendExpired = true; await h.service.register("november-2026", registration()); expect(calls).toBe(1); }
+  finally { h.stripe.invoices.sendInvoice = original; }
+});
+
+test("uncertain invoice sends and unbound attempts beyond 23 hours require reconciliation", async () => {
+  h.fake.loseResponseOf = "invoices.sendInvoice";
+  await expect(h.service.register("november-2026", registration())).rejects.toBeTruthy();
+  h.sendExpired = true;
+  await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "ledger_unavailable" });
+  expect(h.fake.all()[0].sends).toBe(1);
+  h.bindFailure = true; h.sendExpired = false;
+  await expect(h.service.register("january-2027", registration(2))).rejects.toBeTruthy();
+  const held = [...h.seats.values()].find(s => s.invoice_id === null)!; held.created_at = "2026-10-28T12:00:00Z";
+  await expect(h.service.register("january-2027", registration(2))).rejects.toMatchObject({ code: "invoice_reconciliation_required" });
+  expect(h.fake.all()).toHaveLength(2);
+});
+
 test("unexpected provider discounts or balances halt before any invoice email", async () => {
   const original = h.stripe.invoices.retrieve;
   h.stripe.invoices.retrieve = (async (...args: Parameters<typeof original>) => {
