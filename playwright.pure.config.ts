@@ -15,6 +15,7 @@ export default defineConfig({
     "**/fall-waiver-inline.spec.ts",
     "**/homepage.spec.ts",
     "**/mvf-page.spec.ts",
+    "**/mvf-series-flow.spec.ts",
     "**/newsletter.spec.ts",
     "**/reserve-modal.spec.ts",
     "**/seo.spec.ts",

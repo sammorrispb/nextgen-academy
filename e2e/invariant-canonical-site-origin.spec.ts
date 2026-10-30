@@ -189,6 +189,8 @@ const CSRF_COMPARE_FILES = new Set([
   "src/app/api/admin/mvf-capacity-export/route.ts",
 ]);
 const CSRF_COMPARE_LINE = 'if (req.headers.get("origin") !== siteOrigin()) return json(403, { ok: false, error: "bad_origin" });';
+const SERIES_CSRF_FILE = "src/lib/mvf-series-http.ts";
+const SERIES_CSRF_LINE = 'if (request.headers.get("origin") && request.headers.get("origin") !== siteOrigin()) return reply({ code: "invalid_origin" }, 403);';
 
 // This exact Referer predicate only drops credential-bearing telemetry. It
 // cannot supply an origin, redirect or link; every other header read still trips.
@@ -240,6 +242,7 @@ test.describe("source guard — request-derived origins", () => {
       const hits = findRequestOriginReads(readFileSync(file, "utf8"));
       for (const h of hits) {
         if (CSRF_COMPARE_FILES.has(rel) && h === CSRF_COMPARE_LINE) continue;
+        if (rel === SERIES_CSRF_FILE && h === SERIES_CSRF_LINE) continue;
         if (rel === ANALYTICS_PRIVACY_FILE && h === ANALYTICS_PRIVACY_LINE) continue;
         offenders.push(`${rel}: ${h}`);
       }
@@ -252,6 +255,10 @@ test.describe("source guard — request-derived origins", () => {
       const source = readFileSync(join(__dirname, "..", rel), "utf8");
       expect(findRequestOriginReads(source)).toEqual([CSRF_COMPARE_LINE]);
     }
+  });
+
+  test("the series CSRF comparison only rejects a foreign origin and cannot construct one", () => {
+    expect(findRequestOriginReads(readFileSync(join(__dirname, "..", SERIES_CSRF_FILE), "utf8"))).toEqual([SERIES_CSRF_LINE]);
   });
 
   test("the analytics header exception only rejects an event and cannot construct an origin", () => {

@@ -43,6 +43,8 @@ export interface CreateSignupInvoiceArgs {
   beforeFinalize?: (invoiceId: string) => Promise<void>;
   /** Resume an already bound draft/open invoice; never create another. */
   existingInvoiceId?: string;
+  /** Product-specific verification of the final payable amount before email. */
+  beforeSend?: (invoice: Stripe.Invoice) => Promise<void>;
 }
 
 export interface SignupInvoiceResult {
@@ -94,6 +96,7 @@ export async function createAndSendSignupInvoice(
     idempotencyKey,
     beforeFinalize,
     existingInvoiceId,
+    beforeSend,
   } = args;
 
   if (items.length === 0) {
@@ -116,6 +119,7 @@ export async function createAndSendSignupInvoice(
     if (existing.status !== "draft" && existing.status !== "open") throw new Error("Invoice is no longer payable");
     if (beforeFinalize) await beforeFinalize(existingInvoiceId);
     if (existing.status === "draft") await stripe.invoices.finalizeInvoice(existingInvoiceId, {}, keyed("finalize"));
+    if (beforeSend) await beforeSend(await stripe.invoices.retrieve(existingInvoiceId));
     const sent = await stripe.invoices.sendInvoice(existingInvoiceId, {}, keyed("send"));
     return { invoice: await stripe.invoices.retrieve(existingInvoiceId), alreadySent: sent.lastResponse?.headers?.["idempotent-replayed"] === "true" };
   }
@@ -161,6 +165,7 @@ export async function createAndSendSignupInvoice(
 
   if (beforeFinalize) await beforeFinalize(invoice.id);
   await stripe.invoices.finalizeInvoice(invoice.id, {}, keyed("finalize"));
+  if (beforeSend) await beforeSend(await stripe.invoices.retrieve(invoice.id));
   const sent = await stripe.invoices.sendInvoice(invoice.id, {}, keyed("send"));
   return {
     invoice: await stripe.invoices.retrieve(invoice.id),
