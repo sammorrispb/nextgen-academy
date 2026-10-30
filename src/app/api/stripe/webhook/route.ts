@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
+import { mvfSeriesService } from "@/lib/mvf-series-service";
+import { MVF_SERIES_KIND } from "@/data/mvf-series-registration";
 import { invoiceSafeName } from "@/lib/invoice-text";
 import { hasForeignPaymentOwner, nativePaymentOwned } from "@/lib/payment-ownership";
 import { deliverNativeInvoiceEmail, verifiedNativeInvoiceContext, type NativeInvoiceDeliveryContext } from "@/lib/native-invoice-deliveries";
@@ -347,6 +349,11 @@ export async function POST(req: NextRequest) {
   }
   if (event.livemode !== true || (event.data.object as { livemode?: boolean }).livemode === false) {
     return NextResponse.json({ received: true, skipped: "not_live" });
+  }
+
+  if ((event.data.object as { metadata?: { kind?: string } }).metadata?.kind === MVF_SERIES_KIND) {
+    try { return NextResponse.json(await mvfSeriesService.webhook(event)); }
+    catch { return NextResponse.json({ error: "mvf_series_verification_pending" }, { status: 503 }); }
   }
 
   if (event.type === "charge.refunded") {

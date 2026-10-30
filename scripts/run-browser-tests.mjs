@@ -97,6 +97,12 @@ export async function prepareWorkspace(root, port) {
     const fixtureDir = path.join(workspace, "src/app/browser-test-fixture/reservation");
     await mkdir(fixtureDir, { recursive: true });
     await cp(path.join(root, "e2e/fixtures/reservation-page.tsx"), path.join(fixtureDir, "page.tsx"));
+    const seriesFixture = path.join(root, "e2e/fixtures/mvf-series-page.tsx");
+    if (await lstat(seriesFixture).then(() => true, error => { if (error.code === "ENOENT") return false; throw error; })) {
+      const seriesDir = path.join(workspace, "src/app/browser-test-fixture/mvf-series");
+      await mkdir(seriesDir, { recursive: true });
+      await cp(seriesFixture, path.join(seriesDir, "page.tsx"));
+    }
     const guard = path.join(workspace, "network-guard.cjs");
     await writeFile(guard, networkGuardSource(port));
     // Next's child workers inherit this guard too; no secret is loaded.
