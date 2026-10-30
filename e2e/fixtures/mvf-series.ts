@@ -10,7 +10,7 @@ import { type SeriesRelease, type SeriesRegistration } from "../../src/data/mvf-
 export const syntheticRelease = (event = "november-2026"): SeriesRelease => ({ event, revision: "synthetic-v1", date: "2027-02-20", startTime: "10:00 AM", endTime: "1:00 PM", registrationClosesAt: "2027-02-10T15:00:00Z", eligibility: { "12u": { minAge: 6, maxAge: 12 }, "16u": { minAge: 13, maxAge: 16 } }, multipleBrackets: false, eligibilityText: "Synthetic eligibility for offline tests only.", minimumEnrollmentPolicy: "Synthetic operator review.", cancellationPolicy: "Synthetic cancellation policy.", rainPolicy: "Synthetic indoor plan.", invoiceDueDays: 7, ngaRevenueShare: 0.8 });
 export const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 export const registration = (n = 1, changes: Partial<SeriesRegistration> = {}): SeriesRegistration => ({ division: "12u", resident: true, parentName: "Synthetic Guardian", email: "guardian@example.invalid", phone: "2025550100", childFirstName: "Synthetic", childLastName: `Fixture ${n}`, childDob: "2016-02-20", emergencyName: "Synthetic Backup", emergencyPhone: "2025550101", allergies: "synthetic medical notes", smsConsent: false, policyAccepted: true, revision: "synthetic-v1", submissionId: uuid(n), ...changes });
-type Seat = { event_key: string; submission_id: string; attendee_key: string; request_key: string; invoice_id: string | null; state: string; created_at: string; rosterClaimed?: boolean; invoiceSent?: boolean };
+type Seat = { event_key: string; submission_id: string; attendee_key: string; request_key: string; invoice_id: string | null; state: string; created_at: string; rosterClaimed?: boolean; invoiceSent?: boolean; review_required?: boolean; publication?: { token: string; phase: string } };
 type Page = { id: string; parent: { database_id: string }; archived: boolean; properties: Record<string, unknown> };
 
 export class SeriesHarness {
@@ -86,7 +86,24 @@ export class SeriesHarness {
       if (input.action === "send_done") { seat.invoiceSent = true; return ok({ invoice_id: seat.invoice_id, recorded: true }); }
       if (input.action === "paid") { if (seat.state === "void") return bad("closed"); seat.state = "paid"; }
       if (input.action === "void") { if (seat.state === "paid") return bad("paid"); seat.state = "void"; }
+      if (input.action === "publication_claim") {
+        if (seat.state !== "paid") return bad("closed");
+        if (seat.publication && seat.publication.token !== input.publication_token) return bad("publication_busy");
+        if (input.phase === "paid" && seat.review_required) return ok({ invoice_id: seat.invoice_id, claimed: false, review_required: true });
+        if (seat.publication && seat.publication.phase !== input.phase) return bad("publication_mismatch");
+        seat.publication = { token: input.publication_token, phase: input.phase };
+        seat.review_required ||= input.phase === "review";
+        return ok({ invoice_id: seat.invoice_id, claimed: true, review_required: !!seat.review_required, lease_token: input.publication_token });
+      }
+      if (["publication_check", "publication_review", "publication_done"].includes(input.action)) {
+        if (!seat.publication || seat.publication.token !== input.publication_token) return bad("publication_mismatch");
+        if (input.action === "publication_check" && (seat.publication.phase !== input.phase || (input.phase === "paid" && seat.review_required))) return bad("publication_mismatch");
+        if (input.action === "publication_review") { seat.review_required = true; seat.publication.phase = "review"; }
+        if (input.action === "publication_done") delete seat.publication;
+        return ok({ invoice_id: seat.invoice_id, recorded: true });
+      }
       if (input.action.startsWith("notify_")) {
+        if (input.phase === "paid" && (!seat.publication || seat.publication.token !== input.publication_token || seat.publication.phase !== "paid" || seat.review_required)) return bad("publication_mismatch");
         const key = `${input.invoice_id}:${input.phase}:${input.recipient}`;
         let delivery = this.deliveries.get(key);
         if (input.action === "notify_done") { if (!delivery || delivery.lease !== input.lease_token) return bad("request_conflict"); delivery.accepted = true; return ok({ invoice_id: seat.invoice_id, recorded: true }); }
@@ -97,7 +114,7 @@ export class SeriesHarness {
         delivery.busy = true; this.deliveries.set(key, delivery);
         return ok({ invoice_id: seat.invoice_id, state: "leased", lease_token: delivery.lease, provider_key: delivery.provider });
       }
-      return ok(seat);
+      return ok({ ...seat, review_required: !!seat.review_required, publication_pending: !!seat.publication });
     });
     this.stub.onDynamic("api.notion.com", call => {
       const body = call.body ? JSON.parse(call.body) : undefined;

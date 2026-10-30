@@ -232,7 +232,8 @@ for (const adjustment of ["refunded", "credit", "disputed", "pending_refund"] as
   // A later clean provider view must not silently overrule an operator review.
   h.refunded = false; h.creditCents = 0; h.disputed = false; h.refundEvidence = false;
   expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("review_required");
-  await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toMatchObject({ code: "roster_reconciliation_required" });
+  expect(await h.service.webhook(h.event(result.invoiceId))).toEqual({ received: true, mvfSeries: true, reviewRequired: true });
+  expect(h.mails).toHaveLength(4); expect([...h.seats.values()][0].review_required).toBe(true);
 });
 
 test("temporarily unavailable payment evidence clears confirmation without releasing or reclassifying the seat", async () => {
@@ -241,6 +242,43 @@ test("temporarily unavailable payment evidence clears confirmation without relea
   const receipt = await h.service.receipt("november-2026", h.token(result));
   expect(receipt.status).toBe("reconciliation_pending"); expect(receipt.payUrl).toBeNull(); expect(receipt.cancelToken).toBeNull();
   expect(h.pages[0].properties.Status).toEqual({ select: { name: "Confirmed" } }); expect([...h.seats.values()][0].state).toBe("paid");
+});
+
+test("an adjustment interleaved before a stale paid PATCH cannot be overwritten or send confirmation", async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid");
+  const original = globalThis.fetch; let release!: () => void, entered!: () => void, paused = false;
+  const gate = new Promise<void>(resolve => { release = resolve; }), waiting = new Promise<void>(resolve => { entered = resolve; });
+  globalThis.fetch = (async (...args: Parameters<typeof fetch>) => {
+    const body = typeof args[1]?.body === "string" ? args[1].body : "";
+    if (!paused && args[1]?.method === "PATCH" && body.includes('"Confirmed"')) { paused = true; entered(); await gate; }
+    return original(...args);
+  }) as typeof fetch;
+  let pending: Promise<unknown> | undefined;
+  try {
+    pending = h.service.webhook(h.event(result.invoiceId)); await waiting;
+    h.refunded = true;
+    await h.service.adjustment({ ...h.event(result.invoiceId), type: "charge.refunded", data: { object: { id: `ch_pi_${result.invoiceId}`, livemode: true } } } as never).catch(() => undefined);
+    release(); await pending;
+    expect(h.pages[0].properties.Status).toEqual({ select: { name: "Review required" } }); expect(h.mails).toHaveLength(2);
+    // Replay the blocked adjustment; it must be safe and must not release a seat.
+    await h.service.adjustment({ ...h.event(result.invoiceId), type: "charge.refunded", data: { object: { id: `ch_pi_${result.invoiceId}`, livemode: true } } } as never);
+    expect(h.pages[0].properties.Status).toEqual({ select: { name: "Review required" } });
+    expect(h.pages[0].properties.Paid).toEqual({ checkbox: false }); expect(h.mails).toHaveLength(2);
+    expect([...h.seats.values()][0].state).toBe("paid"); expect(h.voids).toBe(0);
+    expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("review_required");
+  } finally { release(); await pending?.catch(() => undefined); globalThis.fetch = original; }
+});
+
+test("uncertain paid publication stays serialized until explicit reconciliation, without another notice or seat release", async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid"); h.noticeFailure = true;
+  await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toMatchObject({ code: "notification_pending" });
+  h.noticeFailure = false;
+  await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toMatchObject({ code: "ledger_unavailable" });
+  const seat = [...h.seats.values()][0]; expect(seat.state).toBe("paid"); expect(seat.publication).toBeTruthy();
+  expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("reconciliation_pending");
+  h.refunded = true;
+  expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("reconciliation_pending");
+  expect(h.mails).toHaveLength(2); expect(h.voids).toBe(0);
 });
 
 for (const type of ["charge.refunded", "credit_note.created", "charge.dispute.created"] as const) test(`signed ${type} reconciles the series roster without legacy cancellation or another notice`, async () => {

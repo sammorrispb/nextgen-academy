@@ -137,7 +137,12 @@ export async function seriesRosterNeedsReview(invoiceId: string, m: Metadata): P
   return false;
 }
 
-export async function updateSeriesRoster(invoiceId: string, m: Metadata, state: "paid" | "void" | "review"): Promise<void> {
+export async function updateSeriesRoster(invoiceId: string, m: Metadata, state: "paid" | "void" | "review", publicationToken?: string): Promise<void> {
+  if (state !== "void") {
+    if (!publicationToken || !UUID.test(publicationToken)) throw new SeriesError("publication_unverified");
+    const check = await seriesCommand(m.event_key, "publication_check", { invoice_id: invoiceId, phase: state, publication_token: publicationToken });
+    if (check.recorded !== true) throw new SeriesError("publication_unverified");
+  }
   let row = await findRow(invoiceId, m);
   if (!row && state === "paid") { await ensureSeriesRoster(invoiceId, m); row = await findRow(invoiceId, m); }
   if (!row) throw new SeriesError("roster_reconciliation_required");
@@ -154,9 +159,11 @@ export async function updateSeriesRoster(invoiceId: string, m: Metadata, state: 
   await notion(`/pages/${row.id}`, "PATCH", { properties: { Status: { select: { name: state === "paid" ? "Confirmed" : "Cancelled" } }, Paid: { checkbox: state === "paid" }, "Amount Due": { number: 0 }, "Amount Paid": { number: state === "paid" ? Number(m.amount_usd) : 0 } } });
 }
 
-export async function sendSeriesNotice(eventKey: string, invoiceId: string, phase: "pending" | "paid" | "void", recipient: "parent" | "admin", payload: Record<string, unknown>): Promise<void> {
+export async function sendSeriesNotice(eventKey: string, invoiceId: string, phase: "pending" | "paid" | "void", recipient: "parent" | "admin", payload: Record<string, unknown>, publicationToken?: string): Promise<void> {
+  if (phase === "paid" && (!publicationToken || !UUID.test(publicationToken))) throw new SeriesError("publication_unverified");
+  const publication: Record<string, string> = phase === "paid" ? { publication_token: publicationToken! } : {};
   const wire = JSON.stringify(payload);
-  const claim = await seriesCommand(eventKey, "notify_claim", { invoice_id: invoiceId, phase, recipient, payload_sha256: createHash("sha256").update(wire).digest("hex") });
+  const claim = await seriesCommand(eventKey, "notify_claim", { invoice_id: invoiceId, phase, recipient, payload_sha256: createHash("sha256").update(wire).digest("hex"), ...publication });
   if (claim.state === "accepted") return;
   if (claim.state !== "leased" || typeof claim.lease_token !== "string" || !UUID.test(claim.lease_token) || typeof claim.provider_key !== "string" || !/^nga-series-[0-9a-f-]{36}$/.test(claim.provider_key)) throw new SeriesError("notification_pending");
   const key = process.env.RESEND_API_KEY;
@@ -167,7 +174,7 @@ export async function sendSeriesNotice(eventKey: string, invoiceId: string, phas
     const result = await response.json();
     if (!response.ok || typeof result.id !== "string") throw new Error();
   } catch { throw new SeriesError("notification_pending"); }
-  const done = await seriesCommand(eventKey, "notify_done", { invoice_id: invoiceId, phase, recipient, lease_token: claim.lease_token });
+  const done = await seriesCommand(eventKey, "notify_done", { invoice_id: invoiceId, phase, recipient, lease_token: claim.lease_token, ...publication });
   if (done.recorded !== true) throw new SeriesError("notification_pending");
 }
 
