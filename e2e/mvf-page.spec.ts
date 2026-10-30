@@ -39,6 +39,17 @@ test.describe("new MVF junior tournament month pages", () => {
       await expect(page.getByRole("heading", { name: "12U" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "16U" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "Tentative schedule" })).toBeVisible();
+      const gallery = page.getByRole("region", { name: "Previous tournament photos" });
+      await expect(gallery).toContainText("Photos from a previous outdoor tournament");
+      await gallery.scrollIntoViewIfNeeded();
+      const photos = gallery.getByRole("img");
+      await expect(photos).toHaveCount(2);
+      for (const photo of await photos.all()) {
+        await expect(photo).toBeVisible();
+        await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+        const box = await photo.boundingBox();
+        expect(box!.width / box!.height).toBeCloseTo(3 / 4, 2);
+      }
       await expect(page.locator("#main form, #main input")).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       expect(providerRequests).toEqual([]);

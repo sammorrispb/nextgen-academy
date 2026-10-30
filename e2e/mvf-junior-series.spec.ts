@@ -43,6 +43,13 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     expect(html).toContain("16 and under");
     expect(html).toContain("$50");
     expect(html).toContain("$60");
+    expect(html).toContain("Previous tournament photos");
+    expect(html).toContain("Photos from a previous outdoor tournament");
+    expect(html).toContain("Junior pickleball participants with medals at a previous tournament");
+    expect(html).toContain("Junior pickleball participants together on outdoor courts at a previous tournament");
+    expect(html.match(/<img /g)).toHaveLength(2);
+    expect(html).toContain('width="1200" height="1600"');
+    expect(html).not.toContain("object-cover");
     expect(html).not.toMatch(/<form|<input|checkout-mvf|application\/ld\+json|Oct(?:ober)? 24|3:45|2:45|No refunds|guaranteed|merged into|rain or shine/i);
     expect(html).toContain("Tentative schedule");
     expect(html).toContain("Proposed dates and times may change.");

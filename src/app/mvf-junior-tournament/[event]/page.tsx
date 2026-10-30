@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   MVF_JUNIOR_SERIES,
@@ -84,6 +85,29 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
           <p className="text-ngpa-white/80 mt-2">${event.prices.nonresidentUsd} non-resident</p>
         </section>
       </div>
+
+      <section aria-labelledby="photos-heading" className="mt-10">
+        <h2 id="photos-heading" className="font-heading text-2xl font-bold text-ngpa-white">Previous tournament photos</h2>
+        <p className="text-ngpa-white/80 text-sm mt-3">Photos from a previous outdoor tournament. See the location above for this event.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5">
+          <Image
+            src="/images/mvf/previous-tournament-medals.webp"
+            alt="Junior pickleball participants with medals at a previous tournament"
+            width={1200}
+            height={1600}
+            sizes="(min-width: 640px) 336px, calc(100vw - 40px)"
+            className="w-full h-auto rounded-2xl border border-ngpa-slate/60"
+          />
+          <Image
+            src="/images/mvf/previous-tournament-group.webp"
+            alt="Junior pickleball participants together on outdoor courts at a previous tournament"
+            width={1200}
+            height={1600}
+            sizes="(min-width: 640px) 336px, calc(100vw - 40px)"
+            className="w-full h-auto rounded-2xl border border-ngpa-slate/60"
+          />
+        </div>
+      </section>
     </article>
   );
 }
