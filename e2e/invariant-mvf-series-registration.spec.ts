@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { SeriesHarness, registration, syntheticRelease } from "./fixtures/mvf-series";
 import { activeSeriesRelease, findSeriesRelease, releaseProblems, validateSeriesRegistration, seriesEventKey } from "../src/data/mvf-series-registration";
 import { POST } from "../src/app/api/mvf-series/[event]/register/route";
-import { readSeriesToken, seriesPayUrl } from "../src/lib/mvf-series-service";
+import { readSeriesToken, seriesPayUrl, seriesToken } from "../src/lib/mvf-series-service";
 import { mvfSeriesService, createSeriesService } from "../src/lib/mvf-series-service";
 import { mvfSeriesJsonLd } from "../src/lib/mvf-series-jsonld";
 import { POST as signedWebhook } from "../src/app/api/stripe/webhook/route";
@@ -106,6 +106,70 @@ test("lost Stripe send response is retryable without another invoice or charge",
   await h.service.register("november-2026", registration()); expect(h.fake.all()).toHaveLength(1); expect(h.fake.all()[0].sends).toBe(1);
 });
 
+test("fixture preserves customer recipient changes instead of substituting guardian metadata", async () => {
+  h.loseNotionResponse = true;
+  await expect(h.service.register("november-2026", registration())).rejects.toBeTruthy();
+  const invoice = h.fake.all()[0];
+  h.fake.customers.get(invoice.customer)!.email = "changed@example.invalid";
+  const draft = await h.stripe.invoices.retrieve(invoice.id);
+  expect(draft.customer_email).toBe("changed@example.invalid");
+  expect(draft.metadata!.parent_email).toBe("guardian@example.invalid");
+});
+
+test("changed guardian recipient on a bound draft fails before finalization or send; safe retry stays singular", async () => {
+  h.loseNotionResponse = true;
+  await expect(h.service.register("november-2026", registration())).rejects.toBeTruthy();
+  const invoice = h.fake.all()[0], customer = h.fake.customers.get(invoice.customer)!;
+  customer.email = "changed@example.invalid";
+  await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "recipient_unverified" });
+  expect(h.fake.all()[0].status).toBe("draft"); expect(h.fake.all()[0].sends).toBe(0); expect(h.mails).toHaveLength(0);
+  customer.email = "guardian@example.invalid";
+  await h.service.register("november-2026", registration()); await h.service.register("november-2026", registration());
+  expect(h.fake.all()).toHaveLength(1); expect(h.fake.all()[0].sends).toBe(1); expect(h.pages).toHaveLength(1);
+});
+
+test("a finalized invoice with mismatched recipient cannot send or reveal a payment link", async () => {
+  h.sendExpired = true;
+  await expect(h.service.register("november-2026", registration())).rejects.toBeTruthy();
+  const invoice = h.fake.all()[0]; expect(invoice.status).toBe("open");
+  invoice.customer_email = "changed@example.invalid"; h.sendExpired = false;
+  await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "recipient_unverified" });
+  const token = seriesToken({ event: "november-2026", invoice: invoice.id, submission: registration().submissionId, revision: "synthetic-v1", purpose: "receipt" }, Number(invoice.metadata.receipt_issued_at));
+  await expect(h.service.receipt("november-2026", token)).rejects.toMatchObject({ code: "recipient_unverified" });
+  expect(h.fake.all()[0].sends).toBe(0); expect(h.mails).toHaveLength(0);
+});
+
+test("customer drift during finalization is rejected even when the invoice snapshot still names the guardian", async () => {
+  const original = h.stripe.invoices.finalizeInvoice;
+  h.stripe.invoices.finalizeInvoice = (async (...args: Parameters<typeof original>) => {
+    const invoice = await original.apply(h.stripe.invoices, args);
+    h.fake.customers.get(String(invoice.customer))!.email = "changed@example.invalid";
+    return invoice;
+  }) as typeof original;
+  try {
+    await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "recipient_unverified" });
+    const invoice = h.fake.all()[0]; expect(invoice.customer_email).toBe("guardian@example.invalid"); expect(invoice.sends).toBe(0);
+    const token = seriesToken({ event: "november-2026", invoice: invoice.id, submission: registration().submissionId, revision: "synthetic-v1", purpose: "receipt" }, Number(invoice.metadata.receipt_issued_at));
+    await expect(h.service.receipt("november-2026", token)).rejects.toMatchObject({ code: "recipient_unverified" });
+    expect(h.mails).toHaveLength(0);
+  } finally { h.stripe.invoices.finalizeInvoice = original; }
+});
+
+test("a recipient mismatch during notice verification cannot become notificationPending success", async () => {
+  const original = h.stripe.customers.retrieve; let changed = false;
+  h.stripe.customers.retrieve = (async (...args: Parameters<typeof original>) => {
+    const customer = await original.apply(h.stripe.customers, args);
+    if (!changed && h.fake.all()[0]?.sends === 1) { changed = true; h.fake.customers.get(customer.id)!.email = "changed@example.invalid"; }
+    return customer;
+  }) as typeof original;
+  try {
+    await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "recipient_unverified" });
+    expect(h.fake.all()[0].sends).toBe(1); expect(h.mails).toHaveLength(0);
+    await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "recipient_unverified" });
+    expect(h.fake.all()).toHaveLength(1); expect(h.fake.all()[0].sends).toBe(1);
+  } finally { h.stripe.customers.retrieve = original; }
+});
+
 test("acknowledged invoice emails do not call Stripe send again after its key window", async () => {
   const original = h.stripe.invoices.sendInvoice; let calls = 0;
   h.stripe.invoices.sendInvoice = (async (...args: Parameters<typeof original>) => { calls++; return original.apply(h.stripe.invoices, args); }) as typeof original;
@@ -151,6 +215,50 @@ test("refund evidence or unpaid redirect cannot confirm a registration", async (
   h.statuses.set(result.invoiceId, "paid"); h.refunded = true; await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toMatchObject({ code: "payment_unverified" });
   expect([...h.seats.values()][0].state).toBe("payable");
   expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("reconciliation_pending");
+});
+
+for (const adjustment of ["refunded", "credit", "disputed", "pending_refund"] as const) test(`post-confirmation ${adjustment} requires review and retains its paid seat`, async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid");
+  await h.service.webhook(h.event(result.invoiceId));
+  expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("paid");
+  if (adjustment === "refunded") h.refunded = true;
+  if (adjustment === "credit") h.creditCents = 100;
+  if (adjustment === "disputed") h.disputed = true;
+  if (adjustment === "pending_refund") h.refundEvidence = true;
+  const receipt = await h.service.receipt("november-2026", h.token(result));
+  expect(receipt.status).toBe("review_required"); expect(receipt.payUrl).toBeNull(); expect(receipt.cancelToken).toBeNull();
+  expect(h.pages[0].properties.Status).toEqual({ select: { name: "Review required" } });
+  expect([...h.seats.values()][0].state).toBe("paid"); expect(h.voids).toBe(0); expect(h.mails).toHaveLength(4);
+  // A later clean provider view must not silently overrule an operator review.
+  h.refunded = false; h.creditCents = 0; h.disputed = false; h.refundEvidence = false;
+  expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("review_required");
+  await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toMatchObject({ code: "roster_reconciliation_required" });
+});
+
+test("temporarily unavailable payment evidence clears confirmation without releasing or reclassifying the seat", async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid"); await h.service.webhook(h.event(result.invoiceId));
+  h.paymentEvidenceUnavailable = true;
+  const receipt = await h.service.receipt("november-2026", h.token(result));
+  expect(receipt.status).toBe("reconciliation_pending"); expect(receipt.payUrl).toBeNull(); expect(receipt.cancelToken).toBeNull();
+  expect(h.pages[0].properties.Status).toEqual({ select: { name: "Confirmed" } }); expect([...h.seats.values()][0].state).toBe("paid");
+});
+
+for (const type of ["charge.refunded", "credit_note.created", "charge.dispute.created"] as const) test(`signed ${type} reconciles the series roster without legacy cancellation or another notice`, async () => {
+  const result = await h.service.register("november-2026", registration()); h.statuses.set(result.invoiceId, "paid"); await h.service.webhook(h.event(result.invoiceId));
+  if (type === "charge.refunded") h.refunded = true;
+  if (type === "credit_note.created") h.creditCents = 100;
+  if (type === "charge.dispute.created") h.disputed = true;
+  process.env.STRIPE_WEBHOOK_SECRET = "whsec_offline_synthetic";
+  const original = mvfSeriesService.adjustment; mvfSeriesService.adjustment = h.service.adjustment;
+  try {
+    for (let retry = 0; retry < 2; retry++) {
+      const event = { ...h.event(result.invoiceId), type, data: { object: type === "credit_note.created" ? { id: "cn_fixture", invoice: result.invoiceId, livemode: true } : type === "charge.refunded" ? { id: `ch_pi_${result.invoiceId}`, livemode: true } : { id: "dp_fixture", charge: `ch_pi_${result.invoiceId}`, livemode: true } } };
+      const payload = JSON.stringify(event), signature = h.stripe.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_WEBHOOK_SECRET });
+      const response = await signedWebhook(new NextRequest("http://localhost/api/stripe/webhook", { method: "POST", body: payload, headers: { "stripe-signature": signature } }));
+      expect(response.status).toBe(200); expect(await response.json()).toEqual({ received: true, mvfSeries: true, reviewRequired: true });
+    }
+    expect(h.pages[0].properties.Status).toEqual({ select: { name: "Review required" } }); expect([...h.seats.values()][0].state).toBe("paid"); expect(h.voids).toBe(0); expect(h.mails).toHaveLength(4);
+  } finally { mvfSeriesService.adjustment = original; }
 });
 test("unpaid cancellation waits for confirmed void and survives lost response", async () => {
   const result = await h.service.register("november-2026", registration()); const receipt = await h.service.receipt("november-2026", h.token(result));

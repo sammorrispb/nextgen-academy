@@ -74,7 +74,7 @@ export async function checkSeriesRosterSchema(): Promise<void> {
   };
   if (!props || Object.entries(types).some(([key, type]) => props[key]?.type !== type) ||
     ["12U", "16U"].some(label => !props.Division?.select?.options?.some(o => o.name === label)) ||
-    ["Pending", "Confirmed", "Cancelled"].some(label => !props.Status?.select?.options?.some(o => o.name === label))) throw new SeriesError("roster_schema_unverified");
+    ["Pending", "Confirmed", "Cancelled", "Review required"].some(label => !props.Status?.select?.options?.some(o => o.name === label))) throw new SeriesError("roster_schema_unverified");
 }
 
 export async function strictSeriesWaiver(email: string): Promise<boolean> {
@@ -129,12 +129,27 @@ export async function ensureSeriesRoster(invoiceId: string, m: Metadata): Promis
   if (!(await findRow(invoiceId, m))) throw new SeriesError("roster_reconciliation_required");
 }
 
-export async function updateSeriesRoster(invoiceId: string, m: Metadata, state: "paid" | "void"): Promise<void> {
+export async function seriesRosterNeedsReview(invoiceId: string, m: Metadata): Promise<boolean> {
+  const row = await findRow(invoiceId, m);
+  if (!row) throw new SeriesError("roster_reconciliation_required");
+  if (row.properties.Status?.select?.name === "Review required") return true;
+  if (row.properties.Status?.select?.name !== "Confirmed" || row.properties.Paid?.checkbox !== true) throw new SeriesError("roster_reconciliation_required");
+  return false;
+}
+
+export async function updateSeriesRoster(invoiceId: string, m: Metadata, state: "paid" | "void" | "review"): Promise<void> {
   let row = await findRow(invoiceId, m);
   if (!row && state === "paid") { await ensureSeriesRoster(invoiceId, m); row = await findRow(invoiceId, m); }
   if (!row) throw new SeriesError("roster_reconciliation_required");
   const status = row.properties.Status?.select?.name;
-  if (state === "paid" && status === "Cancelled") throw new SeriesError("roster_reconciliation_required");
+  if (state === "paid" && ["Cancelled", "Review required"].includes(status ?? "")) throw new SeriesError("roster_reconciliation_required");
+  if (state === "review") {
+    if (status === "Cancelled") throw new SeriesError("roster_reconciliation_required");
+    if (status !== "Review required" || row.properties.Paid?.checkbox !== false) await notion(`/pages/${row.id}`, "PATCH", { properties: { Status: { select: { name: "Review required" } }, Paid: { checkbox: false } } });
+    // Keep historical paid/due amounts; an adjustment is not a new invoice or
+    // an approved cancellation. Only an operator can resolve this hold.
+    return;
+  }
   if ((state === "paid" && status === "Confirmed" && row.properties.Paid?.checkbox === true) || (state === "void" && status === "Cancelled")) return;
   await notion(`/pages/${row.id}`, "PATCH", { properties: { Status: { select: { name: state === "paid" ? "Confirmed" : "Cancelled" } }, Paid: { checkbox: state === "paid" }, "Amount Due": { number: 0 }, "Amount Paid": { number: state === "paid" ? Number(m.amount_usd) : 0 } } });
 }

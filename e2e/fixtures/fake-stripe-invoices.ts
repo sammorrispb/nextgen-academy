@@ -28,6 +28,7 @@ export type FakeStripeEndpoint =
 export interface FakeInvoice {
   id: string;
   customer: string;
+  customer_email: string | null;
   currency: string;
   status: "draft" | "open";
   auto_advance: boolean;
@@ -121,6 +122,12 @@ export class FakeStripeInvoicing {
       }),
     );
 
+    patch(stripe.customers, "retrieve", async (id: string) => {
+      const customer = this.customers.get(id);
+      if (!customer) throw new FakeStripeError("invalid_request_error", `No such customer: ${id}`);
+      return respond({ id, object: "customer", email: customer.email, name: customer.name ?? null }, false);
+    });
+
     patch(stripe.invoices, "create", (params: { customer: string; metadata?: Record<string, string>; auto_advance?: boolean }, opts: Options) =>
       this.post("invoices.create", params, opts, () => {
         if (!this.customers.has(params.customer)) {
@@ -129,6 +136,7 @@ export class FakeStripeInvoicing {
         const invoice: FakeInvoice = {
           id: `in_fake${++this.seq}`,
           customer: params.customer,
+          customer_email: null,
           currency: "usd",
           status: "draft",
           auto_advance: params.auto_advance === true,
@@ -167,6 +175,7 @@ export class FakeStripeInvoicing {
           throw new FakeStripeError("invalid_request_error", "This invoice is already finalized.");
         }
         invoice.status = "open";
+        invoice.customer_email = this.customers.get(invoice.customer)!.email;
         invoice.hosted_invoice_url = `https://invoice.stripe.test/${invoice.id}`;
         return this.view(invoice);
       }),
@@ -206,6 +215,7 @@ export class FakeStripeInvoicing {
       id: invoice.id,
       object: "invoice",
       customer: invoice.customer,
+      customer_email: invoice.status === "draft" ? this.customers.get(invoice.customer)!.email : invoice.customer_email,
       currency: invoice.currency,
       total: invoice.lines.reduce((sum, line) => sum + line.amount, 0),
       status: invoice.status,

@@ -351,6 +351,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, skipped: "not_live" });
   }
 
+  try {
+    const adjusted = await mvfSeriesService.adjustment(event);
+    if (adjusted) return NextResponse.json(adjusted);
+  } catch { return NextResponse.json({ error: "mvf_series_verification_pending" }, { status: 503 }); }
+
   if ((event.data.object as { metadata?: { kind?: string } }).metadata?.kind === MVF_SERIES_KIND) {
     try { return NextResponse.json(await mvfSeriesService.webhook(event)); }
     catch { return NextResponse.json({ error: "mvf_series_verification_pending" }, { status: 503 }); }
