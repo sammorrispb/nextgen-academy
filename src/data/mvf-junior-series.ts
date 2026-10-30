@@ -7,7 +7,8 @@ import {
 } from "@/data/mvf-junior-tournament-2026";
 
 // Sam's October 30 call establishes months, venues, fees and bracket caps.
-// Exact dates/times, age boundaries and November's rain plan await confirmation.
+// MVF's verified email confirms the two winter Sunday schedules at Lake Marion.
+// November's schedule/rain plan and all bracket eligibility still await confirmation.
 // These are informational pages only; October's checkout and ledger stay closed.
 const divisions = [
   { slug: "12u", label: "12U", ageLabel: "12 and under", capacity: 10 },
@@ -30,21 +31,18 @@ const lakeMarion = {
 export const MVF_JUNIOR_SERIES = [
   {
     slug: "november-2026", monthLabel: "November 2026", venue: northCreek, divisions, prices,
-    proposedDates: [{ iso: "2026-11-14", label: "Saturday, November 14, 2026" }],
-    proposedTime: "4:00–7:00 PM ET",
+    dates: [{ iso: "2026-11-14", label: "Saturday, November 14, 2026" }],
+    timeLabel: "4:00–7:00 PM ET", scheduleConfirmed: false,
   },
   {
     slug: "january-2027", monthLabel: "January 2027", venue: lakeMarion, divisions, prices,
-    proposedDates: [{ iso: "2027-01-16", label: "Saturday, January 16, 2027" }],
-    proposedTime: "10:00 AM–1:00 PM ET",
+    dates: [{ iso: "2027-01-17", label: "Sunday, January 17, 2027" }],
+    timeLabel: "10:00 AM–1:00 PM ET", scheduleConfirmed: true,
   },
   {
     slug: "february-2027", monthLabel: "February 2027", venue: lakeMarion, divisions, prices,
-    proposedDates: [
-      { iso: "2027-02-13", label: "Saturday, February 13, 2027" },
-      { iso: "2027-02-20", label: "Saturday, February 20, 2027" },
-    ],
-    proposedTime: null,
+    dates: [{ iso: "2027-02-14", label: "Sunday, February 14, 2027" }],
+    timeLabel: "10:00 AM–1:00 PM ET", scheduleConfirmed: true,
   },
 ] as const;
 

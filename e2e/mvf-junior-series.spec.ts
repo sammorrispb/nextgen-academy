@@ -33,11 +33,23 @@ test("unknown, inherited and historical keys cannot resolve a new event", () => 
   }
 });
 
+test("MVF-confirmed winter dates are Sundays at Lake Marion; November remains tentative", () => {
+  for (const [slug, iso, label] of [["january-2027", "2027-01-17", "Sunday, January 17, 2027"], ["february-2027", "2027-02-14", "Sunday, February 14, 2027"]]) {
+    const event = findMvfJuniorSeriesEvent(slug)!;
+    expect(event.dates).toEqual([{ iso, label }]);
+    expect(event.scheduleConfirmed).toBe(true);
+    expect(event.timeLabel).toBe("10:00 AM–1:00 PM ET");
+    expect(new Date(`${iso}T12:00:00Z`).getUTCDay()).toBe(0);
+    expect(event.venue.name).toBe("Lake Marion Community Center"); expect(event.venue.indoors).toBe(true);
+  }
+  expect(findMvfJuniorSeriesEvent("november-2026")!.scheduleConfirmed).toBe(false);
+});
+
 for (const event of ["november-2026", "january-2027", "february-2027"]) {
   test(`${event}: no registration or unconfirmed event promises in the page`, async () => {
     const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ event }) }));
     expect(html).toContain("Registration is not open yet.");
-    expect(html).toContain("Date and time to be confirmed");
+    expect(html).toContain(event === "november-2026" ? "Date and time to be confirmed" : "Date, time and indoor location are confirmed");
     expect(html).toContain("Maximum 10 players per bracket");
     expect(html).toContain("12 and under");
     expect(html).toContain("16 and under");
@@ -51,11 +63,13 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     expect(html).toContain('width="1200" height="1600"');
     expect(html).not.toContain("object-cover");
     expect(html).not.toMatch(/<form|<input|checkout-mvf|application\/ld\+json|Oct(?:ober)? 24|3:45|2:45|No refunds|guaranteed|merged into|rain or shine/i);
-    expect(html).toContain("Tentative schedule");
-    expect(html).toContain("Proposed dates and times may change.");
+    expect(html).toContain(event === "november-2026" ? "Tentative schedule" : "Tournament schedule");
+    if (event === "november-2026") expect(html).toContain("Proposed dates and times may change.");
+    else { expect(html).toContain("Confirmed date and time."); expect(html).not.toContain("Proposed dates and times may change."); }
     const selected = findMvfJuniorSeriesEvent(event)!;
-    for (const date of selected.proposedDates) expect(html).toContain(`<time dateTime="${date.iso}">`);
-    expect(html).toContain(selected.proposedTime ?? "Time to be confirmed");
+    for (const date of selected.dates) expect(html).toContain(`<time dateTime="${date.iso}">`);
+    expect(html).toContain(selected.timeLabel);
+    expect(html).not.toMatch(/2027-01-16|2027-02-13|2027-02-20|Saturday, (?:January 16|February (?:13|20))/);
     expect(html).toContain(event === "november-2026" ? "North Creek Community Center" : "Lake Marion Community Center");
     if (event !== "november-2026") expect(html).toContain("Indoors");
     else {

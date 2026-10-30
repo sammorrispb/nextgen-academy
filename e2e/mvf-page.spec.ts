@@ -35,10 +35,16 @@ test.describe("new MVF junior tournament month pages", () => {
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://nextgenpbacademy.com/mvf-junior-tournament/${event}`);
       await expect(page.getByRole("heading", { name: "Registration is not open yet." })).toBeVisible();
-      await expect(page.getByRole("status")).toContainText("Date and time to be confirmed");
+      await expect(page.getByRole("status")).toContainText(event === "november-2026" ? "Date and time to be confirmed" : "Date, time and indoor location are confirmed");
       await expect(page.getByRole("heading", { name: "12U" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "16U" })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Tentative schedule" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: event === "november-2026" ? "Tentative schedule" : "Tournament schedule" })).toBeVisible();
+      if (event !== "november-2026") {
+        const date = event === "january-2027" ? "2027-01-17" : "2027-02-14";
+        await expect(page.locator(`#main time[datetime="${date}"]`)).toHaveCount(1);
+        await expect(page.locator("#main")).toContainText("10:00 AM–1:00 PM ET");
+        await expect(page.locator("#main")).not.toContainText("Proposed dates and times may change.");
+      }
       const gallery = page.getByRole("region", { name: "Previous tournament photos" });
       await expect(gallery).toContainText("Photos from a previous outdoor tournament");
       await gallery.scrollIntoViewIfNeeded();

@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     robots: { index: false, follow: false },
     title: { absolute: `MVF Junior Tournament — ${event.monthLabel}` },
-    description: registration ? `MVF Junior Tournament — ${event.monthLabel}. Parent registration and invoice payment for 12U and 16U.` : published ? `MVF Junior Tournament — ${event.monthLabel}. Registration is closed; event details remain available.` : `Junior pickleball in Montgomery Village, ${event.monthLabel}. Registration is not open yet; date and time are being confirmed.`,
+    description: registration ? `MVF Junior Tournament — ${event.monthLabel}. Parent registration and invoice payment for 12U and 16U.` : published ? `MVF Junior Tournament — ${event.monthLabel}. Registration is closed; event details remain available.` : `Junior pickleball in Montgomery Village, ${event.monthLabel}. Registration is not open yet; ${event.scheduleConfirmed ? "the winter date and time are confirmed" : "date and time are being confirmed"}.`,
     alternates: { canonical: mvfJuniorSeriesUrl(event) },
   };
 }
@@ -52,19 +52,19 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
           {published ? "Registration is closed." : "Registration is not open yet."}
         </h2>
         <p role="status" className="text-ngpa-white/80 mt-3">
-          {published ? "The confirmed event details remain below. Existing invoice holders can use their private status link." : "Date and time to be confirmed. Please check this page again for the confirmed schedule and registration details."}
+          {published ? "The confirmed event details remain below. Existing invoice holders can use their private status link." : event.scheduleConfirmed ? "Date, time and indoor location are confirmed. Bracket eligibility and registration details are still being finalized." : "Date and time to be confirmed. Please check this page again for the confirmed schedule and registration details."}
         </p>
       </section>}
 
       <section aria-labelledby="schedule-heading" className="mt-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel p-6">
-        <h2 id="schedule-heading" className="font-heading text-xl font-bold text-ngpa-white">{published ? "Tournament schedule" : "Tentative schedule"}</h2>
-        {!published && <p className="text-ngpa-white/80 mt-3">Proposed dates and times may change.</p>}
+        <h2 id="schedule-heading" className="font-heading text-xl font-bold text-ngpa-white">{published || event.scheduleConfirmed ? "Tournament schedule" : "Tentative schedule"}</h2>
+        {!published && <p className="text-ngpa-white/80 mt-3">{event.scheduleConfirmed ? "Confirmed date and time." : "Proposed dates and times may change."}</p>}
         <p className="text-ngpa-white mt-3">
-          {published ? <time dateTime={published.date}>{published.date}</time> : event.proposedDates.map((date, index) => (
+          {published ? <time dateTime={published.date}>{published.date}</time> : event.dates.map((date, index) => (
             <span key={date.iso}>{index > 0 && " or "}<time dateTime={date.iso}>{date.label}</time></span>
           ))}
         </p>
-        <p className="text-ngpa-white/80 mt-2">{published ? `${published.startTime}–${published.endTime} ET` : event.proposedTime ?? "Time to be confirmed"}</p>
+        <p className="text-ngpa-white/80 mt-2">{published ? `${published.startTime}–${published.endTime} ET` : event.timeLabel}</p>
       </section>
 
       <section aria-labelledby="brackets-heading" className="mt-10">
