@@ -82,6 +82,7 @@ export default function RootLayout({
   // ET calendar date; a UTC build server would otherwise roll the day early.
   const todayEt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
   const tournament = nextMvfJuniorSeriesEvent(todayEt);
+  const registration = tournament && process.env.VERCEL_ENV === "production" ? publicSeriesRelease(tournament.slug) : undefined;
   return (
     <html lang="en">
       <body
@@ -102,9 +103,8 @@ export default function RootLayout({
             eventIso={tournament.dates[0].iso}
             dateLabel={mvfJuniorSeriesShortDate(tournament)}
             divisionsLabel={tournament.divisions.map((d) => d.label).join(" & ")}
-            registrationOpen={
-              process.env.VERCEL_ENV === "production" && Boolean(publicSeriesRelease(tournament.slug))
-            }
+            registrationOpen={Boolean(registration)}
+            registrationClosesAt={registration?.registrationClosesAt}
           />
         )}
         <Navbar />

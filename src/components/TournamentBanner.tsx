@@ -1,53 +1,64 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { trackEvent } from "@/lib/funnelClient";
+import { nextBannerWake, tournamentBannerState, tournamentBannerTiming } from "@/lib/tournament-banner-state";
 
 /**
  * Sitewide announcement bar for the next MVF Junior Tournament in the series.
  *
- * Sam 2026-10-31: put the November tournament back in front of parents with a
- * banner and a "Tournaments" nav item. The layout picks the event and decides
- * whether registration is actually open (the same `publicSeriesRelease` gate
- * the event page uses), so the bar never says "Register" while the page says
- * registration is not open. It flips to "Register" on its own when a release
- * is published, and moves to the next month after each event.
+ * The layout supplies the release gate and deadline. The client rechecks time
+ * even on cached pages and open/background tabs. A later deployment selects
+ * the next event; expired cached banners retire rather than advertise it.
  *
  * Hidden on admin and coach surfaces: Sam flagged the October bar on
  * /admin/fall as noise (agent-log, 2026-10-25).
  */
-const noopSubscribe = () => () => {};
-
-export default function TournamentBanner({
-  href,
-  eventIso,
-  dateLabel,
-  divisionsLabel,
-  registrationOpen,
-}: {
+type Props = {
   href: string;
   eventIso: string;
   dateLabel: string;
   divisionsLabel: string;
   registrationOpen: boolean;
-}) {
+  registrationClosesAt?: string;
+};
+
+export default function TournamentBanner(props: Props) {
   const pathname = usePathname() ?? "";
-  // Static pages freeze the layout's "next event" at build time. If a page was
-  // built before the event and served after it, hide the bar rather than
-  // advertise a tournament that already happened; the next deploy rolls it on.
-  const past = useSyncExternalStore(
-    noopSubscribe,
-    () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date()) > eventIso,
-    () => false,
-  );
-  if (past || pathname.startsWith("/admin") || pathname.startsWith("/coach") || pathname === href) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/coach") || pathname === props.href) {
     return null;
   }
-  const cta = registrationOpen ? "Register" : "Registration opens soon · Details";
+  return <TimedTournamentBanner {...props} />;
+}
+
+function TimedTournamentBanner({ href, eventIso, dateLabel, divisionsLabel, registrationOpen, registrationClosesAt }: Props) {
+  const timing = useMemo(() => tournamentBannerTiming(eventIso, registrationClosesAt), [eventIso, registrationClosesAt]);
+  const subscribe = useCallback((onChange: () => void) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
+      clearTimeout(timer);
+      onChange();
+      const delay = nextBannerWake(timing, Date.now());
+      if (delay != null) timer = setTimeout(refresh, delay);
+    };
+    refresh();
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [timing]);
+  const snapshot = useCallback(() => tournamentBannerState(timing, registrationOpen, Date.now()), [timing, registrationOpen]);
+  // Cached SSR must never advertise an open release without a current clock.
+  const state = useSyncExternalStore(subscribe, snapshot, () => "unknown");
+  if (state === "past") return null;
+  const cta = state === "open" ? "Register" : state === "unknown" ? "Details" : "Registration not open · Details";
   return (
-    <div className="bg-ngpa-lime text-ngpa-deep">
+    <div className="bg-ngpa-teal text-ngpa-deep">
       <Link
         href={href}
         onClick={() =>

@@ -21,7 +21,7 @@ test.describe("MVF junior series promotion", () => {
   test("banner does not promise registration that is not open", async ({ page }) => {
     await page.goto("/");
     const banner = page.locator('a[href="/mvf-junior-tournament/november-2026"]').first();
-    await expect(banner).toContainText("Registration opens soon");
+    await expect(banner).toContainText("Registration not open");
     await banner.click();
     await expect(page).toHaveURL(/\/mvf-junior-tournament\/november-2026$/);
     await expect(page.getByRole("heading", { name: "Registration is not open yet." })).toBeVisible();

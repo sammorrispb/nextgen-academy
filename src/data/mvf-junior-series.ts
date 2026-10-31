@@ -73,8 +73,8 @@ export function mvfJuniorSeriesUrl(event: MvfJuniorSeriesEvent): string {
 
 /**
  * The next series event still ahead of `todayIso` (ET calendar date), or
- * undefined once the last one has passed. Drives the sitewide banner so it
- * moves from November to January to February on its own and then retires.
+ * undefined once the last one has passed. Fresh layout renders select the next
+ * event; already-cached banners retire at Eastern midnight on the client.
  */
 export function nextMvfJuniorSeriesEvent(todayIso: string): MvfJuniorSeriesEvent | undefined {
   return MVF_JUNIOR_SERIES.find((event) => event.dates[0].iso >= todayIso);
