@@ -283,7 +283,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       if (!Number.isFinite(heldAt) || heldAt > deps.now() + 300000) throw new SeriesError("ledger_unavailable");
       if (!held.invoice_id && deps.now() - heldAt >= 23 * 3600000) throw new SeriesError("invoice_reconciliation_required");
       const amount = data.resident ? event.prices.residentUsd : event.prices.nonresidentUsd;
-      const ngaCents = Math.round(amount * 100 * release.ngaRevenueShare);
+      const ngaCents = Math.round((release.ngaRevenueBaseUsd ?? amount) * 100 * release.ngaRevenueShare);
       const metadata = { ...baseSeriesMetadata(release), event_key: eventKey, division: data.division, resident: String(data.resident), amount_usd: amount.toFixed(2),
         nga_revenue_share: String(release.ngaRevenueShare), nga_share_usd: (ngaCents / 100).toFixed(2), mvf_share_usd: ((amount * 100 - ngaCents) / 100).toFixed(2),
         nga_capacity_submission_id: data.submissionId, parent_name: data.parentName, parent_email: data.email, parent_phone: data.phone,

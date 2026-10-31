@@ -38,12 +38,12 @@ test.describe("new MVF junior tournament month pages", () => {
       await expect(page.getByRole("status")).toContainText("Registration remains closed. Please check this page for opening updates.");
       await expect(page.getByRole("heading", { name: "12U" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "16U" })).toBeVisible();
-      const schedule = page.getByRole("region", { name: event === "november-2026" ? "Planned tournament schedule" : "Tournament schedule" });
+      const schedule = page.getByRole("region", { name: "Tournament schedule" });
       await expect(schedule).toBeVisible();
       if (event === "november-2026") {
         await expect(schedule.locator('time[datetime="2026-11-14"]')).toBeVisible();
-        await expect(schedule).toContainText("10:00 AM–noon ET (planned)");
-        await expect(schedule).toContainText("final confirmation with MVF is pending");
+        await expect(schedule).toContainText("10:00 AM–noon ET");
+        await expect(schedule).toContainText("The outdoor date, time and location are confirmed with MVF");
         const backup = schedule.getByRole("region", { name: "Weather backup" });
         await expect(backup).toContainText("Lake Marion Community Center gymnasium");
         await expect(backup).toContainText("3:00–6:00 PM ET");
@@ -56,13 +56,13 @@ test.describe("new MVF junior tournament month pages", () => {
         const makeup = schedule.getByRole("region", { name: "Offered makeup date" });
         await expect(makeup.locator(`time[datetime="${january ? "2027-01-23" : "2027-02-20"}"]`)).toBeVisible();
         await expect(makeup).toContainText("3:30–6:30 PM ET");
-        await expect(makeup).toContainText("makeup venue is still to be confirmed");
+        await expect(makeup).toContainText("Lake Marion Community Center");
       }
       const location = page.getByRole("region", { name: "Location", exact: true });
       await expect(location).toContainText(event === "november-2026" ? "North Creek Community Center" : "Lake Marion Community Center");
       const brackets = page.getByRole("region", { name: "Junior brackets" });
       await expect(brackets).toContainText("minimum of 8 players across both brackets");
-      await expect(brackets).toContainText("Age divisions use the calendar year");
+      await expect(brackets).toContainText("Age is measured on December 31");
       await expect(brackets).toContainText("Younger players may play up");
       await expect(brackets).toContainText("fewer than 5 players");
       await expect(brackets).toContainText("3 days before the tournament");
@@ -96,7 +96,7 @@ test.describe("/mvf-junior-tournament rain plan", () => {
     const overview = page.getByRole("region", { name: "MVF Junior Tournaments", exact: true });
     await expect(overview.getByRole("status")).toContainText("Registration is not open yet");
     const policies = overview.getByRole("region", { name: "Tournament policies" });
-    await expect(policies).toContainText("Age divisions use the calendar year");
+    await expect(policies).toContainText("Age is measured on December 31");
     await expect(policies).toContainText("Younger players may play up");
     await expect(policies).toContainText("minimum of 8 players across both brackets");
     await expect(policies).toContainText("fewer than 5 players");

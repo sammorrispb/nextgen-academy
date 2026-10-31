@@ -46,7 +46,7 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     expect(findMvfJuniorSeriesEvent(event)!.dates[0].iso).toBe(expectedDates[event]);
     expect(html).toContain("A minimum of 8 players across both brackets");
     expect(html).toContain("If a bracket has fewer than 5 players, we will decide whether to combine or cancel it 3 days before the tournament.");
-    expect(html).toContain("Age divisions use the calendar year. Younger players may play up into an older junior bracket.");
+    expect(html).toContain("Players must be at least 6. Age is measured on December 31 of the tournament year. Younger players may play up into an older junior bracket.");
     expect(html).toContain("Weather decisions will be made 24 hours before the tournament.");
     expect(html).toContain("No refunds unless we cancel.");
     expect(html).not.toMatch(/policies are finalized|rules will be confirmed|Final handling will|refund and credit terms are still/);
@@ -64,7 +64,7 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     expect(html).toContain('width="1200" height="1600"');
     expect(html).not.toContain("object-cover");
     expect(html).not.toMatch(/<form|<input|checkout-mvf|application\/ld\+json|Oct(?:ober)? 24|3:45|2:45|guaranteed|merged into|rain or shine/i);
-    expect(html).toContain(event === "november-2026" ? "Planned tournament schedule" : "Tournament schedule");
+    expect(html).toContain("Tournament schedule");
     const selected = findMvfJuniorSeriesEvent(event)!;
     for (const date of selected.dates) expect(html).toContain(`<time dateTime="${date.iso}">`);
     expect(html).toContain(selected.timeLabel);
@@ -76,12 +76,12 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
       expect(html).toContain("Offered makeup date");
       expect(html).toContain(`<time dateTime="${expectedMakeups[event]}">`);
       expect(html).toContain("3:30–6:30 PM ET");
-      expect(html).toContain("The makeup venue is still to be confirmed");
+      expect(html).toContain("Lake Marion Community Center");
     }
     else {
       expect(html).toContain("Outdoors");
-      expect(html).toContain("10:00 AM–noon ET (planned)");
-      expect(html).toContain("final confirmation with MVF is pending");
+      expect(html).toContain("10:00 AM–noon ET");
+      expect(html).toContain("The outdoor date, time and location are confirmed with MVF");
       expect(html).toContain("Weather backup");
       expect(html).toContain("Lake Marion Community Center gymnasium available on November 14, 3:00–6:00 PM ET");
       expect(html).toContain("on the same day, at a later time than the outdoor tournament");
@@ -108,15 +108,15 @@ test("overview separates current updates from the October archive and keeps stab
     expect(html).toContain(`href="${mvfJuniorSeriesUrl(event)}"`);
     expect(html).toContain(event.dates[0].label);
   }
-  expect(html).toContain("10:00 AM–noon ET (planned)");
-  expect(html).toContain("Age divisions use the calendar year.");
+  expect(html).toContain("10:00 AM–noon ET");
+  expect(html).toContain("Age is measured on December 31 of the tournament year.");
   expect(html).toContain("Younger players may play up");
   expect(html).toContain("fewer than 5 players");
   expect(html).toContain("3 days before the tournament");
   expect(html).toContain("Weather decisions will be made 24 hours before the tournament.");
   expect(html).toContain("No refunds unless we cancel.");
   expect(html).toContain("No separate makeup date has been announced.");
-  expect(html).toContain("Venue to be confirmed");
+  expect(html).toContain("Lake Marion Community Center");
   expect(html).not.toMatch(/4:00–7:00 PM|January 16|February 13|<form|<input/);
 });
 

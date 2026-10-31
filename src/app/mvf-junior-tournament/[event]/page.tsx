@@ -86,17 +86,17 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
           ))}
         </p>
         <p className="text-ngpa-white/80 mt-2">{published ? `${published.startTime}–${published.endTime} ET` : event.timeLabel}</p>
-        {!published && event.weatherBackup && <section aria-labelledby="weather-backup-heading" className="mt-5 border-t border-ngpa-slate/60 pt-4">
+        {event.weatherBackup && <section aria-labelledby="weather-backup-heading" className="mt-5 border-t border-ngpa-slate/60 pt-4">
           <h3 id="weather-backup-heading" className="font-heading font-bold text-ngpa-white">Weather backup</h3>
           <p className="text-ngpa-white/80 mt-2">MVF has {event.weatherBackup.venue.name} gymnasium available on November 14, {event.weatherBackup.timeLabel}, as an indoor backup for bad weather.</p>
           <p className="text-ngpa-white/80 text-sm mt-2">{event.weatherBackup.venue.address}</p>
           <p className="text-ngpa-white/80 text-base mt-3">This backup is on the same day, at a later time than the outdoor tournament. No separate makeup date has been announced.</p>
         </section>}
-        {!published && event.makeup && <section aria-labelledby="makeup-heading" className="mt-5 border-t border-ngpa-slate/60 pt-4">
+        {event.makeup && <section aria-labelledby="makeup-heading" className="mt-5 border-t border-ngpa-slate/60 pt-4">
           <h3 id="makeup-heading" className="font-heading font-bold text-ngpa-white">Offered makeup date</h3>
           <p className="text-ngpa-white mt-2"><time dateTime={event.makeup.date.iso}>{event.makeup.date.label}</time></p>
           <p className="text-ngpa-white/80 mt-2">{event.makeup.timeLabel}</p>
-          <p className="text-ngpa-white/80 text-sm mt-2">Offered by MVF. The makeup venue is still to be confirmed.</p>
+          <p className="text-ngpa-white/80 text-sm mt-2">{event.makeup.venue.name} · {event.makeup.venue.address}</p>
         </section>}
       </section>
 
@@ -131,11 +131,11 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
         </section>
       </div>
 
-      {!published && <section aria-labelledby="policies-heading" className="mt-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel p-6">
+      <section aria-labelledby="policies-heading" className="mt-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel p-6">
         <h2 id="policies-heading" className="font-heading text-xl font-bold text-ngpa-white">Tournament policies</h2>
-        <p className="text-ngpa-white/80 mt-3">{MVF_JUNIOR_SERIES_WEATHER_TERMS}</p>
-        <p className="text-ngpa-white/80 mt-3">{MVF_JUNIOR_SERIES_CANCELLATION}</p>
-      </section>}
+        <p className="text-ngpa-white/80 mt-3">{published ? published.rainPolicy : MVF_JUNIOR_SERIES_WEATHER_TERMS}</p>
+        <p className="text-ngpa-white/80 mt-3">{published ? published.cancellationPolicy : MVF_JUNIOR_SERIES_CANCELLATION}</p>
+      </section>
 
       {registration && <section id="register" aria-labelledby="registration-heading" className="mt-10 scroll-mt-24">
         <h2 id="registration-heading" className="font-heading text-2xl font-black text-ngpa-white mb-5">

@@ -6,9 +6,8 @@ import {
   MVF_JUNIOR_TOURNAMENT_RAIN_VENUE,
 } from "@/data/mvf-junior-tournament-2026";
 
-// MVF confirms the winter dates and November backup. Sam's current outdoor
-// plan is November 14, 10 AM–noon; MVF confirmation is pending. Public policy
-// copy does not create a registration release or change payment validation.
+// Sam confirmed MVF's November 10 AM–noon slot and the launch policies.
+// Public copy does not itself enable admission or change payment validation.
 const divisions = [
   { slug: "12u", label: "12U", ageLabel: "12 and under", capacity: 10 },
   { slug: "16u", label: "16U", ageLabel: "16 and under", capacity: 10 },
@@ -29,7 +28,7 @@ const lakeMarion = {
 
 export const MVF_JUNIOR_SERIES_ENROLLMENT = "A minimum of 8 players across both brackets is needed to run each tournament.";
 export const MVF_JUNIOR_SERIES_SHORT_BRACKET = "If a bracket has fewer than 5 players, we will decide whether to combine or cancel it 3 days before the tournament.";
-export const MVF_JUNIOR_SERIES_ELIGIBILITY = "Age divisions use the calendar year. Younger players may play up into an older junior bracket.";
+export const MVF_JUNIOR_SERIES_ELIGIBILITY = "Players must be at least 6. Age is measured on December 31 of the tournament year. Younger players may play up into an older junior bracket.";
 export const MVF_JUNIOR_SERIES_WEATHER_TERMS = "Weather decisions will be made 24 hours before the tournament.";
 export const MVF_JUNIOR_SERIES_CANCELLATION = "No refunds unless we cancel.";
 
@@ -37,9 +36,9 @@ export const MVF_JUNIOR_SERIES = [
   {
     slug: "november-2026", monthLabel: "November 2026", venue: northCreek, divisions, prices,
     dates: [{ iso: "2026-11-14", label: "Saturday, November 14, 2026" }],
-    timeLabel: "10:00 AM–noon ET (planned)",
-    scheduleConfirmed: false,
-    scheduleNote: "The outdoor time is planned; final confirmation with MVF is pending. The indoor weather backup is a separate, later time slot.",
+    timeLabel: "10:00 AM–noon ET",
+    scheduleConfirmed: true,
+    scheduleNote: "The outdoor date, time and location are confirmed with MVF. The indoor weather backup is a separate, later time slot.",
     weatherBackup: { venue: lakeMarion, timeLabel: "3:00–6:00 PM ET" },
     makeup: null,
   },
@@ -50,7 +49,7 @@ export const MVF_JUNIOR_SERIES = [
     scheduleConfirmed: true,
     scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
     weatherBackup: null,
-    makeup: { date: { iso: "2027-01-23", label: "Saturday, January 23, 2027" }, timeLabel: "3:30–6:30 PM ET" },
+    makeup: { date: { iso: "2027-01-23", label: "Saturday, January 23, 2027" }, timeLabel: "3:30–6:30 PM ET", venue: lakeMarion },
   },
   {
     slug: "february-2027", monthLabel: "February 2027", venue: lakeMarion, divisions, prices,
@@ -59,7 +58,7 @@ export const MVF_JUNIOR_SERIES = [
     scheduleConfirmed: true,
     scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
     weatherBackup: null,
-    makeup: { date: { iso: "2027-02-20", label: "Saturday, February 20, 2027" }, timeLabel: "3:30–6:30 PM ET" },
+    makeup: { date: { iso: "2027-02-20", label: "Saturday, February 20, 2027" }, timeLabel: "3:30–6:30 PM ET", venue: lakeMarion },
   },
 ] as const;
 

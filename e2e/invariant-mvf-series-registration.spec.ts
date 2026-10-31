@@ -89,6 +89,20 @@ test("residency price is server-owned and altered retry cannot mutate invoice", 
   const other = await h.service.register("january-2027", registration(2, { resident: false }));
   expect(h.fake.invoices.get(result.invoiceId)!.lines[0].amount).toBe(5000); expect(h.fake.invoices.get(other.invoiceId)!.lines[0].amount).toBe(6000);
 });
+
+test("the new series allocation gives MVF the nonresident surcharge and preserves the base split", async () => {
+  const release = { ...syntheticRelease(), ngaRevenueBaseUsd: 50 };
+  const service = createSeriesService({ active: () => release, release: () => release, now: () => Date.parse("2026-10-30T12:00:00Z"), financialWritesAllowed: () => true });
+  for (const resident of [true, false]) {
+    const result = await service.register("november-2026", registration(resident ? 1 : 2, { resident }));
+    const invoice = h.fake.invoices.get(result.invoiceId)!;
+    expect(invoice.metadata.nga_share_usd).toBe("40.00");
+    expect(invoice.metadata.mvf_share_usd).toBe(resident ? "10.00" : "20.00");
+    expect(invoice.lines[0].amount).toBe(resident ? 5000 : 6000);
+  }
+  const retained = await h.service.register("january-2027", registration(3, { resident: false }));
+  expect(h.fake.invoices.get(retained.invoiceId)!.metadata.nga_share_usd).toBe("48.00");
+});
 test("wrong billing account, unavailable capacity and missing waiver fail before invoice writes", async () => {
   h.merchantId = "acct_Wrong"; await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "merchant_unverified" });
   h.merchantId = "acct_1TU4iSBpXOfTC961"; h.ready = false; await expect(h.service.register("november-2026", registration())).rejects.toMatchObject({ code: "ledger_unavailable" });
