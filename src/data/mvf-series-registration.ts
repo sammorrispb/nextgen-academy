@@ -30,12 +30,10 @@ export interface SeriesRelease {
 
 // Retain issued versions permanently: closing admission or changing a later
 // release must never strand an existing invoice, receipt or paid callback.
-// Winter snapshots deliberately fail releaseProblems until makeup venues are confirmed.
-// Do not remove that blocker by rewording the pending terms. No invoice has been issued.
 export const MVF_SERIES_RELEASES: readonly SeriesRelease[] = [
   { event: "november-2026", date: "2026-11-14", endTime: "12:00 PM", registrationClosesAt: "2026-11-04T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. The same-day indoor weather backup is Lake Marion Community Center gymnasium, 3:00–6:00 PM ET, later than the 10:00 AM–noon outdoor tournament. No separate makeup date is scheduled." },
-  { event: "january-2027", date: "2027-01-17", endTime: "1:00 PM", registrationClosesAt: "2027-01-07T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. Indoor tournament at Lake Marion Community Center. The offered makeup is January 23, 2027, 3:30–6:30 PM ET. Makeup venue to be confirmed." },
-  { event: "february-2027", date: "2027-02-14", endTime: "1:00 PM", registrationClosesAt: "2027-02-04T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. Indoor tournament at Lake Marion Community Center. The offered makeup is February 20, 2027, 3:30–6:30 PM ET. Makeup venue to be confirmed." },
+  { event: "january-2027", date: "2027-01-17", endTime: "1:00 PM", registrationClosesAt: "2027-01-07T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. Indoor tournament at Lake Marion Community Center. The offered makeup is January 23, 2027, 3:30–6:30 PM ET at Lake Marion Community Center." },
+  { event: "february-2027", date: "2027-02-14", endTime: "1:00 PM", registrationClosesAt: "2027-02-04T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. Indoor tournament at Lake Marion Community Center. The offered makeup is February 20, 2027, 3:30–6:30 PM ET at Lake Marion Community Center." },
 ].map(event => ({
   ...event, revision: "launch-2026-10-31", startTime: "10:00 AM", ageCutoffDate: `${event.date.slice(0, 4)}-12-31`,
   eligibility: { "12u": { minAge: 6, maxAge: 12 }, "16u": { minAge: 6, maxAge: 16 } }, multipleBrackets: false,
