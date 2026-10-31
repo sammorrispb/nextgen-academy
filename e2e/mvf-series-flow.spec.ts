@@ -137,3 +137,45 @@ test("failed refresh clears confirmed status and all previous receipt actions", 
   await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveCount(0);
   await expect(page.getByLabel("Cancel this unpaid invoice and release its seat.")).toHaveCount(0);
 });
+
+async function fillDetailsOnly(page: import("@playwright/test").Page) {
+ await page.goto("/browser-test-fixture/mvf-series");
+ for (const [name,value] of [["Parent name","Synthetic Guardian"],["Email","guardian@example.invalid"],["Phone","2025550100"],["Child’s first name","Synthetic"],["Child’s last name","Review Fixture"],["Child’s date of birth","2016-02-20"],["Emergency contact name","Synthetic Backup"],["Emergency contact phone","2025550101"]]) await page.getByLabel(name,{exact:true}).fill(value);
+ await page.getByLabel("I am the parent or guardian and accept these event policies.").check();
+}
+
+test("inline waiver resumes the same synthetic registration without duplicate invoice",async({page})=>{
+ h.waiver=false;const ids:string[]=[];
+ await page.route("**/api/mvf-series/*/register", async route=>{ids.push(route.request().postDataJSON().submissionId);await route.fallback();});
+ await page.route("**/api/waiver-sign", async route=>{expect(route.request().postDataJSON().email).toBe("guardian@example.invalid");h.waiver=true;await route.fulfill({status:200,contentType:"application/json",body:'{"ok":true}'});});
+ await fillDetailsOnly(page);await page.getByRole("button",{name:"Continue to payment — $50",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"Sign your one-time waiver",exact:true})).toBeVisible();
+ await page.getByLabel("Type your full legal name to sign").fill("Synthetic Guardian");
+ await page.getByRole("checkbox",{name:/I am the participant/}).check();
+ await page.getByRole("button",{name:/Sign & continue to payment/}).click();
+ await expect(page.getByRole("link",{name:"Pay the entry fee",exact:true})).toBeVisible();
+ expect(ids).toHaveLength(2);expect(ids[0]).toBe(ids[1]);expect(h.fake.all()).toHaveLength(1);expect(h.pages).toHaveLength(1);
+});
+
+test("lost response retries the same invoice with the same submission id",async({page})=>{
+ const ids:string[]=[];let lost=false;
+ await page.route("**/api/mvf-series/*/register",async route=>{const body=route.request().postDataJSON();ids.push(body.submissionId);if(!lost){lost=true;await h.service.register("november-2026",body);return route.abort();}return route.fallback();});
+ await fillDetailsOnly(page);await page.getByRole("button",{name:"Continue to payment — $50",exact:true}).click();
+ await expect(page.getByRole("form",{name:"Tournament registration"}).getByRole("alert")).toContainText("connection dropped");
+ await page.getByRole("button",{name:"Continue to payment — $50",exact:true}).click();
+ await expect(page.getByRole("link",{name:"Pay the entry fee",exact:true})).toBeVisible();
+ expect(ids).toHaveLength(2);expect(ids[0]).toBe(ids[1]);expect(h.fake.all()).toHaveLength(1);expect(h.pages).toHaveLength(1);
+});
+
+test("form schedule follows the release date used by eligibility and billing",async({page})=>{
+ await page.goto("/browser-test-fixture/mvf-series");
+ const displayed=await page.locator("fieldset").first().locator("p").first().innerText();
+ expect(displayed).toContain("Saturday, February 20, 2027");
+});
+
+test("receipt cannot present public listing date as the bound invoice schedule",async({page})=>{
+ const result=await h.service.register("november-2026",registration());
+ await page.goto(result.receiptUrl);await expect(page.getByRole("link",{name:"Pay the entry fee",exact:true})).toBeVisible();
+ const day=page.locator("section[aria-labelledby=tournament-day-heading]");
+ if(await day.count())expect(await day.innerText()).not.toContain("Saturday, November 14, 2026");
+});

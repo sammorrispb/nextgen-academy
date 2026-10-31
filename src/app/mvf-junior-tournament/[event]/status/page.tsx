@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import MvfSeriesReceipt from "@/components/MvfSeriesReceipt";
 import { findMvfJuniorSeriesEvent } from "@/data/mvf-junior-series";
-import { publishedSeriesRelease } from "@/data/mvf-series-registration";
 
 export const metadata: Metadata = { title: { absolute: "MVF tournament invoice status" }, robots: { index: false, follow: false }, referrer: "no-referrer" };
 
@@ -15,7 +14,6 @@ export default async function Page({ params }: { params: Promise<{ event: string
   const { event: slug } = await params;
   const event = findMvfJuniorSeriesEvent(slug);
   if (!event) notFound();
-  const release = process.env.VERCEL_ENV === "production" ? publishedSeriesRelease(event.slug) : undefined;
   return (
     <main className="bg-ngpa-navy min-h-screen">
       <article className="px-5 sm:px-8 pt-16 pb-10 max-w-2xl mx-auto">
@@ -29,21 +27,15 @@ export default async function Page({ params }: { params: Promise<{ event: string
       <section className="px-5 sm:px-8 pb-10 max-w-2xl mx-auto" aria-labelledby="tournament-day-heading">
         <div className="bg-ngpa-panel rounded-2xl p-6 border border-ngpa-slate/60">
           <h2 id="tournament-day-heading" className="font-heading text-xl font-black text-ngpa-white">Tournament day</h2>
+          {/* The fragment token is verified by MvfSeriesReceipt. This server
+              panel cannot identify its saved release; do not substitute the
+              current listing or active policies for that invoice's terms. */}
           <p className="text-ngpa-white/70 text-sm mt-3">
-            <strong className="text-ngpa-white">When:</strong> {event.dates[0].label},{" "}
-            {release ? `${release.startTime}–${release.endTime} ET` : event.timeLabel}
+            Check your invoice and any event notices for the date, time, venue and policies for your registration.
           </p>
-          <p className="text-ngpa-white/70 text-sm mt-2">
-            <strong className="text-ngpa-white">Where:</strong> {event.venue.name}, {event.venue.address} ({event.venue.environmentLabel.toLowerCase()})
-          </p>
-          {release && (
-            <p className="text-ngpa-white/70 text-sm mt-2">
-              <strong className="text-ngpa-white">{release.cancellationPolicy}</strong> {release.rainPolicy}
-            </p>
-          )}
-          <p className="text-ngpa-white/70 text-sm mt-2">
-            Bring a refillable water bottle and court shoes; we have loaner paddles.
-          </p>
+          <Link href={`/mvf-junior-tournament/${event.slug}`} className="inline-flex items-center min-h-[48px] text-ngpa-teal-bright underline underline-offset-4 mt-2">
+            View current public tournament details
+          </Link>
         </div>
       </section>
 
