@@ -3,11 +3,12 @@ import { MVF_SERIES_RELEASES, activeSeriesRelease, releaseProblems, validateSeri
 import { seriesDobBounds } from "../src/components/MvfSeriesRegistrationForm";
 import { registration, syntheticRelease } from "./fixtures/mvf-series";
 
-test("prepared releases retain deadlines and refuse winter launch with unresolved makeup venues", () => {
+test("confirmed releases retain deadlines, complete policies and closed admission", () => {
   expect(MVF_SERIES_RELEASES).toHaveLength(3);
   for (const [i, event] of ["november-2026", "january-2027", "february-2027"].entries()) {
     const release = MVF_SERIES_RELEASES.find(r => r.event === event)!;
-    expect(releaseProblems(release)).toEqual(i === 0 ? [] : ["rainPolicy"]);
+    expect(releaseProblems(release)).toEqual([]);
+    if (i > 0) expect(release.rainPolicy).toMatch(/3:30–6:30 PM ET at Lake Marion Community Center/);
     expect(release.date).toBe(["2026-11-14", "2027-01-17", "2027-02-14"][i]);
     expect(release.startTime).toBe("10:00 AM");
     expect(release.endTime).toBe(i === 0 ? "12:00 PM" : "1:00 PM");

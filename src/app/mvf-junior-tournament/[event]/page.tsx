@@ -96,7 +96,7 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
           <h3 id="makeup-heading" className="font-heading font-bold text-ngpa-white">Offered makeup date</h3>
           <p className="text-ngpa-white mt-2"><time dateTime={event.makeup.date.iso}>{event.makeup.date.label}</time></p>
           <p className="text-ngpa-white/80 mt-2">{event.makeup.timeLabel}</p>
-          <p className="text-ngpa-white/80 text-sm mt-2">Offered by MVF. The makeup venue is still to be confirmed.</p>
+          <p className="text-ngpa-white/80 text-sm mt-2">{event.makeup.venue.name} · {event.makeup.venue.address}</p>
         </section>}
       </section>
 
