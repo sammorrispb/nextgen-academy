@@ -57,7 +57,10 @@ export default function MvfSeriesRegistrationForm({ release, event }: { release:
 
   const price = form.resident ? event.prices.residentUsd : event.prices.nonresidentUsd;
   const dobBounds = seriesDobBounds(release, form.division);
-  const when = `${event.dates[0].label} · ${release.startTime}–${release.endTime} ET · ${event.venue.name}`;
+  const releaseDateLabel = new Date(`${release.date}T12:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
+  });
+  const when = `${releaseDateLabel} · ${release.startTime}–${release.endTime} ET`;
 
   function update<K extends keyof Fields>(field: K, value: Fields[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
