@@ -13,6 +13,7 @@ import {
   MVF_JUNIOR_SERIES_SHORT_BRACKET,
   MVF_JUNIOR_SERIES_ELIGIBILITY,
   MVF_JUNIOR_SERIES_WEATHER_TERMS,
+  MVF_JUNIOR_SERIES_CANCELLATION,
 } from "@/data/mvf-junior-series";
 
 type Props = { params: Promise<{ event: string }> };
@@ -48,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     robots: { index: false, follow: false },
     title: { absolute: `MVF Junior Tournament — ${event.monthLabel}` },
-    description: registration ? `MVF Junior Tournament — ${event.monthLabel}. Parent registration and invoice payment for 12U and 16U.` : published ? `MVF Junior Tournament — ${event.monthLabel}. Registration is closed; event details remain available.` : `MVF junior pickleball: ${event.dates[0].label} at ${event.venue.name}. ${event.timeLabel}. Registration is not open yet; eligibility and event policies are being finalized.`,
+    description: registration ? `MVF Junior Tournament — ${event.monthLabel}. Parent registration and invoice payment for 12U and 16U.` : published ? `MVF Junior Tournament — ${event.monthLabel}. Registration is closed; event details remain available.` : `MVF junior pickleball: ${event.dates[0].label} at ${event.venue.name}. ${event.timeLabel}. Registration is not open yet; see the schedule and tournament policies.`,
     alternates: { canonical: mvfJuniorSeriesUrl(event) },
   };
 }
@@ -72,12 +73,12 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
           {published ? "Registration is closed." : "Registration is not open yet."}
         </h2>
         <p role="status" className="text-ngpa-white/80 mt-3">
-          {published ? "The confirmed event details remain below. Existing invoice holders can use their private status link." : "Registration remains closed while eligibility and event policies are finalized. Please check this page again for updates."}
+          {published ? "The confirmed event details remain below. Existing invoice holders can use their private status link." : "Registration remains closed. Please check this page for opening updates."}
         </p>
       </section>}
 
       <section aria-labelledby="schedule-heading" className="mt-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel p-6">
-        <h2 id="schedule-heading" className="font-heading text-xl font-bold text-ngpa-white">{published || event.scheduleConfirmed ? "Tournament schedule" : "Schedule — start time pending"}</h2>
+        <h2 id="schedule-heading" className="font-heading text-xl font-bold text-ngpa-white">{published || event.scheduleConfirmed ? "Tournament schedule" : "Planned tournament schedule"}</h2>
         {!published && <p className="text-ngpa-white/80 mt-3">{event.scheduleNote}</p>}
         <p className="text-ngpa-white mt-3">
           {published ? <time dateTime={published.date}>{published.date}</time> : event.dates.map((date, index) => (
@@ -89,6 +90,7 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
           <h3 id="weather-backup-heading" className="font-heading font-bold text-ngpa-white">Weather backup</h3>
           <p className="text-ngpa-white/80 mt-2">MVF has {event.weatherBackup.venue.name} gymnasium available on November 14, {event.weatherBackup.timeLabel}, as an indoor backup for bad weather.</p>
           <p className="text-ngpa-white/80 text-sm mt-2">{event.weatherBackup.venue.address}</p>
+          <p className="text-ngpa-white/80 text-base mt-3">This backup is on the same day, at a later time than the outdoor tournament. No separate makeup date has been announced.</p>
         </section>}
         {!published && event.makeup && <section aria-labelledby="makeup-heading" className="mt-5 border-t border-ngpa-slate/60 pt-4">
           <h3 id="makeup-heading" className="font-heading font-bold text-ngpa-white">Offered makeup date</h3>
@@ -130,8 +132,9 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
       </div>
 
       {!published && <section aria-labelledby="policies-heading" className="mt-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel p-6">
-        <h2 id="policies-heading" className="font-heading text-xl font-bold text-ngpa-white">Policies before registration</h2>
+        <h2 id="policies-heading" className="font-heading text-xl font-bold text-ngpa-white">Tournament policies</h2>
         <p className="text-ngpa-white/80 mt-3">{MVF_JUNIOR_SERIES_WEATHER_TERMS}</p>
+        <p className="text-ngpa-white/80 mt-3">{MVF_JUNIOR_SERIES_CANCELLATION}</p>
       </section>}
 
       {registration && <section id="register" aria-labelledby="registration-heading" className="mt-10 scroll-mt-24">
