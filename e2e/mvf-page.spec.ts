@@ -35,10 +35,30 @@ test.describe("new MVF junior tournament month pages", () => {
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://nextgenpbacademy.com/mvf-junior-tournament/${event}`);
       await expect(page.getByRole("heading", { name: "Registration is not open yet." })).toBeVisible();
-      await expect(page.getByRole("status")).toContainText("Date and time to be confirmed");
+      await expect(page.getByRole("status")).toContainText("Registration remains closed while eligibility and event policies are finalized");
       await expect(page.getByRole("heading", { name: "12U" })).toBeVisible();
       await expect(page.getByRole("heading", { name: "16U" })).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Tentative schedule" })).toBeVisible();
+      const schedule = page.getByRole("region", { name: event === "november-2026" ? "Schedule — start time pending" : "Tournament schedule" });
+      await expect(schedule).toBeVisible();
+      if (event === "november-2026") {
+        await expect(schedule.locator('time[datetime="2026-11-14"]')).toBeVisible();
+        await expect(schedule).toContainText("Earlier daytime start — exact time to be confirmed");
+        const backup = schedule.getByRole("region", { name: "Weather backup" });
+        await expect(backup).toContainText("Lake Marion Community Center gymnasium");
+        await expect(backup).toContainText("3:00–6:00 PM ET");
+      } else {
+        const january = event === "january-2027";
+        await expect(schedule.locator(`time[datetime="${january ? "2027-01-17" : "2027-02-14"}"]`)).toBeVisible();
+        await expect(schedule).toContainText("10:00 AM–1:00 PM ET");
+        const makeup = schedule.getByRole("region", { name: "Offered makeup date" });
+        await expect(makeup.locator(`time[datetime="${january ? "2027-01-23" : "2027-02-20"}"]`)).toBeVisible();
+        await expect(makeup).toContainText("3:30–6:30 PM ET");
+        await expect(makeup).toContainText("makeup venue is still to be confirmed");
+      }
+      const location = page.getByRole("region", { name: "Location", exact: true });
+      await expect(location).toContainText(event === "november-2026" ? "North Creek Community Center" : "Lake Marion Community Center");
+      await expect(page.getByRole("region", { name: "Junior brackets" })).toContainText("minimum of 8 players across both brackets");
+      await expect(page.getByRole("region", { name: "Policies before registration" })).toContainText("Weather cancellation, refund and credit terms are still being finalized");
       const gallery = page.getByRole("region", { name: "Previous tournament photos" });
       await expect(gallery).toContainText("Photos from a previous outdoor tournament");
       await gallery.scrollIntoViewIfNeeded();
@@ -62,7 +82,12 @@ test.describe("/mvf-junior-tournament rain plan", () => {
     const response = await page.goto("/mvf-junior-tournament");
     expect(response?.status()).toBe(200);
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
-    await expect(page.getByRole("status")).toHaveText("This tournament has ended. Registration is closed.");
+    await expect(page.locator("#register")).toHaveText("This tournament has ended. Registration is closed.");
+    const overview = page.getByRole("region", { name: "MVF Junior Tournaments", exact: true });
+    await expect(overview.getByRole("status")).toContainText("Registration is not open yet");
+    for (const event of ["november-2026", "january-2027", "february-2027"]) {
+      await expect(overview.locator(`a[href="https://nextgenpbacademy.com/mvf-junior-tournament/${event}"]`)).toBeVisible();
+    }
     await expect(page.locator("#main form")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /^Register/ })).toHaveCount(0);
     const event = (await page.locator('script[type="application/ld+json"]').allTextContents())
@@ -86,7 +111,8 @@ test.describe("/mvf-junior-tournament rain plan", () => {
     const text = await page.locator("#main").innerText();
     expect(text).toContain("North Creek Community Center");
     expect(text).toContain("4:00–7:00 PM");
-    expect(text).not.toContain("3:30 PM");
+    // Upcoming winter makeups legitimately use 3:30; this pins October only.
+    await expect(plan).not.toContainText("3:30 PM");
     const event = (await page.locator('script[type="application/ld+json"]').allTextContents())
       .map((body) => JSON.parse(body)).find((value) => value["@type"] === "SportsEvent");
     expect(event.location.name).toBe("North Creek Community Center");

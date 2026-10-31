@@ -70,3 +70,20 @@ export function findMvfJuniorSeriesEvent(slug: string): MvfJuniorSeriesEvent | u
 export function mvfJuniorSeriesUrl(event: MvfJuniorSeriesEvent): string {
   return `https://nextgenpbacademy.com/mvf-junior-tournament/${event.slug}`;
 }
+
+/**
+ * The next series event still ahead of `todayIso` (ET calendar date), or
+ * undefined once the last one has passed. Fresh layout renders select the next
+ * event; already-cached banners retire at Eastern midnight on the client.
+ */
+export function nextMvfJuniorSeriesEvent(todayIso: string): MvfJuniorSeriesEvent | undefined {
+  return MVF_JUNIOR_SERIES.find((event) => event.dates[0].iso >= todayIso);
+}
+
+/** "Sat, Nov 14" from an event's first date, for tight surfaces like the banner. */
+export function mvfJuniorSeriesShortDate(event: MvfJuniorSeriesEvent): string {
+  const [y, m, d] = event.dates[0].iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", timeZone: "UTC",
+  });
+}
