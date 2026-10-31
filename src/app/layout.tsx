@@ -3,6 +3,9 @@ import { Montserrat, Inter, Roboto_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StickyMobileCTA from "@/components/StickyMobileCTA";
+import TournamentBanner from "@/components/TournamentBanner";
+import { nextMvfJuniorSeriesEvent, mvfJuniorSeriesShortDate } from "@/data/mvf-junior-series";
+import { publicSeriesRelease } from "@/data/mvf-series-registration";
 import JsonLd from "@/components/JsonLd";
 import { organizationJsonLd } from "@/lib/seo";
 import PageViewTracker from "@/components/PageViewTracker";
@@ -76,6 +79,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // ET calendar date; a UTC build server would otherwise roll the day early.
+  const todayEt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
+  const tournament = nextMvfJuniorSeriesEvent(todayEt);
   return (
     <html lang="en">
       <body
@@ -90,6 +96,17 @@ export default function RootLayout({
         >
           Skip to content
         </a>
+        {tournament && (
+          <TournamentBanner
+            href={`/mvf-junior-tournament/${tournament.slug}`}
+            eventIso={tournament.dates[0].iso}
+            dateLabel={mvfJuniorSeriesShortDate(tournament)}
+            divisionsLabel={tournament.divisions.map((d) => d.label).join(" & ")}
+            registrationOpen={
+              process.env.VERCEL_ENV === "production" && Boolean(publicSeriesRelease(tournament.slug))
+            }
+          />
+        )}
         <Navbar />
         <main id="main" className="pb-16 md:pb-0">{children}</main>
         <Footer />

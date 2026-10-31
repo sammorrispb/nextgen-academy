@@ -4,6 +4,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
 
+## 2026-10-31 — Promote the MVF junior series: next-tournament banner + "Tournaments" nav item
+
+- **Situation:** Sam asked for a sitewide banner to register for the November tournament and a tournament option in the main menu. The October promotion was retired on 2026-10-25, and November 14 registration is still closed in code (`MVF_SERIES_ADMISSION_ENABLED = false`, no releases; start time, eligibility and weather terms pending; draft #453 rebuilds the form but opens nothing).
+- **Decision:** Reuse `TournamentBanner` as a series banner. The layout picks the next event from `MVF_JUNIOR_SERIES` (ET date) and asks the same `publicSeriesRelease` gate the event page uses, so the bar reads "Registration opens soon · Details" today and flips to "Register" by itself when a release is published, then rolls to January and February and retires after the last event. It links to the month page, hides on `/admin`, `/coach` and the page it points at, and a client check hides it on a statically built page served after the event. Nav gains "Tournaments" → `/mvf-junior-tournament`; the desktop row now starts at `lg` (seven links squeezed the logo out at 820px).
+- **Risk:** Copy only; no admission, payment, Notion or PII path touched. Pages stay noindex. The banner never claims registration is open while the page says it is not. Revert the commit to retire promotion again.
+- **Change:** `src/components/TournamentBanner.tsx`, `src/app/layout.tsx`, `src/components/Navbar.tsx`, `src/data/mvf-junior-series.ts` (`nextMvfJuniorSeriesEvent`, `mvfJuniorSeriesShortDate`), `e2e/newsletter.spec.ts` (the "retired tournament promotion" pins replaced with series-promotion pins). Build, tsc, lint green; newsletter/homepage/clusters/mvf-tournament-emails browser specs pass desktop + mobile. Eight `e2e/mvf-page.spec.ts` month-page/archive assertions already fail on main (they expect copy #452 replaced) and are unchanged here.
+
 ## 2026-10-26 — Close new MVF registration after the ended event
 
 - **Situation and authority:** After Sam's tournament-promotion removal, the unlisted October 24 page still rendered a registration form and its public POST had no event-ended gate. The parent explicitly authorized this narrow payment-route fix under standing safe defect-fix authority: preserve history, invoices and callbacks; reject new submissions before Stripe, waivers or capacity side effects. No live acceptance was tested or claimed. Main was `228728a`; open-PR checks were empty and the clean task-local checkout was used.
