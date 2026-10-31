@@ -6,10 +6,9 @@ import {
   MVF_JUNIOR_TOURNAMENT_RAIN_VENUE,
 } from "@/data/mvf-junior-tournament-2026";
 
-// Sam's October 30 call establishes months, venues, fees and bracket caps.
-// MVF's verified email confirms the two winter Sunday schedules at Lake Marion.
-// November's schedule/rain plan and all bracket eligibility still await confirmation.
-// These are informational pages only; October's checkout and ledger stay closed.
+// MVF confirms the winter dates and November backup. Sam's current outdoor
+// plan is November 14, 10 AM–noon; MVF confirmation is pending. Public policy
+// copy does not create a registration release or change payment validation.
 const divisions = [
   { slug: "12u", label: "12U", ageLabel: "12 and under", capacity: 10 },
   { slug: "16u", label: "16U", ageLabel: "16 and under", capacity: 10 },
@@ -28,21 +27,39 @@ const lakeMarion = {
   environmentLabel: "Indoors",
 };
 
+export const MVF_JUNIOR_SERIES_ENROLLMENT = "A minimum of 8 players across both brackets is needed to run each tournament.";
+export const MVF_JUNIOR_SERIES_SHORT_BRACKET = "If a bracket has fewer than 5 players, we will decide whether to combine or cancel it 3 days before the tournament.";
+export const MVF_JUNIOR_SERIES_ELIGIBILITY = "Age divisions use the calendar year. Younger players may play up into an older junior bracket.";
+export const MVF_JUNIOR_SERIES_WEATHER_TERMS = "Weather decisions will be made 24 hours before the tournament.";
+export const MVF_JUNIOR_SERIES_CANCELLATION = "No refunds unless we cancel.";
+
 export const MVF_JUNIOR_SERIES = [
   {
     slug: "november-2026", monthLabel: "November 2026", venue: northCreek, divisions, prices,
     dates: [{ iso: "2026-11-14", label: "Saturday, November 14, 2026" }],
-    timeLabel: "4:00–7:00 PM ET", scheduleConfirmed: false,
+    timeLabel: "10:00 AM–noon ET (planned)",
+    scheduleConfirmed: false,
+    scheduleNote: "The outdoor time is planned; final confirmation with MVF is pending. The indoor weather backup is a separate, later time slot.",
+    weatherBackup: { venue: lakeMarion, timeLabel: "3:00–6:00 PM ET" },
+    makeup: null,
   },
   {
     slug: "january-2027", monthLabel: "January 2027", venue: lakeMarion, divisions, prices,
     dates: [{ iso: "2027-01-17", label: "Sunday, January 17, 2027" }],
-    timeLabel: "10:00 AM–1:00 PM ET", scheduleConfirmed: true,
+    timeLabel: "10:00 AM–1:00 PM ET",
+    scheduleConfirmed: true,
+    scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
+    weatherBackup: null,
+    makeup: { date: { iso: "2027-01-23", label: "Saturday, January 23, 2027" }, timeLabel: "3:30–6:30 PM ET" },
   },
   {
     slug: "february-2027", monthLabel: "February 2027", venue: lakeMarion, divisions, prices,
     dates: [{ iso: "2027-02-14", label: "Sunday, February 14, 2027" }],
-    timeLabel: "10:00 AM–1:00 PM ET", scheduleConfirmed: true,
+    timeLabel: "10:00 AM–1:00 PM ET",
+    scheduleConfirmed: true,
+    scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
+    weatherBackup: null,
+    makeup: { date: { iso: "2027-02-20", label: "Saturday, February 20, 2027" }, timeLabel: "3:30–6:30 PM ET" },
   },
 ] as const;
 
@@ -54,4 +71,21 @@ export function findMvfJuniorSeriesEvent(slug: string): MvfJuniorSeriesEvent | u
 
 export function mvfJuniorSeriesUrl(event: MvfJuniorSeriesEvent): string {
   return `https://nextgenpbacademy.com/mvf-junior-tournament/${event.slug}`;
+}
+
+/**
+ * The next series event still ahead of `todayIso` (ET calendar date), or
+ * undefined once the last one has passed. Fresh layout renders select the next
+ * event; already-cached banners retire at Eastern midnight on the client.
+ */
+export function nextMvfJuniorSeriesEvent(todayIso: string): MvfJuniorSeriesEvent | undefined {
+  return MVF_JUNIOR_SERIES.find((event) => event.dates[0].iso >= todayIso);
+}
+
+/** "Sat, Nov 14" from an event's first date, for tight surfaces like the banner. */
+export function mvfJuniorSeriesShortDate(event: MvfJuniorSeriesEvent): string {
+  const [y, m, d] = event.dates[0].iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", {
+    weekday: "short", month: "short", day: "numeric", timeZone: "UTC",
+  });
 }

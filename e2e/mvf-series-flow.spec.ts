@@ -24,20 +24,20 @@ test.afterEach(() => { const attempts = h.network.attempts.slice(); h.close(); f
 
 async function fill(page: import("@playwright/test").Page, lastName = "Fixture") {
   await page.goto("/browser-test-fixture/mvf-series");
-  for (const [name,value] of [["Parent or guardian name","Synthetic Guardian"],["Parent email","guardian@example.invalid"],["Parent phone","2025550100"],["Player first name","Synthetic"],["Player last name",lastName],["Player date of birth","2016-02-20"],["Emergency contact name","Synthetic Backup"],["Emergency contact phone","2025550101"]]) await page.getByLabel(name,{exact:true}).fill(value);
+  for (const [name,value] of [["Parent name","Synthetic Guardian"],["Email","guardian@example.invalid"],["Phone","2025550100"],["Child\u2019s first name","Synthetic"],["Child\u2019s last name",lastName],["Child\u2019s date of birth","2016-02-20"],["Emergency contact name","Synthetic Backup"],["Emergency contact phone","2025550101"]]) await page.getByLabel(name,{exact:true}).fill(value);
   await page.getByLabel("I am the parent or guardian and accept these event policies.").check();
-  await page.getByRole("button",{name:"Request invoice — $50",exact:true}).click();
-  await expect(page.getByRole("heading",{name:"Payment pending",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Continue to payment — $50",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"One step left: pay your entry fee",exact:true})).toBeVisible();
 }
 
 test("guardian browser request, invoice, receipt and repeated paid callbacks",async({page})=>{
   await fill(page);
   expect(h.fake.all()).toHaveLength(1);expect(h.pages).toHaveLength(1);
-  await expect(page.getByRole("link",{name:"Pay your invoice on Stripe"})).toHaveAttribute("href",/^https:\/\/invoice\.stripe\.com\//);
+  await expect(page.getByRole("link",{name:"Pay the entry fee"})).toHaveAttribute("href",/^https:\/\/invoice\.stripe\.com\//);
   const id=h.fake.all()[0].id;h.statuses.set(id,"paid");
   await h.service.webhook(h.event(id));await h.service.webhook(h.event(id,"invoice.payment_succeeded"));
   await page.getByRole("button",{name:"Check payment status again"}).click();
-  await expect(page.getByRole("heading",{name:"Payment received — registration confirmed"})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Payment received"})).toBeVisible();
   expect(h.mails).toHaveLength(4);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -59,13 +59,13 @@ test("same-event sibling hash navigation and Back/Forward verify the visible inv
   const a = await h.service.register("november-2026", registration());
   const b = await h.service.register("november-2026", registration(2));
   await page.goto(a.receiptUrl);
-  await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveAttribute("href", new RegExp(`${a.invoiceId}$`));
+  await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveAttribute("href", new RegExp(`${a.invoiceId}$`));
   await page.evaluate(url => { history.pushState({}, "", url); }, b.receiptUrl);
-  await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
+  await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
   await page.goBack();
-  await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveAttribute("href", new RegExp(`${a.invoiceId}$`));
+  await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveAttribute("href", new RegExp(`${a.invoiceId}$`));
   await page.goForward();
-  await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
+  await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
   await page.getByLabel("Cancel this unpaid invoice and release its seat.").check();
   await page.getByRole("button", { name: "Confirm unpaid cancellation" }).click();
   await expect(page.getByRole("heading", { name: "Unpaid registration cancelled" })).toBeVisible();
@@ -88,15 +88,15 @@ test("hash change removes previous actions immediately and ignores a late receip
   try {
     await page.goto(a.receiptUrl); await waiting;
     await page.evaluate(url => { location.hash = url.split("#")[1]; }, b.receiptUrl);
-    await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
+    await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
     const completed = page.waitForResponse(response => response.url().endsWith("/receipt") && response.request().postDataJSON().token === h.token(a));
     release(); await completed;
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
+    await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
     // An invalid new hash must erase the last sibling's controls as well.
     await page.evaluate(() => { location.hash = "receipt=invalid"; });
     await expect(page.getByRole("status")).toContainText("could not verify");
-    await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveCount(0);
     await expect(page.getByLabel("Cancel this unpaid invoice and release its seat.")).toHaveCount(0);
   } finally { release(); }
 });
@@ -111,29 +111,71 @@ test("pending navigation verification removes the previous invoice cancellation 
     await page.evaluate(url => { history.replaceState({}, "", url); }, b.receiptUrl); await waiting;
     await expect(page.getByRole("status")).toContainText("Checking");
     await expect(page.getByLabel("Cancel this unpaid invoice and release its seat.")).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveCount(0);
-    release(); await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
+    await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveCount(0);
+    release(); await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveAttribute("href", new RegExp(`${b.invoiceId}$`));
     expect(h.voids).toBe(0);
   } finally { release(); }
 });
 
 test("a refunded confirmed receipt shows review while retaining the seat and hiding payment actions", async ({ page }) => {
   const a = await h.service.register("november-2026", registration()); h.statuses.set(a.invoiceId, "paid"); await h.service.webhook(h.event(a.invoiceId));
-  await page.goto(a.receiptUrl); await expect(page.getByRole("heading", { name: "Payment received — registration confirmed" })).toBeVisible();
+  await page.goto(a.receiptUrl); await expect(page.getByRole("heading", { name: "Payment received" })).toBeVisible();
   h.refunded = true; await page.getByRole("button", { name: "Check payment status again" }).click();
   await expect(page.getByRole("heading", { name: "Payment needs review — contact Coach Sam" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveCount(0);
   await expect(page.getByLabel("Cancel this unpaid invoice and release its seat.")).toHaveCount(0);
   expect([...h.seats.values()][0].state).toBe("paid"); expect(h.voids).toBe(0);
 });
 
 test("failed refresh clears confirmed status and all previous receipt actions", async ({ page }) => {
   const a = await h.service.register("november-2026", registration()); h.statuses.set(a.invoiceId, "paid"); await h.service.webhook(h.event(a.invoiceId));
-  await page.goto(a.receiptUrl); await expect(page.getByRole("heading", { name: "Payment received — registration confirmed" })).toBeVisible();
+  await page.goto(a.receiptUrl); await expect(page.getByRole("heading", { name: "Payment received" })).toBeVisible();
   await page.route("**/api/mvf-series/*/receipt", route => route.fulfill({ status: 503, contentType: "application/json", body: "{}" }));
   await page.getByRole("button", { name: "Check payment status again" }).click();
   await expect(page.getByRole("status")).toContainText("could not verify");
-  await expect(page.getByRole("heading", { name: "Payment received — registration confirmed" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Pay your invoice on Stripe" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Payment received" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Pay the entry fee" })).toHaveCount(0);
   await expect(page.getByLabel("Cancel this unpaid invoice and release its seat.")).toHaveCount(0);
+});
+
+async function fillDetailsOnly(page: import("@playwright/test").Page) {
+ await page.goto("/browser-test-fixture/mvf-series");
+ for (const [name,value] of [["Parent name","Synthetic Guardian"],["Email","guardian@example.invalid"],["Phone","2025550100"],["Child’s first name","Synthetic"],["Child’s last name","Review Fixture"],["Child’s date of birth","2016-02-20"],["Emergency contact name","Synthetic Backup"],["Emergency contact phone","2025550101"]]) await page.getByLabel(name,{exact:true}).fill(value);
+ await page.getByLabel("I am the parent or guardian and accept these event policies.").check();
+}
+
+test("inline waiver resumes the same synthetic registration without duplicate invoice",async({page})=>{
+ h.waiver=false;const ids:string[]=[];
+ await page.route("**/api/mvf-series/*/register", async route=>{ids.push(route.request().postDataJSON().submissionId);await route.fallback();});
+ await page.route("**/api/waiver-sign", async route=>{expect(route.request().postDataJSON().email).toBe("guardian@example.invalid");h.waiver=true;await route.fulfill({status:200,contentType:"application/json",body:'{"ok":true}'});});
+ await fillDetailsOnly(page);await page.getByRole("button",{name:"Continue to payment — $50",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"Sign your one-time waiver",exact:true})).toBeVisible();
+ await page.getByLabel("Type your full legal name to sign").fill("Synthetic Guardian");
+ await page.getByRole("checkbox",{name:/I am the participant/}).check();
+ await page.getByRole("button",{name:/Sign & continue to payment/}).click();
+ await expect(page.getByRole("link",{name:"Pay the entry fee",exact:true})).toBeVisible();
+ expect(ids).toHaveLength(2);expect(ids[0]).toBe(ids[1]);expect(h.fake.all()).toHaveLength(1);expect(h.pages).toHaveLength(1);
+});
+
+test("lost response retries the same invoice with the same submission id",async({page})=>{
+ const ids:string[]=[];let lost=false;
+ await page.route("**/api/mvf-series/*/register",async route=>{const body=route.request().postDataJSON();ids.push(body.submissionId);if(!lost){lost=true;await h.service.register("november-2026",body);return route.abort();}return route.fallback();});
+ await fillDetailsOnly(page);await page.getByRole("button",{name:"Continue to payment — $50",exact:true}).click();
+ await expect(page.getByRole("form",{name:"Tournament registration"}).getByRole("alert")).toContainText("connection dropped");
+ await page.getByRole("button",{name:"Continue to payment — $50",exact:true}).click();
+ await expect(page.getByRole("link",{name:"Pay the entry fee",exact:true})).toBeVisible();
+ expect(ids).toHaveLength(2);expect(ids[0]).toBe(ids[1]);expect(h.fake.all()).toHaveLength(1);expect(h.pages).toHaveLength(1);
+});
+
+test("form schedule follows the release date used by eligibility and billing",async({page})=>{
+ await page.goto("/browser-test-fixture/mvf-series");
+ const displayed=await page.locator("fieldset").first().locator("p").first().innerText();
+ expect(displayed).toContain("Saturday, February 20, 2027");
+});
+
+test("receipt cannot present public listing date as the bound invoice schedule",async({page})=>{
+ const result=await h.service.register("november-2026",registration());
+ await page.goto(result.receiptUrl);await expect(page.getByRole("link",{name:"Pay the entry fee",exact:true})).toBeVisible();
+ const day=page.locator("section[aria-labelledby=tournament-day-heading]");
+ if(await day.count())expect(await day.innerText()).not.toContain("Saturday, November 14, 2026");
 });

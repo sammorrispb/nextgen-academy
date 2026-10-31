@@ -7,8 +7,8 @@ import { usePathname } from "next/navigation";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import { trackEvent } from "@/lib/funnelClient";
 
-// Six doors, no more. The three intents Sam named map to the first three;
-// everything else (Fall Season, Camp, Pickl Park, Clusters, Monday Girls,
+// Seven doors, no more. The three intents Sam named map to the first three;
+// "Tournaments" joined 2026-10-31 for the MVF junior series. Everything else (Fall Season, Camp, Pickl Park, Clusters, Monday Girls,
 // Newsletter, Crew) stays live and reachable from the schedule page, footer,
 // and homepage cards — it just stops competing for attention up here.
 const links = [
@@ -16,6 +16,7 @@ const links = [
   { href: "/lessons", label: "Lessons" },
   { href: "/league", label: "Leagues" },
   { href: "/montgomery-village-youth-pickleball", label: "MVF Classes" },
+  { href: "/mvf-junior-tournament", label: "Tournaments" },
   { href: "/schedule", label: "Schedule" },
   { href: "#about", label: "About" },
 ];
@@ -93,7 +94,7 @@ export default function Navbar() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          <Link href="/" className="flex items-center" aria-label="Next Gen Pickleball Academy — Home">
+          <Link href="/" className="flex shrink-0 items-center" aria-label="Next Gen Pickleball Academy — Home">
             <Image
               src="/images/logo.png"
               alt="Next Gen Pickleball Academy"
@@ -104,7 +105,7 @@ export default function Navbar() {
             />
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1">
             {links.map((link) => {
               const resolved = resolveHref(link.href);
               const isActive = !link.href.startsWith("#") && pathname === link.href;
@@ -149,7 +150,7 @@ export default function Navbar() {
           <button
             ref={hamburgerRef}
             onClick={() => setOpen(!open)}
-            className="md:hidden p-2 -mr-2 text-ngpa-white hover:text-ngpa-teal min-h-[48px] min-w-[48px] flex items-center justify-center"
+            className="lg:hidden p-2 -mr-2 text-ngpa-white hover:text-ngpa-teal min-h-[48px] min-w-[48px] flex items-center justify-center"
             aria-label="Toggle menu"
             aria-expanded={open}
             aria-controls="mobile-menu"
@@ -170,7 +171,7 @@ export default function Navbar() {
             id="mobile-menu"
             role="dialog"
             aria-label="Navigation menu"
-            className="md:hidden pb-5 border-t border-ngpa-slate/60"
+            className="lg:hidden pb-5 border-t border-ngpa-slate/60"
           >
             <div className="flex flex-col gap-1 pt-4">
               {links.map((link) => {

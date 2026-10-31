@@ -17,6 +17,7 @@ export default defineConfig({
     "**/mvf-page.spec.ts",
     "**/mvf-series-flow.spec.ts",
     "**/newsletter.spec.ts",
+    "**/tournament-banner.spec.ts",
     "**/reserve-modal.spec.ts",
     "**/seo.spec.ts",
     // Hits the LIVE site over the network (www→apex redirects) — GitHub
