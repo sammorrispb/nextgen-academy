@@ -34,7 +34,8 @@ function shiftDate(iso: string, years: number, days = 0): string {
 /** Date-of-birth picker hints for a bracket; the server re-checks the age. */
 export function seriesDobBounds(release: SeriesRelease, division: SeriesDivision): { min: string; max: string } {
   const { minAge, maxAge } = release.eligibility[division];
-  return { min: shiftDate(release.date, -(maxAge + 1), 1), max: shiftDate(release.date, -minAge) };
+  const cutoff = release.ageCutoffDate ?? release.date;
+  return { min: shiftDate(cutoff, -(maxAge + 1), 1), max: shiftDate(cutoff, -minAge) };
 }
 
 function fieldId(field: string): string {
@@ -61,6 +62,7 @@ export default function MvfSeriesRegistrationForm({ release, event }: { release:
     weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC",
   });
   const when = `${releaseDateLabel} · ${release.startTime}–${release.endTime} ET`;
+  const deadline = new Date(release.registrationClosesAt).toLocaleString("en-US", { timeZone: "America/New_York", month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 
   function update<K extends keyof Fields>(field: K, value: Fields[K]) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -192,6 +194,7 @@ export default function MvfSeriesRegistrationForm({ release, event }: { release:
         <fieldset className="mb-6">
           <legend className={labelClass}>Which division?</legend>
           <p className="text-sm text-ngpa-white/70 mb-3">{when}</p>
+          <p className="text-sm text-ngpa-white/70 mb-3">Registration closes {deadline} ET. Invoices are due in {release.invoiceDueDays} days.</p>
           <div className="grid grid-cols-1 gap-3">
             {event.divisions.map((option) => {
               const selected = form.division === option.slug;

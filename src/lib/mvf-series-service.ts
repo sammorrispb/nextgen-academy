@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type Stripe from "stripe";
 import { activeSeriesRelease, findSeriesRelease, releaseProblems, seriesEventKey, validateSeriesRegistration, MVF_SERIES_ACCOUNT, MVF_SERIES_KIND, type SeriesRegistration, type SeriesRelease } from "@/data/mvf-series-registration";
 import { findMvfJuniorSeriesEvent, mvfJuniorSeriesUrl } from "@/data/mvf-junior-series";
@@ -103,6 +103,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     const m = invoice.metadata ?? {};
     const seat = await deps.command(m.event_key, "lookup", { invoice_id: invoice.id });
     if (seat.submission_id !== m.nga_capacity_submission_id || !["payable", "paid", "void"].includes(String(seat.state))) throw new SeriesError("invoice_mismatch", 409);
+    if (typeof seat.review_required !== "boolean" || typeof seat.publication_pending !== "boolean") throw new SeriesError("ledger_unavailable");
     return seat;
   }
   async function verifyPayment(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
@@ -118,7 +119,14 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     const refunds = await stripe.refunds.list({ charge: charge.id, limit: 100 });
     if (refunds.has_more || refunds.data.length) throw new SeriesError("payment_unverified");
   }
-  async function notices(invoice: Stripe.Invoice, phase: "pending" | "paid" | "void") {
+  async function freshPayment(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
+    const fresh = await stripe.invoices.retrieve(invoice.id);
+    const m = invoice.metadata!;
+    invoiceRelease(fresh, { event: m.event_slug, revision: m.policy_revision, invoice: invoice.id, submission: m.nga_capacity_submission_id, purpose: "receipt", expires: 0 });
+    await verifyRecipient(stripe, fresh);
+    await verifyPayment(stripe, fresh, amount);
+  }
+  async function notices(invoice: Stripe.Invoice, phase: "pending" | "paid" | "void", publicationToken?: string, beforeWrite?: () => void) {
     const { release, event, m, amount } = invoiceRelease(invoice);
     await verifyRecipient(deps.stripe(), invoice);
     const when = `${release.date}, ${release.startTime}–${release.endTime} ET`;
@@ -131,18 +139,86 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       `${mvfJuniorSeriesUrl(event)}/status#receipt=${seriesToken({ event: release.event, revision: release.revision, invoice: invoice.id, submission: m.nga_capacity_submission_id, purpose: "receipt" }, Number(m.receipt_issued_at))}`,
       mvfJuniorSeriesUrl(event), "Questions: nextgenacademypb@gmail.com · 301-325-4731"].join("\n\n");
     const base = { from: "Next Gen PB Academy <noreply@nextgenpbacademy.com>", reply_to: "nextgenacademypb@gmail.com", subject: `${title} — MVF Junior Tournament — ${event.monthLabel}`, text };
-    await deps.notice(m.event_key, invoice.id, phase, "parent", { ...base, to: [m.parent_email] });
-    await deps.notice(m.event_key, invoice.id, phase, "admin", { ...base, to: ["sam.morris2131@gmail.com", "nextgenacademypb@gmail.com"], text: `${text}\n\nParent: ${invoiceSafeName(m.parent_name)}\nEmail: ${m.parent_email}\nInvoice: ${invoice.id}` });
+    const beforeNotice = async () => {
+      if (phase !== "paid") return;
+      if (!publicationToken) throw new SeriesError("publication_unverified");
+      const check = await deps.command(m.event_key, "publication_check", { invoice_id: invoice.id, phase: "paid", publication_token: publicationToken });
+      if (check.recorded !== true) throw new SeriesError("publication_unverified");
+      await freshPayment(deps.stripe(), invoice, amount);
+    };
+    await beforeNotice();
+    await deps.notice(m.event_key, invoice.id, phase, "parent", { ...base, to: [m.parent_email] }, publicationToken, beforeWrite);
+    await beforeNotice();
+    await deps.notice(m.event_key, invoice.id, phase, "admin", { ...base, to: ["sam.morris2131@gmail.com", "nextgenacademypb@gmail.com"], text: `${text}\n\nParent: ${invoiceSafeName(m.parent_name)}\nEmail: ${m.parent_email}\nInvoice: ${invoice.id}` }, publicationToken, beforeWrite);
   }
 
+  async function claimPublication(invoice: Stripe.Invoice, phase: "paid" | "review") {
+    const token = randomUUID();
+    const claim = await deps.command(invoice.metadata!.event_key, "publication_claim", { invoice_id: invoice.id, phase, publication_token: token });
+    if (phase === "paid" && claim.claimed === false && claim.review_required === true) return null;
+    if (claim.claimed !== true || claim.lease_token !== token || (phase === "review" && claim.review_required !== true)) throw new SeriesError("publication_unverified");
+    return token;
+  }
+  async function finishPublication(invoice: Stripe.Invoice, token: string) {
+    const done = await deps.command(invoice.metadata!.event_key, "publication_done", { invoice_id: invoice.id, publication_token: token });
+    if (done.recorded !== true) throw new SeriesError("publication_unverified");
+  }
+  async function publishReview(invoice: Stripe.Invoice, token?: string, beforeWrite?: () => void) {
+    const owner = token ?? await claimPublication(invoice, "review");
+    if (!owner) throw new SeriesError("publication_unverified");
+    let writeStarted = false;
+    const markWrite = () => { writeStarted = true; beforeWrite?.(); };
+    try {
+      if (token) {
+        const marked = await deps.command(invoice.metadata!.event_key, "publication_review", { invoice_id: invoice.id, publication_token: owner });
+        if (marked.recorded !== true) throw new SeriesError("publication_unverified");
+      }
+      await deps.updateRoster(invoice.id, invoice.metadata!, "review", owner, markWrite);
+      await finishPublication(invoice, owner);
+    } catch (error) {
+      if (!token && !writeStarted) await finishPublication(invoice, owner);
+      throw error;
+    }
+  }
+  async function publishPaid(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
+    const token = await claimPublication(invoice, "paid");
+    if (!token) { await publishReview(invoice); return true; }
+    let writeStarted = false;
+    const markWrite = () => { writeStarted = true; };
+    try {
+      await freshPayment(stripe, invoice, amount);
+      await deps.updateRoster(invoice.id, invoice.metadata!, "paid", token, markWrite);
+      // An adjustment can happen during an external PATCH. Revalidate while
+      // still owning publication before any confirmation notice can start.
+      await freshPayment(stripe, invoice, amount);
+      await notices(invoice, "paid", token, markWrite);
+      await finishPublication(invoice, token);
+      return false;
+    } catch (error) {
+      if (error instanceof SeriesError && ["payment_unverified", "roster_reconciliation_required"].includes(error.code)) {
+        try { await publishReview(invoice, token, markWrite); return true; }
+        catch (reviewError) { if (!writeStarted) await finishPublication(invoice, token); throw reviewError; }
+      }
+      // Only this known worker can release after a read-only failure. Once an
+      // external write starts, an unknown result retains ownership forever.
+      if (!writeStarted) await finishPublication(invoice, token);
+      throw error;
+    }
+  }
   async function paidStatus(stripe: Stripe, invoice: Stripe.Invoice, amount: number) {
+    const seat = await reservation(invoice);
+    if (seat.review_required === true) {
+      if (seat.publication_pending === true) return "review_required";
+      try { await publishReview(invoice); return "review_required"; } catch { return "reconciliation_pending"; }
+    }
     try { await verifyPayment(stripe, invoice, amount); }
     catch (error) {
       if (!(error instanceof SeriesError) || error.code !== "payment_unverified") return "reconciliation_pending";
-      await deps.updateRoster(invoice.id, invoice.metadata!, "review");
-      return "review_required";
+      try { await publishReview(invoice); return "review_required"; } catch { return "reconciliation_pending"; }
     }
-    return await deps.rosterNeedsReview(invoice.id, invoice.metadata!) ? "review_required" : "paid";
+    if (seat.publication_pending === true) return "reconciliation_pending";
+    if (await deps.rosterNeedsReview(invoice.id, invoice.metadata!)) { await publishReview(invoice); return "review_required"; }
+    return "paid";
   }
 
   return {
@@ -207,7 +283,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       if (!Number.isFinite(heldAt) || heldAt > deps.now() + 300000) throw new SeriesError("ledger_unavailable");
       if (!held.invoice_id && deps.now() - heldAt >= 23 * 3600000) throw new SeriesError("invoice_reconciliation_required");
       const amount = data.resident ? event.prices.residentUsd : event.prices.nonresidentUsd;
-      const ngaCents = Math.round(amount * 100 * release.ngaRevenueShare);
+      const ngaCents = Math.round((release.ngaRevenueBaseUsd ?? amount) * 100 * release.ngaRevenueShare);
       const metadata = { ...baseSeriesMetadata(release), event_key: eventKey, division: data.division, resident: String(data.resident), amount_usd: amount.toFixed(2),
         nga_revenue_share: String(release.ngaRevenueShare), nga_share_usd: (ngaCents / 100).toFixed(2), mvf_share_usd: ((amount * 100 - ngaCents) / 100).toFixed(2),
         nga_capacity_submission_id: data.submissionId, parent_name: data.parentName, parent_email: data.email, parent_phone: data.phone,
@@ -304,12 +380,11 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       } else {
         try { await verifyPayment(stripe, invoice, amount); }
         catch (error) {
-          if (seat.state === "paid" && error instanceof SeriesError && error.code === "payment_unverified") await deps.updateRoster(invoice.id, m, "review");
+          if (seat.state === "paid" && error instanceof SeriesError && error.code === "payment_unverified") await publishReview(invoice);
           throw error;
         }
         await deps.command(m.event_key, "paid", { invoice_id: invoice.id });
-        await deps.updateRoster(invoice.id, m, "paid");
-        await notices(invoice, "paid");
+        if (await publishPaid(stripe, invoice, amount)) return { received: true, mvfSeries: true, reviewRequired: true };
       }
       return { received: true, mvfSeries: true };
     },
