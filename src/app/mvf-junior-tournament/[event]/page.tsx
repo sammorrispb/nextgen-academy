@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import MvfSeriesRegistrationForm from "@/components/MvfSeriesRegistrationForm";
-import { publicSeriesRelease, publishedSeriesRelease } from "@/data/mvf-series-registration";
+import { publicSeriesRelease, publishedSeriesRelease, type SeriesRelease } from "@/data/mvf-series-registration";
 import JsonLd from "@/components/JsonLd";
 import { mvfSeriesJsonLd } from "@/lib/mvf-series-jsonld";
 import {
@@ -16,6 +16,22 @@ import {
 } from "@/data/mvf-junior-series";
 
 type Props = { params: Promise<{ event: string }> };
+
+// Vercel preview deployments only: a sample of the registration form so the
+// layout can be reviewed before a real release exists. Placeholder policy text,
+// and the register API still answers "registration_closed" because the sample
+// is never an active release. Production never renders it.
+function previewSampleRelease(event: NonNullable<ReturnType<typeof findMvfJuniorSeriesEvent>>): SeriesRelease | undefined {
+  if (process.env.VERCEL_ENV !== "preview") return undefined;
+  return {
+    event: event.slug, revision: "preview-sample", date: event.dates[0].iso, startTime: "10:00 AM", endTime: "1:00 PM",
+    registrationClosesAt: `${event.dates[0].iso}T00:00:00-05:00`,
+    eligibility: { "12u": { minAge: 6, maxAge: 12 }, "16u": { minAge: 13, maxAge: 16 } }, multipleBrackets: false,
+    eligibilityText: "Preview sample: eligibility text goes here.", minimumEnrollmentPolicy: MVF_JUNIOR_SERIES_ENROLLMENT,
+    cancellationPolicy: "Preview sample: cancellation policy goes here.", rainPolicy: "Preview sample: weather policy goes here.",
+    invoiceDueDays: 7, ngaRevenueShare: 0.8,
+  };
+}
 
 export const dynamicParams = false;
 export const dynamic = "force-dynamic";
@@ -51,7 +67,7 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
       <h1 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white mt-3 leading-tight">
         MVF Junior Tournament
       </h1>
-      {registration ? <section id="register" aria-labelledby="registration-heading" className="mt-6 rounded-2xl border border-ngpa-teal/40 bg-ngpa-panel p-6"><h2 id="registration-heading" className="font-heading text-xl font-bold">Register your player</h2><MvfSeriesRegistrationForm release={registration} /></section> : <section aria-labelledby="registration-heading" className="mt-6 rounded-2xl border border-ngpa-teal/40 bg-ngpa-panel p-6">
+      {!registration && <section aria-labelledby="registration-heading" className="mt-6 rounded-2xl border border-ngpa-teal/40 bg-ngpa-panel p-6">
         <h2 id="registration-heading" className="font-heading text-xl font-bold text-ngpa-white">
           {published ? "Registration is closed." : "Registration is not open yet."}
         </h2>
@@ -116,6 +132,29 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
       {!published && <section aria-labelledby="policies-heading" className="mt-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel p-6">
         <h2 id="policies-heading" className="font-heading text-xl font-bold text-ngpa-white">Policies before registration</h2>
         <p className="text-ngpa-white/80 mt-3">{MVF_JUNIOR_SERIES_WEATHER_TERMS}</p>
+      </section>}
+
+      {registration && <section id="register" aria-labelledby="registration-heading" className="mt-10 scroll-mt-24">
+        <h2 id="registration-heading" className="font-heading text-2xl font-black text-ngpa-white mb-5">
+          Register — ${event.prices.residentUsd} resident / ${event.prices.nonresidentUsd} non-resident
+        </h2>
+        <p className="text-ngpa-white/70 mb-6">
+          Fill this in and we&rsquo;ll email you an invoice — pay it online to lock your player&rsquo;s spot. Each division is capped at {event.divisions[0].capacity} players.
+        </p>
+        <MvfSeriesRegistrationForm release={registration} event={event} />
+      </section>}
+
+      {!registration && previewSampleRelease(event) && <section id="register" aria-labelledby="preview-registration-heading" className="mt-10 scroll-mt-24">
+        <p role="note" className="mb-5 rounded-xl border border-ngpa-red/40 bg-ngpa-red/10 p-4 text-sm text-ngpa-white">
+          Preview deployment only: a sample of the registration form with placeholder policies. It cannot submit, and production registration stays closed.
+        </p>
+        <h2 id="preview-registration-heading" className="font-heading text-2xl font-black text-ngpa-white mb-5">
+          Register — ${event.prices.residentUsd} resident / ${event.prices.nonresidentUsd} non-resident
+        </h2>
+        <p className="text-ngpa-white/70 mb-6">
+          Fill this in and we&rsquo;ll email you an invoice — pay it online to lock your player&rsquo;s spot. Each division is capped at {event.divisions[0].capacity} players.
+        </p>
+        <MvfSeriesRegistrationForm release={previewSampleRelease(event)!} event={event} />
       </section>}
 
       <section aria-labelledby="photos-heading" className="mt-10">

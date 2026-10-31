@@ -66,15 +66,20 @@ export default function MvfSeriesReceipt({ event }: { event: string }) {
     } catch { if (matches(value, version)) setMessage("Cancellation is not confirmed. Check your invoice and contact Coach Sam before registering again."); }
     finally { if (matches(value, version)) setBusy(false); }
   }
-  return <section className="space-y-5 mt-6" aria-label="Invoice status">
-    {message && <p role="status">{message}</p>}
-    {receipt && <><h2 className="font-heading text-2xl font-bold">{receipt.status === "paid" ? "Payment received — registration confirmed" : receipt.status === "pending" ? "Payment pending" : receipt.status === "cancelled" ? "Unpaid registration cancelled" : receipt.status === "review_required" ? "Payment needs review — contact Coach Sam" : "Payment or registration verification pending"}</h2><p>{receipt.division} · ${receipt.amountUsd} entry fee</p>
-      {receipt.status === "review_required" && <p>A payment adjustment needs review. Its seat remains held while Coach Sam reviews the registration.</p>}
-      {receipt.payUrl && <a href={receipt.payUrl} className="inline-block bg-ngpa-teal text-ngpa-deep font-bold rounded-full px-6 py-3 min-h-12">Pay your invoice on Stripe</a>}
-      {receipt.cancelToken && <div className="border border-ngpa-slate rounded-xl p-4"><label className="flex gap-3 min-h-12"><input type="checkbox" checked={confirm} onChange={e => setConfirm(e.target.checked)} className="h-6 w-6" />Cancel this unpaid invoice and release its seat.</label><button type="button" disabled={!confirm || busy} onClick={cancel} className="underline min-h-12 py-3 disabled:opacity-50">Confirm unpaid cancellation</button></div>}
+  // Headings, pay link and help line mirror the October 24 tournament's
+  // status page (src/app/mvf-junior-tournament/success/page.tsx).
+  const heading = receipt?.status === "paid" ? "Payment received" : receipt?.status === "pending" ? "One step left: pay your entry fee" : receipt?.status === "cancelled" ? "Unpaid registration cancelled" : receipt?.status === "review_required" ? "Payment needs review — contact Coach Sam" : "We couldn't verify your payment status yet";
+  return <section className="space-y-4 mt-4" aria-label="Invoice status">
+    {message && <p role="status" className="text-ngpa-white/70">{message}</p>}
+    {receipt && <><h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white leading-tight">{heading}</h2>
+      <p className="text-ngpa-white/80 text-lg">{receipt.division} division · ${receipt.amountUsd} entry fee{receipt.status === "paid" ? ". Your registration is confirmed." : ""}</p>
+      {receipt.status === "pending" && <p className="text-ngpa-white/70">Pay your invoice to lock your player&rsquo;s spot. Check your invoice email, including spam.</p>}
+      {receipt.status === "review_required" && <p className="text-ngpa-white/70">A payment adjustment needs review. Its seat remains held while Coach Sam reviews the registration.</p>}
+      {receipt.payUrl && <a href={receipt.payUrl} className="inline-flex items-center justify-center px-6 py-3 bg-ngpa-teal text-ngpa-deep font-heading font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-12">Pay the entry fee</a>}
+      {receipt.cancelToken && <div className="border border-ngpa-slate/60 rounded-xl p-4"><label className="flex gap-3 min-h-12 text-ngpa-white/80"><input type="checkbox" checked={confirm} onChange={e => setConfirm(e.target.checked)} className="h-6 w-6" />Cancel this unpaid invoice and release its seat.</label><button type="button" disabled={!confirm || busy} onClick={cancel} className="underline min-h-12 py-3 disabled:opacity-50">Confirm unpaid cancellation</button></div>}
     </>}
-    <button type="button" disabled={busy} onClick={() => load(hashToken())} className="underline min-h-12 py-3 disabled:opacity-50">Check payment status again</button>
-    <p>For paid cancellations or help, contact nextgenacademypb@gmail.com or 301-325-4731. No refund is initiated from this page.</p>
-    <a href={`/mvf-junior-tournament/${event}`} className="inline-block underline min-h-12 py-3">Back to tournament details</a>
+    <button type="button" disabled={busy} onClick={() => load(hashToken())} className="block underline min-h-12 py-3 text-ngpa-teal-bright disabled:opacity-50">Check payment status again</button>
+    <p className="text-ngpa-white/70">{receipt?.status === "paid" ? "Keep your Stripe payment receipt and check your email for tournament details. " : ""}If you need help checking your invoice or registration, text Coach Sam at <a href="tel:+13013254731" className="text-ngpa-teal-bright underline hover:text-ngpa-teal">301-325-4731</a> or email nextgenacademypb@gmail.com. No refund is initiated from this page.</p>
+    <a href={`/mvf-junior-tournament/${event}`} className="inline-block underline min-h-12 py-3 text-ngpa-teal-bright">Back to tournament details</a>
   </section>;
 }
