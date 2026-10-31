@@ -26,7 +26,7 @@ export default function MvfJuniorSeriesOverview() {
             <p className="text-ngpa-white mt-3">{event.dates.map(date => <time key={date.iso} dateTime={date.iso}>{date.label}</time>)}</p>
             <p className="text-ngpa-white/80 mt-2">{event.timeLabel} · {event.venue.name} · {event.venue.environmentLabel}</p>
             {event.weatherBackup && <p className="text-ngpa-white/80 text-base mt-3">Same-day weather backup at Lake Marion Community Center gymnasium, {event.weatherBackup.timeLabel}. No separate makeup date has been announced.</p>}
-            {event.makeup && <p className="text-ngpa-white/80 text-base mt-3">Offered makeup: <time dateTime={event.makeup.date.iso}>{event.makeup.date.label}</time>, {event.makeup.timeLabel}. {event.makeup.venue.name}.</p>}
+            {event.makeup && <p className="text-ngpa-white/80 text-base mt-3">Offered makeup: <time dateTime={event.makeup.date.iso}>{event.makeup.date.label}</time>, {event.makeup.timeLabel}. Venue to be confirmed.</p>}
           </li>
         ))}
       </ul>

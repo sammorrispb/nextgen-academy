@@ -49,7 +49,7 @@ export const MVF_JUNIOR_SERIES = [
     scheduleConfirmed: true,
     scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
     weatherBackup: null,
-    makeup: { date: { iso: "2027-01-23", label: "Saturday, January 23, 2027" }, timeLabel: "3:30–6:30 PM ET", venue: lakeMarion },
+    makeup: { date: { iso: "2027-01-23", label: "Saturday, January 23, 2027" }, timeLabel: "3:30–6:30 PM ET" },
   },
   {
     slug: "february-2027", monthLabel: "February 2027", venue: lakeMarion, divisions, prices,
@@ -58,7 +58,7 @@ export const MVF_JUNIOR_SERIES = [
     scheduleConfirmed: true,
     scheduleNote: "The main event date, time and indoor location are confirmed with MVF.",
     weatherBackup: null,
-    makeup: { date: { iso: "2027-02-20", label: "Saturday, February 20, 2027" }, timeLabel: "3:30–6:30 PM ET", venue: lakeMarion },
+    makeup: { date: { iso: "2027-02-20", label: "Saturday, February 20, 2027" }, timeLabel: "3:30–6:30 PM ET" },
   },
 ] as const;
 

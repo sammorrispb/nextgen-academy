@@ -56,7 +56,7 @@ test.describe("new MVF junior tournament month pages", () => {
         const makeup = schedule.getByRole("region", { name: "Offered makeup date" });
         await expect(makeup.locator(`time[datetime="${january ? "2027-01-23" : "2027-02-20"}"]`)).toBeVisible();
         await expect(makeup).toContainText("3:30–6:30 PM ET");
-        await expect(makeup).toContainText("Lake Marion Community Center");
+        await expect(makeup).toContainText("makeup venue is still to be confirmed");
       }
       const location = page.getByRole("region", { name: "Location", exact: true });
       await expect(location).toContainText(event === "november-2026" ? "North Creek Community Center" : "Lake Marion Community Center");
