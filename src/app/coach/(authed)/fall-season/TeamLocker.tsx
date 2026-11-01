@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { lockTeamsAction, previewTeamsAction } from "./actions";
+import { firstRound, type PlayoffPairing } from "@/lib/season-league/finals";
 
 interface RosterEntry {
   id: string;
@@ -20,13 +21,21 @@ interface TeamDraft {
   members: string[];
 }
 
-// Week 6: attendance → snake-seeded teams from the standings → (optional
-// swaps) → lock. Teams are shown as finished teams; there is no pick order
-// and no "still unpicked" list on this screen.
+const PAIRING_BLURB: Record<PlayoffPairing, string> = {
+  halves:
+    "Top half of the standings snakes into the top teams and the bottom half into the bottom teams (eight kids: 1 with 4, 2 with 3, then 5 with 8, 6 with 7). Round one sends each top team against a bottom team.",
+  snake: "1 with the last, 2 with the next, and so on.",
+};
+
+// Week 6: attendance → teams seeded from the standings by the season's pairing
+// rule (SEASON_LEAGUE_PLAYOFF_PAIRING) → (optional moves) → lock. Teams are
+// shown as finished teams with their round-one matchups; there is no pick
+// order and no "still unpicked" list on this screen.
 export default function TeamLocker({ group, roster, initialPresent }: Props) {
   const router = useRouter();
   const [present, setPresent] = useState<Set<string>>(() => new Set(initialPresent));
   const [teams, setTeams] = useState<TeamDraft[] | null>(null);
+  const [pairing, setPairing] = useState<PlayoffPairing>("snake");
   const [names, setNames] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -53,6 +62,7 @@ export default function TeamLocker({ group, roster, initialPresent }: Props) {
         return;
       }
       setTeams(result.teams.map((t) => ({ seed: t.seed, members: [...t.members] })));
+      setPairing(result.pairing);
       setNames(result.names);
     });
   }
@@ -85,6 +95,8 @@ export default function TeamLocker({ group, roster, initialPresent }: Props) {
   }
 
   const sizesOk = teams ? teams.every((t) => t.members.length >= 2 && t.members.length <= 3) : false;
+  const teamLabel = (t: TeamDraft) =>
+    `Team ${t.seed} (${t.members.map((id) => names[id] ?? "Player").join(" & ") || "empty"})`;
 
   return (
     <div className="space-y-5">
@@ -145,8 +157,8 @@ export default function TeamLocker({ group, roster, initialPresent }: Props) {
             Teams · seeded from the standings
           </p>
           <p className="text-xs text-ngpa-white/55 mb-3">
-            1 with {teams.length > 1 ? "the last" : "—"}, 2 with the next, and so on. Move a kid with the
-            dropdown if you need to; every team needs 2 or 3 players.
+            {PAIRING_BLURB[pairing]} Move a kid with the dropdown if you need to; every team needs 2 or 3
+            players.
           </p>
           <ol className="space-y-3">
             {teams.map((t) => (
@@ -175,6 +187,19 @@ export default function TeamLocker({ group, roster, initialPresent }: Props) {
               </li>
             ))}
           </ol>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ngpa-teal mt-4 mb-1">Round one</p>
+          <ul className="space-y-1 text-sm text-ngpa-white/80">
+            {firstRound(teams.length).map((m) => {
+              const a = teams.find((t) => t.seed === m.a);
+              const b = m.b === "bye" ? null : teams.find((t) => t.seed === m.b);
+              return (
+                <li key={m.match}>
+                  {a ? teamLabel(a) : `Team ${m.a}`}
+                  {b ? ` vs ${teamLabel(b)}` : " has a bye"}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
     </div>

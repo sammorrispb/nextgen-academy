@@ -13,6 +13,7 @@ import {
   type RotationLeagueSeason,
 } from "@/data/rotation-league-seasons";
 import { CHILD_LAST_NAME_RE, cleanChildLastName } from "@/lib/child-last-name";
+import { PLAYOFF_PAIRINGS, type PlayoffPairing } from "@/lib/season-league/finals";
 import { callRotationLeague, type LeagueResult } from "@/lib/rotation-league/client";
 import { buildRosterPlayers, readSeasonRegistrations, type RosterPlayer } from "@/lib/rotation-league/roster";
 
@@ -507,6 +508,15 @@ export interface PlayoffPlayer {
 export interface PlayoffPreview {
   locked: boolean;
   teams: { seed: number; players: PlayoffPlayer[] }[];
+  /** The rule the suggested (unlocked) teams follow. */
+  pairing: PlayoffPairing;
+  /** False when Link & Dink refused the pairing field (a build from before it
+   * existed) and these are its snake teams instead of the rule asked for. */
+  pairingApplied: boolean;
+}
+
+function isPlayoffPairing(v: unknown): v is PlayoffPairing {
+  return typeof v === "string" && (PLAYOFF_PAIRINGS as readonly string[]).includes(v);
 }
 
 export type BracketEntrant = { seed: number; players: string[] } | "bye" | null;
@@ -534,13 +544,34 @@ export interface PlayoffView {
 
 const SLOT_ID = /^[A-Za-z0-9:_-]{1,40}$/;
 
-export async function previewPlayoff(slug: unknown): Promise<Outcome<PlayoffPreview>> {
+/** Suggested teams under the season's pairing rule, or under `pick` for this preview. */
+export async function previewPlayoff(slug: unknown, pick?: unknown): Promise<Outcome<PlayoffPreview>> {
   const season = needSeason(slug);
   if ("ok" in season) return season;
   if (season.playoffWeek === null) return { ok: false, message: MESSAGES.no_playoff };
-  const res = await callRotationLeague<PlayoffPreview>({ action: "playoff_preview", season_slug: season.slug });
+  if (pick !== undefined && !isPlayoffPairing(pick)) return { ok: false, message: "Unknown pairing." };
+  const requested: PlayoffPairing = pick === undefined ? season.playoffPairing : pick;
+  // Snake is the endpoint's default and travels as no field at all: a Link &
+  // Dink build from before `pairing` existed rejects any unknown field.
+  let res = await callRotationLeague<PlayoffPreview>({
+    action: "playoff_preview",
+    season_slug: season.slug,
+    ...(requested === "snake" ? {} : { pairing: requested }),
+  });
+  let pairingApplied = true;
+  if (!res.ok && res.code === "bad_input" && requested !== "snake") {
+    res = await callRotationLeague<PlayoffPreview>({ action: "playoff_preview", season_slug: season.slug });
+    pairingApplied = false;
+  }
   if (!res.ok) return fail(res);
-  return { ok: true, locked: res.data.locked === true, teams: Array.isArray(res.data.teams) ? res.data.teams : [] };
+  const echoed = isPlayoffPairing(res.data.pairing) ? res.data.pairing : null;
+  return {
+    ok: true,
+    locked: res.data.locked === true,
+    teams: Array.isArray(res.data.teams) ? res.data.teams : [],
+    pairing: echoed ?? (pairingApplied ? requested : "snake"),
+    pairingApplied,
+  };
 }
 
 /** Lock teams given as seed order -> registration refs (the coach may have moved kids). */

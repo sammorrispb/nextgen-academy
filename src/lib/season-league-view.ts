@@ -5,6 +5,7 @@ import {
   SEASON_LEAGUE_GAME_TARGETS,
   SEASON_LEAGUE_GROUPS,
   SEASON_LEAGUE_MAX_BRACKET_TEAMS,
+  SEASON_LEAGUE_PLAYOFF_PAIRING,
   SEASON_LEAGUE_PLAYOFF_WEEK,
   SEASON_LEAGUE_PLAY_WEEKS,
   SEASON_LEAGUE_PUBLIC_TITLE,
@@ -38,10 +39,11 @@ import {
   type SeasonLeagueRow,
 } from "@/lib/notion-season-league";
 import {
+  pairTeams,
   resolveBracket,
-  snakeTeams,
   type BracketResult,
   type BracketState,
+  type PlayoffPairing,
   type Team,
 } from "@/lib/season-league/finals";
 import { buildNameMap, nameFor, sideLabel } from "@/lib/season-league/names";
@@ -506,7 +508,16 @@ export interface TeamsInput {
 }
 
 export type TeamsPreview =
-  | { ok: true; group: SeasonLeagueGroup; present: PlayerId[]; ranked: PlayerId[]; teams: Team[]; names: Record<PlayerId, string> }
+  | {
+      ok: true;
+      group: SeasonLeagueGroup;
+      present: PlayerId[];
+      ranked: PlayerId[];
+      teams: Team[];
+      names: Record<PlayerId, string>;
+      /** The rule the suggested teams follow (coach-adjusted teams keep it as a label). */
+      pairing: PlayoffPairing;
+    }
   | { ok: false; message: string };
 
 function parseTeams(raw: unknown, present: readonly PlayerId[]): Team[] | { error: string } {
@@ -545,12 +556,12 @@ function computeTeams(snapshot: LeagueSnapshot, presentIds: unknown[], teamsRaw:
     if ("error" in parsed) return { ok: false, message: parsed.error };
     teams = parsed;
   } else {
-    teams = snakeTeams(ranked);
+    teams = pairTeams(ranked, SEASON_LEAGUE_PLAYOFF_PAIRING);
   }
   if (teams.length > SEASON_LEAGUE_MAX_BRACKET_TEAMS) return { ok: false, message: `At most ${SEASON_LEAGUE_MAX_BRACKET_TEAMS} teams` };
   const names: Record<PlayerId, string> = {};
   for (const id of present) names[id] = nameFor(snapshot.names, id);
-  return { ok: true, group: snapshot.group, present, ranked, teams, names };
+  return { ok: true, group: snapshot.group, present, ranked, teams, names, pairing: SEASON_LEAGUE_PLAYOFF_PAIRING };
 }
 
 export async function previewTeams(input: TeamsInput): Promise<TeamsPreview> {

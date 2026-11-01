@@ -432,13 +432,20 @@ a family nearly being told the wrong product under that name, so parent-facing c
 - **Standings rank on SHRUNK win %** `(W+2)/(GP+4)` so a 3–0 Sunday can't outrank a 12–3
   season (kids miss weeks and play 3 or 4 games); tiebreaks point-diff per game, then
   points-for per game, then name. No head-to-head — noise in rotating doubles.
-- **Week 6 = snake seeding + double elimination** (`finals.ts`): 1+N, 2+N−1 …, an odd
+- **Week 6 = seeded teams + double elimination** (`finals.ts`): snake, 1+N, 2+N−1 …, an odd
   lowest-ranked kid rides as a third on the last team; the coach can move kids before
   locking; teams freeze at lock (`Phase = Team` rows carry the seed). The bracket is a
   static blueprint of slots resolved from results — byes to top seeds and propagated, a
   grand-final reset only when the losers-side team wins the final; real games are always
   2T−2 (+1). Sam chose this over a captains' draft because a visible pick order can leave
   a nine-year-old picked last in front of the group.
+  **Since 2026-11-01 the teams follow `SEASON_LEAGUE_PLAYOFF_PAIRING = "halves"`** (Sam): the
+  top half of the standings snakes into the top teams and the bottom half into the bottom
+  teams, seeded so round one sends each top team against a bottom team (eight kids: 1+4 v
+  5+8 and 2+3 v 6+7; `pairTeams` keeps snake in the engine). The locker names the round-one
+  matchups before Lock, and the same rule and pins live in community-os
+  `packages/rotation-league` (`e2e/season-league-finals.spec.ts`,
+  `e2e/rotation-league-playoff-pairing.spec.ts`).
 - **One Notion DB, `NOTION_SEASON_LEAGUE_DB_ID` ("NGA Season League Games"), holds NO
   names.** One row per game / day / team / playoff game (`Phase`); kids are `relation`
   links to their Fall Registrations row and first names join at render, so the DB is
@@ -567,8 +574,13 @@ season.
   build doesn't talk to Link & Dink" message. L&D's error text never reaches the coach
   unless it is a known engine code; `bad_score` shows the engine's own short reason.
 - **Playoff (`/coach/league/<slug>/playoff`, 2026-10-20):** check in on the playoff week,
-  review the snake-seeded teams from the standings of the kids checked in (tap two names
-  to swap them), **Lock**, then score the double-elimination bracket game by game. Link &
+  review the teams the season's `playoffPairing` suggests from the standings of the kids
+  checked in (`halves` since 2026-11-01: top half against bottom half, 1+4 v 5+8 and 2+3 v
+  6+7 with eight kids; snake is one tap away; the round-one matchups show before Lock; tap
+  two names to swap them), **Lock**, then score the double-elimination bracket game by game.
+  Link & Dink builds the suggested teams (`playoff_preview` takes `pairing`); a build from
+  before that field rejects it as `bad_input`, so the page falls back to that build's snake
+  teams and says so rather than relabel them. Link &
   Dink stores only the locked teams and a score per slot (`ld.rotation_league_playoff_members`,
   community-os #1852) and recomputes byes, the reset and the champion on every read. A
   slot is scoreable when ready, or correctable while nothing downstream has been played;

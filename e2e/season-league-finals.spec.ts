@@ -4,6 +4,9 @@ import {
   lossesBySeed,
   nextPow2,
   resolveBracket,
+  firstRound,
+  halvesTeams,
+  pairTeams,
   snakeTeams,
   standardBracket,
   type BracketResult,
@@ -17,6 +20,10 @@ import { mulberry32 } from "../src/lib/season-league/prng";
 // count the season can produce (2..8) under random results.
 //   npx playwright test e2e/season-league-finals.spec.ts --project=desktop
 //
+// Mutation checks (halves): give the bottom teams ascending seeds → the
+// eight-kid round-one pin and the top-meets-bottom pin fail; drop the one-team
+// snake fallback → the three-kid pin fails; take the bottom half's odd kid onto
+// a top team → the seven- and nine-kid pins fail.
 // Mutation checks: drop the odd-kid `push` in snakeTeams → the seven-kids pin
 // fails; make a one-bye slot `pending` instead of auto-advancing → the random-
 // results pins fail (the bracket never completes); force `resetNeeded` false →
@@ -78,6 +85,116 @@ test.describe("snake seeding", () => {
     expect(snakeTeams(["a", "b", "a", "c", "d"])).toEqual([
       { seed: 1, members: ["a", "d"] },
       { seed: 2, members: ["b", "c"] },
+    ]);
+  });
+});
+
+test.describe("top-half / bottom-half pairing (Sam, 2026-11-01)", () => {
+  test("eight kids → 1+4, 2+3 on top and 6+7, 5+8 below, so round one is 1+4 v 5+8 and 2+3 v 6+7", () => {
+    const teams = halvesTeams(ranked(8));
+    expect(teams).toEqual([
+      { seed: 1, members: ["r1", "r4"] },
+      { seed: 2, members: ["r2", "r3"] },
+      { seed: 3, members: ["r6", "r7"] },
+      { seed: 4, members: ["r5", "r8"] },
+    ]);
+    const members = new Map(teams.map((t) => [t.seed, t.members]));
+    expect(firstRound(4).map((m) => [members.get(m.a), members.get(m.b as number)])).toEqual([
+      [["r1", "r4"], ["r5", "r8"]],
+      [["r2", "r3"], ["r6", "r7"]],
+    ]);
+  });
+
+  test("top team i meets bottom team i in round one, for 4, 8 and 16 kids", () => {
+    for (const n of [4, 8, 16]) {
+      const half = n / 2;
+      const teams = halvesTeams(ranked(n));
+      const bottomPairs = snakeTeams(ranked(n).slice(half));
+      const matches = firstRound(teams.length);
+      expect(matches, `${n} kids`).toHaveLength(teams.length / 2);
+      for (const m of matches) {
+        const top = teams.find((t) => t.seed === m.a);
+        const bottom = teams.find((t) => t.seed === m.b);
+        expect(top?.members.every((r) => Number(r.slice(1)) <= half), `${n} kids: seed ${m.a} is a top team`).toBe(true);
+        expect(bottom?.members, `${n} kids: top team ${m.a} meets bottom team ${m.a}`).toEqual(bottomPairs[m.a - 1].members);
+      }
+    }
+  });
+
+  test("four kids → the top two against the bottom two", () => {
+    expect(halvesTeams(ranked(4))).toEqual([
+      { seed: 1, members: ["r1", "r2"] },
+      { seed: 2, members: ["r3", "r4"] },
+    ]);
+    expect(firstRound(2)).toEqual([{ match: 1, a: 1, b: 2 }]);
+  });
+
+  test("an odd kid rides as a third on the last bottom team; a single team is plain snake", () => {
+    expect(halvesTeams(ranked(7))).toEqual([
+      { seed: 1, members: ["r1", "r4"] },
+      { seed: 2, members: ["r2", "r3"] },
+      { seed: 3, members: ["r5", "r6", "r7"] },
+    ]);
+    expect(halvesTeams(ranked(9))).toEqual([
+      { seed: 1, members: ["r1", "r4"] },
+      { seed: 2, members: ["r2", "r3"] },
+      { seed: 3, members: ["r6", "r7", "r9"] },
+      { seed: 4, members: ["r5", "r8"] },
+    ]);
+    expect(halvesTeams(ranked(5))).toEqual([
+      { seed: 1, members: ["r1", "r2"] },
+      { seed: 2, members: ["r3", "r4", "r5"] },
+    ]);
+    expect(halvesTeams(ranked(3))).toEqual(snakeTeams(ranked(3)));
+  });
+
+  test("six and ten kids: the top half of the teams snakes from the top of the standings, the rest from the bottom", () => {
+    expect(halvesTeams(ranked(6))).toEqual([
+      { seed: 1, members: ["r1", "r4"] },
+      { seed: 2, members: ["r2", "r3"] },
+      { seed: 3, members: ["r5", "r6"] },
+    ]);
+    expect(halvesTeams(ranked(10))).toEqual([
+      { seed: 1, members: ["r1", "r6"] },
+      { seed: 2, members: ["r2", "r5"] },
+      { seed: 3, members: ["r3", "r4"] },
+      { seed: 4, members: ["r8", "r9"] },
+      { seed: 5, members: ["r7", "r10"] },
+    ]);
+  });
+
+  test("every kid is on exactly one team of 2 or 3 and seeds run 1..T, for 2 to 16 kids", () => {
+    for (let n = 2; n <= 16; n += 1) {
+      const teams = halvesTeams(ranked(n));
+      expect(teams.map((t) => t.seed), `${n} kids`).toEqual(teams.map((_, i) => i + 1));
+      expect(teams.flatMap((t) => t.members).sort(), `${n} kids`).toEqual(ranked(n).sort());
+      expect(teams.every((t) => t.members.length >= 2 && t.members.length <= 3), `${n} kids`).toBe(true);
+    }
+  });
+
+  test("too few kids → no teams; duplicates are ignored; pairTeams picks the rule, snake by default", () => {
+    expect(halvesTeams(ranked(1))).toEqual([]);
+    expect(halvesTeams([])).toEqual([]);
+    expect(halvesTeams(["a", "b", "a", "c", "d"])).toEqual([
+      { seed: 1, members: ["a", "b"] },
+      { seed: 2, members: ["c", "d"] },
+    ]);
+    expect(pairTeams(ranked(8), "halves")).toEqual(halvesTeams(ranked(8)));
+    expect(pairTeams(ranked(8), "snake")).toEqual(snakeTeams(ranked(8)));
+    expect(pairTeams(ranked(8))).toEqual(snakeTeams(ranked(8)));
+  });
+
+  test("the first round names byes past the team count, never for the higher seed", () => {
+    expect(firstRound(1)).toEqual([]);
+    expect(firstRound(3)).toEqual([
+      { match: 1, a: 1, b: "bye" },
+      { match: 2, a: 2, b: 3 },
+    ]);
+    expect(firstRound(5).map((m) => [m.a, m.b])).toEqual([
+      [1, "bye"],
+      [4, 5],
+      [2, "bye"],
+      [3, "bye"],
     ]);
   });
 });

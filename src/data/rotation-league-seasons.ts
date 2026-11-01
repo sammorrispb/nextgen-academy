@@ -1,4 +1,5 @@
 import { FALL_PLAY_DATES } from "@/data/fall-2026";
+import type { PlayoffPairing } from "@/lib/season-league/finals";
 
 // Seasons run on Link & Dink's rotation-league engine (community-os
 // packages/rotation-league, ld.rotation_league_*), reached through
@@ -27,6 +28,9 @@ export interface RotationLeagueSeason {
   targetGamesPerPlayer: number;
   playWeeks: readonly number[];
   playoffWeek: number | null;
+  /** How the playoff teams come off the standings: Link & Dink's engine
+   * builds them (`pairTeams`), the coach can still swap kids before locking. */
+  playoffPairing: PlayoffPairing;
   gameTarget: number;
   gameTargets: readonly number[];
   winBy: number;
@@ -48,6 +52,11 @@ const FALL_WEEK_DATES: Record<number, string> = Object.fromEntries(
   FALL_PLAY_DATES.map((date, i) => [i + 1, date]),
 );
 
+// Playoff teams (Sam, 2026-11-01): the top half of the standings against the
+// bottom half, so eight kids play 1+4 v 5+8 and 2+3 v 6+7. Snake (1+8, 2+7, …)
+// stays one tap away on the playoff page.
+const FALL_PLAYOFF_PAIRING: PlayoffPairing = "halves";
+
 export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
   {
     slug: "nga-fall-2026-green-trial",
@@ -60,6 +69,7 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     targetGamesPerPlayer: 3,
     playWeeks: [1, 2, 3, 4, 5],
     playoffWeek: 6,
+    playoffPairing: FALL_PLAYOFF_PAIRING,
     gameTarget: 11,
     gameTargets: [11, 15, 21],
     winBy: 2,
@@ -78,6 +88,7 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     targetGamesPerPlayer: 3,
     playWeeks: [1, 2, 3, 4, 5],
     playoffWeek: 6,
+    playoffPairing: FALL_PLAYOFF_PAIRING,
     gameTarget: 11,
     gameTargets: [11, 15, 21],
     winBy: 2,
