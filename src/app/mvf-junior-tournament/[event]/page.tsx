@@ -68,6 +68,12 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
       <h1 className="font-heading text-4xl sm:text-5xl font-black text-ngpa-white mt-3 leading-tight">
         MVF Junior Tournament
       </h1>
+      {registration && <a
+        href="#register"
+        className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-full bg-ngpa-teal px-6 py-3 font-heading text-base font-bold text-ngpa-deep transition-colors hover:bg-ngpa-teal-bright focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ngpa-teal-bright sm:w-auto"
+      >
+        Register Now
+      </a>}
       {!registration && <section aria-labelledby="registration-heading" className="mt-6 rounded-2xl border border-ngpa-teal/40 bg-ngpa-panel p-6">
         <h2 id="registration-heading" className="font-heading text-xl font-bold text-ngpa-white">
           {published ? "Registration is closed." : "Registration is not open yet."}
