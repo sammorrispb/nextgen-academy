@@ -94,7 +94,7 @@ export interface WeeklyNewsletterInput {
     /** UTM-stamped /fall registration URL. */
     url: string;
     progress?: FallNewsletterProgress;
-    /** ISO date of the season's playoff Sunday, when it has one. */
+    /** ISO date of the season's Finale Sunday, when it has one. */
     playoffDate?: string;
   } | null;
   /**
@@ -257,8 +257,8 @@ function fallGlance(input: WeeklyNewsletterInput): NewsletterGlance | null {
   const playoff = upcomingPlayoff(input);
   const remaining = fall.progress?.scheduleNotes[0] ?? "";
   return {
-    text: `Fall Sunday season at ${fall.venueLine}: ${remaining}${playoff ? ` Playoff ${longDay(playoff)}.` : ""}`.replace(/\s+$/, ""),
-    short: playoff ? `fall playoff ${monthDay(playoff)}` : "fall Sundays continue",
+    text: `Fall Sunday season at ${fall.venueLine}: ${remaining}${playoff ? ` Finale: ${longDay(playoff)}.` : ""}`.replace(/\s+$/, ""),
+    short: playoff ? `fall finale ${monthDay(playoff)}` : "fall Sundays continue",
   };
 }
 
@@ -340,7 +340,7 @@ function fallNotes(input: WeeklyNewsletterInput): string[] {
   return [
     ...(fall.progress?.scheduleNotes ?? []),
     ...(fall.progress?.makeupNotes ?? []),
-    ...(playoff ? [`Playoff: ${longDay(playoff)}.`] : []),
+    ...(playoff ? [`Finale: ${longDay(playoff)}.`] : []),
   ];
 }
 

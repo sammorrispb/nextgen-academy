@@ -225,7 +225,7 @@ export default async function FallPage() {
                   <span key={d}>
                     {i > 0 && " · "}
                     <time dateTime={d}>{sundayLabel(d)}</time>
-                    {d === FALL_PLAYOFF_DATE && " (playoff)"}
+                    {d === FALL_PLAYOFF_DATE && " (finale)"}
                   </span>
                 ))}
                 .
@@ -245,7 +245,7 @@ export default async function FallPage() {
                     <time dateTime={d}>{sundayLabel(d)}</time>
                   </span>
                 ))}
-                , so the season wraps with the playoff on{" "}
+                , so the season wraps with the finale on{" "}
                 <time dateTime={FALL_PLAYOFF_DATE}>{sundayLabel(FALL_PLAYOFF_DATE)}</time>. We
                 make the weather call two hours before your group starts.
               </li>

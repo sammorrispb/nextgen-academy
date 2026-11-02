@@ -124,14 +124,16 @@ Each Sunday, on your phone:
 4. A kid arrives late or leaves? Re-check attendance and **Save — replace unplayed
    rounds**. Played games are kept; only the unplayed rounds are re-planned around the new
    list and the round numbers continue.
-5. Week 6: check attendance, **Seed the teams** (1+6, 2+5, 3+4 from the standings; an odd
-   lowest-ranked kid becomes a third on the last team; move anyone with the dropdown),
-   **Lock teams**, then score the bracket games marked "on deck" — double elimination,
-   single games to 11, on either court in any order. The champions banner appears on the
-   parent page when the final (and the reset, if the losers-side team wins it) is scored.
+5. Week 6 (Nov 8) is the **Finale**. Run it like any Sunday — check attendance, preview,
+   save, score — and those games count in the standings. Keep games short (tick "ended on
+   time") and set "Rounds to add" to what fits the block: about 7 for eight kids, 5–6 for
+   seven. After the last round-robin score, the top four kids checked in play one game for
+   1st and 2nd: #1 and #4 against #2 and #3, from the standings on the page. If #4 and #5
+   are tied, settle it on court. Everyone else cheers. The Link & Dink trial
+   (`/coach/league`) is not used on Nov 8.
 
 The parent link for each group is on `/coach/fall-season` ("Copy parent link") — paste it
-into that group's WhatsApp once. It shows first names, records, scores and the bracket,
+into that group's WhatsApp once. It shows first names, records, scores and the final,
 nothing else, and it is unlisted: rotate `STANDINGS_LINK_SECRET` in Vercel to revoke it.
 
 Before the first Sunday: the "NGA Season League Games" Notion DB must exist, be **shared

@@ -298,12 +298,12 @@ export function buildFallEvents(origin: string): EventFeedItem[] {
 
   return [
     // The played calendar: Sep 27 and Oct 11 washed out onto the rain dates,
-    // so Nov 1 and Nov 8 are confirmed sessions now and Nov 8 is the playoff.
+    // so Nov 1 and Nov 8 are confirmed sessions now and Nov 8 is the Finale.
     ...FALL_PLAY_DATES.map((date) => ({
       ...shared(date),
       title:
         date === FALL_PLAYOFF_DATE
-          ? "NGA Fall Season — Playoff (Green & Yellow)"
+          ? "NGA Fall Season — Finale (Green & Yellow)"
           : "NGA Fall Season — Green & Yellow",
       tentative: false,
       status: "Open" as const,

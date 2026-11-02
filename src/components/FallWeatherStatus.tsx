@@ -40,7 +40,7 @@ function pill(s: FallGroupSession, g: FallGroupSchedule): { text: string; tone: 
       return {
         text:
           s.date === FALL_PLAYOFF_DATE
-            ? "Playoff"
+            ? "Finale"
             : s.makeupFor
               ? `Make-up for ${shortDayLabel(s.makeupFor)}`
               : "Scheduled",

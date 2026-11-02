@@ -313,7 +313,7 @@ function computeDay(
   roundsRaw: unknown,
   append = false,
 ): DayPreview {
-  if (!isPlayWeek(week)) return { ok: false, message: "Week 6 is the playoff — use the teams panel" };
+  if (!isPlayWeek(week)) return { ok: false, message: "That Sunday isn't a play week" };
   if (snapshot.rowsStatus !== "ok") {
     return {
       ok: false,

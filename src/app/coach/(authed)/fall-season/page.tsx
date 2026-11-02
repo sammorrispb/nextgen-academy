@@ -39,7 +39,8 @@ export default async function FallSeasonIndexPage() {
       </h1>
       <p className="text-base text-ngpa-white/70 leading-relaxed mb-8 max-w-2xl">
         Rotating partners, singles and doubles every round, standings for the
-        parents, and a seeded double-elimination playoff on week {SEASON_LEAGUE_PLAYOFF_WEEK}.
+        parents, and the Finale on week {SEASON_LEAGUE_PLAYOFF_WEEK}: a round robin that counts, then
+        #1 &amp; #4 vs #2 &amp; #3 for 1st and 2nd.
         Open a Sunday, check in who&rsquo;s here, preview, save, score.
       </p>
 
@@ -111,14 +112,8 @@ export default async function FallSeasonIndexPage() {
 
               <ol className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-6">
                 {snapshot.weeks.map((w) => {
-                  const isPlayoff = w.week === SEASON_LEAGUE_PLAYOFF_WEEK;
-                  const status = isPlayoff
-                    ? snapshot.playoff.state?.complete
-                      ? "champion crowned"
-                      : snapshot.playoff.locked
-                        ? `${snapshot.playoff.results.length} played`
-                        : "playoff"
-                    : w.played + w.scheduled === 0
+                  const status =
+                    w.played + w.scheduled === 0
                       ? "not started"
                       : `${w.played} played${w.scheduled ? ` · ${w.scheduled} up` : ""}`;
                   return (

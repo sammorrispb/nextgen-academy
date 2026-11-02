@@ -243,15 +243,17 @@ test.describe("events feed — Fall 2026", () => {
     }
   });
 
-  test("washed-out Sundays are gone and the playoff is named", () => {
+  test("washed-out Sundays are gone and Nov 8 is named the Finale", () => {
     const items = buildFallEvents(ORIGIN);
     const played = new Set<string>(FALL_PLAY_DATES);
     for (const washedOut of FALL_SUNDAYS.filter((d) => !played.has(d))) {
       expect(items.map((i) => i.date)).not.toContain(washedOut);
     }
-    const playoff = items.find((i) => i.date === FALL_PLAYOFF_DATE)!;
-    expect(playoff.title).toContain("Playoff");
-    expect(items.filter((i) => i.title.includes("Playoff"))).toHaveLength(1);
+    const finale = items.find((i) => i.date === FALL_PLAYOFF_DATE)!;
+    expect(finale.title).toContain("Finale");
+    expect(finale.key).toBe(`nga-fall:sunday:${FALL_PLAYOFF_DATE}`);
+    expect(items.filter((i) => i.title.includes("Finale"))).toHaveLength(1);
+    expect(items.filter((i) => /playoff/i.test(i.title))).toHaveLength(0);
   });
 });
 
