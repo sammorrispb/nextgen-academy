@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import MvfSeriesRegistrationForm from "@/components/MvfSeriesRegistrationForm";
+import MvfSeriesFormatRules from "@/components/MvfSeriesFormatRules";
 import { publicSeriesRelease, publishedSeriesRelease, type SeriesRelease } from "@/data/mvf-series-registration";
 import JsonLd from "@/components/JsonLd";
 import { mvfSeriesJsonLd } from "@/lib/mvf-series-jsonld";
@@ -121,6 +122,8 @@ export default async function MvfJuniorSeriesPage({ params }: Props) {
         <p className="text-ngpa-white/80 text-base mt-3">{published ? published.minimumEnrollmentPolicy : MVF_JUNIOR_SERIES_ENROLLMENT}</p>
         {!published && <p className="text-ngpa-white/80 text-sm mt-2">{MVF_JUNIOR_SERIES_SHORT_BRACKET}</p>}
       </section>
+
+      <MvfSeriesFormatRules />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
         <section aria-labelledby="venue-heading" className="bg-ngpa-panel rounded-2xl p-6 border border-ngpa-slate/60">
