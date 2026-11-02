@@ -11,11 +11,10 @@
 //   - weeks 1–5 are league play. Every round runs a DOUBLES court and a SINGLES
 //     court, so with six kids nobody sits and each kid plays exactly three games
 //     a Sunday (two doubles, one singles). Games to 11, win by 2.
-//   - week 6 is the playoff: teams seeded from the standings, then a
-//     double-elimination bracket of single games to 11. Snake (1+6, 2+5, 3+4; an
-//     odd lowest-ranked kid rides as a third on the last team) until 2026-11-01,
-//     when Sam set top-half / bottom-half pairing for the Fall 2026 playoff:
-//     see SEASON_LEAGUE_PLAYOFF_PAIRING.
+//   - week 6 (Nov 8) is the Finale (Sam, 2026-11-02): a rotating-partner round
+//     robin that counts toward the standings like any Sunday, then one game for
+//     1st and 2nd — #1 & #4 vs #2 & #3 among the kids checked in that day. It
+//     replaced the seeded double-elimination playoff planned until 2026-11-01.
 //   - every pair of kids partners a near-equal number of times across the
 //     season; the engine reads the season's played games to guarantee it.
 // Every number here is imported from the season files rather than re-typed, so
@@ -38,7 +37,7 @@ export const SEASON_LEAGUE_GROUPS = FALL_SEASON_GROUPS;
 export const SEASON_LEAGUE_VENUE_SHORT = FALL_VENUE_SHORT;
 
 /** The Sunday each league week is actually PLAYED on, week 1 first: the
- * season's played calendar (FALL_PLAY_DATES), playoff on Nov 8. Rows key on
+ * season's played calendar (FALL_PLAY_DATES), the Finale on Nov 8. Rows key on
  * Week, never on the date, so this only moves labels and the Session Date
  * stamped on new rows. */
 export const SEASON_LEAGUE_SUNDAYS: readonly string[] = FALL_PLAY_DATES;
@@ -46,7 +45,9 @@ export const SEASON_LEAGUE_SUNDAYS: readonly string[] = FALL_PLAY_DATES;
 export const SEASON_LEAGUE_WEEKS = [1, 2, 3, 4, 5, 6] as const;
 export type SeasonLeagueWeek = (typeof SEASON_LEAGUE_WEEKS)[number];
 
-export const SEASON_LEAGUE_PLAY_WEEKS = [1, 2, 3, 4, 5] as const;
+/** Week 6 is a play week too: the Finale's round robin counts. */
+export const SEASON_LEAGUE_PLAY_WEEKS = [1, 2, 3, 4, 5, 6] as const;
+/** The Finale Sunday — its round robin, then the final game. */
 export const SEASON_LEAGUE_PLAYOFF_WEEK: SeasonLeagueWeek = 6;
 
 /** One tennis court per group block = two pickleball courts. */

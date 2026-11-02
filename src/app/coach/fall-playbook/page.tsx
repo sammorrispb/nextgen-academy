@@ -872,7 +872,7 @@ export default async function FallPlaybookPage() {
               ))}
             </div>
             <p className="mt-4 text-xs text-ngpa-muted print:text-gray-600">
-              Season Sundays: {FALL_PLAY_DATES.map(formatSunday).join(" · ")}. Playoff:{" "}
+              Season Sundays: {FALL_PLAY_DATES.map(formatSunday).join(" · ")}. Finale:{" "}
               {formatSunday(FALL_PLAYOFF_DATE)}. Both rain dates are in use.
             </p>
           </Section>

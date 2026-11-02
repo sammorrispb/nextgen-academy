@@ -18,9 +18,6 @@ import AddRoundButton from "../../AddRoundButton";
 import DayPlanner from "../../DayPlanner";
 import { GameTargetProvider } from "../../GameTarget";
 import GameScoreForm from "../../GameScoreForm";
-import PlayoffScoreForm from "../../PlayoffScoreForm";
-import TeamLocker from "../../TeamLocker";
-import UnlockTeamsButton from "../../UnlockTeamsButton";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +36,7 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
   const view = buildStandingsView(snapshot);
   const summary = snapshot.weeks.find((w) => w.week === week)!;
   const slug = seasonLeagueGroupSlug(group);
-  const isPlayoff = week === SEASON_LEAGUE_PLAYOFF_WEEK;
+  const isFinale = week === SEASON_LEAGUE_PLAYOFF_WEEK;
 
   const roster = snapshot.confirmed.map((p) => ({ id: p.pageId, name: nameFor(snapshot.names, p.pageId) }));
   const initialPresent =
@@ -64,7 +61,7 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
         Week {week} · <time dateTime={summary.date}>{formatLongDate(summary.date)}</time> · {option.timeLabel}
       </p>
       <h1 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight mb-2">
-        {option.label} · {isPlayoff ? "Playoff" : `Sunday ${week}`}
+        {option.label} · {isFinale ? "Finale" : `Sunday ${week}`}
       </h1>
       <p className="text-sm text-ngpa-white/65 mb-8">
         Tick &ldquo;ended on time&rdquo; to record a game the clock stopped.
@@ -91,9 +88,6 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
         </div>
       )}
 
-      {isPlayoff ? (
-        <PlayoffSection snapshotLocked={snapshot.playoff.locked} group={group} roster={roster} initialPresent={initialPresent} view={view} snapshot={snapshot} />
-      ) : (
         <div className="space-y-10">
           <section className="rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/40 p-4 sm:p-6">
             <DayPlanner
@@ -175,8 +169,18 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
               <RankingNote />
             </div>
           </section>
+
+          {isFinale && (
+            <section className="rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/5 px-5 py-4">
+              <h2 className="font-heading text-xl font-black text-ngpa-white tracking-tight mb-2">The final</h2>
+              <p className="text-sm text-ngpa-white/75 leading-relaxed">
+                After the round robin, the top four kids checked in today play one game for 1st and
+                2nd: #1 and #4 against #2 and #3, from the standings above once every round-robin
+                game is scored. Everyone else cheers. If #4 and #5 are tied, settle it on court.
+              </p>
+            </section>
+          )}
         </div>
-      )}
       </GameTargetProvider>
       <p className="mt-10 text-xs text-ngpa-white/40">
         Other Sundays:{" "}
@@ -187,103 +191,5 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
         ))}
       </p>
     </>
-  );
-}
-
-function PlayoffSection({
-  snapshotLocked,
-  group,
-  roster,
-  initialPresent,
-  view,
-  snapshot,
-}: {
-  snapshotLocked: boolean;
-  group: "Green" | "Yellow";
-  roster: Array<{ id: string; name: string }>;
-  initialPresent: string[];
-  view: ReturnType<typeof buildStandingsView>;
-  snapshot: Awaited<ReturnType<typeof loadLeagueSnapshot>>;
-}) {
-  const { playoff } = snapshot;
-  if (!snapshotLocked || !playoff.state || !view.playoff) {
-    return (
-      <div className="space-y-10">
-        <section className="rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/40 p-4 sm:p-6">
-          <TeamLocker group={group} roster={roster} initialPresent={initialPresent} />
-        </section>
-        <section>
-          <h2 className="font-heading text-2xl font-black text-ngpa-white tracking-tight mb-4">
-            Final standings (seeding)
-          </h2>
-          <StandingsTable rows={view.standings} />
-        </section>
-      </div>
-    );
-  }
-
-  const { state } = playoff;
-  const canUnlock = playoff.results.length === 0;
-  const visible = state.slots.filter((s) => s.status !== "skipped" && s.status !== "bye");
-
-  return (
-    <div className="space-y-10">
-      {state.champion && view.playoff.champion && (
-        <div className="rounded-2xl border border-ngpa-lime/50 bg-ngpa-lime/10 px-5 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ngpa-lime mb-1">Champions</p>
-          <p className="font-heading text-2xl font-black text-ngpa-white tracking-tight">{view.playoff.champion}</p>
-        </div>
-      )}
-      <section>
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <h2 className="font-heading text-2xl font-black text-ngpa-white tracking-tight">Teams</h2>
-          {canUnlock && <UnlockTeamsButton group={group} />}
-        </div>
-        <ol className="grid gap-2 sm:grid-cols-2">
-          {view.playoff.teams.map((t) => (
-            <li key={t.seed} className="flex items-center gap-3 rounded-xl border border-ngpa-slate/60 bg-ngpa-panel/60 px-4 py-3 text-sm">
-              <span className="font-mono text-xs text-ngpa-white/50">#{t.seed}</span>
-              <span className="font-bold text-ngpa-white">{t.name}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
-      <section>
-        <h2 className="font-heading text-2xl font-black text-ngpa-white tracking-tight mb-1">Bracket</h2>
-        <p className="text-xs text-ngpa-white/55 mb-4">
-          Double elimination — a team is out after its second loss. Games marked &ldquo;on deck&rdquo; can
-          be played now, in any order, on either court.
-        </p>
-        <ul className="divide-y divide-ngpa-slate/40 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/60">
-          {visible.map((s) => {
-            const g = view.playoff!.games.find((x) => x.id === s.slot.id);
-            const playable = s.status === "ready" || s.status === "played";
-            return (
-              <li key={s.slot.id} className="px-4 py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm">
-                  <span className="text-xs text-ngpa-white/55 mr-2">{s.slot.label}</span>
-                  <span className="font-bold text-ngpa-white">{g?.a ?? "TBD"}</span>
-                  <span className="text-ngpa-white/45"> vs </span>
-                  <span className="font-bold text-ngpa-white">{g?.b ?? "TBD"}</span>
-                  {s.status === "ready" && <span className="ml-2 text-[10px] font-bold uppercase text-ngpa-teal">on deck</span>}
-                </div>
-                {playable ? (
-                  <PlayoffScoreForm
-                    group={group}
-                    slot={s.slot.id}
-                    scoreA={s.result?.scoreA ?? null}
-                    scoreB={s.result?.scoreB ?? null}
-                    timed={playoff.games.find((x) => x.slot === s.slot.id)?.timed ?? false}
-                    played={s.status === "played"}
-                  />
-                ) : (
-                  <span className="text-xs text-ngpa-white/40">waiting on an earlier game</span>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-    </div>
   );
 }

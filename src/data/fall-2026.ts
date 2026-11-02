@@ -206,7 +206,7 @@ export const FALL_RAIN_DATES = ["2026-11-01", "2026-11-08"] as const;
 /**
  * The six Sundays the season is actually PLAYED on, week 1 first. Sep 27 and
  * Oct 11 rained out and moved to the two rain dates (the weather record on
- * /fall), so the season ends on Nov 8 and that Sunday is the playoff (Sam,
+ * /fall), so the season ends on Nov 8 and that Sunday is the Finale (Sam,
  * 2026-10-18). Written out, never derived at build time.
  *
  * FALL_SUNDAYS + FALL_RAIN_DATES stay as the SOLD calendar: the weather

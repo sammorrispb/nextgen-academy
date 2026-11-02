@@ -200,7 +200,7 @@ test.describe("agent-friendly layout", () => {
 
   test("the Oct 29 issue leads with what families need now, and nothing that has ended", () => {
     const texts = newsletterHighlights(oct29).map((h) => h.text).join("\n");
-    expect(texts).toContain("Playoff Sunday, November 8");
+    expect(texts).toContain("Finale: Sunday, November 8");
     expect(texts).toContain("the last session is Saturday, October 31");
     expect(texts).toContain("last class Thu, Nov 19");
     expect(texts).toMatch(/Winter: indoor plans are being finalized/);
@@ -213,7 +213,7 @@ test.describe("agent-friendly layout", () => {
   });
 
   test("the subject names the issue's top two items, and never says an underway season is open", () => {
-    expect(weeklyNewsletterSubject(oct29)).toBe("Next Gen this week: fall playoff Nov 8 and last Pickl Park Saturday Oct 31");
+    expect(weeklyNewsletterSubject(oct29)).toBe("Next Gen this week: fall finale Nov 8 and last Pickl Park Saturday Oct 31");
     expect(weeklyNewsletterSubject(oct29)).not.toMatch(/open/i);
     expect(weeklyNewsletterSubject({ ...baseInput, fallSeason: fallOpen, sessions: [] })).toBe("Next Gen this week: fall registration open");
     expect(weeklyNewsletterSubject(baseInput)).toBe("Next Gen this week: open sessions this week");
@@ -585,11 +585,12 @@ test.describe("weekly newsletter — fall season block", () => {
     expect(html).not.toContain(">For families enrolled now</h2>");
   });
 
-  test("once underway: remaining dates and the playoff for enrolled families, no price, no sales pitch", () => {
+  test("once underway: remaining dates and the finale for enrolled families, no price, no sales pitch", () => {
     const input: WeeklyNewsletterInput = { ...baseInput, issueDate: "2026-10-29", fallSeason: fallUnderway };
     for (const rendered of [weeklyNewsletterHtml(input), weeklyNewsletterText(input)]) {
       expect(rendered).toContain("2 Sundays remaining: Sun, Nov 1; Sun, Nov 8.");
-      expect(rendered).toContain("Playoff: Sunday, November 8.");
+      expect(rendered).toContain("Finale: Sunday, November 8.");
+      expect(rendered).not.toMatch(/playoff/i);
       expect(rendered).toContain("View remaining dates and weather calls");
       expect(rendered).not.toContain(`$${FALL_SEASON_PRICE_USD}`);
       expect(rendered).not.toContain("Register for the season");
@@ -599,9 +600,11 @@ test.describe("weekly newsletter — fall season block", () => {
     expect(html.indexOf(FALL_SEASON_TITLE)).toBeLessThan(html.indexOf(">Ways to play</h2>"));
   });
 
-  test("a passed playoff is not announced", () => {
+  test("a passed finale is not announced", () => {
     const input: WeeklyNewsletterInput = { ...baseInput, issueDate: "2026-11-09", fallSeason: fallUnderway };
-    expect(weeklyNewsletterHtml(input)).not.toContain("Playoff");
+    for (const rendered of [weeklyNewsletterHtml(input), weeklyNewsletterText(input), weeklyNewsletterSubject(input)]) {
+      expect(rendered).not.toMatch(/finale|playoff/i);
+    }
   });
 
   test("the season the email advertises is the season in the data files", () => {

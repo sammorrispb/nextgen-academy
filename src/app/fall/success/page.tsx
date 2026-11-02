@@ -99,12 +99,12 @@ export default async function FallSuccessPage({ searchParams }: PageProps) {
               {FALL_PLAY_DATES.map((d) => (
                 <li key={d} className="text-sm text-ngpa-muted font-mono">
                   <time dateTime={d}>{sundayLabel(d)}</time>
-                  {d === FALL_PLAYOFF_DATE && " · playoff"}
+                  {d === FALL_PLAYOFF_DATE && " · finale"}
                 </li>
               ))}
             </ul>
             <p className="text-xs text-ngpa-muted/80 mt-3">
-              Both rain dates are already in use, so the season ends with the playoff on{" "}
+              Both rain dates are already in use, so the season ends with the finale on{" "}
               <time dateTime={FALL_PLAYOFF_DATE}>{sundayLabel(FALL_PLAYOFF_DATE)}</time>.
             </p>
           </div>

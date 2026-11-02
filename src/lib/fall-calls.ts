@@ -28,7 +28,7 @@ import {
  * so it cannot drift from them: replay every cancellation in date order and
  * give each one the next unclaimed rain date. The league weeks follow for free
  * — season-league rows key on Week, not date, so a washed-out week is simply
- * played on the next Sunday and the playoff lands on the rain date.
+ * played on the next Sunday and the Finale lands on the rain date.
  *
  * A Sunday that has passed without being marked is counted as held. Sam only
  * has to act when he cancels; "we're on" is optional bookkeeping.

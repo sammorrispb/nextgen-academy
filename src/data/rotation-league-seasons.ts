@@ -69,6 +69,9 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     targetGamesPerPlayer: 3,
     playWeeks: [1, 2, 3, 4, 5],
     playoffWeek: 6,
+    // Nov 8 is the Finale, run and scored in Fall season play (/coach/fall-season)
+    // only; every trial screen says so (Sam, 2026-11-02).
+    note: "Nov 8 Finale is scored in Fall season play only.",
     playoffPairing: FALL_PLAYOFF_PAIRING,
     gameTarget: 11,
     gameTargets: [11, 15, 21],
@@ -88,6 +91,9 @@ export const ROTATION_LEAGUE_SEASONS: readonly RotationLeagueSeason[] = [
     targetGamesPerPlayer: 3,
     playWeeks: [1, 2, 3, 4, 5],
     playoffWeek: 6,
+    // Nov 8 is the Finale, run and scored in Fall season play (/coach/fall-season)
+    // only; every trial screen says so (Sam, 2026-11-02).
+    note: "Nov 8 Finale is scored in Fall season play only.",
     playoffPairing: FALL_PLAYOFF_PAIRING,
     gameTarget: 11,
     gameTargets: [11, 15, 21],

@@ -53,8 +53,12 @@ export default async function FallStandingsPage({ params }: PageProps) {
           </h1>
           <p className="mt-4 text-base sm:text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Sundays {view.timeLabel} at {view.venue}. Rotating partners, singles and
-            doubles every week, and a seeded playoff on{" "}
-            <time dateTime={view.playoffDate}>{formatLongDate(view.playoffDate)}</time>.
+            doubles every week. On{" "}
+            <time dateTime={view.playoffDate}>{formatLongDate(view.playoffDate)}</time>, the
+            finale: a rotating-partner round robin that counts in the standings like any
+            Sunday. Then one game for 1st and 2nd: of the kids there that day, the top four in
+            the standings team up, #1 with #4 against #2 with #3, and the rest of the group
+            cheers them on.
           </p>
 
           <PagePhoto page="/fall/standings/[group]/[token]" />
@@ -70,7 +74,7 @@ export default async function FallStandingsPage({ params }: PageProps) {
 
         {view.playoff && (
           <section>
-            <h2 className="font-heading text-2xl font-black text-ngpa-white tracking-tight mb-4">Playoff</h2>
+            <h2 className="font-heading text-2xl font-black text-ngpa-white tracking-tight mb-4">Finale: 1st and 2nd</h2>
             <PlayoffBoard playoff={view.playoff} />
           </section>
         )}

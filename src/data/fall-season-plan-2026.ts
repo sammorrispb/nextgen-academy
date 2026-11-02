@@ -173,7 +173,7 @@ export const FALL_SEASON_PLAN: readonly SeasonWeek[] = [
     coachLooksFor:
       "Everything, under pressure, with parents watching. And each kid's own week-1 number, beaten.",
     parentLine:
-      "Everything, in real games — and each kid measured against their own week-1 number, never against each other.",
+      "Everything, in real games. The finale is a rotating-partner round robin, then one game for 1st and 2nd while the rest of the group cheers. Whatever the score, each kid's progress is measured against their own week-1 number, never against each other.",
     homeRep: "Nothing. Go play a game with someone for fun.",
   },
 ] as const;
@@ -277,9 +277,9 @@ export const FALL_SEASON_PLAN_YELLOW: readonly SeasonWeek[] = [
     games: ["king-of-the-court", "kitchen-game"],
     ritual: "jailbreak",
     coachLooksFor:
-      "Serving at 9–9 without rushing. Closing a game out. The reset when it gets loud. Then the playoff — and each kid's own week-1 number, beaten.",
+      "Serving at 9–9 without rushing. Closing a game out. The reset when it gets loud. Then the finale — and each kid's own week-1 number, beaten.",
     parentLine:
-      "Learning to win — serving under pressure, closing out a game, the reset when it gets loud — then the playoff, with each kid measured against their own week-1 number, never against each other.",
+      "Learning to win: serving under pressure, closing out a game, slowing a fast point down when it gets loud. Then the finale: a rotating-partner round robin, then one game for 1st and 2nd while the rest of the group cheers. Whatever the score, each kid's progress is measured against their own week-1 number, never against each other.",
     homeRep: "Nothing. Go play a game with someone for fun.",
   },
 ] as const;

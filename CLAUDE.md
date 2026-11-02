@@ -407,9 +407,9 @@ The one-shot notice to families who had **already paid** when the season moved f
 - **Read-only.** The engine never writes to Notion (pinned) — a refund, if a family takes it, is a separate deliberate act through the existing cancel path, not a side effect of the notice.
 - **No sent-flag column — a repeated live run RE-SENDS; always `{"dryRun": true}` first** (the body reports `scanned_rows`, `confirmed_rows` and the recipient list) and use `only` to retry a partial run.
 
-### Fall 2026 season play — rotating-partner standings + playoff (`/coach/fall-season`, 2026-09-13)
+### Fall 2026 season play — rotating-partner standings + Finale (`/coach/fall-season`, 2026-09-13)
 The Walter Johnson Sunday season is run as a **rotating-partner league, one per colour
-group**: weeks 1–5 are league play, week 6 is a playoff. **NOT the "Fall 2026 League"
+group**: weeks 1–6 are league play and week 6 (Nov 8) is the Finale. **NOT the "Fall 2026 League"
 product** (`src/data/leagues.ts`, `/league`, 14U/16U age divisions) — Open Brain records
 a family nearly being told the wrong product under that name, so parent-facing copy says
 "Fall Season standings" and nothing lives under `/league`. Code namespace `season-league`.
@@ -432,20 +432,19 @@ a family nearly being told the wrong product under that name, so parent-facing c
 - **Standings rank on SHRUNK win %** `(W+2)/(GP+4)` so a 3–0 Sunday can't outrank a 12–3
   season (kids miss weeks and play 3 or 4 games); tiebreaks point-diff per game, then
   points-for per game, then name. No head-to-head — noise in rotating doubles.
-- **Week 6 = seeded teams + double elimination** (`finals.ts`): snake, 1+N, 2+N−1 …, an odd
-  lowest-ranked kid rides as a third on the last team; the coach can move kids before
-  locking; teams freeze at lock (`Phase = Team` rows carry the seed). The bracket is a
-  static blueprint of slots resolved from results — byes to top seeds and propagated, a
-  grand-final reset only when the losers-side team wins the final; real games are always
-  2T−2 (+1). Sam chose this over a captains' draft because a visible pick order can leave
-  a nine-year-old picked last in front of the group.
-  **Since 2026-11-01 the teams follow `SEASON_LEAGUE_PLAYOFF_PAIRING = "halves"`** (Sam): the
-  top half of the standings snakes into the top teams and the bottom half into the bottom
-  teams, seeded so round one sends each top team against a bottom team (eight kids: 1+4 v
-  5+8 and 2+3 v 6+7; `pairTeams` keeps snake in the engine). The locker names the round-one
-  matchups before Lock, and the same rule and pins live in community-os
-  `packages/rotation-league` (`e2e/season-league-finals.spec.ts`,
-  `e2e/rotation-league-playoff-pairing.spec.ts`).
+- **Week 6 = the Finale** (Sam, 2026-11-02; it replaced the seeded double-elimination
+  playoff planned through 2026-11-01). Week 6 is a play week (`SEASON_LEAGUE_PLAY_WEEKS =
+  [1..6]`): the coach plans and scores a rotating-partner round robin with the normal
+  DayPlanner and those games count in the standings. Then one game for 1st and 2nd:
+  #1 & #4 vs #2 & #3 among the kids checked in that day, from the standings after the round
+  robin; a tie at the #4/#5 cut is settled on court, never by the name tiebreak; everyone
+  else cheers. Until the lock-and-score flow lands, the coach runs that final on court from
+  the standings on the page. The double-elimination engine (`finals.ts` `buildBracket`,
+  `pairTeams`, `halvesTeams`, pinned by `e2e/season-league-finals.spec.ts` and
+  `e2e/rotation-league-playoff-pairing.spec.ts`) stays for the Link & Dink trial, whose
+  screens all carry a note that the Nov 8 Finale is scored in Fall season play only. Every Nov 8 surface says "Finale",
+  never "playoff" (`e2e/season-league-finale.spec.ts`). Sam knowingly extended this season's
+  growth-only waiver to a top-four final (2026-11-02, agent-log).
 - **One Notion DB, `NOTION_SEASON_LEAGUE_DB_ID` ("NGA Season League Games"), holds NO
   names.** One row per game / day / team / playoff game (`Phase`); kids are `relation`
   links to their Fall Registrations row and first names join at render, so the DB is
