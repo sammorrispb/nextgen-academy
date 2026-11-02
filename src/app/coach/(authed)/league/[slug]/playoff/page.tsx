@@ -10,9 +10,11 @@ import { PlayoffScoreForm, UnlockTeamsButton } from "./PlayoffControls";
 
 export const dynamic = "force-dynamic";
 
-// Playoff day: check in who's here, review the snake-seeded teams (swap kids
-// if needed), lock them, then score the double-elimination bracket game by
-// game. The bracket is recomputed by Link & Dink from the scores on every read.
+// Playoff day: check in who's here, review the teams the season's pairing rule
+// suggests (top half of the standings against the bottom half since Sam's
+// 2026-11-01 call; swap kids or switch to snake if needed), lock them, then
+// score the double-elimination bracket game by game. The bracket is recomputed
+// by Link & Dink from the scores on every read.
 export default async function LeaguePlayoffPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const season = findRotationLeagueSeason(slug);
@@ -66,12 +68,14 @@ export default async function LeaguePlayoffPage({ params }: { params: Promise<{ 
             )}
           </section>
           <section>
-            <h2 className="font-heading text-xl font-black text-ngpa-white mb-3">2. Teams</h2>
+            <h2 className="font-heading text-xl font-black text-ngpa-white mb-3">2. Teams and round one</h2>
             {preview.ok ? (
               <TeamBuilder
                 key={preview.teams.map((t) => t.players.map((p) => p.external_ref).join(",")).join("|")}
                 slug={season.slug}
                 teams={preview.teams.map((t) => t.players)}
+                pairing={preview.pairing}
+                pairingApplied={preview.pairingApplied}
               />
             ) : (
               <p className="text-sm text-red-300">{preview.message}</p>

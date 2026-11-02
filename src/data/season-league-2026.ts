@@ -11,9 +11,11 @@
 //   - weeks 1–5 are league play. Every round runs a DOUBLES court and a SINGLES
 //     court, so with six kids nobody sits and each kid plays exactly three games
 //     a Sunday (two doubles, one singles). Games to 11, win by 2.
-//   - week 6 is the playoff: teams snake-seeded from the standings (1+6, 2+5,
-//     3+4; an odd lowest-ranked kid rides as a third on the last team), then a
-//     double-elimination bracket of single games to 11.
+//   - week 6 is the playoff: teams seeded from the standings, then a
+//     double-elimination bracket of single games to 11. Snake (1+6, 2+5, 3+4; an
+//     odd lowest-ranked kid rides as a third on the last team) until 2026-11-01,
+//     when Sam set top-half / bottom-half pairing for the Fall 2026 playoff:
+//     see SEASON_LEAGUE_PLAYOFF_PAIRING.
 //   - every pair of kids partners a near-equal number of times across the
 //     season; the engine reads the season's played games to guarantee it.
 // Every number here is imported from the season files rather than re-typed, so
@@ -26,6 +28,7 @@ import {
 } from "./fall-2026";
 import { FALL_SEASON_GROUPS, type FallSeasonGroup } from "./fall-season-2026";
 import { PICKLEBALL_COURTS_PER_TENNIS_COURT } from "./venue-parking";
+import type { PlayoffPairing } from "@/lib/season-league/finals";
 
 export type SeasonLeagueGroup = FallSeasonGroup;
 
@@ -61,6 +64,12 @@ export const SEASON_LEAGUE_GAMES_PER_PLAYER = 3;
 /** The bracket engine is exhaustive-tested to this size (Yellow sells to 10
  * kids = 5 teams). */
 export const SEASON_LEAGUE_MAX_BRACKET_TEAMS = 8;
+
+/** How the playoff teams come off the standings (Sam, 2026-11-01): the top
+ * half snakes into the top teams and the bottom half into the bottom teams,
+ * so eight kids play 1+4 v 5+8 and 2+3 v 6+7. "snake" is the old 1+8, 2+7, …
+ * The coach can still move kids before locking. */
+export const SEASON_LEAGUE_PLAYOFF_PAIRING: PlayoffPairing = "halves";
 
 /** Parent-facing title. Deliberately not "league" — see the header. */
 export const SEASON_LEAGUE_PUBLIC_TITLE = "Fall Season standings";

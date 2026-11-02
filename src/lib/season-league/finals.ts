@@ -4,6 +4,9 @@ import type { PlayerId } from "./types";
  * Week-6 playoff engine: snake-seeded doubles teams from the standings, then a
  * double-elimination bracket.
  *
+ * Two pairing rules: snake (the default) and top-half / bottom-half
+ * (`halvesTeams`, Sam, 2026-11-01). Both start from the standings order.
+ *
  * Snake seeding replaced a captains' draft on Sam's call (2026-09-13): a
  * visible pick order can leave a nine-year-old picked last in front of the
  * group. 1+N, 2+N−1, … is private, deterministic and balanced; an odd, lowest-
@@ -36,6 +39,66 @@ export function snakeTeams(rankedPlayerIds: readonly PlayerId[]): Team[] {
     teams[pairs - 1].members.push(ids[ids.length - 1]);
   }
   return teams;
+}
+
+/** How the playoff teams are built from the standings. */
+export type PlayoffPairing = "snake" | "halves";
+export const PLAYOFF_PAIRINGS: readonly PlayoffPairing[] = ["snake", "halves"];
+
+/**
+ * Top-half / bottom-half pairing (Sam, 2026-11-01, for the Fall 2026 playoff):
+ * the top half of the standings snakes into the higher-seeded teams and the
+ * bottom half into the lower-seeded ones, so partners sit close in level, and
+ * the bracket's first round sends each top team against a bottom team. Eight
+ * kids: 1+4 and 2+3 on top, 5+8 and 6+7 below, played as 1+4 v 5+8 and
+ * 2+3 v 6+7.
+ *
+ * Seeds: the top teams take 1..⌈T/2⌉ in order and the bottom teams take the
+ * rest in REVERSE, because standardBracket pairs seed s with seed T+1−s, so
+ * top team i meets bottom team i in round one. With four teams that makes
+ * 6+7 seed 3 and 5+8 seed 4. An odd kid rides as a third on the last bottom
+ * team, as in snake; with only one team there is no split, so it is snake.
+ */
+export function halvesTeams(rankedPlayerIds: readonly PlayerId[]): Team[] {
+  const ids = [...new Set(rankedPlayerIds)];
+  const teamCount = Math.floor(ids.length / 2);
+  const topCount = Math.ceil(teamCount / 2);
+  const bottomCount = teamCount - topCount;
+  if (bottomCount === 0) return snakeTeams(ids);
+  const top = snakeTeams(ids.slice(0, 2 * topCount));
+  const bottom = snakeTeams(ids.slice(2 * topCount));
+  return [
+    ...top.map((t, i) => ({ seed: i + 1, members: t.members })),
+    ...bottom.map((t, i) => ({ seed: teamCount - i, members: t.members })),
+  ].sort((a, b) => a.seed - b.seed);
+}
+
+/** Teams for the season's pairing rule; snake unless told otherwise. */
+export function pairTeams(
+  rankedPlayerIds: readonly PlayerId[],
+  pairing: PlayoffPairing = "snake",
+): Team[] {
+  return pairing === "halves" ? halvesTeams(rankedPlayerIds) : snakeTeams(rankedPlayerIds);
+}
+
+/** One match of the first winners round: the two seeds it pairs. */
+export interface FirstRoundMatch {
+  match: number;
+  a: number;
+  /** A seed past the team count is a bye: `a` advances without a game. */
+  b: number | "bye";
+}
+
+/** The first winners round for T teams, for the coach's preview before the
+ * teams are locked. The higher seed is always `a` (never a bye). */
+export function firstRound(teamCount: number): FirstRoundMatch[] {
+  const seedOf = (s: Source): number => (s.kind === "seed" ? s.seed : 0);
+  return buildBracket(teamCount)
+    .filter((s) => s.side === "winners" && s.round === 1)
+    .map((s) => {
+      const b = seedOf(s.b);
+      return { match: s.index, a: seedOf(s.a), b: b <= teamCount ? b : "bye" };
+    });
 }
 
 export function nextPow2(n: number): number {

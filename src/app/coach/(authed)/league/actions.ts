@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
 import { LEAGUE_PLAYER_CHANGES_ENABLED, PLAYER_CHANGES_UNAVAILABLE } from "@/lib/rotation-league/capabilities";
+import type { PlayoffPairing } from "@/lib/season-league/finals";
 import {
   addGuest,
   checkIn,
@@ -151,9 +152,12 @@ function revalidatePlayoff(slug: unknown): void {
   if (typeof slug === "string") revalidatePath(`/coach/league/${slug}/playoff`);
 }
 
-export async function previewPlayoffAction(input: { slug: string }): Promise<Outcome<PlayoffPreview>> {
+export async function previewPlayoffAction(input: {
+  slug: string;
+  pairing?: PlayoffPairing;
+}): Promise<Outcome<PlayoffPreview>> {
   if (!(await requireCoach())) return UNAUTHORIZED;
-  return previewPlayoff(input.slug);
+  return previewPlayoff(input.slug, input.pairing);
 }
 
 export async function lockPlayoffAction(input: { slug: string; teams: string[][] }): Promise<Outcome> {
