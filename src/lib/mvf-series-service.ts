@@ -263,15 +263,17 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
       const errors = validateSeriesRegistration(input, release);
       if (Object.keys(errors).length) throw new SeriesInputError(errors);
       const raw = input as SeriesRegistration;
+      const homeAddress = raw.homeAddress?.trim().replace(/\r\n?/g, "\n");
       const data: SeriesRegistration = {
         division: raw.division, resident: raw.resident, parentName: raw.parentName.trim(), email: normalizeEmailTypos(raw.email.trim()).toLowerCase(), phone: raw.phone.trim(),
         childFirstName: raw.childFirstName.trim(), childLastName: raw.childLastName.trim(), childDob: raw.childDob.trim(),
         emergencyName: raw.emergencyName.trim(), emergencyPhone: raw.emergencyPhone.trim(), allergies: raw.allergies,
         smsConsent: raw.smsConsent, policyAccepted: true, revision: raw.revision.trim(), submissionId: raw.submissionId.trim(),
+        ...(homeAddress ? { homeAddress } : {}),
       };
       seriesSecret();
       if (!process.env.RESEND_API_KEY) throw new SeriesError("notifications_not_configured");
-      await deps.schema();
+      await deps.schema(!!homeAddress);
       if (!(await deps.waiver(data.email))) throw new SeriesError("waiver_required", 409);
       const stripe = await merchant(undefined, true);
       const event = findMvfJuniorSeriesEvent(eventSlug)!;
@@ -290,7 +292,8 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
         receipt_issued_at: String(heldAt),
         child_first_name: data.childFirstName, child_last_name: data.childLastName, child_dob: data.childDob,
         emergency_name: data.emergencyName, emergency_phone: data.emergencyPhone, allergies: data.allergies,
-        sms_consent: String(data.smsConsent), sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "", waiver_accepted: "true", policy_accepted: "true" };
+        sms_consent: String(data.smsConsent), sms_consent_text: data.smsConsent ? SMS_CONSENT_TEXT : "", waiver_accepted: "true", policy_accepted: "true",
+        ...(homeAddress ? { home_address: homeAddress } : {}) };
       if (held.invoice_id) {
         const existing = await stripe.invoices.retrieve(String(held.invoice_id));
         invoiceRelease(existing, { event: eventSlug, revision: release.revision, invoice: existing.id, submission: data.submissionId, purpose: "receipt", expires: 0 });

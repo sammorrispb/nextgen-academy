@@ -24,7 +24,7 @@ import type { MvfJuniorSeriesEvent } from "@/data/mvf-junior-series";
 type Fields = Omit<SeriesRegistration, "submissionId">;
 type FormStatus = "idle" | "submitting" | "redirecting" | "error";
 
-const FIELD_ORDER = ["division", "resident", "parentName", "email", "phone", "childFirstName", "childLastName", "childDob", "emergencyName", "emergencyPhone", "allergies", "smsConsent", "policyAccepted"] as const;
+const FIELD_ORDER = ["division", "resident", "parentName", "email", "phone", "homeAddress", "childFirstName", "childLastName", "childDob", "emergencyName", "emergencyPhone", "allergies", "smsConsent", "policyAccepted"] as const;
 
 function shiftDate(iso: string, years: number, days = 0): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -46,6 +46,7 @@ export default function MvfSeriesRegistrationForm({ release, event }: { release:
   const router = useRouter();
   const [form, setForm] = useState<Fields>({
     division: "12u", resident: true, parentName: "", email: "", phone: "",
+    homeAddress: "",
     childFirstName: "", childLastName: "", childDob: "", emergencyName: "", emergencyPhone: "",
     allergies: "", smsConsent: false, policyAccepted: false, revision: release.revision,
   });
@@ -263,12 +264,33 @@ export default function MvfSeriesRegistrationForm({ release, event }: { release:
           {textField("parentName", "Parent name", "text", "name")}
           {textField("email", "Email", "email", "email")}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div className="mb-4">
           {textField("phone", "Phone", "tel", "tel")}
-          {textField("childFirstName", "Child’s first name")}
+        </div>
+        <div className="mb-6">
+          <label className={labelClass} htmlFor="series-homeAddress">
+            Home address <span className="font-normal text-ngpa-white/50">(optional)</span>
+          </label>
+          <p id="series-homeAddress-hint" className="text-sm text-ngpa-white/70 mb-2">Street address, apartment/unit, city, state, and ZIP code.</p>
+          <textarea
+            id="series-homeAddress"
+            name="homeAddress"
+            className={inputClass}
+            value={form.homeAddress ?? ""}
+            rows={3}
+            maxLength={480}
+            autoComplete="street-address"
+            onChange={(e) => update("homeAddress", e.target.value)}
+            aria-invalid={!!errors.homeAddress}
+            aria-describedby={`series-homeAddress-hint${errors.homeAddress ? " series-homeAddress-error" : ""}`}
+          />
+          {errors.homeAddress && <p id="series-homeAddress-error" className={errorClass}>{errors.homeAddress}</p>}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          {textField("childFirstName", "Child’s first name")}
           {textField("childLastName", "Child’s last name")}
+        </div>
+        <div className="mb-4">
           <div>
             <label className={labelClass} htmlFor="series-childDob">Child&rsquo;s date of birth</label>
             <input

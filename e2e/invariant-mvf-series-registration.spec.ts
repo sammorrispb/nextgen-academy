@@ -70,6 +70,86 @@ test("actual adapters create one pending roster/invoice and same-attempt retry r
   const receipt = await h.service.receipt("november-2026", h.token(result)); expect(receipt.status).toBe("pending"); expect(receipt.payUrl).toMatch(/^https:\/\/invoice.stripe.com\//);
   expect(JSON.stringify(receipt)).not.toMatch(/Synthetic|medical|guardian@example/);
 });
+test("home address is retained privately through retries and paid callbacks without duplicate invoices", async () => {
+  const homeAddress = "123 Example Lane, Apt 4\nExample City, MD 20886";
+  const input = registration(1, { homeAddress: `  ${homeAddress.replace(/\n/g, "\r\n")}  ` });
+  const result = await h.service.register("november-2026", input);
+  const again = await h.service.register("november-2026", registration(1, { homeAddress }));
+  expect(again.invoiceId).toBe(result.invoiceId);
+  expect(h.fake.all()).toHaveLength(1);
+  expect(h.fake.all()[0].sends).toBe(1);
+  expect(h.fake.all()[0].metadata.home_address).toBe(homeAddress);
+  expect(h.pages).toHaveLength(1);
+  expect(h.pages[0].properties["Home Address"]).toEqual({ rich_text: [{ plain_text: homeAddress }] });
+  h.statuses.set(result.invoiceId, "paid");
+  await h.service.webhook(h.event(result.invoiceId));
+  await h.service.webhook(h.event(result.invoiceId, "invoice.payment_succeeded"));
+  expect(h.pages[0].properties.Status).toEqual({ select: { name: "Confirmed" } });
+  expect(h.pages[0].properties["Home Address"]).toEqual({ rich_text: [{ plain_text: homeAddress }] });
+  const receipt = await h.service.receipt("november-2026", h.token(result));
+  expect(JSON.stringify(receipt)).not.toContain("123 Example Lane");
+  expect(JSON.stringify(h.mails)).not.toContain("123 Example Lane");
+  expect(JSON.stringify(h.stub.calls.filter(call => call.url.includes("series.example.invalid")))).not.toContain("123 Example Lane");
+});
+test("omitted and blank home addresses preserve the original request identity and retry invoice", async () => {
+  h.homeAddressPropertyType = null;
+  const result = await h.service.register("november-2026", registration());
+  for (const homeAddress of ["", "  \n  "]) {
+    const again = await h.service.register("november-2026", registration(1, { homeAddress }));
+    expect(again.invoiceId).toBe(result.invoiceId);
+  }
+  expect(h.fake.all()).toHaveLength(1);
+  expect(h.fake.all()[0].metadata).not.toHaveProperty("home_address");
+  expect(h.pages[0].properties).not.toHaveProperty("Home Address");
+});
+test("invalid address values are rejected before capacity or provider work", async () => {
+  for (const homeAddress of [null, 42, {}, "x".repeat(481), "Address\u0000value", "Address\tvalue"]) {
+    await expect(h.service.register("november-2026", { ...registration(), homeAddress })).rejects.toMatchObject({
+      code: "invalid_registration", errors: { homeAddress: expect.any(String) },
+    });
+  }
+  expect(h.stub.calls).toHaveLength(0);
+  expect(h.accountReads).toBe(0);
+  expect(h.seats.size).toBe(0);
+  expect(h.fake.all()).toHaveLength(0);
+});
+test("a supplied address needs verified roster storage before any invoice is created", async () => {
+  for (const propertyType of [null, "number"]) {
+    h.homeAddressPropertyType = propertyType;
+    await expect(h.service.register("november-2026", registration(1, { homeAddress: "123 Example Lane, Example City, MD 20886" }))).rejects.toMatchObject({ code: "roster_schema_unverified" });
+  }
+  expect(h.seats.size).toBe(0);
+  expect(h.fake.all()).toHaveLength(0);
+  expect(h.accountReads).toBe(0);
+});
+test("editing an address cannot mutate an existing invoice or create a second entry for the same player", async () => {
+  const first = registration(1, { homeAddress: "123 Example Lane, Example City, MD 20886" });
+  await h.service.register("november-2026", first);
+  const changed = { ...first, homeAddress: "456 Example Lane, Example City, MD 20886" };
+  await expect(h.service.register("november-2026", changed)).rejects.toMatchObject({ code: "request_conflict" });
+  await expect(h.service.register("november-2026", { ...changed, submissionId: registration(2).submissionId })).rejects.toMatchObject({ code: "duplicate" });
+  expect(h.fake.all()).toHaveLength(1);
+  expect(h.fake.all()[0].metadata.home_address).toBe(first.homeAddress);
+});
+test("a roster address mismatch cannot silently resume or finalize the registration", async () => {
+  h.loseNotionResponse = true;
+  const input = registration(1, { homeAddress: "123 Example Lane, Example City, MD 20886" });
+  await expect(h.service.register("november-2026", input)).rejects.toBeTruthy();
+  h.pages[0].properties["Home Address"] = { rich_text: [{ plain_text: "Different address" }] };
+  await expect(h.service.register("november-2026", input)).rejects.toMatchObject({ code: "roster_mismatch" });
+  expect(h.fake.all()).toHaveLength(1);
+  expect(h.fake.all()[0].status).toBe("draft");
+  expect(h.fake.all()[0].sends).toBe(0);
+});
+test("an operator's later address correction does not block payment or get overwritten by a callback", async () => {
+  const result = await h.service.register("november-2026", registration(1, { homeAddress: "123 Example Lane, Example City, MD 20886" }));
+  const corrected = { rich_text: [{ plain_text: "456 Example Lane, Example City, MD 20886" }] };
+  h.pages[0].properties["Home Address"] = corrected;
+  h.statuses.set(result.invoiceId, "paid");
+  await h.service.webhook(h.event(result.invoiceId));
+  expect(h.pages[0].properties.Status).toEqual({ select: { name: "Confirmed" } });
+  expect(h.pages[0].properties["Home Address"]).toEqual(corrected);
+});
 test("events and brackets keep distinct invoices and capacity; one event's duplicate cannot restart", async () => {
   const first = await h.service.register("november-2026", registration());
   await expect(h.service.register("november-2026", registration(2, { childLastName: "Fixture 1" }))).rejects.toMatchObject({ code: "duplicate" });

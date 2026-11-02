@@ -108,6 +108,7 @@ export function publicSeriesRelease(event: string, now = Date.now()): SeriesRele
 
 export interface SeriesRegistration {
   division: SeriesDivision; resident: boolean; parentName: string; email: string; phone: string;
+  homeAddress?: string;
   childFirstName: string; childLastName: string; childDob: string;
   emergencyName: string; emergencyPhone: string; allergies: string; smsConsent: boolean;
   policyAccepted: boolean; revision: string; submissionId: string;
@@ -120,6 +121,7 @@ export function validateSeriesRegistration(value: unknown, release: SeriesReleas
   for (const key of ["parentName", "childFirstName", "childLastName", "emergencyName"]) if (!text(key) || text(key).length > 100 || /[\r\n\x00-\x1f]/.test(text(key))) errors[key] = "Enter a name (100 characters maximum)";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text("email")) || text("email").length > 254) errors.email = "Enter a valid parent email";
   for (const key of ["phone", "emergencyPhone"]) if (!/^\+?[\d ()-]{10,25}$/.test(text(key)) || text(key).replace(/\D/g, "").length < 10) errors[key] = "Enter a valid phone number";
+  if (input.homeAddress !== undefined && (typeof input.homeAddress !== "string" || input.homeAddress.length > 480 || /[\x00-\x09\x0b\x0c\x0e-\x1f\x7f]/.test(input.homeAddress))) errors.homeAddress = "Enter a home address using at most 480 characters";
   if (typeof input.resident !== "boolean") errors.resident = "Choose resident or nonresident";
   if (!["12u", "16u"].includes(String(input.division))) errors.division = "Choose 12U or 16U";
   if (!isCalendarDob(text("childDob"))) errors.childDob = "Enter a valid date of birth";
