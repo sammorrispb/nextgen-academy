@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "auditedAt": "2026-11-02",
+  "components": [
+    {
+      "id": "nextgen-academy",
+      "repository": "sammorrispb/nextgen-academy",
+      "commit": "62437fd6acfe661906077d959da0f8324e3bfb55",
+      "aliasRoot": "src",
+      "entrypoints": [
+        "src/app/mvf-junior-tournament/[event]/page.tsx",
+        "src/app/mvf-junior-tournament/[event]/status/page.tsx",
+        "src/components/MvfJuniorSeriesOverview.tsx",
+        "src/app/api/mvf-series/[event]/register/route.ts",
+        "src/app/api/mvf-series/[event]/receipt/route.ts",
+        "src/app/api/mvf-series/[event]/cancel/route.ts"
+        ,"src/app/api/stripe/webhook/route.ts"
+      ],
+      "include": ["package.json", "package-lock.json", "tsconfig.json", "playwright.pure.config.ts", "e2e/invariant-mvf-series-registration.spec.ts", "e2e/fixtures/mvf-series.ts", "e2e/fixtures/fake-stripe-invoices.ts", "e2e/fixtures/fetch-stub.ts", "e2e/fixtures/deny-provider-network.ts"],
+      "role": "Existing NGA public pages, guardian form, waiver/invoice/receipt adapters and offline verification fixtures; an integration reference, not a new-event activation script"
+    },
+    {
+      "id": "community-os",
+      "repository": "sammorrispb/community-os",
+      "commit": "1f0e0076bebe1b5ee315f3f7e229ce8385a0fb6e",
+      "aliasRoot": "apps/p3/src",
+      "workspaceAliases": { "@community-os/ops": "packages/ops/src/index.ts", "@community-os/tournament": "packages/tournament/src/index.ts" },
+      "entrypoints": ["apps/p3/src/app/api/internal/nga-series-registration/route.ts"],
+      "include": ["packages/tournament/", "packages/ops/", "apps/p3/src/lib/nga-series-registration.ts", "apps/p3/package.json", "supabase/migrations/20261030154615_nga_mvf_series_ledger.sql", "supabase/migrations/20261030183653_nga_mvf_series_acl_correction.sql", "supabase/migrations/20261030185713_nga_mvf_series_publication.sql"],
+      "role": "Reusable game engines plus the current server-only capacity/publication ledger integration; historical ready=true activation is deliberately excluded"
+    }
+  ],
+  "formatGuide": "https://app.notion.com/p/3fdfa3ac27dc814a81d1e4d3750d1ef0",
+  "notes": [
+    "The native API allowlist contains only the six MVF month/division keys. Add new keys and isolated capacity through a reviewed change before using native registration for another event.",
+    "Snapshots may contain historical enabled application flags. They are source evidence, never an instruction to enable a copied event.",
+    "No credentials, real registrants, participant photos, invoices, provider exports or live evidence files belong in a reusable template."
+  ]
+}

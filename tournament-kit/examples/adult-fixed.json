@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "slug": "adult-doubles-example",
+  "title": "Adult Doubles Cup — example configuration",
+  "audience": "adult",
+  "timezone": "America/New_York",
+  "brand": {
+    "name": "Your tournament brand",
+    "accent": "#a8df65"
+  },
+  "startAt": "2099-06-07T10:00:00-04:00",
+  "endAt": "2099-06-07T14:00:00-04:00",
+  "publicUrl": "https://example.invalid/adult-doubles-cup",
+  "venue": {
+    "name": "Your reserved facility",
+    "address": "Your confirmed venue address",
+    "indoors": true
+  },
+  "contact": {
+    "name": "Tournament director",
+    "email": "organizer@example.invalid",
+    "phone": "202-555-0100"
+  },
+  "divisions": [
+    {
+      "id": "doubles-open",
+      "label": "Adult doubles",
+      "eligibility": "Adults 18+; publish the skill eligibility and partner policy before launch.",
+      "capacity": 12
+    }
+  ],
+  "registration": {
+    "state": "draft",
+    "provider": "external",
+    "url": "",
+    "closesAt": "2099-06-01T10:00:00-04:00",
+    "homeAddress": "optional",
+    "fees": [
+      {
+        "id": "pair",
+        "label": "Per pair — illustrative price",
+        "amountCents": 8000
+      }
+    ]
+  },
+  "format": {
+    "label": "Fixed-partner pool play into playoffs — example",
+    "entryUnit": "pair",
+    "description": "Enter as a pair and keep the same partner through pool play and playoffs. Review this example format before using it.",
+    "roundRobin": {
+      "target": 11,
+      "winBy": 2,
+      "scoring": "Side-out scoring — illustrative setting; verify for this event."
+    },
+    "medals": {
+      "target": 15,
+      "winBy": 2,
+      "scoring": "Side-out scoring — illustrative setting; verify for this event."
+    },
+    "gamesDescription": "Publish the game count supported by the selected draw and actual number of pairs. No game-count promise has been approved in this example.",
+    "tiebreakers": [
+      "Set the verified standings hierarchy for this event before opening."
+    ],
+    "medalRules": [
+      "Set qualifiers, seeding, semifinals/finals and bronze policy for this event before opening."
+    ],
+    "turnoutRules": [
+      "Select a supported engine for the actual pair count; do not use a rotating-partner player count as a fixed-pair count."
+    ],
+    "source": "https://github.com/sammorrispb/community-os/tree/1f0e0076bebe1b5ee315f3f7e229ce8385a0fb6e/packages/tournament"
+  },
+  "policies": {
+    "refund": "Write and approve this event’s refund policy before opening.",
+    "weather": "Write and approve this event’s weather policy before opening.",
+    "minimumEnrollment": "Write and approve this event’s minimumEnrollment policy before opening.",
+    "waiver": "Write and approve this event’s waiver policy before opening."
+  },
+  "payments": {
+    "owner": "Choose the event’s payment owner",
+    "reconciliation": "Reconcile registrations, provider invoices/payments, refunds, fees and any approved partner allocation for this event."
+  },
+  "operations": {
+    "director": "Name the event director",
+    "courts": 4,
+    "checkinMinutes": 30,
+    "scoringUrl": "",
+    "privateRosterUrl": ""
+  },
+  "readiness": {
+    "eventDetails": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "format": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "registration": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "payments": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "capacity": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "waiver": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "privacy": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "operations": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "mobileQA": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "desktopQA": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    }
+  }
+}

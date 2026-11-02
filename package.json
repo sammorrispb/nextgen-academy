@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:pure": "playwright test --config=playwright.pure.config.ts"
+    "test:pure": "playwright test --config=playwright.pure.config.ts",
+    "tournament-kit": "node tournament-kit/cli.mjs",
+    "test:tournament-kit": "npm --prefix tournament-kit test"
   },
   "dependencies": {
     "next": "16.4.3",
