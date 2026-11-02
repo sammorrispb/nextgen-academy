@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "slug": "mvf-november-2026",
+  "title": "MVF Junior Tournament — November 2026",
+  "audience": "junior",
+  "timezone": "America/New_York",
+  "brand": {
+    "name": "Next Gen Pickleball Academy",
+    "accent": "#02b2cb"
+  },
+  "startAt": "2026-11-14T10:00:00-05:00",
+  "endAt": "2026-11-14T12:00:00-05:00",
+  "publicUrl": "https://nextgenpbacademy.com/mvf-junior-tournament/november-2026",
+  "venue": {
+    "name": "North Creek Community Center",
+    "address": "20125 Arrowhead Road, Montgomery Village, MD 20886",
+    "indoors": false
+  },
+  "contact": {
+    "name": "Coach Sam Morris",
+    "email": "nextgenacademypb@gmail.com",
+    "phone": "301-325-4731"
+  },
+  "divisions": [
+    {
+      "id": "12u",
+      "label": "12U",
+      "eligibility": "Ages 6–12 on December 31, 2026.",
+      "capacity": 10
+    },
+    {
+      "id": "16u",
+      "label": "16U",
+      "eligibility": "Ages 6–16 on December 31, 2026; younger players may play up. Choose one bracket.",
+      "capacity": 10
+    }
+  ],
+  "registration": {
+    "state": "draft",
+    "provider": "nga-series",
+    "url": "https://nextgenpbacademy.com/mvf-junior-tournament/november-2026#register",
+    "closesAt": "2026-11-13T10:00:00-05:00",
+    "homeAddress": "optional",
+    "fees": [
+      {
+        "id": "resident",
+        "label": "Montgomery Village resident",
+        "amountCents": 5000
+      },
+      {
+        "id": "nonresident",
+        "label": "Nonresident",
+        "amountCents": 6000
+      }
+    ],
+    "native": {
+      "event": "november-2026",
+      "revision": "launch-2026-11-02"
+    }
+  },
+  "format": {
+    "label": "Rotating-partner round robin",
+    "entryUnit": "individual",
+    "description": "Register individually; doubles partners rotate between rounds and each player earns an individual standing.",
+    "roundRobin": {
+      "target": 11,
+      "winBy": 2,
+      "scoring": "One game to the target score; review the serving/scoring convention at the player briefing."
+    },
+    "medals": {
+      "target": 15,
+      "winBy": 2,
+      "scoring": "One game per medal match."
+    },
+    "gamesDescription": "The documented 5-, 8-, 9- and 10-player draws provide four round-robin games per player, followed by a medal game for qualifiers.",
+    "tiebreakers": [
+      "Wins.",
+      "Head-to-head wins against tied players as opponents.",
+      "Overall pool/bracket point differential.",
+      "Point differential in games between tied players.",
+      "Point differential against the players immediately above them.",
+      "Total points scored; review unresolved advancement ties with the director."
+    ],
+    "medalRules": [
+      "One pool of 8 or 9: gold 1st + 4th vs 2nd + 3rd; bronze 5th + 8th vs 6th + 7th. Ninth place finishes after round robin.",
+      "Two pools of 5: gold A1 + B2 vs B1 + A2; bronze A3 + B4 vs B3 + A4. Fifth place in each pool finishes after round robin.",
+      "Gold-game winners earn gold, runners-up silver, bronze-game winners bronze. Smaller fields need a director-confirmed medal draw."
+    ],
+    "turnoutRules": [
+      "Five-player pools: four games and one rest round per player. Eight-player four-game draw: no rest rounds. Nine-player draw: one rest round per player.",
+      "Ten players: two reviewed pools of five. Other counts need a reviewed inclusive schedule before play."
+    ],
+    "source": "https://app.notion.com/p/3fdfa3ac27dc814a81d1e4d3750d1ef0"
+  },
+  "policies": {
+    "refund": "No refunds unless we cancel.",
+    "weather": "Weather decisions are made 24 hours before the tournament. Same-day indoor backup: Lake Marion Community Center gymnasium, 3–6 PM ET. No separate makeup date.",
+    "minimumEnrollment": "At least 8 players across both brackets. If a bracket has fewer than 5, decide whether to combine or cancel it 3 days before the tournament.",
+    "waiver": "A parent or guardian must complete the NGA one-time waiver and accept the event policies."
+  },
+  "payments": {
+    "owner": "Next Gen Pickleball Academy LLC",
+    "reconciliation": "Match every registration to its NGA Stripe invoice. Confirm actual paid/refund/dispute evidence before changing payment status. MVF allocation: 20% of the $50 resident base plus the entire $10 nonresident surcharge; the organizer covers processing fees. This is an event-production agreement, not a platform transaction fee."
+  },
+  "operations": {
+    "director": "Coach Sam Morris — verify event-day coverage",
+    "courts": 2,
+    "checkinMinutes": 15,
+    "scoringUrl": "",
+    "privateRosterUrl": "https://app.notion.com/p/3e871752585e4d53adbf01ecab134b8d"
+  },
+  "readiness": {
+    "eventDetails": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "format": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "registration": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "payments": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "capacity": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "waiver": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "privacy": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "operations": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "mobileQA": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    },
+    "desktopQA": {
+      "status": "pending",
+      "evidence": "",
+      "verifiedAt": ""
+    }
+  }
+}

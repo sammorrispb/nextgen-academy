@@ -4,6 +4,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 `docs/ops/` holds operational SOPs read by cloud `/schedule` routines (they git-clone this repo): the session-cadence config + playbook. See [`docs/ops/README.md`](docs/ops/README.md).
 
+## Tournament Launch Kit
+
+[`tournament-kit/`](tournament-kit/README.md) generates a copyable event package from one configuration: public page and registration setup, format/rules, director runbook, communications, operating sheets, QR assets, and optional pinned implementation sources. Start with its README to create the next tournament.
+
 ## Getting Started
 
 First, run the development server:

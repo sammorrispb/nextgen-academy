@@ -1,0 +1,9 @@
+{
+  "name": "@nextgen/tournament-launch-kit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "dependencies": { "qrcode": "1.5.4", "typescript": "5.9.3" }
+}
