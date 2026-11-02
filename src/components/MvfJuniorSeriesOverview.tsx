@@ -1,4 +1,5 @@
 import Link from "next/link";
+import MvfSeriesFormatRules from "@/components/MvfSeriesFormatRules";
 import {
   MVF_JUNIOR_SERIES,
   MVF_JUNIOR_SERIES_ENROLLMENT,
@@ -32,6 +33,7 @@ export default function MvfJuniorSeriesOverview({ openEvents = [] }: { openEvent
           </li>
         ))}
       </ul>
+      <MvfSeriesFormatRules />
       <section aria-labelledby="series-policies-heading" className="mt-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel p-5">
         <h2 id="series-policies-heading" className="font-heading text-xl font-bold text-ngpa-white">Tournament policies</h2>
         <p className="text-ngpa-white/80 mt-4">{MVF_JUNIOR_SERIES_ELIGIBILITY}</p>
