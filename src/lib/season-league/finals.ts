@@ -363,3 +363,53 @@ export function lossesBySeed(state: BracketState): Map<number, number> {
   }
   return out;
 }
+
+// ---------------------------------------------------------------------------
+// The Fall 2026 Finale's one game (Sam, 2026-11-02)
+// ---------------------------------------------------------------------------
+
+/** The Finale's single slot. Old bracket slot ids (w1m1, gf, …) never resolve here. */
+export const FINAL_SLOT: SlotId = "final";
+/** How many kids play the Finale's one game. */
+export const FINAL_SIZE = 4;
+
+/**
+ * The top four of the standings (already filtered to the kids checked in)
+ * pair #1 & #4 against #2 & #3 — snake over four, NOT halves, which would make
+ * 1+2 v 3+4. Fewer than four kids make no final.
+ */
+export function finalTeams(rankedPlayerIds: readonly PlayerId[]): Team[] {
+  const ids = [...new Set(rankedPlayerIds)];
+  if (ids.length < FINAL_SIZE) return [];
+  return snakeTeams(ids.slice(0, FINAL_SIZE));
+}
+
+/**
+ * One game for 1st and 2nd: seed 1 (#1 & #4) vs seed 2 (#2 & #3). No winners
+ * round, no grand final, no reset — the score decides it. Returned in the
+ * bracket's state shape so the existing boards render it unchanged.
+ */
+export function resolveFinal(results: readonly BracketResult[]): BracketState {
+  const slot: BracketSlot = {
+    id: FINAL_SLOT,
+    side: "final",
+    round: 1,
+    index: 1,
+    label: "Final",
+    a: { kind: "seed", seed: 1 },
+    b: { kind: "seed", seed: 2 },
+  };
+  const result = results.find((r) => r.slot === FINAL_SLOT && r.scoreA !== r.scoreB);
+  const winner = result ? (result.scoreA > result.scoreB ? 1 : 2) : null;
+  const loser = winner === null ? null : winner === 1 ? 2 : 1;
+  return {
+    teamCount: 2,
+    slots: [{ slot, a: 1, b: 2, status: result ? "played" : "ready", winner, loser, ...(result ? { result } : {}) }],
+    readySlotIds: result ? [] : [FINAL_SLOT],
+    playedCount: result ? 1 : 0,
+    champion: winner,
+    runnerUp: loser,
+    resetNeeded: false,
+    complete: result !== undefined,
+  };
+}

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { formatLongDate } from "@/lib/format-date";
 import { resolveStandingsView } from "@/lib/season-league-view";
 import {
-  PlayoffBoard,
+  FinalBoard,
   RankingNote,
   StandingsTable,
   WeekResults,
@@ -75,7 +75,7 @@ export default async function FallStandingsPage({ params }: PageProps) {
         {view.playoff && (
           <section>
             <h2 className="font-heading text-2xl font-black text-ngpa-white tracking-tight mb-4">Finale: 1st and 2nd</h2>
-            <PlayoffBoard playoff={view.playoff} />
+            <FinalBoard playoff={view.playoff} />
           </section>
         )}
 

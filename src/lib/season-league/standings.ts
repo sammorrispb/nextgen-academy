@@ -127,3 +127,16 @@ export function computeStandings(
 export function rankedPlayerIds(rows: readonly StandingRow[]): PlayerId[] {
   return rows.map((r) => r.playerId);
 }
+
+/**
+ * True when two rows tie on every numeric key the table sorts by, so only the
+ * first-name fallback separates them. The Finale never lets that fallback
+ * decide who plays: a tie like this at the #4/#5 cut is settled on court.
+ */
+export function tiedOnRecord(a: StandingRow, b: StandingRow): boolean {
+  return (
+    a.rankScore === b.rankScore &&
+    perGame(a.pointDiff, a.games) === perGame(b.pointDiff, b.games) &&
+    perGame(a.pointsFor, a.games) === perGame(b.pointsFor, b.games)
+  );
+}

@@ -5,7 +5,9 @@ import {
   nextPow2,
   resolveBracket,
   firstRound,
+  finalTeams,
   halvesTeams,
+  resolveFinal,
   pairTeams,
   snakeTeams,
   standardBracket,
@@ -302,5 +304,43 @@ test.describe("double elimination — every team count the season can produce", 
     ];
     const b = [...a].reverse();
     expect(resolveBracket(4, a)).toEqual(resolveBracket(4, b));
+  });
+});
+
+// The Fall 2026 Finale (Sam, 2026-11-02): the top four checked-in kids play ONE
+// game for 1st and 2nd, #1 & #4 vs #2 & #3. Not halves (four kids under halves
+// would be 1+2 v 3+4) and not a bracket (two teams there mean up to three games).
+test.describe("finale final", () => {
+  test("the top four pair #1 & #4 against #2 & #3, whatever the group size", () => {
+    for (const n of [4, 5, 7, 8, 10]) {
+      expect(finalTeams(ranked(n)), `${n} kids`).toEqual([
+        { seed: 1, members: ["r1", "r4"] },
+        { seed: 2, members: ["r2", "r3"] },
+      ]);
+    }
+  });
+
+  test("fewer than four kids make no final, and a repeated id is counted once", () => {
+    expect(finalTeams(ranked(3))).toEqual([]);
+    expect(finalTeams(["r1", "r1", "r2", "r3"])).toEqual([]);
+  });
+
+  test("one game, no reset: unscored it is on deck, scored it names 1st and 2nd", () => {
+    const open = resolveFinal([]);
+    expect(open.slots.map((s) => s.slot.id)).toEqual(["final"]);
+    expect(open.slots[0].status).toBe("ready");
+    expect(open.champion).toBeNull();
+    expect(open.complete).toBe(false);
+
+    const won = resolveFinal([{ slot: "final", scoreA: 11, scoreB: 7 }]);
+    expect([won.champion, won.runnerUp, won.complete, won.resetNeeded]).toEqual([1, 2, true, false]);
+    const upset = resolveFinal([{ slot: "final", scoreA: 5, scoreB: 11 }]);
+    expect([upset.champion, upset.runnerUp]).toEqual([2, 1]);
+  });
+
+  test("results for old bracket slots are ignored", () => {
+    const state = resolveFinal([{ slot: "w1m1", scoreA: 11, scoreB: 7 }]);
+    expect(state.champion).toBeNull();
+    expect(state.slots).toHaveLength(1);
   });
 });

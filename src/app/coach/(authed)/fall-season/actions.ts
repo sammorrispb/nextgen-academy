@@ -4,20 +4,20 @@ import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
 import { seasonLeagueGroupSlug } from "@/data/season-league-2026";
 import {
-  lockTeams,
+  lockFinal,
   parseGroup,
   parseWeek,
   previewDay,
-  previewTeams,
+  previewFinal,
   recordGameScore,
   recordPlayoffScore,
   saveDay,
-  unlockTeams,
+  unlockFinal,
   type DayPreview,
+  type FinalPreview,
   type LockResult,
   type SaveDayResult,
   type ScoreResult,
-  type TeamsPreview,
 } from "@/lib/season-league-view";
 
 // Thin coach-auth wrappers over @/lib/season-league-view — the same shape as
@@ -76,32 +76,24 @@ export async function recordScoreAction(input: {
   return result;
 }
 
-export async function previewTeamsAction(input: {
-  group: string;
-  presentIds: string[];
-  teams?: Array<{ seed: number; members: string[] }>;
-}): Promise<TeamsPreview> {
+export async function previewFinalAction(input: { group: string; chosen?: string[] }): Promise<FinalPreview> {
   const email = await requireCoach();
   if (!email) return UNAUTHORIZED;
-  return previewTeams(input);
+  return previewFinal(input);
 }
 
-export async function lockTeamsAction(input: {
-  group: string;
-  presentIds: string[];
-  teams?: Array<{ seed: number; members: string[] }>;
-}): Promise<LockResult> {
+export async function lockFinalAction(input: { group: string; chosen?: string[] }): Promise<LockResult> {
   const email = await requireCoach();
   if (!email) return { ...UNAUTHORIZED, created: 0, updated: 0, failed: 0, voided: 0 };
-  const result = await lockTeams(input);
+  const result = await lockFinal(input);
   revalidateLeague(input.group, 6);
   return result;
 }
 
-export async function unlockTeamsAction(input: { group: string }): Promise<ScoreResult> {
+export async function unlockFinalAction(input: { group: string }): Promise<ScoreResult> {
   const email = await requireCoach();
   if (!email) return UNAUTHORIZED;
-  const result = await unlockTeams(input);
+  const result = await unlockFinal(input);
   revalidateLeague(input.group, 6);
   return result;
 }

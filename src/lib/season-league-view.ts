@@ -4,8 +4,6 @@ import {
   SEASON_LEAGUE_GAME_TARGET,
   SEASON_LEAGUE_GAME_TARGETS,
   SEASON_LEAGUE_GROUPS,
-  SEASON_LEAGUE_MAX_BRACKET_TEAMS,
-  SEASON_LEAGUE_PLAYOFF_PAIRING,
   SEASON_LEAGUE_PLAYOFF_WEEK,
   SEASON_LEAGUE_PLAY_WEEKS,
   SEASON_LEAGUE_PUBLIC_TITLE,
@@ -39,11 +37,11 @@ import {
   type SeasonLeagueRow,
 } from "@/lib/notion-season-league";
 import {
-  pairTeams,
-  resolveBracket,
+  FINAL_SIZE,
+  finalTeams,
+  resolveFinal,
   type BracketResult,
   type BracketState,
-  type PlayoffPairing,
   type Team,
 } from "@/lib/season-league/finals";
 import { buildNameMap, nameFor, sideLabel } from "@/lib/season-league/names";
@@ -54,7 +52,7 @@ import {
   planDay,
 } from "@/lib/season-league/rotation";
 import { validateScore } from "@/lib/season-league/scores";
-import { computeStandings, type StandingRow } from "@/lib/season-league/standings";
+import { computeStandings, tiedOnRecord, type StandingRow } from "@/lib/season-league/standings";
 import type {
   CourtAllocation,
   PlannedGame,
@@ -206,14 +204,17 @@ export function buildSnapshot(
   const teamRows = live
     .filter((r) => r.phase === "Team" && r.week === SEASON_LEAGUE_PLAYOFF_WEEK && r.seed > 0)
     .sort((a, b) => a.seed - b.seed);
-  const teams: Team[] = teamRows.map((r) => ({ seed: r.seed, members: r.sideA }));
+  // The Finale's two teams are seeds 1 and 2. A higher seed can only be a
+  // stale bracket lock from before the Finale; it never counts (a re-lock or
+  // an unlock voids it).
+  const teams: Team[] = teamRows.filter((r) => r.seed <= 2).map((r) => ({ seed: r.seed, members: r.sideA }));
   const playoffGames = live
     .filter((r) => r.phase === "Playoff" && r.week === SEASON_LEAGUE_PLAYOFF_WEEK)
     .sort(byRoundThenCourt);
   const results: BracketResult[] = playoffGames
     .filter((r) => r.status === "Played" && r.scoreA !== null && r.scoreB !== null && r.slot)
     .map((r) => ({ slot: r.slot, scoreA: r.scoreA as number, scoreB: r.scoreB as number }));
-  const locked = teams.length >= 2;
+  const locked = teams.length === 2;
 
   return {
     group,
@@ -232,7 +233,7 @@ export function buildSnapshot(
       teamRows,
       games: playoffGames,
       results,
-      state: locked ? resolveBracket(teams.length, results) : null,
+      state: locked ? resolveFinal(results) : null,
     },
   };
 }
@@ -497,78 +498,84 @@ export async function recordGameScore(input: ScoreInput): Promise<ScoreResult> {
 }
 
 // ---------------------------------------------------------------------------
-// Playoff (week 6)
+// The Finale's final game (week 6)
 // ---------------------------------------------------------------------------
 
-export interface TeamsInput {
+export interface FinalInput {
   group: unknown;
-  presentIds: unknown[];
-  /** Optional coach-adjusted teams; validated against `presentIds`. */
-  teams?: unknown;
+  /** After a tie at the cut is settled on court: the tied kids who take the open spots. */
+  chosen?: unknown;
 }
 
-export type TeamsPreview =
+/** A dead-even tie straddling the #4/#5 cut. */
+export interface FinalTie {
+  /** How many of the tied kids get into the final. */
+  spots: number;
+  kids: Array<{ id: PlayerId; name: string }>;
+}
+
+export type FinalPreview =
   | {
       ok: true;
       group: SeasonLeagueGroup;
-      present: PlayerId[];
-      ranked: PlayerId[];
+      /** Seed 1 = #1 & #4, seed 2 = #2 & #3. */
       teams: Team[];
       names: Record<PlayerId, string>;
-      /** The rule the suggested teams follow (coach-adjusted teams keep it as a label). */
-      pairing: PlayoffPairing;
+      /** Round-robin games still unscored: the top four may still move. */
+      warning: string | null;
     }
-  | { ok: false; message: string };
+  | { ok: false; message: string; tie?: FinalTie };
 
-function parseTeams(raw: unknown, present: readonly PlayerId[]): Team[] | { error: string } {
-  if (!Array.isArray(raw)) return { error: "Teams must be a list" };
-  const used = new Set<PlayerId>();
-  const teams: Team[] = [];
-  for (const [i, t] of raw.entries()) {
-    const members = Array.isArray((t as { members?: unknown })?.members) ? ((t as { members: unknown[] }).members) : null;
-    if (!members) return { error: `Team ${i + 1} has no players` };
-    const ids: PlayerId[] = [];
-    for (const m of members) {
-      if (typeof m !== "string" || !present.includes(m)) return { error: "A team lists a kid who isn't checked in" };
-      if (used.has(m)) return { error: `${m} is on two teams` };
-      used.add(m);
-      ids.push(m);
-    }
-    if (ids.length < 2 || ids.length > 3) return { error: `Team ${i + 1} needs 2 or 3 players` };
-    teams.push({ seed: i + 1, members: ids });
-  }
-  if (used.size !== present.length) return { error: "Every checked-in kid must be on a team" };
-  if (teams.length < 2) return { error: "A playoff needs at least two teams" };
-  if (teams.length > SEASON_LEAGUE_MAX_BRACKET_TEAMS) return { error: `At most ${SEASON_LEAGUE_MAX_BRACKET_TEAMS} teams` };
-  return teams;
-}
-
-function computeTeams(snapshot: LeagueSnapshot, presentIds: unknown[], teamsRaw: unknown): TeamsPreview {
+/**
+ * Who plays the final (Sam, 2026-11-02): the kids checked in for the week-6
+ * round robin (its Day row), ranked by the standings after it, top four →
+ * #1 & #4 vs #2 & #3. A tie on every numeric key across the #4/#5 cut is never
+ * settled by the name fallback — the coach settles it on court and picks.
+ */
+function computeFinal(snapshot: LeagueSnapshot, chosenRaw: unknown): FinalPreview {
   if (snapshot.rowsStatus !== "ok") {
     return { ok: false, message: snapshot.rowsStatus === "config_missing" ? "NOTION_SEASON_LEAGUE_DB_ID is not set" : "Couldn't read the games database — try again" };
   }
-  const present = presentFrom(snapshot, presentIds);
-  if (present.length < 4) return { ok: false, message: "A playoff needs at least four kids checked in" };
-  const ranked = snapshot.standings.map((s) => s.playerId).filter((id) => present.includes(id));
-  let teams: Team[];
-  if (teamsRaw !== undefined) {
-    const parsed = parseTeams(teamsRaw, present);
-    if ("error" in parsed) return { ok: false, message: parsed.error };
-    teams = parsed;
-  } else {
-    teams = pairTeams(ranked, SEASON_LEAGUE_PLAYOFF_PAIRING);
+  const summary = snapshot.weeks.find((w) => w.week === SEASON_LEAGUE_PLAYOFF_WEEK);
+  if (!summary?.dayRow) return { ok: false, message: "Check in today's kids and save the round robin first" };
+  const present = presentFrom(snapshot, summary.dayRow.present);
+  if (present.length < FINAL_SIZE) return { ok: false, message: "The final needs at least four kids checked in" };
+
+  const ranked = snapshot.standings.filter((s) => present.includes(s.playerId));
+  const atCut = ranked[FINAL_SIZE - 1];
+  const tiedFrom = ranked.findIndex((s) => tiedOnRecord(s, atCut));
+  const tied = ranked.filter((s) => tiedOnRecord(s, atCut));
+  let top: StandingRow[] = ranked.slice(0, FINAL_SIZE);
+  if (tiedFrom + tied.length > FINAL_SIZE) {
+    const spots = FINAL_SIZE - tiedFrom;
+    const tie: FinalTie = { spots, kids: tied.map((s) => ({ id: s.playerId, name: nameFor(snapshot.names, s.playerId) })) };
+    const listed = tie.kids.map((k) => k.name).join(", ");
+    const chosen = Array.isArray(chosenRaw) ? [...new Set(chosenRaw.filter((c): c is string => typeof c === "string"))] : [];
+    if (chosen.length === 0) {
+      return { ok: false, tie, message: `Tied at the cut: ${listed}. Settle it on court, then pick who plays.` };
+    }
+    if (chosen.length !== spots || chosen.some((id) => !tied.some((s) => s.playerId === id))) {
+      return { ok: false, tie, message: `Pick ${spots} of the tied kids: ${listed}` };
+    }
+    top = [...ranked.slice(0, tiedFrom), ...tied.filter((s) => chosen.includes(s.playerId))];
   }
-  if (teams.length > SEASON_LEAGUE_MAX_BRACKET_TEAMS) return { ok: false, message: `At most ${SEASON_LEAGUE_MAX_BRACKET_TEAMS} teams` };
+
+  const teams = finalTeams(top.map((s) => s.playerId));
   const names: Record<PlayerId, string> = {};
-  for (const id of present) names[id] = nameFor(snapshot.names, id);
-  return { ok: true, group: snapshot.group, present, ranked, teams, names, pairing: SEASON_LEAGUE_PLAYOFF_PAIRING };
+  for (const t of teams) for (const id of t.members) names[id] = nameFor(snapshot.names, id);
+  const unscored = summary.games.filter((g) => g.phase === "League" && g.status === "Scheduled").length;
+  const warning =
+    unscored > 0
+      ? `${unscored} round-robin game${unscored === 1 ? " is" : "s are"} still unscored — the top four may still change`
+      : null;
+  return { ok: true, group: snapshot.group, teams, names, warning };
 }
 
-export async function previewTeams(input: TeamsInput): Promise<TeamsPreview> {
+export async function previewFinal(input: FinalInput): Promise<FinalPreview> {
   const group = parseGroup(input.group);
   if (!group) return { ok: false, message: "Unknown league" };
   const snapshot = await loadLeagueSnapshot(group);
-  return computeTeams(snapshot, input.presentIds ?? [], input.teams);
+  return computeFinal(snapshot, input.chosen);
 }
 
 export interface LockResult {
@@ -580,31 +587,27 @@ export interface LockResult {
   voided: number;
 }
 
-export async function lockTeams(input: TeamsInput): Promise<LockResult> {
+const FINAL_SCORED = "The final is already scored — the teams can't change now";
+
+export async function lockFinal(input: FinalInput): Promise<LockResult> {
   const zero = { created: 0, updated: 0, failed: 0, voided: 0 };
   const group = parseGroup(input.group);
   if (!group) return { ok: false, message: "Unknown league", ...zero };
   const snapshot = await loadLeagueSnapshot(group);
-  if (snapshot.playoff.results.length > 0) {
-    return { ok: false, message: "Playoff games are already scored — teams can't change now", ...zero };
-  }
-  const preview = computeTeams(snapshot, input.presentIds ?? [], input.teams);
+  if (snapshot.playoff.results.length > 0) return { ok: false, message: FINAL_SCORED, ...zero };
+  const preview = computeFinal(snapshot, input.chosen);
   if (!preview.ok) return { ok: false, message: preview.message, ...zero };
 
   const week = SEASON_LEAGUE_PLAYOFF_WEEK;
   const sessionDate = seasonLeagueWeekDate(week);
-  const attempt = (snapshot.weeks.find((w) => w.week === week)?.dayRow?.attempt ?? 0) + 1;
-  const entries = [
-    {
-      key: dayKey(group, week),
-      props: buildDayRowProps({ group, week, sessionDate, present: preview.present, attempt, rounds: 0 }),
-    },
-    ...preview.teams.map((t) => ({
+  // Team rows only. The Day row is the round robin's (who is checked in, its
+  // rounds and plan seed) and is never rewritten by the final.
+  const outcomes = await upsertSeasonLeagueRows(
+    preview.teams.map((t) => ({
       key: teamKey(group, week, t.seed),
       props: buildTeamRowProps({ group, week, sessionDate, seed: t.seed, members: t.members }),
     })),
-  ];
-  const outcomes = await upsertSeasonLeagueRows(entries);
+  );
   const counts = { ...zero };
   for (const o of outcomes) {
     if (o.action === "created" || o.action === "updated" || o.action === "failed") counts[o.action] += 1;
@@ -612,18 +615,17 @@ export async function lockTeams(input: TeamsInput): Promise<LockResult> {
   const stale = snapshot.playoff.teamRows.filter((r) => r.seed > preview.teams.length);
   counts.voided = await voidSeasonLeagueRows(stale.map((r) => r.pageId));
   const ok = counts.failed === 0;
-  return { ok, message: ok ? `Locked ${preview.teams.length} teams` : `${counts.failed} rows failed — tap Lock again`, ...counts };
+  const [a, b] = preview.teams.map((t) => sideLabel(snapshot.names, t.members));
+  return { ok, message: ok ? `Locked the final: ${a} vs ${b}` : `${counts.failed} rows failed — tap Lock again`, ...counts };
 }
 
-export async function unlockTeams(input: { group: unknown }): Promise<ScoreResult> {
+export async function unlockFinal(input: { group: unknown }): Promise<ScoreResult> {
   const group = parseGroup(input.group);
   if (!group) return { ok: false, message: "Unknown league" };
   const snapshot = await loadLeagueSnapshot(group);
-  if (snapshot.playoff.results.length > 0) {
-    return { ok: false, message: "Playoff games are already scored — teams can't change now" };
-  }
+  if (snapshot.playoff.results.length > 0) return { ok: false, message: FINAL_SCORED };
   const voided = await voidSeasonLeagueRows(snapshot.playoff.teamRows.map((r) => r.pageId));
-  return { ok: true, message: `Unlocked (${voided} team rows cleared)` };
+  return { ok: true, message: `Unlocked the final (${voided} team rows cleared)` };
 }
 
 export interface PlayoffScoreInput {
@@ -647,7 +649,7 @@ export async function recordPlayoffScore(input: PlayoffScoreInput): Promise<Scor
 
   const snapshot = await loadLeagueSnapshot(group);
   const { state, teams } = snapshot.playoff;
-  if (!state) return { ok: false, message: "Lock the teams first" };
+  if (!state) return { ok: false, message: "Lock the final first" };
   const resolved = state.slots.find((s) => s.slot.id === slot);
   if (!resolved || (resolved.status !== "ready" && resolved.status !== "played")) {
     return { ok: false, message: "That game isn't ready to play yet" };
@@ -725,6 +727,8 @@ export interface StandingsViewPlayoffGame {
   b: string | null;
   scoreA: number | null;
   scoreB: number | null;
+  /** The game ended on the clock, so the score needn't reach the length. */
+  timed: boolean;
   status: "bye" | "pending" | "ready" | "played" | "skipped";
 }
 
@@ -804,6 +808,7 @@ export function buildStandingsView(snapshot: LeagueSnapshot): StandingsView {
               b: teamName(s.b),
               scoreA: s.result?.scoreA ?? null,
               scoreB: s.result?.scoreB ?? null,
+              timed: snapshot.playoff.games.find((g) => g.slot === s.slot.id)?.timed ?? false,
               status: s.status,
             })),
           champion: teamName(state.champion),

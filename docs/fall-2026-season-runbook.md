@@ -127,10 +127,12 @@ Each Sunday, on your phone:
 5. Week 6 (Nov 8) is the **Finale**. Run it like any Sunday — check attendance, preview,
    save, score — and those games count in the standings. Keep games short (tick "ended on
    time") and set "Rounds to add" to what fits the block: about 7 for eight kids, 5–6 for
-   seven. After the last round-robin score, the top four kids checked in play one game for
-   1st and 2nd: #1 and #4 against #2 and #3, from the standings on the page. If #4 and #5
-   are tied, settle it on court. Everyone else cheers. The Link & Dink trial
-   (`/coach/league`) is not used on Nov 8.
+   seven. After the last round-robin score, scroll to **The final** and tap **Show the
+   final**: the top four kids checked in, #1 and #4 against #2 and #3. If it says #4 and #5
+   are tied, settle it on court, tick who plays and show it again. **Lock the final**, set
+   "Final to", play the one game and save the score — 1st and 2nd place appear on the
+   page and the parent link. Unlock works until the final is scored. Everyone else cheers.
+   The Link & Dink trial (`/coach/league`) is not used on Nov 8.
 
 The parent link for each group is on `/coach/fall-season` ("Copy parent link") — paste it
 into that group's WhatsApp once. It shows first names, records, scores and the final,

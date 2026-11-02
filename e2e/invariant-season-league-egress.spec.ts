@@ -13,7 +13,7 @@ process.env.LEAD_INGEST_TOKEN = "ob-token";
 process.env.RESEND_API_KEY = "re_test_egress";
 
 import {
-  lockTeams,
+  lockFinal,
   previewDay,
   recordGameScore,
   recordPlayoffScore,
@@ -181,16 +181,20 @@ test.describe("season play — the games database holds no names", () => {
     expect(patch.body).toContain('"Played"');
   });
 
-  test("a playoff lock and a bracket score write ids and scores only", async () => {
+  test("the finale's lock and final score write ids and scores only", async () => {
     const games: Page[] = [];
     installWorld(stub, games);
-    const lock = await lockTeams({ group: "Green", presentIds: REG_IDS });
-    expect(lock.ok).toBe(true);
-    const score = await recordPlayoffScore({ group: "Green", slot: "w1m2", scoreA: 11, scoreB: 9, timed: false });
-    expect(score.ok).toBe(true);
+    // The final draws from the week-6 round robin's check-in. With no games
+    // yet all six kids are dead even, so the coach picks the four who play.
+    expect((await saveDay({ group: "Green", week: 6, presentIds: REG_IDS })).ok).toBe(true);
+    const lock = await lockFinal({ group: "Green", chosen: REG_IDS.slice(0, 4) });
+    expect(lock.ok, lock.message).toBe(true);
+    const score = await recordPlayoffScore({ group: "Green", slot: "final", scoreA: 11, scoreB: 9, timed: false });
+    expect(score.ok, score.message).toBe(true);
     for (const w of writes(stub)) assertNoSentinels(w.body, `${w.method} ${w.url}`);
-    const playoffRow = games.find((p) => p.properties.Phase?.select?.name === "Playoff")!;
-    expect(playoffRow.properties["Side A"].relation.length).toBeGreaterThanOrEqual(2);
+    const finalRow = games.find((p) => p.properties.Phase?.select?.name === "Playoff")!;
+    expect(finalRow.properties["Side A"].relation).toHaveLength(2);
+    expect(finalRow.properties["Side B"].relation).toHaveLength(2);
   });
 });
 
@@ -307,5 +311,24 @@ test.describe("season play — the parent link", () => {
     expect(view!.weeks[0].games.some((g) => g.status === "Played" && g.scoreA === 11)).toBe(true);
     // Everything it read came from Notion only.
     for (const call of stub.calls) expect(ALLOWED_HOSTS).toContain(new URL(call.url).host);
+  });
+
+  test("a scored final shows the two pairs by first name — and no parent field, age, or attendance", async () => {
+    const games: Page[] = [];
+    installWorld(stub, games);
+    await saveDay({ group: "Green", week: 6, presentIds: REG_IDS });
+    expect((await lockFinal({ group: "Green", chosen: REG_IDS.slice(0, 4) })).ok).toBe(true);
+    expect((await recordPlayoffScore({ group: "Green", slot: "final", scoreA: 11, scoreB: 9 })).ok).toBe(true);
+
+    const view = await resolveStandingsView("green", signStandingsLink("Green")!);
+    const final = view!.playoff!;
+    expect(final.champion).toBeTruthy();
+    expect(final.runnerUp).toBeTruthy();
+    const json = JSON.stringify(final);
+    for (const s of SENTINELS) expect(json, `final view must not carry ${s}`).not.toContain(s);
+    expect(json).not.toContain("reg-1");
+    for (const key of ['"present"', '"sitting"', '"absent"', '"age"', '"birthYear"']) {
+      expect(json, `final view must not carry ${key}`).not.toContain(key);
+    }
   });
 });
