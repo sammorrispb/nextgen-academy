@@ -7,7 +7,7 @@ import EmailTypoHint from "@/components/EmailTypoHint";
 import { submissionKeyFor } from "@/lib/submission-key";
 import { isWaiverRequired } from "@/lib/waiver-required";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
-import { validateSeriesRegistration, type SeriesDivision, type SeriesRelease, type SeriesRegistration } from "@/data/mvf-series-registration";
+import { invoiceDueLabel, validateSeriesRegistration, type SeriesDivision, type SeriesRelease, type SeriesRegistration } from "@/data/mvf-series-registration";
 import type { MvfJuniorSeriesEvent } from "@/data/mvf-junior-series";
 
 // MVF junior series sign-up form. Same steps, layout and copy as the
@@ -194,7 +194,7 @@ export default function MvfSeriesRegistrationForm({ release, event }: { release:
         <fieldset className="mb-6">
           <legend className={labelClass}>Which division?</legend>
           <p className="text-sm text-ngpa-white/70 mb-3">{when}</p>
-          <p className="text-sm text-ngpa-white/70 mb-3">Registration closes {deadline} ET. Invoices are due in {release.invoiceDueDays} days.</p>
+          <p className="text-sm text-ngpa-white/70 mb-3">Registration closes {deadline} ET. Invoices are due in {invoiceDueLabel(release.invoiceDueDays)}.</p>
           <div className="grid grid-cols-1 gap-3">
             {event.divisions.map((option) => {
               const selected = form.division === option.slug;
@@ -321,7 +321,7 @@ export default function MvfSeriesRegistrationForm({ release, event }: { release:
           </p>
           <p className="text-sm text-ngpa-white/70">{release.minimumEnrollmentPolicy}</p>
           <p className="text-sm text-ngpa-white/70">
-            We&rsquo;ll email you an invoice, due in {release.invoiceDueDays} days. Your player&rsquo;s spot is confirmed once it&rsquo;s paid.
+            We&rsquo;ll email you an invoice, due in {invoiceDueLabel(release.invoiceDueDays)}. Your player&rsquo;s spot is confirmed once it&rsquo;s paid.
           </p>
         </div>
 

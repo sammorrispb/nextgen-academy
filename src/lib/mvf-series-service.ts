@@ -1,6 +1,6 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type Stripe from "stripe";
-import { activeSeriesRelease, findSeriesRelease, releaseProblems, seriesEventKey, validateSeriesRegistration, MVF_SERIES_ACCOUNT, MVF_SERIES_KIND, type SeriesRegistration, type SeriesRelease } from "@/data/mvf-series-registration";
+import { activeSeriesRelease, findSeriesRelease, invoiceDueLabel, releaseProblems, seriesEventKey, validateSeriesRegistration, MVF_SERIES_ACCOUNT, MVF_SERIES_KIND, type SeriesRegistration, type SeriesRelease } from "@/data/mvf-series-registration";
 import { findMvfJuniorSeriesEvent, mvfJuniorSeriesUrl } from "@/data/mvf-junior-series";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import { getStripe } from "./stripe";
@@ -133,7 +133,7 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
     const title = phase === "paid" ? "Payment received" : phase === "void" ? "Unpaid registration cancelled" : "Your invoice is ready";
     const text = [title, `MVF Junior Tournament — ${event.monthLabel} — ${m.division.toUpperCase()}`,
       `Player: ${invoiceSafeName(m.child_first_name)}`, `When: ${when}`, `Where: ${event.venue.name}, ${event.venue.address}`,
-      phase === "paid" ? `Paid: $${(amount / 100).toFixed(2)}. Your registration is confirmed.` : phase === "void" ? "Your unpaid invoice is void and its seat has been released. No payment or refund was made by this cancellation." : `Entry fee: $${(amount / 100).toFixed(2)}. Payment is pending. Your invoice is due in ${release.invoiceDueDays} days; becoming overdue does not automatically cancel it.`,
+      phase === "paid" ? `Paid: $${(amount / 100).toFixed(2)}. Your registration is confirmed.` : phase === "void" ? "Your unpaid invoice is void and its seat has been released. No payment or refund was made by this cancellation." : `Entry fee: $${(amount / 100).toFixed(2)}. Payment is pending. Your invoice is due in ${invoiceDueLabel(release.invoiceDueDays)}; becoming overdue does not automatically cancel it.`,
       ...(phase === "pending" && seriesPayUrl(invoice.hosted_invoice_url) ? [`Pay your invoice: ${seriesPayUrl(invoice.hosted_invoice_url)}`] : []),
       `Cancellation policy: ${release.cancellationPolicy}`, `Weather policy: ${release.rainPolicy}`, `Minimum enrollment: ${release.minimumEnrollmentPolicy}`,
       `${mvfJuniorSeriesUrl(event)}/status#receipt=${seriesToken({ event: release.event, revision: release.revision, invoice: invoice.id, submission: m.nga_capacity_submission_id, purpose: "receipt" }, Number(m.receipt_issued_at))}`,

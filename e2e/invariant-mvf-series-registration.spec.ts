@@ -17,11 +17,12 @@ test.beforeEach(() => {
 });
 test.afterEach(() => { const attempts = h.network.attempts.slice(); h.close(); for (const [key, value] of Object.entries(saved)) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } expect(attempts).toEqual([]); });
 
-test("all production events remain closed before any body parsing or service call", async () => {
+test("open events still refuse registration outside production before any provider call", async () => {
   for (const event of ["november-2026", "january-2027", "february-2027"]) {
-    expect(activeSeriesRelease(event)).toBeUndefined(); expect(findSeriesRelease(event, "synthetic-v1")).toBeUndefined();
-    const response = await POST(new NextRequest(`http://localhost/api/mvf-series/${event}/register`, { method: "POST", body: "{bad json" }), { params: Promise.resolve({ event }) });
-    expect(response.status).toBe(409); expect((await response.json()).code).toBe("registration_closed");
+    expect(findSeriesRelease(event, "synthetic-v1")).toBeUndefined();
+    const open = Date.now() < Date.parse(activeSeriesRelease(event)!.registrationClosesAt);
+    const response = await POST(new NextRequest(`http://localhost/api/mvf-series/${event}/register`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(registration(1)) }), { params: Promise.resolve({ event }) });
+    expect(response.status).toBe(409); expect((await response.json()).code).toBe(open ? "production_only" : "registration_closed");
   }
   expect(h.fake.all()).toHaveLength(0); expect(h.stub.calls).toEqual([]); expect(h.accountReads).toBe(0);
 });

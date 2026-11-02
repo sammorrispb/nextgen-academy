@@ -8,7 +8,7 @@ import {
   mvfJuniorSeriesUrl,
 } from "../src/data/mvf-junior-series";
 import MvfJuniorSeriesOverview from "../src/components/MvfJuniorSeriesOverview";
-import { publicSeriesRelease } from "../src/data/mvf-series-registration";
+import { invoiceDueLabel, publicSeriesRelease } from "../src/data/mvf-series-registration";
 import Page, { generateMetadata, generateStaticParams } from "../src/app/mvf-junior-tournament/[event]/page";
 
 const require = createRequire(`${process.cwd()}/package.json`);
@@ -42,7 +42,8 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ event }) }));
     expect(html).toContain("Registration is not open yet.");
     expect(html).toContain("Registration remains closed. Please check this page for opening updates.");
-    expect(publicSeriesRelease(event)).toBeUndefined();
+    const live = publicSeriesRelease(event);
+    if (live) expect(live.revision).toBe(event === "november-2026" ? "launch-2026-11-02" : "launch-2026-10-31");
     expect(findMvfJuniorSeriesEvent(event)!.dates[0].iso).toBe(expectedDates[event]);
     expect(html).toContain("A minimum of 8 players across both brackets");
     expect(html).toContain("If a bracket has fewer than 5 players, we will decide whether to combine or cancel it 3 days before the tournament.");
@@ -99,6 +100,20 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
     expect(JSON.stringify(meta)).not.toMatch(/January 16\b|February 13\b|October 24|4:00–7:00 PM/);
   });
 }
+
+test("overview says registration is open only for open months and links each to register", () => {
+  const html = renderToStaticMarkup(MvfJuniorSeriesOverview({ openEvents: ["november-2026", "january-2027"] }));
+  expect(html).toContain("Registration is open for November 2026, January 2027.");
+  expect(html).not.toContain("Registration is not open yet");
+  expect(html).toContain("Register for November 2026");
+  expect(html).toContain("Register for January 2027");
+  expect(html).toContain("February 2027 details and updates");
+});
+
+test("invoice due wording is singular for one day and plural otherwise", () => {
+  expect(invoiceDueLabel(1)).toBe("1 day");
+  expect(invoiceDueLabel(7)).toBe("7 days");
+});
 
 test("overview separates current updates from the October archive and keeps stable links", () => {
   const html = renderToStaticMarkup(MvfJuniorSeriesOverview());

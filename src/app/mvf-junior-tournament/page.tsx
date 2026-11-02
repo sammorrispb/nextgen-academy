@@ -1,5 +1,7 @@
 import PagePhoto from "@/components/PagePhoto";
 import MvfJuniorSeriesOverview from "@/components/MvfJuniorSeriesOverview";
+import { MVF_JUNIOR_SERIES } from "@/data/mvf-junior-series";
+import { publicSeriesRelease } from "@/data/mvf-series-registration";
 import type { Metadata } from "next";
 import JsonLd from "@/components/JsonLd";
 import MvfJuniorTournamentForm from "@/components/MvfJuniorTournamentForm";
@@ -32,10 +34,14 @@ import {
 //
 // Keep historical links working after retiring public promotion.
 
+// Rendered per request so the open/closed registration status follows each
+// deadline instead of the build time.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
   title: { absolute: "MVF Junior Tournaments — Montgomery Village, MD" },
-  description: "Schedule updates for the November 2026, January 2027 and February 2027 MVF junior tournaments. Registration is not open yet. Includes the October 24 tournament archive.",
+  description: "Schedule, registration and policies for the November 2026, January 2027 and February 2027 MVF junior tournaments. Includes the October 24 tournament archive.",
   alternates: { canonical: "https://nextgenpbacademy.com/mvf-junior-tournament" },
 };
 
@@ -44,7 +50,7 @@ export default function MvfJuniorTournamentPage() {
   return (
     <main className="bg-ngpa-navy min-h-screen">
       <JsonLd data={mvfTournamentJsonLd()} />
-      <MvfJuniorSeriesOverview />
+      <MvfJuniorSeriesOverview openEvents={process.env.VERCEL_ENV === "production" ? MVF_JUNIOR_SERIES.filter(e => publicSeriesRelease(e.slug)).map(e => e.slug) : []} />
       {/* Hero */}
       <section className="px-5 sm:px-8 pt-16 pb-10 max-w-3xl mx-auto">
         <p className="text-ngpa-white/70 mb-3">October 24, 2026 archive — the details and policies below apply only to that past tournament.</p>

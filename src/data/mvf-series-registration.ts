@@ -4,7 +4,7 @@ import { sessionStartUtcMs, parseStartTime } from "@/lib/session-time";
 
 export const MVF_SERIES_KIND = "mvf-junior-series";
 export const MVF_SERIES_ACCOUNT = "acct_1TU4iSBpXOfTC961";
-export const MVF_SERIES_ADMISSION_ENABLED: boolean = false;
+export const MVF_SERIES_ADMISSION_ENABLED: boolean = true;
 export type SeriesDivision = "12u" | "16u";
 export interface SeriesRelease {
   event: string;
@@ -30,7 +30,7 @@ export interface SeriesRelease {
 
 // Retain issued versions permanently: closing admission or changing a later
 // release must never strand an existing invoice, receipt or paid callback.
-export const MVF_SERIES_RELEASES: readonly SeriesRelease[] = [
+const CONFIRMED_LAUNCH_RELEASES: readonly SeriesRelease[] = [
   { event: "november-2026", date: "2026-11-14", endTime: "12:00 PM", registrationClosesAt: "2026-11-04T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. The same-day indoor weather backup is Lake Marion Community Center gymnasium, 3:00–6:00 PM ET, later than the 10:00 AM–noon outdoor tournament. No separate makeup date is scheduled." },
   { event: "january-2027", date: "2027-01-17", endTime: "1:00 PM", registrationClosesAt: "2027-01-07T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. Indoor tournament at Lake Marion Community Center. The offered makeup is January 23, 2027, 3:30–6:30 PM ET at Lake Marion Community Center." },
   { event: "february-2027", date: "2027-02-14", endTime: "1:00 PM", registrationClosesAt: "2027-02-04T15:00:00Z", rainPolicy: "Weather decisions will be made 24 hours before the tournament. Indoor tournament at Lake Marion Community Center. The offered makeup is February 20, 2027, 3:30–6:30 PM ET at Lake Marion Community Center." },
@@ -41,7 +41,19 @@ export const MVF_SERIES_RELEASES: readonly SeriesRelease[] = [
   minimumEnrollmentPolicy: "A minimum of 8 players across both brackets is needed to run each tournament. If a bracket has fewer than 5 players, we will decide whether to combine or cancel it 3 days before the tournament.",
   cancellationPolicy: "No refunds unless we cancel.", invoiceDueDays: 7, ngaRevenueShare: 0.8, ngaRevenueBaseUsd: 50,
 }));
-export const MVF_SERIES_ACTIVE_REVISIONS: Readonly<Record<string, string>> = {};
+// November 2: Sam extended November registration to 10:00 AM ET on Friday,
+// November 13, with one-day invoices so payment is due by the 10:00 AM start.
+// Added as a new revision; the original release above stays retained.
+const NOVEMBER_EXTENDED_RELEASE: SeriesRelease = {
+  ...CONFIRMED_LAUNCH_RELEASES.find(r => r.event === "november-2026")!,
+  revision: "launch-2026-11-02", registrationClosesAt: "2026-11-13T15:00:00Z", invoiceDueDays: 1,
+};
+export const MVF_SERIES_RELEASES: readonly SeriesRelease[] = [...CONFIRMED_LAUNCH_RELEASES, NOVEMBER_EXTENDED_RELEASE];
+export const MVF_SERIES_ACTIVE_REVISIONS: Readonly<Record<string, string>> = {
+  "november-2026": "launch-2026-11-02",
+  "january-2027": "launch-2026-10-31",
+  "february-2027": "launch-2026-10-31",
+};
 
 export function seriesEventKey(event: string, division: SeriesDivision): string {
   if (!findMvfJuniorSeriesEvent(event)) throw new Error("Unknown tournament");
@@ -70,6 +82,10 @@ export function releaseProblems(release: SeriesRelease): string[] {
   if (release.ngaRevenueBaseUsd !== undefined && release.ngaRevenueBaseUsd !== findMvfJuniorSeriesEvent(release.event)?.prices.residentUsd) problems.push("confirmed revenue base");
   if (start !== null && Date.parse(release.registrationClosesAt) + release.invoiceDueDays * 86400000 > start) problems.push("invoice payment window before event");
   return problems;
+}
+
+export function invoiceDueLabel(days: number): string {
+  return `${days} day${days === 1 ? "" : "s"}`;
 }
 
 export function findSeriesRelease(event: string, revision: string): SeriesRelease | undefined {
