@@ -32,6 +32,7 @@ export class SeriesHarness {
   refundEvidence = false;
   paymentEvidenceUnavailable = false;
   ready = true;
+  homeAddressPropertyType: string | null = "rich_text";
   admission = true;
   bindFailure = false;
   noticeFailure = false;
@@ -121,6 +122,7 @@ export class SeriesHarness {
       if (call.url.includes("/waiver") || call.url.includes(process.env.NOTION_WAIVERS_DB_ID!)) return { status: 200, json: { results: this.waiver ? [{}] : [] } };
       if (call.method === "GET") {
         const types: Record<string, string> = { "Parent Name": "title", "Parent Email": "email", "Parent Phone": "phone_number", "Child First Name": "rich_text", "Child Last Name": "rich_text", "Child DOB": "date", "Event Key": "rich_text", "Policy Revision": "rich_text", Division: "select", Resident: "checkbox", Status: "select", Paid: "checkbox", "Amount Due": "number", "Amount Paid": "number", "Stripe Invoice ID": "rich_text", "Emergency Name": "rich_text", "Emergency Phone": "phone_number", Allergies: "rich_text", "SMS Consent": "checkbox", "SMS Consent Text": "rich_text" };
+        if (this.homeAddressPropertyType) types["Home Address"] = this.homeAddressPropertyType;
         return { status: 200, json: { properties: Object.fromEntries(Object.entries(types).map(([key, type]) => [key, { type, ...(type === "select" ? { select: { options: (key === "Division" ? ["12U", "16U"] : ["Pending", "Confirmed", "Cancelled", "Review required"]).map(name => ({ name })) } } : {}) }])) } };
       }
       if (call.url.endsWith("/query")) { const id = body.filter.rich_text.equals; return { status: 200, json: { results: this.pages.filter(p => (p.properties["Stripe Invoice ID"] as { rich_text: { plain_text: string }[] }).rich_text[0].plain_text === id), has_more: false } }; }

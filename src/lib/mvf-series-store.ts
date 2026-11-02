@@ -63,7 +63,7 @@ async function notion(path: string, method = "GET", body?: unknown): Promise<Rec
   } catch { throw new SeriesError("roster_unavailable"); }
 }
 
-export async function checkSeriesRosterSchema(): Promise<void> {
+export async function checkSeriesRosterSchema(requireHomeAddress = false): Promise<void> {
   const { db } = notionConfig();
   const result = await notion(`/databases/${db}`);
   const props = result.properties as Record<string, { type?: string; select?: { options?: { name: string }[] } }> | undefined;
@@ -71,6 +71,7 @@ export async function checkSeriesRosterSchema(): Promise<void> {
     "Parent Name": "title", "Parent Email": "email", "Parent Phone": "phone_number", "Child First Name": "rich_text", "Child Last Name": "rich_text", "Child DOB": "date",
     "Event Key": "rich_text", "Policy Revision": "rich_text", Division: "select", Resident: "checkbox", Status: "select", Paid: "checkbox",
     "Amount Due": "number", "Amount Paid": "number", "Stripe Invoice ID": "rich_text", "Emergency Name": "rich_text", "Emergency Phone": "phone_number", Allergies: "rich_text", "SMS Consent": "checkbox", "SMS Consent Text": "rich_text",
+    ...(requireHomeAddress ? { "Home Address": "rich_text" } : {}),
   };
   if (!props || Object.entries(types).some(([key, type]) => props[key]?.type !== type) ||
     ["12U", "16U"].some(label => !props.Division?.select?.options?.some(o => o.name === label)) ||
@@ -113,7 +114,11 @@ async function findRow(invoiceId: string, metadata: Metadata): Promise<RosterPag
 }
 
 export async function ensureSeriesRoster(invoiceId: string, m: Metadata, beforeWrite?: () => void): Promise<void> {
-  if (await findRow(invoiceId, m)) return;
+  const verifyAddress = (row: RosterPage) => {
+    if (m.home_address && plain(row.properties["Home Address"]) !== m.home_address) throw new SeriesError("roster_mismatch");
+  };
+  const existing = await findRow(invoiceId, m);
+  if (existing) { verifyAddress(existing); return; }
   const claim = await seriesCommand(m.event_key, "roster_claim", { invoice_id: invoiceId });
   if (claim.claimed !== true) throw new SeriesError("roster_reconciliation_required");
   const { db } = notionConfig();
@@ -125,9 +130,12 @@ export async function ensureSeriesRoster(invoiceId: string, m: Metadata, beforeW
     Status: { select: { name: "Pending" } }, Paid: { checkbox: false }, "Amount Due": { number: Number(m.amount_usd) }, "Amount Paid": { number: 0 },
     "Stripe Invoice ID": rich(invoiceId), "Emergency Name": rich(m.emergency_name), "Emergency Phone": { phone_number: m.emergency_phone }, Allergies: rich(m.allergies),
     "SMS Consent": { checkbox: m.sms_consent === "true" }, "SMS Consent Text": rich(m.sms_consent_text),
+    ...(m.home_address ? { "Home Address": rich(m.home_address) } : {}),
   } });
   // A successful create response alone must not authorize an unrelated row.
-  if (!(await findRow(invoiceId, m))) throw new SeriesError("roster_reconciliation_required");
+  const created = await findRow(invoiceId, m);
+  if (!created) throw new SeriesError("roster_reconciliation_required");
+  verifyAddress(created);
 }
 
 export async function seriesRosterNeedsReview(invoiceId: string, m: Metadata): Promise<boolean> {
