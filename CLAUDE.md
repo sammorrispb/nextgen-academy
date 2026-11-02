@@ -438,8 +438,15 @@ a family nearly being told the wrong product under that name, so parent-facing c
   DayPlanner and those games count in the standings. Then one game for 1st and 2nd:
   #1 & #4 vs #2 & #3 among the kids checked in that day, from the standings after the round
   robin; a tie at the #4/#5 cut is settled on court, never by the name tiebreak; everyone
-  else cheers. Until the lock-and-score flow lands, the coach runs that final on court from
-  the standings on the page. The double-elimination engine (`finals.ts` `buildBracket`,
+  else cheers. On the week-6 page the coach taps **Show the final** then **Lock the final**
+  (`lockFinal`): candidates are the round robin's check-in (the week-6 Day row, which the
+  lock never rewrites), ranked by `snapshot.standings`; `finalTeams` pairs the top four
+  #1 & #4 v #2 & #3 (snake over four — never halves, which would make 1+2 v 3+4); a dead-even
+  tie across the cut (`tiedOnRecord`) blocks the lock until the coach picks who plays. Only
+  Team rows T1/T2 are written; stale higher seeds are voided. `resolveFinal` scores ONE game
+  in slot `final` (no reset; old bracket slots are refused) with its own "Final to" length
+  picker, and the coach card and parent board show 1st and 2nd place. Unlock works until the
+  final is scored. The double-elimination engine (`finals.ts` `buildBracket`,
   `pairTeams`, `halvesTeams`, pinned by `e2e/season-league-finals.spec.ts` and
   `e2e/rotation-league-playoff-pairing.spec.ts`) stays for the Link & Dink trial, whose
   screens all carry a note that the Nov 8 Finale is scored in Fall season play only. Every Nov 8 surface says "Finale",

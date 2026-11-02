@@ -16,8 +16,11 @@ import { nameFor, sideLabel } from "@/lib/season-league/names";
 import { RankingNote, StandingsTable } from "@/components/season-league/StandingsTable";
 import AddRoundButton from "../../AddRoundButton";
 import DayPlanner from "../../DayPlanner";
+import FinalLocker from "../../FinalLocker";
 import { GameTargetProvider } from "../../GameTarget";
 import GameScoreForm from "../../GameScoreForm";
+import PlayoffScoreForm from "../../PlayoffScoreForm";
+import UnlockTeamsButton from "../../UnlockTeamsButton";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +40,7 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
   const summary = snapshot.weeks.find((w) => w.week === week)!;
   const slug = seasonLeagueGroupSlug(group);
   const isFinale = week === SEASON_LEAGUE_PLAYOFF_WEEK;
+  const finalGame = isFinale ? view.playoff?.games[0] ?? null : null;
 
   const roster = snapshot.confirmed.map((p) => ({ id: p.pageId, name: nameFor(snapshot.names, p.pageId) }));
   const initialPresent =
@@ -171,13 +175,54 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
           </section>
 
           {isFinale && (
-            <section className="rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/5 px-5 py-4">
+            <section className="rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/5 p-4 sm:p-6">
               <h2 className="font-heading text-xl font-black text-ngpa-white tracking-tight mb-2">The final</h2>
-              <p className="text-sm text-ngpa-white/75 leading-relaxed">
+              <p className="text-sm text-ngpa-white/75 leading-relaxed mb-5">
                 After the round robin, the top four kids checked in today play one game for 1st and
-                2nd: #1 and #4 against #2 and #3, from the standings above once every round-robin
-                game is scored. Everyone else cheers. If #4 and #5 are tied, settle it on court.
+                2nd: #1 and #4 against #2 and #3, from the standings above. Everyone else cheers. If
+                #4 and #5 are tied, settle it on court, then pick who plays.
               </p>
+              {finalGame && view.playoff ? (
+                <GameTargetProvider
+                  group={group}
+                  week={week}
+                  scope="final"
+                  label="Final to"
+                  targets={SEASON_LEAGUE_GAME_TARGETS}
+                  defaultTarget={SEASON_LEAGUE_GAME_TARGET}
+                  winBy={SEASON_LEAGUE_WIN_BY}
+                >
+                  <div className="space-y-4">
+                    {view.playoff.champion && (
+                      <div className="rounded-2xl border border-ngpa-lime/50 bg-ngpa-lime/10 px-5 py-4">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ngpa-lime mb-1">1st place</p>
+                        <p className="font-heading text-2xl font-black text-ngpa-white tracking-tight">{view.playoff.champion}</p>
+                        {view.playoff.runnerUp && (
+                          <p className="text-sm text-ngpa-white/70 mt-1">2nd place: {view.playoff.runnerUp}</p>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2 rounded-xl border border-ngpa-slate/60 bg-ngpa-panel/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm">
+                        <span className="font-bold text-ngpa-white">{finalGame.a}</span>
+                        <span className="text-ngpa-white/45"> vs </span>
+                        <span className="font-bold text-ngpa-white">{finalGame.b}</span>
+                      </div>
+                      <PlayoffScoreForm
+                        group={group}
+                        slot={finalGame.id}
+                        scoreA={finalGame.scoreA}
+                        scoreB={finalGame.scoreB}
+                        timed={finalGame.timed}
+                        played={finalGame.status === "played"}
+                      />
+                    </div>
+                    {snapshot.playoff.results.length === 0 && <UnlockTeamsButton group={group} />}
+                  </div>
+                </GameTargetProvider>
+              ) : (
+                <FinalLocker group={group} />
+              )}
             </section>
           )}
         </div>

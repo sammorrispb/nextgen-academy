@@ -12,8 +12,8 @@ const GameTargetContext = createContext<number | null>(null);
 
 const CHANGE_EVENT = "nga-season-game-target";
 
-function storageKey(group: string, week: number): string {
-  return `nga-season-game-target:${group}:${week}`;
+function storageKey(group: string, week: number, scope?: string): string {
+  return `nga-season-game-target:${group}:${week}${scope ? `:${scope}` : ""}`;
 }
 
 function readSaved(key: string): number | null {
@@ -40,11 +40,15 @@ interface ProviderProps {
   targets: readonly number[];
   defaultTarget: number;
   winBy: number;
+  /** A separate length inside the same Sunday, e.g. the Finale's final game. */
+  scope?: string;
+  /** Picker label; "Games to" by default. */
+  label?: string;
   children: ReactNode;
 }
 
-export function GameTargetProvider({ group, week, targets, defaultTarget, winBy, children }: ProviderProps) {
-  const key = storageKey(group, week);
+export function GameTargetProvider({ group, week, targets, defaultTarget, winBy, scope, label = "Games to", children }: ProviderProps) {
+  const key = storageKey(group, week, scope);
   // The server and the first client render use the default, so hydration
   // matches; the saved choice applies straight after.
   const saved = useSyncExternalStore(subscribe, () => readSaved(key), () => null);
@@ -69,8 +73,8 @@ export function GameTargetProvider({ group, week, targets, defaultTarget, winBy,
     <GameTargetContext.Provider value={target}>
       <div className="mb-8 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/40 px-4 py-3 sm:px-5">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal">Games to</span>
-          <div role="radiogroup" aria-label="Games to" className="inline-flex rounded-full border border-ngpa-slate/60 p-1">
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal">{label}</span>
+          <div role="radiogroup" aria-label={label} className="inline-flex rounded-full border border-ngpa-slate/60 p-1">
             {targets.map((t) => {
               const on = t === target;
               return (

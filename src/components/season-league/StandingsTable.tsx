@@ -129,56 +129,35 @@ export function WeekResults({ weeks }: { weeks: StandingsViewWeek[] }) {
   );
 }
 
-export function PlayoffBoard({ playoff }: { playoff: StandingsViewPlayoff }) {
+/** The Finale's one game for 1st and 2nd (Sam, 2026-11-02): no seeds, no bracket. */
+export function FinalBoard({ playoff }: { playoff: StandingsViewPlayoff }) {
+  const game = playoff.games[0];
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {playoff.champion && (
         <div className="rounded-2xl border border-ngpa-lime/50 bg-ngpa-lime/10 px-5 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ngpa-lime mb-1">Champions</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-ngpa-lime mb-1">1st place</p>
           <p className="font-heading text-2xl font-black text-ngpa-white tracking-tight">{playoff.champion}</p>
-          {playoff.runnerUp && (
-            <p className="text-sm text-ngpa-white/70 mt-1">Runners-up: {playoff.runnerUp}</p>
-          )}
+          {playoff.runnerUp && <p className="text-sm text-ngpa-white/70 mt-1">2nd place: {playoff.runnerUp}</p>}
         </div>
       )}
-      <div>
-        <h3 className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-2">Teams</h3>
-        <ol className="grid gap-2 sm:grid-cols-2">
-          {playoff.teams.map((t) => (
-            <li
-              key={t.seed}
-              className="flex items-center gap-3 rounded-xl border border-ngpa-slate/60 bg-ngpa-panel/60 px-4 py-3 text-sm"
-            >
-              <span className="font-mono text-xs text-ngpa-white/50">#{t.seed}</span>
-              <span className="font-bold text-ngpa-white">{t.name}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
-      <div>
-        <h3 className="font-heading text-lg font-black text-ngpa-white tracking-tight mb-2">Bracket</h3>
-        <ul className="divide-y divide-ngpa-slate/40 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/60">
-          {playoff.games.map((g) => (
-            <li key={g.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-sm">
-              <span className="text-xs text-ngpa-white/55 w-40 shrink-0">{g.label}</span>
-              <span className="flex-1 min-w-[10rem] text-ngpa-white/90">
-                {g.a ?? <span className="text-ngpa-white/40">TBD</span>}{" "}
-                <span className="text-ngpa-white/45">vs</span>{" "}
-                {g.b ?? <span className="text-ngpa-white/40">TBD</span>}
-              </span>
-              <span className="font-mono font-bold text-ngpa-white">
-                {g.status === "played" ? (
-                  `${g.scoreA}–${g.scoreB}`
-                ) : g.status === "ready" ? (
-                  <span className="text-ngpa-teal font-normal">on deck</span>
-                ) : (
-                  <span className="text-ngpa-white/40 font-normal">waiting</span>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {game && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/60 px-4 py-3 text-sm">
+          <span className="flex-1 min-w-[10rem] text-ngpa-white/90">
+            {game.a} <span className="text-ngpa-white/45">vs</span> {game.b}
+          </span>
+          <span className="font-mono font-bold text-ngpa-white">
+            {game.status === "played" ? (
+              <>
+                {game.scoreA}–{game.scoreB}
+                {game.timed && <span className="ml-1 text-[10px] font-bold uppercase text-ngpa-white/45">time</span>}
+              </>
+            ) : (
+              <span className="text-ngpa-teal font-normal">after the round robin</span>
+            )}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

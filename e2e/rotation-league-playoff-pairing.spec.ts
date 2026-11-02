@@ -7,7 +7,6 @@ process.env.NGA_SYNC_SECRET = "s3cret";
 process.env.LINKDINK_BASE_URL = "https://ld.example.test";
 
 import { ROTATION_LEAGUE_SEASONS } from "../src/data/rotation-league-seasons";
-import { SEASON_LEAGUE_PLAYOFF_PAIRING } from "../src/data/season-league-2026";
 import { previewPlayoff } from "../src/lib/rotation-league/view";
 
 // The Fall 2026 playoff pairs the top half of the standings against the bottom
@@ -43,9 +42,8 @@ test.afterEach(() => {
   delete process.env.VERCEL_ENV;
 });
 
-test("both Fall seasons on Link & Dink and the Notion season play declare the top-half / bottom-half rule", () => {
+test("both Fall seasons on Link & Dink declare the top-half / bottom-half rule", () => {
   expect(ROTATION_LEAGUE_SEASONS.map((s) => s.playoffPairing)).toEqual(["halves", "halves"]);
-  expect(SEASON_LEAGUE_PLAYOFF_PAIRING).toBe("halves");
 });
 
 test("the preview asks Link & Dink for the season's rule, and for nothing else", async () => {
@@ -101,8 +99,11 @@ test("an unknown pairing pick never leaves NGA", async () => {
   expect(stub.calls).toHaveLength(0);
 });
 
-test("the Notion season play seeds with the season's rule and never calls snake directly", () => {
+// The Notion season play no longer runs a bracket: its Nov 8 Finale plays one
+// game, #1 & #4 vs #2 & #3, built by finalTeams (Sam, 2026-11-02). Pinned here
+// so halves (which would make 1+2 v 3+4 out of four kids) can't creep back.
+test("the Notion season play's final pairs the top four through finalTeams, never halves", () => {
   const code = readFileSync(join(ROOT, "src/lib/season-league-view.ts"), "utf8");
-  expect(code).toContain("pairTeams(ranked, SEASON_LEAGUE_PLAYOFF_PAIRING)");
-  expect(code).not.toMatch(/\bsnakeTeams\(/);
+  expect(code).toContain("finalTeams(top.map((s) => s.playerId))");
+  expect(code).not.toMatch(/\bpairTeams\(|\bhalvesTeams\(|\bsnakeTeams\(/);
 });
