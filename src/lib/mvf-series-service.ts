@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { activeSeriesRelease, findSeriesRelease, invoiceDueLabel, releaseProblems, seriesEventKey, validateSeriesRegistration, MVF_SERIES_ACCOUNT, MVF_SERIES_KIND, type SeriesRegistration, type SeriesRelease } from "@/data/mvf-series-registration";
 import { findMvfJuniorSeriesEvent, mvfJuniorSeriesUrl } from "@/data/mvf-junior-series";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
+import { syncMvfSeriesSeatToLinkDink } from "./linkdink-roster-sync";
 import { getStripe } from "./stripe";
 import { createAndSendSignupInvoice, type CreateSignupInvoiceArgs, type SignupInvoiceResult } from "./stripe-invoices";
 import { PAYMENT_OWNER, hasForeignPaymentOwner } from "./payment-ownership";
@@ -51,11 +52,12 @@ export interface SeriesServices {
   invoice: (args: CreateSignupInvoiceArgs) => Promise<SignupInvoiceResult>;
   notice: typeof sendSeriesNotice;
   financialWritesAllowed: () => boolean;
+  ldRoster: typeof syncMvfSeriesSeatToLinkDink;
 }
 export class SeriesInputError extends SeriesError {
   constructor(readonly errors: Record<string, string>) { super("invalid_registration", 400); }
 }
-const defaults: SeriesServices = { stripe: getStripe, active: activeSeriesRelease, release: findSeriesRelease, now: Date.now, command: seriesCommand, schema: checkSeriesRosterSchema, waiver: strictSeriesWaiver, roster: ensureSeriesRoster, updateRoster: updateSeriesRoster, rosterNeedsReview: seriesRosterNeedsReview, invoice: createAndSendSignupInvoice, notice: sendSeriesNotice, financialWritesAllowed: () => process.env.VERCEL_ENV === "production" && /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? "") };
+const defaults: SeriesServices = { stripe: getStripe, active: activeSeriesRelease, release: findSeriesRelease, now: Date.now, command: seriesCommand, schema: checkSeriesRosterSchema, waiver: strictSeriesWaiver, roster: ensureSeriesRoster, updateRoster: updateSeriesRoster, rosterNeedsReview: seriesRosterNeedsReview, invoice: createAndSendSignupInvoice, notice: sendSeriesNotice, financialWritesAllowed: () => process.env.VERCEL_ENV === "production" && /^(sk|rk)_live_/.test(process.env.STRIPE_SECRET_KEY ?? ""), ldRoster: syncMvfSeriesSeatToLinkDink };
 
 export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
   const deps = { ...defaults, ...overrides };
@@ -388,6 +390,12 @@ export function createSeriesService(overrides: Partial<SeriesServices> = {}) {
         }
         await deps.command(m.event_key, "paid", { invoice_id: invoice.id });
         if (await publishPaid(stripe, invoice, amount)) return { received: true, mvfSeries: true, reviewRequired: true };
+        // Seat the paid child on the division's Link & Dink roster, as October's
+        // checkout did. After publication, so a seat held for review is never
+        // seated; fail-soft (it alerts Sam itself) and idempotent on L&D, so a
+        // re-delivered webhook is harmless and a failure never fails payment.
+        await deps.ldRoster({ event: m.event_slug, division: m.division, childFirstName: m.child_first_name,
+          childLastName: m.child_last_name, parentEmail: m.parent_email });
       }
       return { received: true, mvfSeries: true };
     },
