@@ -303,6 +303,22 @@ test("paid aliases and repeated callbacks confirm once, emit only guardian/admin
   expect(h.mails).toHaveLength(4); expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("paid");
   const serialized = JSON.stringify(h.mails); expect(serialized).not.toMatch(/medical notes|child_dob|2016-02-20|malvero|Emergency/);
   expect(h.mails.map(m => m.to)).toEqual([["guardian@example.invalid"], ["sam.morris2131@gmail.com", "nextgenacademypb@gmail.com"], ["guardian@example.invalid"], ["sam.morris2131@gmail.com", "nextgenacademypb@gmail.com"]]);
+  // The paid child is seated on the division's L&D roster (October's sync, the
+  // series key mapped to the L&D event slug). Repeat callbacks re-send the same
+  // four fields; L&D's endpoint is idempotent on them.
+  expect(h.ldRoster.length).toBeGreaterThan(0);
+  for (const body of h.ldRoster) {
+    expect(Object.keys(body).sort()).toEqual(["email", "event_key", "first_name", "last_name"]);
+    expect(body).toEqual(h.ldRoster[0]);
+  }
+  expect(h.ldRoster[0].event_key).toBe("mvf-junior-tournament-12u-2026-11-14");
+  expect(h.ldRoster[0].email).toBe("guardian@example.invalid");
+  expect(JSON.stringify(h.ldRoster)).not.toMatch(/2016-02-20|child_dob|medical|Emergency|Guardian/);
+});
+test("an unpaid registration is never seated on the L&D roster", async () => {
+  const result = await h.service.register("november-2026", registration());
+  await expect(h.service.webhook(h.event(result.invoiceId))).rejects.toMatchObject({ code: "payment_unverified" });
+  expect(h.ldRoster).toEqual([]);
 });
 test("refund evidence or unpaid redirect cannot confirm a registration", async () => {
   const result = await h.service.register("november-2026", registration());
@@ -324,11 +340,14 @@ for (const adjustment of ["refunded", "credit", "disputed", "pending_refund"] as
   expect(receipt.status).toBe("review_required"); expect(receipt.payUrl).toBeNull(); expect(receipt.cancelToken).toBeNull();
   expect(h.pages[0].properties.Status).toEqual({ select: { name: "Review required" } });
   expect([...h.seats.values()][0].state).toBe("paid"); expect(h.voids).toBe(0); expect(h.mails).toHaveLength(4);
+  const seatedBeforeReview = h.ldRoster.length;
   // A later clean provider view must not silently overrule an operator review.
   h.refunded = false; h.creditCents = 0; h.disputed = false; h.refundEvidence = false;
   expect((await h.service.receipt("november-2026", h.token(result))).status).toBe("review_required");
   expect(await h.service.webhook(h.event(result.invoiceId))).toEqual({ received: true, mvfSeries: true, reviewRequired: true });
   expect(h.mails).toHaveLength(4); expect([...h.seats.values()][0].review_required).toBe(true);
+  // A seat under review is not re-seated by a later callback.
+  expect(h.ldRoster.length).toBe(seatedBeforeReview);
 });
 
 test("temporarily unavailable payment evidence clears confirmation without releasing or reclassifying the seat", async () => {

@@ -49,3 +49,36 @@ test.describe("MVF tournament → Link & Dink roster sync", () => {
     );
   });
 });
+
+test.describe("MVF series (November onward) → Link & Dink roster sync", () => {
+  test("maps each tournament and division to the slug the L&D form makes", async () => {
+    const { mvfSeriesLdEventKey } = await import("../src/lib/linkdink-roster-sync");
+    expect(mvfSeriesLdEventKey("november-2026", "12u")).toBe("mvf-junior-tournament-12u-2026-11-14");
+    expect(mvfSeriesLdEventKey("november-2026", "16u")).toBe("mvf-junior-tournament-16u-2026-11-14");
+    expect(mvfSeriesLdEventKey("january-2027", "12u")).toBe("mvf-junior-tournament-12u-2027-01-17");
+    expect(mvfSeriesLdEventKey("february-2027", "16u")).toBe("mvf-junior-tournament-16u-2027-02-14");
+    for (const event of ["november-2026", "january-2027", "february-2027"])
+      for (const division of ["12u", "16u"])
+        expect(mvfSeriesLdEventKey(event, division)).toMatch(LD_EVENT_KEY_SHAPE);
+  });
+
+  test("refuses an unknown tournament or division instead of guessing a roster", async () => {
+    const { mvfSeriesLdEventKey, buildMvfSeriesRosterSyncBody } = await import("../src/lib/linkdink-roster-sync");
+    expect(mvfSeriesLdEventKey("march-2027", "12u")).toBeNull();
+    expect(mvfSeriesLdEventKey("november-2026", "14u")).toBeNull();
+    expect(mvfSeriesLdEventKey("november-2026", "12U")).toBeNull();
+    expect(buildMvfSeriesRosterSyncBody({ event: "november-2026", division: "10u", childFirstName: "A", childLastName: "B", parentEmail: "p@example.invalid" })).toBeNull();
+  });
+
+  test("sends exactly the October body: key, cleaned names and the parent email", async () => {
+    const { buildMvfSeriesRosterSyncBody } = await import("../src/lib/linkdink-roster-sync");
+    const body = buildMvfSeriesRosterSyncBody({
+      event: "november-2026", division: "16u",
+      childFirstName: "  Sam ", childLastName: "Example", parentEmail: "parent@example.invalid",
+    });
+    expect(body).toEqual({
+      event_key: "mvf-junior-tournament-16u-2026-11-14",
+      first_name: "Sam", last_name: "Example", email: "parent@example.invalid",
+    });
+  });
+});

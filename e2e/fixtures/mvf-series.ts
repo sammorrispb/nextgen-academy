@@ -20,6 +20,8 @@ export class SeriesHarness {
   readonly seats = new Map<string, Seat>();
   readonly pages: Page[] = [];
   readonly mails: Record<string, unknown>[] = [];
+  /** Bodies POSTed to L&D's nga-roster-add (the paid-seat roster sync). */
+  readonly ldRoster: Record<string, unknown>[] = [];
   readonly deliveries = new Map<string, { accepted: boolean; busy: boolean; hash: string; lease: string; provider: string }>();
   readonly statuses = new Map<string, "paid" | "void">();
   failNotionCreate = false;
@@ -60,6 +62,7 @@ export class SeriesHarness {
     patch(this.stripe.paymentIntents, "retrieve", async (id: string) => { const value = await this.stripe.invoices.retrieve(id.slice(3)); return { id, livemode: true, status: "succeeded", currency: "usd", amount: value.total, amount_received: value.total, customer: value.customer, latest_charge: `ch_${id}`, metadata: {}, on_behalf_of: null, transfer_data: null }; });
     patch(this.stripe.charges, "retrieve", async (id: string) => { const value = await this.stripe.invoices.retrieve(id.slice(6)); return { id, livemode: true, paid: true, captured: true, amount: value.total, amount_captured: value.total, amount_refunded: this.refunded ? value.total : 0, refunded: this.refunded, disputed: this.disputed, currency: "usd", payment_intent: id.slice(3), metadata: {}, on_behalf_of: null, transfer_data: null }; });
     patch(this.stripe.refunds, "list", async () => ({ data: this.refundEvidence ? [{ id: "re_synthetic", status: "pending" }] : [], has_more: false }));
+    this.stub.onDynamic("/nga-roster-add", call => { this.ldRoster.push(JSON.parse(call.body)); return { status: 200, json: { ok: true } }; });
     this.stub.onDynamic("/nga-series-registration", call => {
       const input = JSON.parse(call.body); const ok = (data: object) => ({ status: 200, json: { ok: true, event_key: input.event_key, ...data } });
       const bad = (error: string) => ({ status: 409, json: { error } });

@@ -21,6 +21,12 @@
  * LINKDINK_BASE_URL points at an L&D instance on purpose). Pinned by
  * e2e/invariant-linkdink-roster-egress.spec.ts.
  *
+ * The November-onward series (data/mvf-junior-series.ts) uses the same send:
+ * syncMvfSeriesSeatToLinkDink, called from the series webhook once a seat is
+ * published as PAID (October seated at invoice time), with the L&D key
+ * mvf-junior-tournament-<division>-<date> (mvfSeriesLdEventKey). Same egress,
+ * same four fields; pinned by e2e/invariant-mvf-series-registration.spec.ts.
+ *
  * Posture: never throws, never fails a registration. A failed sync is logged
  * and alerted without registrant data (L&D's error code, the division, the
  * key); the Notion roster row stays the source of truth and the endpoint is
@@ -29,6 +35,7 @@
 
 import { after } from "next/server";
 import type { MvfTournamentDivision } from "@/data/mvf-junior-tournament-2026";
+import { findMvfJuniorSeriesEvent } from "@/data/mvf-junior-series";
 import { deliverCronAlert } from "@/lib/cron-alert";
 import { cleanPersonName } from "@/lib/invoice-text";
 
@@ -150,6 +157,47 @@ async function alertSyncFailure(
 }
 
 /**
+ * The Link & Dink event key for one division of a November-onward series
+ * tournament (data/mvf-junior-series.ts): `mvf-junior-tournament-<division>-
+ * <date>`, the same shape as the October keys, which is the slug the L&D
+ * organizer form makes from the title "MVF Junior Tournament — 12U" on that
+ * date. Null for an unknown tournament or division. Derived, never listed, so
+ * the January and February tournaments need no code change.
+ *
+ * Distinct from the series' own ledger key (seriesEventKey, e.g.
+ * "mvf-junior-tournament-november-2026-12u"): the L&D form cannot produce that
+ * slug, and the endpoint only resolves a key or the key plus "-N".
+ */
+export function mvfSeriesLdEventKey(event: string, division: string): string | null {
+  const tournament = findMvfJuniorSeriesEvent(event);
+  if (!tournament || (division !== "12u" && division !== "16u")) return null;
+  return `mvf-junior-tournament-${division}-${tournament.dates[0].iso}`;
+}
+
+export interface MvfSeriesRosterSyncInput {
+  /** The series tournament slug, e.g. "november-2026" (invoice event_slug). */
+  event: string;
+  division: string;
+  childFirstName: string;
+  childLastName: string;
+  parentEmail: string;
+}
+
+/** The request body for one paid series seat; the October body's shape. */
+export function buildMvfSeriesRosterSyncBody(
+  input: MvfSeriesRosterSyncInput,
+): MvfRosterSyncBody | null {
+  const eventKey = mvfSeriesLdEventKey(input.event, input.division);
+  if (!eventKey) return null;
+  return {
+    event_key: eventKey,
+    first_name: cleanPersonName(input.childFirstName),
+    last_name: cleanPersonName(input.childLastName),
+    email: input.parentEmail,
+  };
+}
+
+/**
  * Push one MVF tournament registrant to the Link & Dink roster.
  * Returns true when the player is on the roster (or already was).
  * Never throws — logs, alerts and returns false on any failure.
@@ -157,13 +205,40 @@ async function alertSyncFailure(
 export async function syncMvfRegistrationToLinkDink(
   input: MvfRosterSyncInput,
 ): Promise<boolean> {
+  let body: MvfRosterSyncBody | null = null;
+  try {
+    body = buildMvfRosterSyncBody(input);
+  } catch {
+    body = null;
+  }
+  return sendRosterAdd(input.division, body);
+}
+
+/**
+ * Push one PAID November-onward series seat to its division's Link & Dink
+ * roster: the October sync, with the series key. Called after the seat is
+ * published as paid, so only paid children are seated. Never throws.
+ */
+export async function syncMvfSeriesSeatToLinkDink(
+  input: MvfSeriesRosterSyncInput,
+): Promise<boolean> {
+  let body: MvfRosterSyncBody | null = null;
+  try {
+    body = buildMvfSeriesRosterSyncBody(input);
+  } catch {
+    body = null;
+  }
+  return sendRosterAdd(input.division, body);
+}
+
+async function sendRosterAdd(
+  rawDivision: string,
+  body: MvfRosterSyncBody | null,
+): Promise<boolean> {
   let ref = "unknown registration";
   try {
     // Logs and alerts name the division and key, never the registrant.
-    const division = /^[a-z0-9]{1,8}$/.test(input.division)
-      ? input.division
-      : "invalid";
-    const body = buildMvfRosterSyncBody(input);
+    const division = /^[a-z0-9]{1,8}$/.test(rawDivision) ? rawDivision : "invalid";
     ref = `${division} → ${body?.event_key ?? "no event key"}`;
 
     // Only a production deploy sends. A preview or local build would seat
