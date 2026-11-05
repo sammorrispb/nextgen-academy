@@ -55,6 +55,9 @@ export async function POST(req: NextRequest) {
   const { input, status } = await readBody(req);
   if (status !== 200) return json(status, { error: status === 413 ? "body_too_large" : "bad_input" });
   if (!isMvfParentContactRequest(input)) return json(400, { error: "bad_input" });
+  // October and the series read different DBs: a key whose own DB is unset
+  // is unconfigured, never an empty audience.
+  if (!mvfParentContactsConfigured(input.event_key)) return json(503, { error: "not_configured" });
   try {
     return json(200, await readMvfParentContacts(input.event_key, input.sync_keys, input.registration_refs));
   } catch {

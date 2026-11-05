@@ -3,6 +3,14 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+## 2026-11-05 — MVF series parents reach the organizer roster and check-in board
+
+- **Situation:** The L&D organizer roster's "Email registrants" panel and the check-in board's parent link worked for the Oct 24 MVF tournament only. `mvf-parent-contacts` read the October registrations DB with the two October keys, and L&D's `MVF_KEY` accepted only those keys, so every series event (Nov 14, Jan 17, Feb 14; 12U/16U) failed closed as "recipients unavailable", even though #467 seats paid series children on those rosters.
+- **Decision (Sam's go, 2026-11-05):** The reader takes every series L&D key, derived from `MVF_JUNIOR_SERIES` × its divisions through `mvfSeriesLdEventKey` (no hand list), maps it to the series ledger key and division, and reads `NOTION_MVF_SERIES_REGS_DB_ID` filtered on Event Key + Division + `Status = Confirmed`, re-checking each row for that DB, `Paid = true` and its Event Key. Only paid seats count because the series webhook seats a child on L&D only once the seat is paid. The sync key is rebuilt with the series roster body (`buildMvfSeriesRosterSyncBody`), the exact names the sync sent. October is unchanged (its DB, Pending + Confirmed). A key whose own DB is unset is 503, and the series DB may never name the October DB. The L&D half (community-os) widens `MVF_KEY` to 12U/16U slugs whose date equals the event's Eastern start date.
+- **Risk:** A rain makeup moved to its makeup date fails closed on both sides (the slug date and the sync key no longer agree); that is deliberate and needs its own change. Rows paid before the sync went live and hand-added to L&D resolve only if the hand-added names match the Notion names.
+- **Validation:** New `e2e/mvf-parent-contacts-series.spec.ts` (32 tests) beside the unchanged October spec (89). Mutations: series allows Pending fails 2; dropping the Paid check 1; dropping the row Event Key check 2; series reading the October DB 19; series DB allowed to equal October 1; series key from the October body 8; route skipping the per-key config check 4; dropping the Event Key query filter 6.
+- **Change:** `src/lib/mvf-parent-contacts.ts`, `src/app/api/internal/mvf-parent-contacts/route.ts`, the new spec, `docs/source-inventory.md` (row + risk log #16).
+
 ## 2026-11-02 — The Finale's final: lock the top four checked in, score one game
 
 - **Situation:** With week 6 a play week (previous entry), the final still had no software: the old week-6 lock refused a top-four final (it required every checked-in kid on a team), overwrote the round robin's Day row, and resolved a double-elimination bracket. With two teams that bracket means up to three games, not one.
