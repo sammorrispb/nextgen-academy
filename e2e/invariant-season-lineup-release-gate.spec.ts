@@ -16,12 +16,12 @@ function harness(authorized: boolean, mutateGate = false) {
     if (name === 'parseWeek') return () => 6;
     return async () => { delegated.push(name); return { ok: true }; };
   } });
-  const module = { exports: {} as Record<string, (input: unknown) => Promise<unknown>> };
+  const mod = { exports: {} as Record<string, (input: unknown) => Promise<unknown>> };
   const source = readFileSync('src/app/coach/(authed)/fall-season/actions.ts', 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: {
     target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
   } }).outputText;
-  runInNewContext(code, { module, exports: module.exports, require: (id: string) => {
+  runInNewContext(code, { module: mod, exports: mod.exports, require: (id: string) => {
     if (id === '@/lib/coach-auth-server') return { requireCoach: async () => { authCalls++; return authorized ? 'coach@example.com' : null; } };
     if (id === '@/lib/season-league/lineup-release') return { manualLineupEditingAvailable: mutateGate ? () => true : manualLineupEditingAvailable, LINEUP_EDIT_HOLD_MESSAGE };
     if (id === '@/lib/season-league-view') return view;
@@ -29,7 +29,7 @@ function harness(authorized: boolean, mutateGate = false) {
     if (id === '@/data/season-league-2026') return { seasonLeagueGroupSlug: () => 'yellow' };
     throw new Error(`Unexpected action dependency: ${id}`);
   } });
-  return { actions: module.exports, delegated, revalidated, authCalls: () => authCalls };
+  return { actions: mod.exports, delegated, revalidated, authCalls: () => authCalls };
 }
 
 const staleClientInput = { group: 'Yellow', week: 6, round: 1, expected: [], games: [] };
