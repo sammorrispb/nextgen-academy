@@ -308,10 +308,20 @@ function bestRound(
   day: DayState,
   rnd: () => number,
 ): Candidate {
-  let best: { cost: number; candidate: Candidate } | null = null;
+  let best: { singlesLoad: number; cost: number; candidate: Candidate } | null = null;
   const consider = (candidate: Candidate, playing: readonly PlayerId[]) => {
+    // Daily format fairness precedes season/partner variety. A weighted cost
+    // alone can repeatedly put the same kids in singles as history grows.
+    // This is the change in sum-of-squares of today's singles counts; the
+    // unchanged players are constant across candidates and can be omitted.
+    const singlesLoad = candidate.singles.flat().reduce(
+      (sum, p) => sum + 2 * count(day.singlesToday, p) + 1, 0,
+    );
     const cost = candidateCost(candidate, h, day, playing) + rnd() * 1e-3;
-    if (!best || cost < best.cost) best = { cost, candidate };
+    if (!best || singlesLoad < best.singlesLoad ||
+      (singlesLoad === best.singlesLoad && cost < best.cost)) {
+      best = { singlesLoad, cost, candidate };
+    }
   };
 
   for (const sitting of sittingChoices(present, allocation.sitting, day)) {
