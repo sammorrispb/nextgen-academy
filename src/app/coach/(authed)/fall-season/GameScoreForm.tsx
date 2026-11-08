@@ -9,6 +9,8 @@ interface Props {
   group: string;
   week: number;
   gameKey: string;
+  sideA: string[];
+  sideB: string[];
   scoreA: number | null;
   scoreB: number | null;
   timed: boolean;
@@ -18,7 +20,7 @@ interface Props {
 // One row's score entry. Mirrors AttendanceToggle: optimistic local state,
 // useTransition for the action, router.refresh() so the standings panel and
 // the parent page pick the result up.
-export default function GameScoreForm({ group, week, gameKey, scoreA, scoreB, timed, played }: Props) {
+export default function GameScoreForm({ group, week, gameKey, sideA, sideB, scoreA, scoreB, timed, played }: Props) {
   const router = useRouter();
   const target = useGameTarget();
   const [a, setA] = useState(scoreA === null ? "" : String(scoreA));
@@ -36,6 +38,8 @@ export default function GameScoreForm({ group, week, gameKey, scoreA, scoreB, ti
         group,
         week,
         key: gameKey,
+        expectedSideA: sideA,
+        expectedSideB: sideB,
         scoreA: Number(a),
         scoreB: Number(b),
         timed: onTime,

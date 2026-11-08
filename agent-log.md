@@ -1573,3 +1573,9 @@ Append-only. One entry per consequential decision, newest first. Format:
 - Decision: Provide round selectors that swap occupied positions or insert checked-in sitting players. Save through the existing coach gate, validating current lineup, roster, format, uniqueness, scored status and final lock.
 - Risk: Notion has no cross-row transaction. Relation-only writes are verified; failed/partial saves demand reload and checking every court. Duplicate lineups are blocked from score entry. Scored rounds and locked final teams remain protected.
 - Change: New pure swap/validation tests and mocked integration tests cover cross-court swap, stale/absent/duplicate rejection, score preservation and final lock. Full pure run: 3574 passed/1 skipped, then additional lock test passed (finale suite 9/9). Typecheck passed; lint no errors/two existing warnings. Existing local build network constraint unchanged; hosted preview required. No live lineups or scores were edited.
+
+## 2026-11-08 — Hold manual lineup release for score integrity
+- Situation: Independent review identified stale scoring inputs, stale editor baseline on refresh, and a Notion edit/score race.
+- Decision: Require expected score participants; remount score inputs when players change; retain the editor's opening baseline. Keep release held for the unresolved cross-instance race.
+- Risk: Notion read-check-PATCH is not atomic. Snapshot relation schema and legacy/version handling are proposed in docs/lineup-score-integrity.md but NOT applied or represented as complete.
+- Change: Stale/missing score participant requests reject without writes; regression coverage added. No live schema, lineup or score changes.

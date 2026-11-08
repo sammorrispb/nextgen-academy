@@ -65,6 +65,8 @@ export async function recordScoreAction(input: {
   group: string;
   week: number;
   key: string;
+  expectedSideA: string[];
+  expectedSideB: string[];
   scoreA: number;
   scoreB: number;
   timed: boolean;

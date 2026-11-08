@@ -141,6 +141,9 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
                               <span className="font-bold text-ngpa-white">{sideLabel(snapshot.names, g.sideB)}</span>
                             </div>
                             <GameScoreForm
+                              key={JSON.stringify([g.key, g.sideA, g.sideB])}
+                              sideA={g.sideA}
+                              sideB={g.sideB}
                               group={group}
                               week={week}
                               gameKey={g.key}

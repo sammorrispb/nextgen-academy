@@ -20,3 +20,14 @@ test('rejects duplicates, absent players and malformed side sizes', () => {
   expect(validLineup(games, ['a'])).toBe(false);
   expect(validLineup([{...games[0], sideA: ['a']}], ['a','b','c','d','e','f'])).toBe(false);
 });
+
+
+test('editor retains its opening baseline and score forms reset on participant changes', async () => {
+  const { readFileSync } = await import('node:fs');
+  const editor = readFileSync('src/app/coach/(authed)/fall-season/RoundLineupEditor.tsx', 'utf8');
+  expect(editor).toContain('setBaseline(games)');
+  expect(editor).toContain('expected: baseline');
+  expect(editor).not.toContain('expected: games');
+  const page = readFileSync('src/app/coach/(authed)/fall-season/[group]/[week]/page.tsx', 'utf8');
+  expect(page).toContain('key={JSON.stringify([g.key, g.sideA, g.sideB])}');
+});
