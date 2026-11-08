@@ -1,5 +1,6 @@
 "use server";
 
+import { manualLineupEditingAvailable, LINEUP_EDIT_HOLD_MESSAGE } from "@/lib/season-league/lineup-release";
 import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
 import { seasonLeagueGroupSlug } from "@/data/season-league-2026";
@@ -119,6 +120,7 @@ export async function recordPlayoffScoreAction(input: {
 export async function editRoundLineupAction(input: Parameters<typeof editRoundLineup>[0]): Promise<ScoreResult> {
   const email = await requireCoach();
   if (!email) return UNAUTHORIZED;
+  if (!manualLineupEditingAvailable()) return { ok: false, message: LINEUP_EDIT_HOLD_MESSAGE };
   const result = await editRoundLineup(input);
   revalidateLeague(input.group, input.week);
   return result;

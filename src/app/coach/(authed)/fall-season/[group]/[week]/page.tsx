@@ -1,3 +1,4 @@
+import { manualLineupEditingAvailable, LINEUP_EDIT_HOLD_MESSAGE } from "@/lib/season-league/lineup-release";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -155,12 +156,12 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
                           </li>
                         ))}
                       </ul>
-                      <RoundLineupEditor
+                      {manualLineupEditingAvailable() ? <RoundLineupEditor
                         group={group} week={week}
                         games={games.map(g => ({ key: g.key, round: g.round, court: g.court, format: g.format === "singles" ? "singles" : "doubles", sideA: g.sideA, sideB: g.sideB }))}
                         players={roster.filter(p => presentSet.has(p.id))}
                         locked={snapshot.playoff.locked || games.some(g => g.status !== "Scheduled")}
-                      />
+                      /> : <p className="px-4 py-3 text-xs text-ngpa-white/60">{LINEUP_EDIT_HOLD_MESSAGE}</p>}
                     </li>
                   );
                 })}

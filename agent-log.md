@@ -1579,3 +1579,4 @@ Append-only. One entry per consequential decision, newest first. Format:
 - Decision: Require expected score participants; remount score inputs when players change; retain the editor's opening baseline. Keep release held for the unresolved cross-instance race.
 - Risk: Notion read-check-PATCH is not atomic. Snapshot relation schema and legacy/version handling are proposed in docs/lineup-score-integrity.md but NOT applied or represented as complete.
 - Change: Stale/missing score participant requests reject without writes; regression coverage added. No live schema, lineup or score changes.
+- Mitigation after externally merged #470: hard-code manual editing release gate CLOSED in both the page and coach server action. No environment flag can reopen it. Viewing/scoring remain available. A stale browser's edit action returns a clear unavailable message before persistence. This mitigation does not claim to solve the underlying transaction design.

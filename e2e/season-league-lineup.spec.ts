@@ -1,3 +1,4 @@
+import { manualLineupEditingAvailable } from '../src/lib/season-league/lineup-release';
 import { test, expect } from '@playwright/test';
 import { replaceLineupPlayer, validLineup, type LineupGame } from '../src/lib/season-league/lineup';
 const games: LineupGame[] = [
@@ -30,4 +31,16 @@ test('editor retains its opening baseline and score forms reset on participant c
   expect(editor).not.toContain('expected: games');
   const page = readFileSync('src/app/coach/(authed)/fall-season/[group]/[week]/page.tsx', 'utf8');
   expect(page).toContain('key={JSON.stringify([g.key, g.sideA, g.sideB])}');
+});
+
+
+test('release gate is closed in UI and server action, including stale clients', async () => {
+  expect(manualLineupEditingAvailable()).toBe(false);
+  const { readFileSync } = await import('node:fs');
+  const actions = readFileSync('src/app/coach/(authed)/fall-season/actions.ts', 'utf8');
+  const action = actions.slice(actions.indexOf('export async function editRoundLineupAction'));
+  expect(action).toContain('if (!manualLineupEditingAvailable()) return { ok: false, message: LINEUP_EDIT_HOLD_MESSAGE }');
+  expect(action.indexOf('if (!manualLineupEditingAvailable())')).toBeLessThan(action.indexOf('await editRoundLineup(input)'));
+  const page = readFileSync('src/app/coach/(authed)/fall-season/[group]/[week]/page.tsx', 'utf8');
+  expect(page).toContain('manualLineupEditingAvailable() ? <RoundLineupEditor');
 });
