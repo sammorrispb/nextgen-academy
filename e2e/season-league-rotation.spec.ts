@@ -385,3 +385,40 @@ test.describe("a season with absences", () => {
     expect(history.games.get("p04")).toBeLessThan(history.games.get("p01") ?? 0);
   });
 });
+
+test('appended rounds keep daily singles balanced despite season history', () => {
+  for (const n of [6, 7]) {
+    const players = roster(n);
+    const history = emptyHistory();
+    // Returning players have unequal prior-season exposure; today's session
+    // must still share singles fairly, rather than making others catch up.
+    history.singlesGames.set(players[0], 40);
+    const today: PlannedGame[] = [];
+    for (let attempt = 0; attempt < 14; attempt++) {
+      const plan = planDay({ present: players, history, playedToday: today,
+        courts: 2, targetGamesPerPlayer: 3, rounds: 1, seed: `append-${attempt}` });
+      const games = plan.rounds.flatMap(r => r.games);
+      today.push(...games);
+      games.forEach(g => recordGame(history, g));
+      const counts = players.map(p => today.filter(g => g.format === 'singles' && [...g.sideA, ...g.sideB].includes(p)).length);
+      expect(spread(counts), `n=${n}, append=${attempt}, counts=${counts}`).toBeLessThanOrEqual(1);
+    }
+  }
+});
+
+test('new rounds repair inherited imbalance without changing saved rounds', () => {
+  const players = roster(6);
+  const saved: PlannedGame[] = [1, 2, 3].flatMap(round => [
+    { round, court: 1, format: 'singles' as const, sideA: [players[0]], sideB: [players[1]] },
+    { round, court: 2, format: 'doubles' as const, sideA: players.slice(2, 4), sideB: players.slice(4, 6) },
+  ]);
+  const original = JSON.stringify(saved);
+  const history = buildHistory(saved);
+  const plan = planDay({ present: players, history, playedToday: saved,
+    courts: 2, targetGamesPerPlayer: 3, rounds: 6, seed: 'repair' });
+  const final = buildHistory([...saved, ...plan.rounds.flatMap(r => r.games)]);
+  expect(players.map(p => final.singlesGames.get(p))).toEqual([3, 3, 3, 3, 3, 3]);
+  expect(plan.rounds[0].round).toBe(4);
+  expect(JSON.stringify(saved)).toBe(original);
+  expect(history.singlesGames.get(players[0])).toBe(3);
+});
