@@ -37,7 +37,7 @@ test.describe("fall-season actions are coach-gated", () => {
   test("every exported action awaits requireCoach and fails closed", () => {
     const src = actionsSrc();
     const exported = src.match(/export async function \w+Action/g) ?? [];
-    expect(exported.length).toBe(7);
+    expect(exported.length).toBe(8);
     const gates = src.match(/await requireCoach\(\)/g) ?? [];
     expect(gates.length, "each action must call requireCoach()").toBeGreaterThanOrEqual(exported.length);
     const denials = src.match(/if \(!email\) return/g) ?? [];

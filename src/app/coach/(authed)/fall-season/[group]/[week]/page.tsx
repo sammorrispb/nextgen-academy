@@ -14,6 +14,7 @@ import { formatLongDate } from "@/lib/format-date";
 import { buildStandingsView, loadLeagueSnapshot } from "@/lib/season-league-view";
 import { nameFor, sideLabel } from "@/lib/season-league/names";
 import { RankingNote, StandingsTable } from "@/components/season-league/StandingsTable";
+import RoundLineupEditor from "../../RoundLineupEditor";
 import AddRoundButton from "../../AddRoundButton";
 import DayPlanner from "../../DayPlanner";
 import FinalLocker from "../../FinalLocker";
@@ -151,6 +152,12 @@ export default async function FallSeasonDayPage({ params }: PageProps) {
                           </li>
                         ))}
                       </ul>
+                      <RoundLineupEditor
+                        group={group} week={week}
+                        games={games.map(g => ({ key: g.key, round: g.round, court: g.court, format: g.format === "singles" ? "singles" : "doubles", sideA: g.sideA, sideB: g.sideB }))}
+                        players={roster.filter(p => presentSet.has(p.id))}
+                        locked={snapshot.playoff.locked || games.some(g => g.status !== "Scheduled")}
+                      />
                     </li>
                   );
                 })}

@@ -1567,3 +1567,9 @@ Append-only. One entry per consequential decision, newest first. Format:
 - Decision: Minimize today's singles load before using season/partner variety to break ties; keep existing equal-playing-time/sitting constraints first.
 - Risk: Daily fairness can take precedence over avoiding a repeated partner. No live rows, scores, attendance, auth, or permissions changed.
 - Change: Regression reproduced failure on third appended round before fix; repeated six/seven-player append and inherited-imbalance recovery tests pass, and prior schedules/history remain unchanged. Rotation suite 33 passed. Full pure suite passed (3568); lint no errors, two existing warnings. Default build blocked by Turbopack's external node_modules symlink boundary; alternate webpack validation tracked separately.
+
+## 2026-11-08 — Coach manual round lineups
+- Situation: Sam requested selecting replacement players for any team/round on the season coach page.
+- Decision: Provide round selectors that swap occupied positions or insert checked-in sitting players. Save through the existing coach gate, validating current lineup, roster, format, uniqueness, scored status and final lock.
+- Risk: Notion has no cross-row transaction. Relation-only writes are verified; failed/partial saves demand reload and checking every court. Duplicate lineups are blocked from score entry. Scored rounds and locked final teams remain protected.
+- Change: New pure swap/validation tests and mocked integration tests cover cross-court swap, stale/absent/duplicate rejection, score preservation and final lock. Full pure run: 3574 passed/1 skipped, then additional lock test passed (finale suite 9/9). Typecheck passed; lint no errors/two existing warnings. Existing local build network constraint unchanged; hosted preview required. No live lineups or scores were edited.

@@ -1,3 +1,4 @@
+import { validLineup, type LineupGame } from "./season-league/lineup";
 import {
   SEASON_LEAGUE_COURTS,
   SEASON_LEAGUE_GAMES_PER_PLAYER,
@@ -30,6 +31,7 @@ import {
   gameKey,
   playoffKey,
   recordSeasonLeagueScore,
+  patchSeasonLeagueRelations,
   teamKey,
   upsertSeasonLeagueRows,
   voidSeasonLeagueRows,
@@ -460,6 +462,43 @@ export async function saveDay(input: DayInput): Promise<SaveDayResult> {
   };
 }
 
+/** Edit only an unscored round; the browser must submit the lineup it read. */
+export async function editRoundLineup(input: {
+  group: unknown; week: unknown; round: number;
+  expected: LineupGame[]; games: LineupGame[];
+}): Promise<ScoreResult> {
+  const group = parseGroup(input.group), week = parseWeek(input.week);
+  if (!group || !week || !Number.isInteger(input.round) || input.round < 1 ||
+    !Array.isArray(input.expected) || input.expected.some(g => !g || !Array.isArray(g.sideA) || !Array.isArray(g.sideB)) || !Array.isArray(input.games)) return { ok: false, message: "Invalid round" };
+  const snapshot = await loadLeagueSnapshot(group);
+  if (snapshot.rowsStatus !== "ok" || snapshot.rosterStatus !== "ok") return { ok: false, message: "Couldn't verify roster and games. Reload and try again." };
+  if (snapshot.playoff.locked) return { ok: false, message: "Final teams are locked. Unlock them before editing league lineups." };
+  const summary = snapshot.weeks.find(w => w.week === week)!;
+  const rows = summary.games.filter(g => g.phase === "League" && g.round === input.round);
+  if (!rows.length || rows.some(g => g.status !== "Scheduled")) return { ok: false, message: "Scored rounds cannot be edited." };
+  const shape = (g: LineupGame) => ({ key: g.key, round: g.round, court: g.court, format: g.format, sideA: g.sideA, sideB: g.sideB });
+  const current = rows.map(g => shape({ ...toPlannedGame(g), key: g.key }));
+  if (JSON.stringify(input.expected.map(shape)) !== JSON.stringify(current)) return { ok: false, message: "This round changed. Reload before editing." };
+  const present = presentFrom(snapshot, summary.dayRow?.present ?? []);
+  if (input.games.length !== rows.length || !input.games.every((g, i) => g &&
+    g.key === rows[i].key && g.round === rows[i].round && g.court === rows[i].court &&
+    g.format === rows[i].format && Array.isArray(g.sideA) && Array.isArray(g.sideB)) ||
+    !validLineup(input.games, present)) return { ok: false, message: "Choose checked-in players once each, keeping each court's format." };
+  const changed = input.games.filter((g, i) => JSON.stringify(shape(g)) !== JSON.stringify(current[i]));
+  if (!changed.length) return { ok: true, message: "No lineup changes" };
+  const result = await patchSeasonLeagueRelations(changed.map(g => ({
+    pageId: rows.find(r => r.key === g.key)!.pageId, sideA: g.sideA, sideB: g.sideB,
+  })));
+  // Notion has no multi-row transaction. Never report partial writes as saved.
+  const verified = await loadLeagueSnapshot(group);
+  const matches = verified.rowsStatus === "ok" && input.games.every(g => {
+    const row = verified.rows.find(r => r.key === g.key);
+    return row && row.status === "Scheduled" && JSON.stringify(row.sideA) === JSON.stringify(g.sideA) && JSON.stringify(row.sideB) === JSON.stringify(g.sideB);
+  });
+  return result.failed === 0 && matches ? { ok: true, message: "Lineup saved" } :
+    { ok: false, message: "Some lineup changes could not be verified. Reload and check every court before entering scores." };
+}
+
 export interface ScoreInput {
   group: unknown;
   week: unknown;
@@ -491,6 +530,8 @@ export async function recordGameScore(input: ScoreInput): Promise<ScoreResult> {
     (r) => r.key === key && r.league === group && r.week === week && r.phase === "League" && r.status !== "Void",
   );
   if (!row) return { ok: false, message: "That game isn't on today's schedule" };
+  const roundPlayers = snapshot.rows.filter(r => r.week === week && r.phase === "League" && r.round === row.round && r.status !== "Void").flatMap(r => [...r.sideA, ...r.sideB]);
+  if (new Set(roundPlayers).size !== roundPlayers.length) return { ok: false, message: "This round has duplicate players. Correct the lineup before scoring." };
   const saved = await recordSeasonLeagueScore(row.pageId, input.scoreA as number, input.scoreB as number, timed);
   return saved
     ? { ok: true, message: row.status === "Played" ? "Score corrected" : "Score saved" }
@@ -680,7 +721,9 @@ export async function recordPlayoffScore(input: PlayoffScoreInput): Promise<Scor
     // A Played playoff row is corrected in place rather than re-created.
     const row = snapshot.playoff.games.find((g) => g.slot === slot);
     if (!row) return { ok: false, message: "Couldn't find the game to correct" };
-    const saved = await recordSeasonLeagueScore(row.pageId, input.scoreA as number, input.scoreB as number, timed);
+    const roundPlayers = snapshot.rows.filter(r => r.week === week && r.phase === "League" && r.round === row.round && r.status !== "Void").flatMap(r => [...r.sideA, ...r.sideB]);
+  if (new Set(roundPlayers).size !== roundPlayers.length) return { ok: false, message: "This round has duplicate players. Correct the lineup before scoring." };
+  const saved = await recordSeasonLeagueScore(row.pageId, input.scoreA as number, input.scoreB as number, timed);
     return saved ? { ok: true, message: "Score corrected" } : { ok: false, message: "Couldn't save to Notion — try again" };
   }
   return { ok: true, message: "Score saved" };
