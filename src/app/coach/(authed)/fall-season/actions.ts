@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireCoach } from "@/lib/coach-auth-server";
 import { seasonLeagueGroupSlug } from "@/data/season-league-2026";
 import {
+  editRoundLineup,
   lockFinal,
   parseGroup,
   parseWeek,
@@ -110,5 +111,13 @@ export async function recordPlayoffScoreAction(input: {
   if (!email) return UNAUTHORIZED;
   const result = await recordPlayoffScore(input);
   revalidateLeague(input.group, 6);
+  return result;
+}
+
+export async function editRoundLineupAction(input: Parameters<typeof editRoundLineup>[0]): Promise<ScoreResult> {
+  const email = await requireCoach();
+  if (!email) return UNAUTHORIZED;
+  const result = await editRoundLineup(input);
+  revalidateLeague(input.group, input.week);
   return result;
 }

@@ -10,8 +10,8 @@ process.env.NOTION_SEASON_LEAGUE_DB_ID = "finale-games-db";
 process.env.NOTION_FALL_REGS_DB_ID = "finale-regs-db";
 process.env.STANDINGS_LINK_SECRET = "finale-standings-secret";
 
-import { previewDay, resolveStandingsView, saveDay } from "../src/lib/season-league-view";
-import { buildGameRowProps, buildScoreProps } from "../src/lib/notion-season-league";
+import { editRoundLineup, loadLeagueSnapshot, previewDay, resolveStandingsView, saveDay } from "../src/lib/season-league-view";
+import { buildGameRowProps, buildScoreProps, buildTeamRowProps } from "../src/lib/notion-season-league";
 import { signStandingsLink } from "../src/lib/standings-link-token";
 import { FALL_PLAYOFF_DATE } from "../src/data/fall-2026";
 import { FALL_SEASON_PLAN, FALL_SEASON_PLAN_YELLOW } from "../src/data/fall-season-plan-2026";
@@ -196,4 +196,52 @@ test.describe("Nov 8 is the Finale on every surface", () => {
       expect(last.parentLine.toLowerCase()).toMatch(/never against each other/);
     }
   });
+});
+
+
+test.describe("manual unscored lineups", () => {
+  async function setup() {
+    const pages: Page[] = [];
+    installWorld(stub, pages);
+    await saveDay({ group: "Green", week: 6, presentIds: REG_IDS, rounds: 1 });
+    const snapshot = await loadLeagueSnapshot("Green");
+    const games = snapshot.weeks.find(w => w.week === 6)!.games.filter(g => g.phase === "League").map(g => ({ key: g.key, round: g.round, court: g.court, format: g.format === "singles" ? "singles" as const : "doubles" as const, sideA: g.sideA, sideB: g.sideB }));
+    return { pages, games };
+  }
+  test("saves a cross-court swap, verifies it, and leaves scores untouched", async () => {
+    const { pages, games } = await setup();
+    const edited = games.map(g => ({ ...g, sideA: [...g.sideA], sideB: [...g.sideB] }));
+    [edited[0].sideA[0], edited[1].sideA[0]] = [edited[1].sideA[0], edited[0].sideA[0]];
+    const before = stub.calls.length;
+    expect(await editRoundLineup({ group: "Green", week: 6, round: 1, expected: games, games: edited })).toEqual({ ok: true, message: "Lineup saved" });
+    const writes = stub.calls.slice(before).filter(c => c.method === "PATCH");
+    expect(writes).toHaveLength(2);
+    for (const call of writes) expect(Object.keys(JSON.parse(call.body).properties).sort()).toEqual(["Side A", "Side B"]);
+    expect(pages.length).toBe(3);
+  });
+  test("rejects stale, duplicate, absent and scored edits without writes", async () => {
+    const { pages, games } = await setup();
+    const input = { group: "Green", week: 6, round: 1, expected: games, games };
+    const before = stub.calls.length;
+    expect((await editRoundLineup({ ...input, expected: [] })).ok).toBe(false);
+    const duplicate = games.map(g => ({ ...g, sideA: [...g.sideA] }));
+    duplicate[0].sideA[0] = duplicate[1].sideA[0];
+    expect((await editRoundLineup({ ...input, games: duplicate })).ok).toBe(false);
+    duplicate[0].sideA[0] = "absent";
+    expect((await editRoundLineup({ ...input, games: duplicate })).ok).toBe(false);
+    const gamePage = pages.find(p => p.properties.Phase?.select?.name === "League")!;
+    Object.assign(gamePage.properties, toPageProps(buildScoreProps(11, 5, false)));
+    expect((await editRoundLineup(input)).ok).toBe(false);
+    expect(stub.calls.slice(before).filter(c => c.method === "PATCH")).toHaveLength(0);
+  });
+  test("locked final rejects lineup edits", async () => {
+    const { pages, games } = await setup();
+    for (const seed of [1, 2]) pages.push({ id: `team-${seed}`, properties: toPageProps(buildTeamRowProps({ group: "Green", week: 6, sessionDate: FALL_PLAYOFF_DATE, seed, members: REG_IDS.slice((seed - 1) * 2, seed * 2) })) });
+    const before = stub.calls.length;
+    const result = await editRoundLineup({ group: "Green", week: 6, round: 1, expected: games, games });
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain("locked");
+    expect(stub.calls.slice(before).filter(c => c.method === "PATCH")).toHaveLength(0);
+  });
+
 });
