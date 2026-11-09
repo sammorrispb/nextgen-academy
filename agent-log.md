@@ -3,6 +3,14 @@
 Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
+
+## 2026-11-09 — Retire public Fall checkout after the season
+
+- **Situation and authority:** Fall 2026 ended November 8, but the public endpoint could still create a paid checkout. Sam explicitly approved: "also change the endpoint to reject new fall registrations." The broader multi-file website removal plan remains pending and is not part of this patch.
+- **Decision:** Replace only `/api/checkout-fall` with an unconditional HTTP 410 `registration_closed` response. Do not parse parent/child data or import Stripe, Notion, waiver or registration dependencies. A stale flag or configured price cannot reopen it. Retired-route tests replace the old capacity-to-waiver route contract; shared capacity/validation and historical webhook coverage stay intact. Remove the now-unused request-origin exception.
+- **Risk and preservation:** No database, environment, payments, refunds, webhooks, existing Checkout sessions, historical success pages, signed standings, or public website copy are changed. Already-created Stripe sessions may remain valid until normal expiry. Production stays unchanged until a human merges and the deployment is verified. Reverting this route would reopen registration and requires deliberate approval.
+- **Validation:** 13 behavior tests failed before the fix, pass after it, and fail again when the prior route is restored in an isolated mutation check. Full credential-free pure suite: 3,583 passed, one existing skip. Lint: zero errors, two pre-existing warnings. Typecheck and isolated production build pass. Built-app HTTP smoke: valid/empty/malformed requests return 410; GET stays unsupported; historical `/fall/success` still returns 200. Independent read-only diff review found no blocking issue. No real purchase, provider write or production form submission was performed.
+
 ## 2026-11-05 — MVF series parents reach the organizer roster and check-in board
 
 - **Situation:** The L&D organizer roster's "Email registrants" panel and the check-in board's parent link worked for the Oct 24 MVF tournament only. `mvf-parent-contacts` read the October registrations DB with the two October keys, and L&D's `MVF_KEY` accepted only those keys, so every series event (Nov 14, Jan 17, Feb 14; 12U/16U) failed closed as "recipients unavailable", even though #467 seats paid series children on those rosters.

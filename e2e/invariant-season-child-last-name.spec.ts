@@ -60,12 +60,14 @@ test.describe("child last name — the rule", () => {
     ).toBeDefined();
   });
 
-  test("both checkouts put the cleaned value in metadata, and no other checkout changed", () => {
-    for (const r of ["checkout-fall", "checkout-monday-girls"]) {
-      expect(src(`src/app/api/${r}/route.ts`)).toContain(
-        "child_last_name: cleanChildLastName(data.childLastName)",
-      );
-    }
+  test("the active season checkout cleans the name; retired Fall collects nothing", () => {
+    expect(src("src/app/api/checkout-monday-girls/route.ts")).toContain(
+      "child_last_name: cleanChildLastName(data.childLastName)",
+    );
+    const retired = src("src/app/api/checkout-fall/route.ts");
+    expect(retired).not.toContain("child_last_name");
+    expect(retired).not.toContain("checkout.sessions.create");
+    expect(retired).toContain("410");
   });
 
   test("the webhook reads it only for the roster rows and the admin lines", () => {

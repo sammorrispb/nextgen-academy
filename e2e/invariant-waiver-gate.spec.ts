@@ -121,7 +121,6 @@ test.describe("all paid checkout routes — gate precedes Stripe (source invaria
     "checkout-camp/route.ts",
     "checkout-league/route.ts",
     "checkout-cluster/route.ts",
-    "checkout-fall/route.ts",
   ];
 
   // RETIRED 2026-09-07 — no longer a paid checkout route, so the
@@ -130,7 +129,8 @@ test.describe("all paid checkout routes — gate precedes Stripe (source invaria
   // 410. Listed separately rather than silently dropped: a route leaving this
   // array must be because it stopped taking money, and the test below is what
   // proves that rather than assuming it.
-  const RETIRED_ROUTES = ["checkout-picklpark/route.ts"];
+  // Fall 2026 retired on 2026-11-09 with Sam's explicit approval.
+  const RETIRED_ROUTES = ["checkout-picklpark/route.ts", "checkout-fall/route.ts"];
 
   for (const rel of ROUTES) {
     test(`${rel} calls hasWaiverOnFile before checkout.sessions.create`, () => {
