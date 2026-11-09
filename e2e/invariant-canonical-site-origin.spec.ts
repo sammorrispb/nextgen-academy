@@ -173,11 +173,10 @@ const REQUEST_ORIGIN_PATTERNS: RegExp[] = [
   /new\s+URL\([^)]*,\s*(req|request)\.url\s*\)/,
 ];
 // A line-based tripwire, not a proof — it catches the shapes a hurried fix
-// reaches for. Reviewed exceptions. checkout-fall is rewritten on the unmerged branch
-// feat/admin-prorated-fall-registration (which also adds admin/fall-registration);
-// that branch swaps to siteOrigin() when it lands — remove both entries then.
+// reaches for. The pending admin route lives on the unmerged branch
+// feat/admin-prorated-fall-registration. The public Fall checkout retired
+// on 2026-11-09 and no longer needs an exception.
 const ALLOWLIST = new Set([
-  "src/app/api/checkout-fall/route.ts",
   "src/app/api/admin/fall-registration/route.ts",
 ]);
 
