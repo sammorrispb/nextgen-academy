@@ -10,7 +10,7 @@ process.env.NOTION_SEASON_LEAGUE_DB_ID = "finale-games-db";
 process.env.NOTION_FALL_REGS_DB_ID = "finale-regs-db";
 process.env.STANDINGS_LINK_SECRET = "finale-standings-secret";
 
-import { editRoundLineup, loadLeagueSnapshot, previewDay, resolveStandingsView, saveDay } from "../src/lib/season-league-view";
+import { editRoundLineup, recordGameScore, loadLeagueSnapshot, previewDay, resolveStandingsView, saveDay } from "../src/lib/season-league-view";
 import { buildGameRowProps, buildScoreProps, buildTeamRowProps } from "../src/lib/notion-season-league";
 import { signStandingsLink } from "../src/lib/standings-link-token";
 import { FALL_PLAYOFF_DATE } from "../src/data/fall-2026";
@@ -241,6 +241,21 @@ test.describe("manual unscored lineups", () => {
     const result = await editRoundLineup({ group: "Green", week: 6, round: 1, expected: games, games });
     expect(result.ok).toBe(false);
     expect(result.message).toContain("locked");
+    expect(stub.calls.slice(before).filter(c => c.method === "PATCH")).toHaveLength(0);
+  });
+
+  test("old scoring tab cannot score a successfully replaced lineup", async () => {
+    const { games } = await setup();
+    const edited = games.map(g => ({ ...g, sideA: [...g.sideA], sideB: [...g.sideB] }));
+    [edited[0].sideA[0], edited[1].sideA[0]] = [edited[1].sideA[0], edited[0].sideA[0]];
+    expect((await editRoundLineup({ group: "Green", week: 6, round: 1, expected: games, games: edited })).ok).toBe(true);
+    const before = stub.calls.length;
+    const stale = await recordGameScore({ group: "Green", week: 6, key: games[0].key,
+      expectedSideA: games[0].sideA, expectedSideB: games[0].sideB, scoreA: 11, scoreB: 5 });
+    expect(stale.ok).toBe(false);
+    expect(stale.message).toContain("players changed");
+    const legacy = await recordGameScore({ group: "Green", week: 6, key: games[0].key, scoreA: 11, scoreB: 5 });
+    expect(legacy.ok).toBe(false);
     expect(stub.calls.slice(before).filter(c => c.method === "PATCH")).toHaveLength(0);
   });
 

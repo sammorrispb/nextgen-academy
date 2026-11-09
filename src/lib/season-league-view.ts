@@ -503,6 +503,8 @@ export interface ScoreInput {
   group: unknown;
   week: unknown;
   key: unknown;
+  expectedSideA?: unknown;
+  expectedSideB?: unknown;
   scoreA: unknown;
   scoreB: unknown;
   timed?: unknown;
@@ -530,6 +532,11 @@ export async function recordGameScore(input: ScoreInput): Promise<ScoreResult> {
     (r) => r.key === key && r.league === group && r.week === week && r.phase === "League" && r.status !== "Void",
   );
   if (!row) return { ok: false, message: "That game isn't on today's schedule" };
+  if (!Array.isArray(input.expectedSideA) || !Array.isArray(input.expectedSideB) ||
+    JSON.stringify(input.expectedSideA) !== JSON.stringify(row.sideA) ||
+    JSON.stringify(input.expectedSideB) !== JSON.stringify(row.sideB)) {
+    return { ok: false, message: "The players changed. Reload and confirm the lineup before scoring." };
+  }
   const roundPlayers = snapshot.rows.filter(r => r.week === week && r.phase === "League" && r.round === row.round && r.status !== "Void").flatMap(r => [...r.sideA, ...r.sideB]);
   if (new Set(roundPlayers).size !== roundPlayers.length) return { ok: false, message: "This round has duplicate players. Correct the lineup before scoring." };
   const saved = await recordSeasonLeagueScore(row.pageId, input.scoreA as number, input.scoreB as number, timed);
@@ -721,9 +728,7 @@ export async function recordPlayoffScore(input: PlayoffScoreInput): Promise<Scor
     // A Played playoff row is corrected in place rather than re-created.
     const row = snapshot.playoff.games.find((g) => g.slot === slot);
     if (!row) return { ok: false, message: "Couldn't find the game to correct" };
-    const roundPlayers = snapshot.rows.filter(r => r.week === week && r.phase === "League" && r.round === row.round && r.status !== "Void").flatMap(r => [...r.sideA, ...r.sideB]);
-  if (new Set(roundPlayers).size !== roundPlayers.length) return { ok: false, message: "This round has duplicate players. Correct the lineup before scoring." };
-  const saved = await recordSeasonLeagueScore(row.pageId, input.scoreA as number, input.scoreB as number, timed);
+    const saved = await recordSeasonLeagueScore(row.pageId, input.scoreA as number, input.scoreB as number, timed);
     return saved ? { ok: true, message: "Score corrected" } : { ok: false, message: "Couldn't save to Notion — try again" };
   }
   return { ok: true, message: "Score saved" };

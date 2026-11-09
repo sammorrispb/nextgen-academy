@@ -140,7 +140,7 @@ test.describe("season play — hosts", () => {
 
     const first = games.find((p) => p.properties.Phase?.select?.name === "League")!;
     const key = first.properties.Game.title[0].plain_text as string;
-    const score = await recordGameScore({ group: "Green", week: 1, key, scoreA: 11, scoreB: 6, timed: false });
+    const score = await recordGameScore({ expectedSideA: first.properties["Side A"].relation.map((r: {id: string}) => r.id), expectedSideB: first.properties["Side B"].relation.map((r: {id: string}) => r.id), group: "Green", week: 1, key, scoreA: 11, scoreB: 6, timed: false });
     expect(score.ok).toBe(true);
 
     expect(stub.calls.length).toBeGreaterThan(0);
@@ -168,7 +168,7 @@ test.describe("season play — the games database holds no names", () => {
     installWorld(stub, games);
     await saveDay({ group: "Green", week: 1, presentIds: REG_IDS });
     const first = games.find((p) => p.properties.Phase?.select?.name === "League")!;
-    await recordGameScore({ group: "Green", week: 1, key: first.properties.Game.title[0].plain_text, scoreA: 11, scoreB: 6, timed: true });
+    await recordGameScore({ expectedSideA: first.properties["Side A"].relation.map((r: {id: string}) => r.id), expectedSideB: first.properties["Side B"].relation.map((r: {id: string}) => r.id), group: "Green", week: 1, key: first.properties.Game.title[0].plain_text, scoreA: 11, scoreB: 6, timed: true });
 
     const bodies = writes(stub);
     expect(bodies.length).toBeGreaterThan(1);
@@ -208,7 +208,7 @@ test.describe("season play — a save never rewrites a played game", () => {
     await saveDay({ group: "Green", week: 1, presentIds: REG_IDS });
     const round1 = games.filter((p) => p.properties.Phase?.select?.name === "League" && p.properties.Round?.number === 1);
     for (const p of round1) {
-      await recordGameScore({ group: "Green", week: 1, key: p.properties.Game.title[0].plain_text, scoreA: 11, scoreB: 4, timed: false });
+      await recordGameScore({ expectedSideA: p.properties["Side A"].relation.map((r: {id: string}) => r.id), expectedSideB: p.properties["Side B"].relation.map((r: {id: string}) => r.id), group: "Green", week: 1, key: p.properties.Game.title[0].plain_text, scoreA: 11, scoreB: 4, timed: false });
     }
     games.push({
       id: "stale",
@@ -252,7 +252,7 @@ test.describe("season play — a save never rewrites a played game", () => {
     const lastRound = Math.max(...before.map((g) => g.round));
     // Score one game so the sheet holds both Played and Scheduled rounds.
     const first = league().find((p) => p.properties.Round.number === 1)!;
-    await recordGameScore({ group: "Green", week: 3, key: first.properties.Game.title[0].plain_text, scoreA: 15, scoreB: 4, timed: false });
+    await recordGameScore({ expectedSideA: first.properties["Side A"].relation.map((r: {id: string}) => r.id), expectedSideB: first.properties["Side B"].relation.map((r: {id: string}) => r.id), group: "Green", week: 3, key: first.properties.Game.title[0].plain_text, scoreA: 15, scoreB: 4, timed: false });
     stub.calls.length = 0;
 
     const added = await saveDay({ group: "Green", week: 3, presentIds: REG_IDS, append: true });
@@ -296,7 +296,7 @@ test.describe("season play — the parent link", () => {
     installWorld(stub, games);
     await saveDay({ group: "Green", week: 1, presentIds: REG_IDS });
     const first = games.find((p) => p.properties.Phase?.select?.name === "League")!;
-    await recordGameScore({ group: "Green", week: 1, key: first.properties.Game.title[0].plain_text, scoreA: 11, scoreB: 6, timed: false });
+    await recordGameScore({ expectedSideA: first.properties["Side A"].relation.map((r: {id: string}) => r.id), expectedSideB: first.properties["Side B"].relation.map((r: {id: string}) => r.id), group: "Green", week: 1, key: first.properties.Game.title[0].plain_text, scoreA: 11, scoreB: 6, timed: false });
 
     const view = await resolveStandingsView("green", signStandingsLink("Green")!);
     expect(view).not.toBeNull();
