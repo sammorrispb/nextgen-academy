@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { lessonSchedulingUrl, EVALUATION_SMS_URL } from "../src/data/scheduling";
 import { faq } from "../src/data/faq";
 import { seo } from "../src/data/seo";
-import { familySiteUrl } from "../src/lib/urls";
+import { coachLessonUrl } from "../src/lib/urls";
 import { stickyCtaFor } from "../src/lib/sticky-cta";
 import LessonBookPage from "../src/app/lessons/book/page";
 import { leadConfirmationHtml } from "../src/lib/email/lead-confirmation";
@@ -22,13 +22,13 @@ test.beforeEach(() => {
 test.afterEach(() => { globalThis.fetch = originalFetch; });
 
 test("lesson entry shares Coach Sam's NGA request flow", () => {
-  expect(lessonSchedulingUrl()).toBe("https://coach.sammorrispb.com/book/nga-lessons");
+  expect(lessonSchedulingUrl()).toBe("https://coach.linkanddink.com/book/nga-lessons");
 });
 
 test("a new parent reaches request scheduling without an invoice or Stripe read", async () => {
   await expect(LessonBookPage({ searchParams: Promise.resolve({ utm_source: "newsletter" }) }))
     .rejects.toMatchObject({
-      digest: "NEXT_REDIRECT;replace;https://coach.sammorrispb.com/book/nga-lessons?utm_source=newsletter;307;",
+      digest: "NEXT_REDIRECT;replace;https://coach.linkanddink.com/book/nga-lessons?utm_source=newsletter;307;",
     });
   expect(schedulingChecks).toHaveLength(1);
   expect(schedulingChecks[0].url).toBe(lessonSchedulingUrl());
@@ -74,7 +74,7 @@ test("lesson redirect forwards only bounded campaign attribution, never child or
   expect(Object.fromEntries(url.searchParams)).toEqual({
     utm_source: "newsletter", utm_medium: "email", utm_campaign: "fall",
   });
-  expect(url.origin).toBe("https://coach.sammorrispb.com");
+  expect(url.origin).toBe("https://coach.linkanddink.com");
 });
 
 test("legacy paid lesson invoice path retains its payment and product guards", () => {
@@ -140,14 +140,15 @@ test("evaluation FAQ and search description use the text scheduling path", () =>
 });
 
 test("adult cross-invite points at live lesson requests with NGA attribution", () => {
-  const target = familySiteUrl("sammorrispb", "https://coach.sammorrispb.com/book/private-lesson", "about_adults");
+  const target = coachLessonUrl("about_adults");
   const url = new URL(target);
-  expect(url.hostname).toBe("coach.sammorrispb.com");
+  expect(url.hostname).toBe("coach.linkanddink.com");
   expect(url.pathname).toBe("/book/private-lesson");
   expect(url.searchParams.get("utm_source")).toBe("nga");
   expect(url.searchParams.get("utm_content")).toBe("about_adults");
   const page = source("app/page.tsx");
-  expect(page).toContain('familySiteUrl("sammorrispb", "https://coach.sammorrispb.com/book/private-lesson", "about_adults")');
+  expect(page).toContain('coachLessonUrl("about_adults")');
+  expect(page).not.toContain('familySiteUrl("sammorrispb", "https://coach');
   expect(page).toContain("Request an adult lesson with Sam");
   expect(faq.find(item => item.question === "Do you offer lessons for adults?")!.answer).not.toContain("free 30-minute skill evaluation");
 });

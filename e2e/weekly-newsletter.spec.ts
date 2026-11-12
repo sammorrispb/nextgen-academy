@@ -344,7 +344,7 @@ test.describe("weeklyNewsletterHtml", () => {
     }
     for (const [base, content] of [
       [`${ORIGIN}/lessons/book`, "youth-lessons"],
-      ["https://coach.sammorrispb.com/book/private-lesson", "parent-lessons"],
+      ["https://coach.linkanddink.com/book/private-lesson", "parent-lessons"],
     ]) {
       const expected = appendUtm(base, content, input.utmCampaign);
       expect(text).toContain(expected);
@@ -352,6 +352,12 @@ test.describe("weeklyNewsletterHtml", () => {
       const url = new URL(expected);
       expect(url.searchParams.get("utm_campaign")).toBe(input.utmCampaign);
       expect(url.searchParams.get("utm_medium")).toBe("email");
+    }
+    // The old host only redirected to the real one. The positive control
+    // proves the renderer produced the adult lesson link at all.
+    for (const body of [html, text]) {
+      expect(body).toContain("https://coach.linkanddink.com/book/private-lesson");
+      expect(body).not.toContain("coach.sammorrispb.com");
     }
   });
 

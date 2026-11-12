@@ -24,7 +24,8 @@ import { site } from "@/data/site";
 import { faq } from "@/data/faq";
 import { seo } from "@/data/seo";
 import { testimonials } from "@/data/testimonials";
-import { familySiteUrl } from "@/lib/urls";
+import LessonHandoffLink from "@/components/LessonHandoffLink";
+import { coachLessonUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import { todayET } from "@/lib/fall-refund-policy";
 import {
@@ -289,14 +290,13 @@ export default async function Home() {
             <p className="text-lg text-ngpa-white/80 leading-relaxed">
               And if you&rsquo;re wondering &mdash; yes, Sam coaches adults too,
               separately from NGA.{" "}
-              <a
-                href={familySiteUrl("sammorrispb", "https://coach.sammorrispb.com/book/private-lesson", "about_adults")}
-                target="_blank"
-                rel="noopener noreferrer"
+              <LessonHandoffLink
+                href={coachLessonUrl("about_adults")}
                 className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
+                noteClassName="mt-1 text-sm text-ngpa-white/65"
               >
                 Request an adult lesson with Sam &rarr;
-              </a>
+              </LessonHandoffLink>
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-7">
