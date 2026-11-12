@@ -5,9 +5,9 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import type { ReactElement } from "react";
 import SeasonCallouts from "../src/components/SeasonCallouts";
-import HomeMvfFeature from "../src/components/HomeMvfFeature";
+import HomeMvfFeature, * as homeMvf from "../src/components/HomeMvfFeature";
 import { FALL_SEASON_END } from "../src/data/fall-2026";
-import { MVF_PROGRAMS } from "../src/data/mvf";
+import { MVF_PROGRAMS, type MvfProgram } from "../src/data/mvf";
 import { PICKLPARK_SATURDAYS } from "../src/data/picklpark-2026";
 
 // The season cards on /schedule and the home page retire with their seasons.
@@ -89,6 +89,32 @@ test.describe("home page: the MVF Session II card", () => {
     expect(feature(shift(lastClass, -30))).toContain(CARD);
     expect(feature(shift(lastClass, 1)), "no empty section left holding padding").toBe("");
     expect(feature("2026-11-20")).toBe("");
+  });
+
+  test("only this fall's two Session II classes can show the card", () => {
+    // The card's dates and links are typed into MvfSessionTwoFeature, so a
+    // later program that merely shares the "fall-2" prefix must not revive it.
+    const { HOME_MVF_SESSION_TWO_KEYS, mvfSessionTwoEnrolling } = homeMvf as unknown as {
+      HOME_MVF_SESSION_TWO_KEYS: readonly string[];
+      mvfSessionTwoEnrolling: (todayIso: string, programs?: MvfProgram[]) => boolean;
+    };
+    expect([...HOME_MVF_SESSION_TWO_KEYS].sort()).toEqual(["fall-2-advanced", "fall-2-beginner"]);
+    for (const key of HOME_MVF_SESSION_TWO_KEYS) {
+      expect(MVF_PROGRAMS.some((p) => p.key === key), `${key} is a real program`).toBe(true);
+    }
+    const real = fallTwo[0];
+    const nextYear = (key: string): MvfProgram => ({
+      ...real,
+      key,
+      startDate: "2027-10-14",
+      endDate: "2027-11-18",
+    });
+    expect(mvfSessionTwoEnrolling(lastClass, [real]), "positive control").toBe(true);
+    for (const key of ["fall-2027-beginner", "fall-2-2027-advanced", "fall-20"]) {
+      expect(mvfSessionTwoEnrolling("2027-10-01", [nextYear(key)]), key).toBe(false);
+      expect(render(() => HomeMvfFeature({ todayIso: "2027-10-01", programs: [nextYear(key)] }))).toBe("");
+    }
+    expect(mvfSessionTwoEnrolling(lastClass, [])).toBe(false);
   });
 
   test("the home page renders the card only through the gate, with an Eastern date", () => {

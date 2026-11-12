@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import type { ReactElement } from "react";
 import type { Metadata } from "next";
 import * as fallPage from "../src/app/fall/page";
-import { FALL_SEASON_END } from "../src/data/fall-2026";
+import { FALL_SEASON_END, FALL_VENUE } from "../src/data/fall-2026";
 import { FALL_SEASON_PRICE_USD } from "../src/data/fall-season-2026";
 import { FetchStub } from "./fixtures/fetch-stub";
 import { fixedDate } from "./fixtures/fixed-date";
@@ -85,12 +85,27 @@ function seasonJsonLd(html: string): Record<string, unknown> {
   return event as Record<string, unknown>;
 }
 
+/** What a reader sees: markup with the JSON-LD and any other script removed. */
+const visibleBody = (html: string) => html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
+
+// Copy that sells or runs a live season. None of it may outlive the finale,
+// anywhere on the page; all of it must still render while the season is on.
+const SELLING_COPY = [
+  "$",
+  'itemprop="price"',
+  "non-refundable",
+  "first come first serve",
+  "sub list",
+  "weather call",
+  "paid up front",
+];
+
 test.describe("/fall once the season is over", () => {
   for (const flag of ["true", "false", undefined]) {
     test(`flag ${String(flag)}: ended badge and copy, no form, nothing on offer`, async () => {
       const html = await renderFall(DAY_AFTER, flag);
       expect(html).toContain("Fall 2026 season complete");
-      expect(html).toContain("The Fall 2026 season has ended.");
+      expect(html).toContain(">The Fall 2026 season has ended</h2>");
       expect(html).toContain("Registration is closed.");
       expect(html).not.toContain("<form");
       expect(html).not.toContain("Grab your spot");
@@ -100,15 +115,46 @@ test.describe("/fall once the season is over", () => {
       expect(html).not.toContain("InStock");
       expect(html).not.toContain("PreOrder");
       expect(seasonJsonLd(html)).not.toHaveProperty("offers");
-      expect(stub.calls, "an ended season reads no seat counts").toEqual([]);
+      const body = visibleBody(html).toLowerCase();
+      for (const phrase of SELLING_COPY) {
+        expect(body, `ended page must not carry ${JSON.stringify(phrase)}`).not.toContain(phrase);
+      }
+      expect(body, "no em dash in the ended page's visible text").not.toContain("\u2014");
+      expect(body).not.toContain("&mdash;");
+      // What stays is plain history: when it was played and where.
+      expect(html).toContain("Six Sundays. One crew. Real games every week.");
+      expect(html).toContain(`<time dateTime="${FALL_SEASON_END}">`);
+      expect(html).toContain(FALL_VENUE);
     });
   }
+
+  test("an ended season reads nothing from Notion; a live one reads seats and weather calls", async () => {
+    const configure = () => {
+      Object.assign(process.env, {
+        NOTION_API_KEY: "notion_fixture",
+        NOTION_FALL_REGS_DB_ID: "db_fall_regs_fixture",
+        NOTION_FALL_CALLS_DB_ID: "db_fall_calls_fixture",
+      });
+      stub.reset();
+      stub.on("api.notion.com", { results: [], has_more: false });
+    };
+    // Positive control first: with the same config, a live season does read.
+    configure();
+    await renderFall(IN_SEASON, "true");
+    expect(stub.callsTo("db_fall_regs_fixture").length, "seat counts are read in season").toBeGreaterThan(0);
+    expect(stub.callsTo("db_fall_calls_fixture").length, "weather calls are read in season").toBeGreaterThan(0);
+
+    configure();
+    const html = await renderFall(DAY_AFTER, "true");
+    expect(html).toContain("Fall 2026 season complete");
+    expect(stub.calls, "no seat count and no weather-call read for a finished season").toEqual([]);
+  });
 
   test("the ended registration section has one way forward: View Schedule", async () => {
     const html = await renderFall(DAY_AFTER, "true");
     const section = html.slice(html.indexOf('id="register"'));
     const registration = section.slice(0, section.indexOf("</section>"));
-    expect(registration).toContain("The Fall 2026 season has ended.");
+    expect(registration).toContain(">The Fall 2026 season has ended</h2>");
     const links = [...registration.matchAll(/<a [^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g)];
     expect(links.map((m) => m[1])).toEqual(["/schedule"]);
     expect(links[0][2]).toContain("View Schedule");
@@ -122,8 +168,12 @@ test.describe("/fall once the season is over", () => {
     expect(html).toContain("registration open");
     expect(html).toContain("Grab your spot");
     expect(html).not.toContain("season complete");
-    expect(html).not.toContain("The Fall 2026 season has ended.");
+    expect(html).not.toContain("The Fall 2026 season has ended");
     expect(seasonJsonLd(html).offers).toMatchObject({ availability: "https://schema.org/InStock" });
+    const body = visibleBody(html).toLowerCase();
+    for (const phrase of SELLING_COPY) {
+      expect(body, `in season the page still carries ${JSON.stringify(phrase)}`).toContain(phrase);
+    }
   });
 
   test("in season with the flag unset, the opening-soon state is unchanged", async () => {
