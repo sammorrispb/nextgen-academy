@@ -144,6 +144,7 @@ test("only /picklpark's own source reads the price fields", () => {
     "src/app/youth-pickleball-frederick/page.tsx",
     "src/app/fall/page.tsx",
     "src/app/schedule/page.tsx",
+    "src/components/SeasonCallouts.tsx",
     "src/app/api/cron/weekly-newsletter/route.ts",
     "src/lib/llms-txt.ts",
     "src/lib/league-hub.ts",

@@ -229,6 +229,26 @@ export const FALL_PLAYOFF_DATE: string = FALL_PLAY_DATES[FALL_PLAY_DATES.length 
 /** The last Sunday anyone plays — what "is the season still on" checks read. */
 export const FALL_SEASON_END: string = FALL_PLAYOFF_DATE;
 
+export type FallRegistrationState = "soon" | "open" | "ended";
+
+/**
+ * The one answer to "is fall registration open", for every surface that asks.
+ *
+ * The date decides "ended" on its own: the ships-dark flag
+ * (NEXT_PUBLIC_FALL_REGISTRATION_OPEN) was still "true" in production after
+ * the finale and /fall kept rendering the form for four days. Only the exact
+ * string "true" opens it, so a typo stays shut.
+ *
+ * Pure: pass today in America/New_York (`todayET()`), never a UTC date.
+ */
+export function fallRegistrationState(
+  todayIso: string,
+  flag: string | undefined,
+): FallRegistrationState {
+  if (todayIso > FALL_SEASON_END) return "ended";
+  return flag === "true" ? "open" : "soon";
+}
+
 /** Human range for copy, e.g. page headers. Follows the played calendar. */
 export const FALL_SEASON_LABEL = "September 20 – November 8, 2026";
 

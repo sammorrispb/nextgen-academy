@@ -1,6 +1,6 @@
 import {
   FALL_PUBLIC_AREA,
-  FALL_SEASON_END,
+  fallRegistrationState,
   FALL_SEASON_LABEL,
   FALL_VENUE_SHORT,
 } from "@/data/fall-2026";
@@ -109,8 +109,7 @@ export default async function PicklParkPage() {
   // last Sunday — it retires with the season instead of pointing at a closed
   // page.
   const fallOpen =
-    process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true" &&
-    todayIso <= FALL_SEASON_END;
+    fallRegistrationState(todayIso, process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN) === "open";
 
   // One SportsEvent per league, each with its OWN podplay registration URL —
   // a single event carrying one offer would send every structured-data reader

@@ -1,5 +1,5 @@
 import {
-  FALL_SEASON_END,
+  fallRegistrationState,
   FALL_SEASON_LABEL,
   FALL_VENUE_SHORT,
 } from "@/data/fall-2026";
@@ -11,6 +11,7 @@ import {
 } from "@/data/fall-season-2026";
 import { fetchFallRoster } from "@/lib/notion-fall-registrations";
 import { requireAdmin } from "@/lib/require-admin";
+import { todayET } from "@/lib/fall-refund-policy";
 import {
   buildFallGroupMailto,
   countConfirmedByGroup,
@@ -63,8 +64,7 @@ export default async function AdminFallPage() {
   const unplaced = players.filter((p) => !knownGroups.includes(p.group));
 
   const registrationOpen =
-    process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true" &&
-    new Date().toISOString().slice(0, 10) <= FALL_SEASON_END;
+    fallRegistrationState(todayET(), process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN) === "open";
 
   return (
     <div>
