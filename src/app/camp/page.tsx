@@ -8,6 +8,7 @@ import {
   CAMP_OPTIONS,
   CAMP_AGE_MIN,
   CAMP_AGE_MAX,
+  isCampOver,
 } from "@/data/camps";
 import { orgRef } from "@/lib/seo";
 
@@ -70,7 +71,7 @@ export default function CampIndexPage() {
   // public page. The camp data itself stays in `camps.ts` so coach rosters and
   // reminder history for a finished week remain intact.
   const today = todayET();
-  const upcomingCamps = CAMPS.filter((camp) => camp.makeupDate >= today);
+  const upcomingCamps = CAMPS.filter((camp) => !isCampOver(camp, today));
 
   const weeksLeft = upcomingCamps.length;
   const countWord =

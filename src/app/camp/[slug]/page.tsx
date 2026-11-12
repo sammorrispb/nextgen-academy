@@ -9,7 +9,16 @@ import {
   CAMP_AGE_MIN,
   CAMP_AGE_MAX,
   findCampBySlug,
+  isCampOver,
 } from "@/data/camps";
+import { EVALUATION_SMS_URL } from "@/data/scheduling";
+import { todayET } from "@/lib/fall-refund-policy";
+
+// Statically generated, so "is this week over?" would otherwise be answered
+// once at build time. Revalidation is lazy (the first visitor after expiry
+// still gets the old render), so this is NOT a bound on how long a stale form
+// can show. The checkout endpoint's own date check is what closes the week.
+export const revalidate = 43200;
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -28,6 +37,13 @@ export async function generateMetadata({
   const { slug } = await params;
   const camp = findCampBySlug(slug);
   if (!camp) return { title: "Camp not found" };
+  if (isCampOver(camp, todayET())) {
+    return {
+      title: { absolute: `${camp.title} | Next Gen Pickleball Camp` },
+      description: `Next Gen Pickleball ${camp.title.replace("Summer Camp \u2014 ", "Summer Camp, ")} ran ${camp.weekLabel} in ${camp.publicArea}. This camp week has wrapped up.`,
+      alternates: { canonical: `${SITE_ORIGIN}/camp/${camp.slug}` },
+    };
+  }
   return {
     // Week label stays in the description; with it the title ran past 60 chars.
     title: { absolute: `${camp.title} | Next Gen Pickleball Camp` },
@@ -50,6 +66,7 @@ export default async function CampWeekPage({ params }: PageProps) {
   const { slug } = await params;
   const camp = findCampBySlug(slug);
   if (!camp) notFound();
+  const over = isCampOver(camp, todayET());
 
   return (
     <section className="bg-ngpa-navy py-14 sm:py-16 px-4 sm:px-6 lg:px-8">
@@ -74,6 +91,29 @@ export default async function CampWeekPage({ params }: PageProps) {
           </p>
         </div>
 
+        {over ? (
+          <div className="mt-6 bg-ngpa-panel rounded-2xl border border-ngpa-slate p-6 text-center">
+            <p className="text-ngpa-muted leading-relaxed">
+              This camp week has wrapped up. Want first dibs on next
+              season&rsquo;s dates?{" "}
+              <Link
+                href="/newsletter"
+                className="text-ngpa-teal-bright font-semibold hover:underline"
+              >
+                Join the newsletter
+              </Link>{" "}
+              or{" "}
+              <Link
+                href={EVALUATION_SMS_URL}
+                className="text-ngpa-teal-bright font-semibold hover:underline"
+              >
+                text for a free evaluation
+              </Link>{" "}
+              to get your child on the court now.
+            </p>
+          </div>
+        ) : (
+          <>
         {/* Quick facts */}
         <div className="mt-6 bg-ngpa-panel rounded-2xl border border-ngpa-slate p-5 text-sm">
           <ul className="space-y-1.5 text-ngpa-muted">
@@ -102,6 +142,8 @@ export default async function CampWeekPage({ params }: PageProps) {
           Register
         </h2>
         <CampRegisterForm campSlug={camp.slug} />
+          </>
+        )}
       </div>
 
       <PagePhoto page={`/camp/${camp.slug}`} />
