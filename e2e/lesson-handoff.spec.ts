@@ -71,8 +71,17 @@ function anchors(html: string): Anchor[] {
 /** The handoff line is the very next element after the link, nothing between. */
 function lineFollows(anchor: Anchor): boolean {
   const next = /^<span\b[^>]*>([^<]*)<\/span>/.exec(anchor.after);
-  return Boolean(line) && next?.[1] === line;
+  return Boolean(line) && next !== null && decode(next[1]) === line;
 }
+
+// React escapes apostrophes, quotes and ampersands in rendered text. The line
+// is the owner's to reword, so compare decoded text, not raw markup.
+const decode = (markup: string) =>
+  markup
+    .replaceAll("&#x27;", "'")
+    .replaceAll("&#39;", "'")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&amp;", "&");
 
 // The home page is imported inside the render window on purpose: HowItWorks
 // builds JSX at module load, and that JSX is only renderable if React's
@@ -86,7 +95,7 @@ const Home = (): Promise<React.ReactNode> => {
   return load("./src/app/page").default();
 };
 
-const count = (html: string) => (line ? html.split(line).length - 1 : 0);
+const count = (html: string) => (line ? decode(html).split(line).length - 1 : 0);
 
 test("the handoff line names the site the lesson request opens on", () => {
   expect(typeof line).toBe("string");
