@@ -1,4 +1,5 @@
 import {
+  fallRegistrationState,
   FALL_PUBLIC_AREA,
   FALL_SEASON_END,
   FALL_SEASON_LABEL,
@@ -114,24 +115,23 @@ export function buildOpenNowOffers(
 }
 
 /**
- * The gate `/fall` reads. Fall is still the ships-dark flag.
+ * The gate `/fall` reads: the ships-dark flag AND the season's own last
+ * Sunday, through the one shared rule (`fallRegistrationState`). `todayIso` is
+ * today in America/New_York.
  *
- * `picklParkRegistrationOpen` is retained on the shape but is always false —
+ * `picklParkRegistrationOpen` is retained on the shape but is always false:
  * NGA stopped selling the Pickl Park season on 2026-09-07 and the Saturday's
  * own card is now gated on `picklParkLeaguesOpen(todayIso)` inside
  * `buildOpenNowOffers`, not on this flag. Kept rather than removed so the
  * field's disappearance can't silently change a caller's object literal.
  */
-export function openNowFlags(
-  ...ignored: [todayIso?: string]
-): OpenNowFlags {
-  // `todayIso` is accepted and discarded: the Pickl Park card it used to gate
-  // now reads the calendar inside buildOpenNowOffers, and the fall flag is
-  // date-independent. Kept in the signature so existing call sites compile.
-  void ignored;
+export function openNowFlags(todayIso: string): OpenNowFlags {
   return {
     fallRegistrationOpen:
-      process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true",
+      fallRegistrationState(
+        todayIso,
+        process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN,
+      ) === "open",
     picklParkRegistrationOpen: false,
   };
 }

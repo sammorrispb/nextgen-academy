@@ -1,4 +1,5 @@
 import {
+  fallRegistrationState,
   FALL_PLAYOFF_DATE,
   FALL_PLAY_DATES,
   FALL_PUBLIC_AREA,
@@ -50,15 +51,24 @@ import {
 // the page body correct while the meta description still said Rockville — the
 // exact "canonical page is right, a variant path is stale" miss the repo rule
 // warns about. Derive it and that can't happen again.
-export const metadata: Metadata = {
-  title: { absolute: "Fall 2026 Youth Pickleball Season — Bethesda, MD | Next Gen" },
-  description: [
-    `Six Sundays of youth pickleball at ${FALL_VENUE_SHORT} in ${FALL_PUBLIC_AREA}, ${FALL_SEASON_LABEL}.`,
-    FALL_SEASON_GROUPS.map((g) => `${g.label} ${g.timeLabel}`).join(", ") + ".",
-    `Small groups, $${FALL_SEASON_PRICE_USD} per player for the full season.`,
-  ].join(" "),
-  alternates: { canonical: "https://nextgenpbacademy.com/fall" },
-};
+//
+// A function, not a constant, so the description is decided per render: a
+// frozen one kept quoting the price after the season ended.
+export function generateMetadata(): Metadata {
+  const ended =
+    fallRegistrationState(todayET(), process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN) === "ended";
+  return {
+    title: { absolute: "Fall 2026 Youth Pickleball Season — Bethesda, MD | Next Gen" },
+    description: ended
+      ? `The Fall 2026 youth pickleball season at ${FALL_VENUE_SHORT} in ${FALL_PUBLIC_AREA} ran ${FALL_SEASON_LABEL}. The season has ended and registration is closed.`
+      : [
+          `Six Sundays of youth pickleball at ${FALL_VENUE_SHORT} in ${FALL_PUBLIC_AREA}, ${FALL_SEASON_LABEL}.`,
+          FALL_SEASON_GROUPS.map((g) => `${g.label} ${g.timeLabel}`).join(", ") + ".",
+          `Small groups, $${FALL_SEASON_PRICE_USD} per player for the full season.`,
+        ].join(" "),
+    alternates: { canonical: "https://nextgenpbacademy.com/fall" },
+  };
+}
 
 // A minute, not five: this page carries the live weather call on a Sunday
 // morning. The call route also revalidates /fall the moment a call is made,
@@ -80,8 +90,15 @@ function sundayLabel(iso: string): string {
 }
 
 export default async function FallPage() {
-  const registrationOpen =
-    process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true";
+  const todayIso = todayET();
+  // The flag alone used to decide this, so the page kept selling after the
+  // finale. The date now ends the season whatever the flag says.
+  const registrationState = fallRegistrationState(
+    todayIso,
+    process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN,
+  );
+  const registrationOpen = registrationState === "open";
+  const seasonEnded = registrationState === "ended";
   // The other fall option (Saturdays, indoors, Frederick). Gated on whether
   // the Saturday is still RUNNING, not on whether NGA is selling it — NGA
   // stopped selling Pickl Park on 2026-09-07 and The Pickl Park registers both
@@ -89,8 +106,9 @@ export default async function FallPage() {
   // live leagues from the page our paying families actually land on.
   const picklParkOpen = picklParkLeaguesOpen(picklParkTodayET());
 
-  const todayIso = todayET();
-  const calls = await fetchFallCalls();
+  // Once the season is over there is no call to show and no seat to count,
+  // so neither Notion read happens.
+  const calls = seasonEnded ? null : await fetchFallCalls();
 
   const spotsTaken: Partial<Record<FallSeasonGroup, number | null>> = {};
   if (registrationOpen) {
@@ -110,29 +128,40 @@ export default async function FallPage() {
       name: FALL_VENUE_SHORT,
       address: FALL_VENUE,
     },
-    offers: {
-      "@type": "Offer",
-      price: String(FALL_SEASON_PRICE_USD),
-      priceCurrency: "USD",
-      availability: registrationOpen
-        ? "https://schema.org/InStock"
-        : "https://schema.org/PreOrder",
-      url: "https://nextgenpbacademy.com/fall",
-    },
+    // No offer at all once the season is over: nothing is for sale.
+    ...(seasonEnded
+      ? {}
+      : {
+          offers: {
+            "@type": "Offer",
+            price: String(FALL_SEASON_PRICE_USD),
+            priceCurrency: "USD",
+            availability: registrationOpen
+              ? "https://schema.org/InStock"
+              : "https://schema.org/PreOrder",
+            url: "https://nextgenpbacademy.com/fall",
+          },
+        }),
   };
 
   return (
     <div className="bg-ngpa-navy">
       <JsonLd data={eventJsonLd} />
-      <FallWeatherAlert calls={calls} todayIso={todayIso} />
+      {calls && <FallWeatherAlert calls={calls} todayIso={todayIso} />}
       <section className="relative bg-ngpa-deep border-b border-ngpa-slate/40">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
           <p className="font-heading text-xs font-bold text-ngpa-lime uppercase tracking-[0.2em] mb-4">
-            Fall 2026 — registration {registrationOpen ? "open" : "opening soon"}
+            {seasonEnded
+              ? "Fall 2026 season complete"
+              : `Fall 2026 — registration ${registrationOpen ? "open" : "opening soon"}`}
           </p>
           <h1 className="font-heading text-3xl sm:text-5xl font-black text-ngpa-white tracking-tight mb-5">
             Six Sundays. One crew. Real games every week.
           </h1>
+          {/* Everything below the title sells or runs a live season, so it
+              goes when the season does. The dates and venue stay further down. */}
+          {!seasonEnded && (
+          <>
           <p className="text-lg text-ngpa-white/80 leading-relaxed mb-6">
             The Next Gen Youth Fall Season runs {FALL_SEASON_WEEKS} Sundays at{" "}
             {FALL_VENUE_SHORT} in {FALL_PUBLIC_AREA},{" "}
@@ -157,6 +186,8 @@ export default async function FallPage() {
             dates, and if we ever have to cancel sessions outright, we refund
             what we didn&rsquo;t run.
           </p>
+          </>
+          )}
         </div>
 
         <PagePhoto page="/fall" />
@@ -164,9 +195,11 @@ export default async function FallPage() {
 
       <section className="bg-ngpa-navy">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
-          <div id="weather" className="scroll-mt-24">
-            <FallWeatherStatus calls={calls} todayIso={todayIso} />
-          </div>
+          {calls && (
+            <div id="weather" className="scroll-mt-24">
+              <FallWeatherStatus calls={calls} todayIso={todayIso} />
+            </div>
+          )}
           <h2 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white tracking-tight mb-6">
             The season at a glance
           </h2>
@@ -188,10 +221,12 @@ export default async function FallPage() {
                     {option.label}
                   </a>
                 </h3>
-                <p className="text-ngpa-white/80 leading-relaxed">
-                  Ninety minutes — coached practice, then the round robin.
-                  Small group.
-                </p>
+                {!seasonEnded && (
+                  <p className="text-ngpa-white/80 leading-relaxed">
+                    Ninety minutes — coached practice, then the round robin.
+                    Small group.
+                  </p>
+                )}
               </article>
             ))}
           </div>
@@ -211,14 +246,16 @@ export default async function FallPage() {
               How it works
             </h3>
             <ul className="space-y-3 text-ngpa-white/80 leading-relaxed">
-              <li>
-                <strong className="text-ngpa-white">
-                  It&rsquo;s a full season.
-                </strong>{" "}
-                One registration covers all {FALL_SEASON_WEEKS} Sundays, paid up
-                front. That&rsquo;s what keeps a group together and keeps the
-                round robin worth showing up for.
-              </li>
+              {!seasonEnded && (
+                <li>
+                  <strong className="text-ngpa-white">
+                    It&rsquo;s a full season.
+                  </strong>{" "}
+                  One registration covers all {FALL_SEASON_WEEKS} Sundays, paid up
+                  front. That&rsquo;s what keeps a group together and keeps the
+                  round robin worth showing up for.
+                </li>
+              )}
               <li>
                 <strong className="text-ngpa-white">Your Sundays:</strong>{" "}
                 {FALL_PLAY_DATES.map((d, i) => (
@@ -246,30 +283,35 @@ export default async function FallPage() {
                   </span>
                 ))}
                 , so the season wraps with the finale on{" "}
-                <time dateTime={FALL_PLAYOFF_DATE}>{sundayLabel(FALL_PLAYOFF_DATE)}</time>. We
-                make the weather call two hours before your group starts.
+                <time dateTime={FALL_PLAYOFF_DATE}>{sundayLabel(FALL_PLAYOFF_DATE)}</time>.
+                {!seasonEnded &&
+                  " We make the weather call two hours before your group starts."}
               </li>
-              <li>
-                <strong className="text-ngpa-white">
-                  Can&rsquo;t commit to all {FALL_SEASON_WEEKS} weeks?
-                </strong>{" "}
-                There&rsquo;s a sub list — reply to any of our emails or text
-                Coach Sam at 301-325-4731 and we&rsquo;ll call you when a spot
-                opens week to week.
-              </li>
-              <li>
-                <strong className="text-ngpa-white">
-                  Parents — you play too.
-                </strong>{" "}
-                The adult round robin track runs through Link &amp; Dink —{" "}
-                <a
-                  href={familySiteUrl("linkanddink", "/play/popup", "fall_page")}
-                  className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
-                >
-                  see the adult schedule
-                </a>
-                .
-              </li>
+              {!seasonEnded && (
+                <li>
+                  <strong className="text-ngpa-white">
+                    Can&rsquo;t commit to all {FALL_SEASON_WEEKS} weeks?
+                  </strong>{" "}
+                  There&rsquo;s a sub list — reply to any of our emails or text
+                  Coach Sam at 301-325-4731 and we&rsquo;ll call you when a spot
+                  opens week to week.
+                </li>
+              )}
+              {!seasonEnded && (
+                <li>
+                  <strong className="text-ngpa-white">
+                    Parents — you play too.
+                  </strong>{" "}
+                  The adult round robin track runs through Link &amp; Dink —{" "}
+                  <a
+                    href={familySiteUrl("linkanddink", "/play/popup", "fall_page")}
+                    className="text-ngpa-teal-bright underline hover:text-ngpa-teal"
+                  >
+                    see the adult schedule
+                  </a>
+                  .
+                </li>
+              )}
             </ul>
             <p className="text-sm text-ngpa-white/55 mt-5">
               Venue: {FALL_VENUE}.
@@ -313,14 +355,27 @@ export default async function FallPage() {
       <section className="bg-ngpa-black" id="register">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 sm:py-16">
           <h2 className="font-heading text-2xl sm:text-3xl font-black text-ngpa-white tracking-tight mb-3">
-            {registrationOpen ? "Grab your spot" : "Registration opens soon"}
+            {seasonEnded
+              ? "The Fall 2026 season has ended"
+              : registrationOpen
+                ? "Grab your spot"
+                : "Registration opens soon"}
           </h2>
           <p className="text-ngpa-white/70 leading-relaxed mb-8">
-            {registrationOpen
-              ? "Pick your player's color group, register, and pay for the season in one go — you'll get a confirmation email with every date."
-              : "We're finishing the season setup. Join the newsletter and you'll be first to know the moment registration opens."}
+            {seasonEnded
+              ? "Registration is closed."
+              : registrationOpen
+                ? "Pick your player's color group, register, and pay for the season in one go — you'll get a confirmation email with every date."
+                : "We're finishing the season setup. Join the newsletter and you'll be first to know the moment registration opens."}
           </p>
-          {registrationOpen ? (
+          {seasonEnded ? (
+            <Link
+              href="/schedule"
+              className="inline-flex items-center justify-center px-8 py-4 bg-ngpa-teal text-ngpa-deep font-heading font-bold text-lg rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+            >
+              View Schedule
+            </Link>
+          ) : registrationOpen ? (
             <FallRegistrationForm spotsTaken={spotsTaken} />
           ) : (
             <a

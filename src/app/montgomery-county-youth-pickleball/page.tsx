@@ -8,6 +8,7 @@ import { levels } from "@/data/levels";
 import { coaches } from "@/data/coaches";
 import { localFaq } from "@/data/faq";
 import { testimonials } from "@/data/testimonials";
+import { fallRegistrationState } from "@/data/fall-2026";
 import JsonLd from "@/components/JsonLd";
 import EvaluationSchedulingCard from "@/components/EvaluationSchedulingCard";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
@@ -40,8 +41,10 @@ export const metadata: Metadata = {
 // The shared local FAQ subset lives in src/data/faq.ts (one copy).
 
 export default function MontgomeryCountyPage() {
-  const programs = buildLeagueHubCards(picklParkTodayET(), {
-    fallRegistrationOpen: process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true",
+  const todayIso = picklParkTodayET();
+  const programs = buildLeagueHubCards(todayIso, {
+    fallRegistrationOpen:
+      fallRegistrationState(todayIso, process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN) === "open",
   }).filter((card) => card.key === "fall" || card.key.startsWith("mvf-"));
 
   return (

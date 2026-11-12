@@ -21,26 +21,8 @@ import OpenNowOffers from "@/components/OpenNowOffers";
 import WeatherBar from "@/components/WeatherBar";
 import { fetchWeatherForDates, upcomingDates } from "@/lib/weather";
 import { breadcrumbJsonLd, courseJsonLd, SITE_URL } from "@/lib/seo";
-import {
-  FALL_PUBLIC_AREA,
-  FALL_SEASON_LABEL,
-  FALL_SEASON_WEEKS,
-  FALL_VENUE_SHORT,
-} from "@/data/fall-2026";
-import {
-  FALL_SEASON_GROUPS,
-  FALL_SEASON_PRICE_USD,
-} from "@/data/fall-season-2026";
-import {
-  PICKLPARK_PUBLIC_AREA,
-  PICKLPARK_SEASON_LABEL,
-  PICKLPARK_SEASON_WEEKS,
-  PICKLPARK_VENUE_SHORT,
-} from "@/data/picklpark-2026";
-import {
-  PICKLPARK_LEAGUES,
-  PICKLPARK_LEAGUES_FORMAT_LINE,
-} from "@/data/picklpark-leagues-2026";
+import SeasonCallouts from "@/components/SeasonCallouts";
+import { todayET } from "@/lib/fall-refund-policy";
 
 const SITE_ORIGIN =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://nextgenpbacademy.com";
@@ -182,85 +164,16 @@ export default async function SchedulePage() {
         </div>
       </section>
 
-      {/* ─── Sessions ─────────────────────────── */}
-      {/* ─── Fall 2026 season callout ──── */}
+      {/* ─── Season callouts ──────────────────── */}
+      {/* The top padding lives on this wrapper, not on a card: the fall
+          cards retire with their seasons, and whichever card is first must
+          not sit tight under the hero. */}
       <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16">
-        <div className="max-w-3xl mx-auto">
-          <Link
-            href="/fall"
-            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/10 p-5 sm:p-6 hover:border-ngpa-lime transition-colors"
-          >
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
-                New &middot; Fall 2026 Season
-              </p>
-              {/* Venue from the constants — this line hardcoded Wood MS and
-                  would have gone stale on the 2026-08-27 move to Walter Johnson. */}
-              <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                {FALL_SEASON_WEEKS === 6 ? "Six" : FALL_SEASON_WEEKS} Sundays at{" "}
-                {FALL_VENUE_SHORT} in {FALL_PUBLIC_AREA}
-              </p>
-              {/* Dates, blocks and price all derived — this line hardcoded
-                  them and had already drifted: it advertised "8 spots per
-                  group" after Yellow moved to 10, and a public seat count is
-                  not ours to publish either way (2026-08-29 rule). */}
-              <p className="text-sm text-ngpa-muted mt-0.5">
-                {FALL_SEASON_LABEL} &middot;{" "}
-                {FALL_SEASON_GROUPS.map((g, i) => (
-                  <span key={g.group}>
-                    {i > 0 && ", "}
-                    {g.label} {g.timeLabel}
-                  </span>
-                ))}{" "}
-                &middot; ${FALL_SEASON_PRICE_USD} per player, small groups.
-              </p>
-            </div>
-            <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              See both leagues &rarr;
-            </span>
-          </Link>
-        </div>
-      </section>
+        <div className="max-w-3xl mx-auto space-y-6">
+          <SeasonCallouts todayIso={todayET()} />
 
-      {/* ─── Pickl Park Saturday season callout ──── */}
-      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-6">
-        <div className="max-w-3xl mx-auto">
-          <Link
-            href="/picklpark"
-            className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-lime/40 bg-ngpa-lime/10 p-5 sm:p-6 hover:border-ngpa-lime transition-colors"
-          >
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-lime">
-                Fall 2026 Season &middot; Frederick
-              </p>
-              <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                {PICKLPARK_SEASON_WEEKS === 6 ? "Six" : PICKLPARK_SEASON_WEEKS}{" "}
-                Saturdays indoors at {PICKLPARK_VENUE_SHORT} in{" "}
-                {PICKLPARK_PUBLIC_AREA}
-              </p>
-              <p className="text-sm text-ngpa-muted mt-0.5">
-                {PICKLPARK_SEASON_LABEL} &middot;{" "}
-                {PICKLPARK_LEAGUES.map((l, i) => (
-                  <span key={l.slug}>
-                    {i > 0 && ", "}
-                    {l.title} {l.timeLabel} ({l.ageLabel})
-                  </span>
-                ))}{" "}
-                &middot; {PICKLPARK_LEAGUES_FORMAT_LINE}. Coached by Next Gen,
-                registered with The Pickl Park.
-              </p>
-            </div>
-            <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-lime text-ngpa-deep font-heading font-bold group-hover:brightness-110 transition-all min-h-[48px]">
-              See the league &rarr;
-            </span>
-          </Link>
-        </div>
-      </section>
-
-      {/* ─── Winter League callout removed 2026-09-22: details being nailed down ─── */}
-      {/* ─── MVF Montgomery Village callout ──── */}
-      <section className="bg-ngpa-navy px-4 sm:px-6 lg:px-10 pt-6">
-        <div className="max-w-3xl mx-auto">
+          {/* ─── Winter League callout removed 2026-09-22: details being nailed down ─── */}
+          {/* ─── MVF Montgomery Village callout ──── */}
           <Link
             href="/montgomery-village-youth-pickleball"
             className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-teal/40 bg-ngpa-teal/10 p-5 sm:p-6 hover:border-ngpa-teal transition-colors"

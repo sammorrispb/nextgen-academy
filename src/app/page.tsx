@@ -4,7 +4,7 @@ import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
 import CoachStrip from "@/components/CoachStrip";
 import IntentChooser from "@/components/IntentChooser";
-import MvfSessionTwoFeature from "@/components/MvfSessionTwoFeature";
+import HomeMvfFeature from "@/components/HomeMvfFeature";
 import UpcomingSessions from "@/components/UpcomingSessions";
 import BallPathway from "@/components/BallPathway";
 import LevelGrid from "@/components/LevelGrid";
@@ -26,6 +26,7 @@ import { seo } from "@/data/seo";
 import { testimonials } from "@/data/testimonials";
 import { familySiteUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
+import { todayET } from "@/lib/fall-refund-policy";
 import {
   orgRef,
   PERSON_IDS,
@@ -119,11 +120,7 @@ export default async function Home() {
       <UpcomingSessions sessions={sessions} />
 
       {/* ─── Featured: MVF Fall Session II ───────── */}
-      <section className="bg-ngpa-navy py-14 sm:py-20 px-4 sm:px-6 lg:px-10">
-        <div className="max-w-6xl mx-auto">
-          <MvfSessionTwoFeature section="homepage" />
-        </div>
-      </section>
+      <HomeMvfFeature todayIso={todayET()} />
 
       {/* ─── Programs / Ball Pathway ─────────────── */}
       <section

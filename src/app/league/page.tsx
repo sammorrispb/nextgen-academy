@@ -6,6 +6,7 @@ import LeagueSeasonForm from "@/components/LeagueSeasonForm";
 import JsonLd from "@/components/JsonLd";
 import { site } from "@/data/site";
 import { LEAGUE_BANDS, LEAGUE_SEASONS } from "@/data/leagues";
+import { fallRegistrationState } from "@/data/fall-2026";
 import { breadcrumbJsonLd, SITE_URL } from "@/lib/seo";
 import { buildLeagueHubCards } from "@/lib/league-hub";
 import { picklParkTodayET } from "@/lib/picklpark-registration-window";
@@ -105,7 +106,8 @@ export const revalidate = 300;
 export default function LeaguePage() {
   const todayIso = picklParkTodayET();
   const runningNow = buildLeagueHubCards(todayIso, {
-    fallRegistrationOpen: process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN === "true",
+    fallRegistrationOpen:
+      fallRegistrationState(todayIso, process.env.NEXT_PUBLIC_FALL_REGISTRATION_OPEN) === "open",
   });
   return (
     <>
