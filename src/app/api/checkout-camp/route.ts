@@ -1,7 +1,13 @@
 import { ownedCheckoutParams } from "@/lib/payment-ownership";
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
-import { findCampBySlug, findCampOption } from "@/data/camps";
+import {
+  CAMP_ENDED_RESPONSE,
+  findCampBySlug,
+  findCampOption,
+  isCampOver,
+} from "@/data/camps";
+import { todayET } from "@/lib/fall-refund-policy";
 import { SMS_CONSENT_TEXT } from "@/data/sms-consent";
 import { validateCampForm, type CampFormData } from "@/lib/validate-camp";
 import { normalizeEmailTypos, hadEmailTypo } from "@/lib/email-typo";
@@ -19,6 +25,15 @@ export async function POST(req: NextRequest) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  // An ended week takes no registration, whatever a cached or bookmarked form
+  // sends. Checked before validation, the waiver lookup and Stripe, so a
+  // closed week reads no parent or child field and contacts no provider.
+  const requestedCamp =
+    typeof body?.campSlug === "string" ? findCampBySlug(body.campSlug) : undefined;
+  if (requestedCamp && isCampOver(requestedCamp, todayET())) {
+    return NextResponse.json(CAMP_ENDED_RESPONSE, { status: 410 });
   }
 
   const errors = validateCampForm(body);

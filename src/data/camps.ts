@@ -135,6 +135,23 @@ export function upcomingCamps(todayIso: string, camps: Camp[] = CAMPS): Camp[] {
   return camps.filter((c) => c.startDate > todayIso);
 }
 
+/**
+ * A camp week is over once its makeup/rain Friday is behind us (`todayIso` in
+ * America/New_York). One rule for the /camp index, the week page and the
+ * checkout endpoint, so a week the index has stopped listing can't still be
+ * sold from its own URL: the week pages kept a live form and a working
+ * checkout for months after the index hid them.
+ */
+export function isCampOver(camp: Camp, todayIso: string): boolean {
+  return camp.makeupDate < todayIso;
+}
+
+/** What a stale form is told. The form prints `error` as-is. */
+export const CAMP_ENDED_RESPONSE = {
+  code: "registration_closed",
+  error: "This camp week has ended. Registration is closed.",
+} as const;
+
 export function findCampOption(key: string): CampOption | undefined {
   return CAMP_OPTIONS.find((o) => o.key === key);
 }
