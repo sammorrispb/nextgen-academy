@@ -15,7 +15,9 @@ import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import { todayET } from "@/lib/fall-refund-policy";
 
 // Statically generated, so "is this week over?" would otherwise be answered
-// once at build time. Same 12h window as the /camp index.
+// once at build time. Revalidation is lazy (the first visitor after expiry
+// still gets the old render), so this is NOT a bound on how long a stale form
+// can show. The checkout endpoint's own date check is what closes the week.
 export const revalidate = 43200;
 
 const SITE_ORIGIN =
@@ -38,7 +40,7 @@ export async function generateMetadata({
   if (isCampOver(camp, todayET())) {
     return {
       title: { absolute: `${camp.title} | Next Gen Pickleball Camp` },
-      description: `Next Gen Pickleball ${camp.title} ran ${camp.weekLabel} in ${camp.publicArea}. This camp week has wrapped up.`,
+      description: `Next Gen Pickleball ${camp.title.replace("Summer Camp \u2014 ", "Summer Camp, ")} ran ${camp.weekLabel} in ${camp.publicArea}. This camp week has wrapped up.`,
       alternates: { canonical: `${SITE_ORIGIN}/camp/${camp.slug}` },
     };
   }

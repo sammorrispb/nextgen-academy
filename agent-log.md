@@ -4,6 +4,14 @@ Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
 
+## 2026-11-12 — Ended camp weeks take no registration, on the page or through checkout
+
+- **Situation and authority:** The `/camp` index stopped listing a week once its makeup Friday passed, but each week's own page (`/camp/june-29`, `/camp/july-20`, `/camp/august-17`) still returned 200 with the price list, the registration form and a "Register & pay" button, and `/api/checkout-camp` had no date check. Found during a cross-site review on 2026-11-12. Sam approved this fix, including the change to the camp checkout endpoint, the same day ("approve pr1"). Whether the camp Stripe price env vars are still set in production was not verified (no POST was made).
+- **Decision:** One rule, `isCampOver(camp, todayIso)` (makeup Friday behind us, America/New_York), shared by the index, the week page and checkout. The week page shows the index's wrapped-up copy with no price and no form, its metadata stops saying "Register for", and it gains `revalidate` so the static page re-answers the question. `checkout-camp` returns 410 `registration_closed` for an ended week before validation, the waiver lookup and Stripe.
+- **Risk:** The cutoff is the index's existing one, so a week stays sellable through its makeup Friday and a single-morning purchase for a morning already past still validates; both predate this change and are Sam's call to tighten. Revalidation is lazy, so a stale form can outlive 12 hours; the endpoint guard is the cover. Ended week pages remain in the sitemap. No webhook, refund, roster, reminder or success-page code is touched, and existing registrations are unaffected.
+- **Validation:** New `e2e/invariant-camp-checkout-ended.spec.ts` (16 tests, clocks derived from each camp's own dates). Mutations: checkout guard removed fails 7; week page always live fails 3; cutoff off by one fails 2; metadata gate removed fails 1. Full pure suite, lint (0 errors, 2 existing warnings), typecheck and production build pass; built HTML for all three ended weeks carries the wrapped-up state and no form. Independent review: no blocking findings.
+- **Change:** `src/data/camps.ts`, `src/app/api/checkout-camp/route.ts`, `src/app/camp/[slug]/page.tsx`, `src/app/camp/page.tsx`, the new spec, a comment in `e2e/validate-camp.spec.ts`.
+
 ## 2026-11-09 — Retire public Fall checkout after the season
 
 - **Situation and authority:** Fall 2026 ended November 8, but the public endpoint could still create a paid checkout. Sam explicitly approved: "also change the endpoint to reject new fall registrations." The broader multi-file website removal plan remains pending and is not part of this patch.

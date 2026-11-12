@@ -55,7 +55,7 @@ test.describe("validateCampForm", () => {
   test("retired option keys are no longer registrable", () => {
     for (const dead of ["am", "full", "pm"]) {
       expect(findCampOption(dead)).toBeUndefined();
-      // checkout-camp delegates to validateCampForm first, so a stale/bookmarked
+      // checkout-camp runs validateCampForm before any provider call, so a stale/bookmarked
       // form posting a removed key is cleanly rejected (400), never a 503.
       expect(validateCampForm(validForm({ optionKey: dead })).optionKey).toBeTruthy();
     }

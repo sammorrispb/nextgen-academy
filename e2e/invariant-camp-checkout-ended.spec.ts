@@ -46,7 +46,15 @@ test.afterEach(() => {
   }
 });
 
-const WEEK_ONE = CAMPS.find((c) => c.slug === "june-29") as Camp;
+// Clocks are derived from each camp's own dates, so adding next summer's weeks
+// (or pruning these) changes nothing here. Noon ET-ish, well clear of midnight.
+const DAY_MS = 86_400_000;
+const atNoonUtc = (iso: string, offsetDays: number) =>
+  new Date(Date.parse(`${iso}T16:00:00Z`) + offsetDays * DAY_MS).toISOString();
+const dayAfterOver = (camp: Camp) => atNoonUtc(camp.makeupDate, 1);
+const beforeStart = (camp: Camp) => atNoonUtc(camp.startDate, -9);
+const FIRST = CAMPS[0];
+const WEEK_PRICE = CAMP_OPTIONS.find((o) => o.key === "week")?.priceUsd;
 
 function body(camp: Camp, optionKey = "week") {
   return JSON.stringify({
@@ -75,18 +83,19 @@ function request(payload: string): NextRequest {
 
 test.describe("isCampOver", () => {
   test("open through the makeup Friday, over the day after", () => {
-    expect(isCampOver(WEEK_ONE, "2026-06-01")).toBe(false);
-    expect(isCampOver(WEEK_ONE, WEEK_ONE.startDate)).toBe(false);
-    expect(isCampOver(WEEK_ONE, WEEK_ONE.makeupDate)).toBe(false);
-    expect(isCampOver(WEEK_ONE, "2026-07-04")).toBe(true);
+    expect(CAMPS.length, "the loops below must have something to check").toBeGreaterThan(0);
+    expect(isCampOver(FIRST, beforeStart(FIRST).slice(0, 10))).toBe(false);
+    expect(isCampOver(FIRST, FIRST.startDate)).toBe(false);
+    expect(isCampOver(FIRST, FIRST.makeupDate)).toBe(false);
+    expect(isCampOver(FIRST, dayAfterOver(FIRST).slice(0, 10))).toBe(true);
   });
 });
 
 test.describe("POST /api/checkout-camp", () => {
   for (const camp of CAMPS) {
     for (const optionKey of CAMP_OPTIONS.map((o) => o.key)) {
-      test(`${camp.slug} (${optionKey}) on 2026-11-12: closed, nothing looked up, nothing charged`, async () => {
-        restoreDate = fixedDate("2026-11-12T16:00:00Z");
+      test(`${camp.slug} (${optionKey}) the day after it is over: closed, nothing looked up, nothing charged`, async () => {
+        restoreDate = fixedDate(dayAfterOver(camp));
         const response = await submit(request(body(camp, optionKey)));
         expect(response.status).toBe(410);
         expect(await response.json()).toEqual({
@@ -98,24 +107,30 @@ test.describe("POST /api/checkout-camp", () => {
     }
   }
 
-  test("positive control: before the week starts, the same request gets past the date guard", async () => {
-    restoreDate = fixedDate("2026-06-20T16:00:00Z");
-    const response = await submit(request(body(WEEK_ONE)));
-    expect(response.status, "reaches the waiver gate, so the guard did not block it").toBe(409);
-    expect(stub.calls.length, "the waiver lookup ran").toBeGreaterThan(0);
-  });
+  for (const optionKey of CAMP_OPTIONS.map((o) => o.key)) {
+    test(`positive control (${optionKey}): before the week starts, the same request gets past the date guard`, async () => {
+      restoreDate = fixedDate(beforeStart(FIRST));
+      const response = await submit(request(body(FIRST, optionKey)));
+      expect(response.status, "reaches the waiver gate, so the guard did not block it").toBe(409);
+      expect(stub.calls.length, "the waiver lookup ran").toBeGreaterThan(0);
+    });
+  }
 
   test("boundary: still open at 11:59 PM ET on the makeup Friday, closed at midnight", async () => {
-    // July 3 2026 is EDT (UTC-4): 03:59:59Z on July 4 is still July 3 in New York.
+    // Pinned to one real week because the UTC offset depends on the date:
+    // July 3 2026 is EDT (UTC-4), so 03:59:59Z on July 4 is still July 3 in
+    // New York. If this week is ever pruned from CAMPS, re-pin to another.
+    const pinned = CAMPS.find((c) => c.makeupDate === "2026-07-03") as Camp;
+    expect(pinned, "re-pin the boundary test to a camp that still exists").toBeTruthy();
     restoreDate = fixedDate("2026-07-04T03:59:59Z");
-    expect((await submit(request(body(WEEK_ONE)))).status).toBe(409);
+    expect((await submit(request(body(pinned)))).status).toBe(409);
     restoreDate();
     restoreDate = fixedDate("2026-07-04T04:00:00Z");
-    expect((await submit(request(body(WEEK_ONE)))).status).toBe(410);
+    expect((await submit(request(body(pinned)))).status).toBe(410);
   });
 
   test("an unknown camp is still a validation error, not a closed season", async () => {
-    restoreDate = fixedDate("2026-11-12T16:00:00Z");
+    restoreDate = fixedDate(dayAfterOver(FIRST));
     const response = await submit(request(JSON.stringify({ campSlug: "no-such-week" })));
     expect(response.status).toBe(400);
   });
@@ -139,8 +154,8 @@ async function renderWeek(slug: string, nowIso: string): Promise<string> {
 
 test.describe("/camp/[slug]", () => {
   for (const camp of CAMPS) {
-    test(`${camp.slug} on 2026-11-12 shows the wrapped-up state with no form and no price`, async () => {
-      const html = await renderWeek(camp.slug, "2026-11-12T16:00:00Z");
+    test(`${camp.slug} the day after it is over shows the wrapped-up state with no form and no price`, async () => {
+      const html = await renderWeek(camp.slug, dayAfterOver(camp));
       expect(html).toContain("This camp week has wrapped up.");
       expect(html).not.toContain("<form");
       expect(html).not.toContain("Register");
@@ -150,25 +165,27 @@ test.describe("/camp/[slug]", () => {
   }
 
   test("positive control: before the week starts the form and prices render", async () => {
-    const html = await renderWeek(WEEK_ONE.slug, "2026-06-20T16:00:00Z");
+    const html = await renderWeek(FIRST.slug, beforeStart(FIRST));
+    expect(WEEK_PRICE, "the week option still exists").toBeTruthy();
     expect(html).toContain("<form");
     expect(html).toContain("Register");
-    expect(html).toContain("$150");
+    expect(html).toContain(`$${WEEK_PRICE}`);
     expect(html).not.toContain("wrapped up");
   });
 
   test("metadata stops selling an ended week", async () => {
-    const restore = fixedDate("2026-11-12T16:00:00Z");
+    const restore = fixedDate(dayAfterOver(FIRST));
     try {
-      const meta = await generateMetadata({ params: Promise.resolve({ slug: WEEK_ONE.slug }) });
+      const meta = await generateMetadata({ params: Promise.resolve({ slug: FIRST.slug }) });
       expect(String(meta.description)).not.toMatch(/Register|\$/);
       expect(String(meta.description)).toContain("wrapped up");
+      expect(String(meta.description), "new public copy carries no em dash").not.toContain("\u2014");
     } finally {
       restore();
     }
-    const restoreLive = fixedDate("2026-06-20T16:00:00Z");
+    const restoreLive = fixedDate(beforeStart(FIRST));
     try {
-      const meta = await generateMetadata({ params: Promise.resolve({ slug: WEEK_ONE.slug }) });
+      const meta = await generateMetadata({ params: Promise.resolve({ slug: FIRST.slug }) });
       expect(String(meta.description)).toMatch(/^Register for/);
     } finally {
       restoreLive();
