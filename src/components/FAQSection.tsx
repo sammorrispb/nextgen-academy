@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { faq } from "@/data/faq";
+import { LESSON_REQUEST_PATH } from "@/data/scheduling";
 import { site } from "@/data/site";
+import LessonHandoffLink from "@/components/LessonHandoffLink";
 
 export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -69,7 +71,19 @@ export default function FAQSection() {
                   >
                     {item.answer}
                   </p>
-                  {item.cta && (
+                  {item.cta && item.cta.href === LESSON_REQUEST_PATH && (
+                    <p className="px-5 pb-5">
+                      <LessonHandoffLink
+                        href={item.cta.href}
+                        className="inline-flex items-center gap-1 text-ngpa-teal font-bold text-sm hover:text-ngpa-teal-bright transition-colors"
+                        noteClassName="mt-1 text-sm text-ngpa-white/65"
+                      >
+                        {item.cta.label}
+                        <span aria-hidden="true">→</span>
+                      </LessonHandoffLink>
+                    </p>
+                  )}
+                  {item.cta && item.cta.href !== LESSON_REQUEST_PATH && (
                     <p className="px-5 pb-5">
                       <a
                         href={item.cta.href}

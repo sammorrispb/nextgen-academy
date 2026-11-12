@@ -1,3 +1,5 @@
+import { ADULT_LESSON_REQUEST_URL } from "@/data/scheduling";
+
 const DEFAULT_REF = "nga";
 const UTM_SOURCE = "nga";
 
@@ -56,6 +58,20 @@ export function familySiteUrl(
   if (ldPid) {
     url.searchParams.set("ld_pid", ldPid);
   }
+  return url.toString();
+}
+
+/**
+ * Coach Sam's adult lesson request page, with the same cross-family UTM block
+ * familySiteUrl stamps. Its own helper because the page lives on the coach
+ * host, which is neither FAMILY_BASES entry.
+ */
+export function coachLessonUrl(utmContent: string): string {
+  const url = new URL(ADULT_LESSON_REQUEST_URL);
+  url.searchParams.set("utm_source", "nga");
+  url.searchParams.set("utm_medium", "cross_family_nav");
+  url.searchParams.set("utm_campaign", "family_reciprocal");
+  url.searchParams.set("utm_content", utmContent);
   return url.toString();
 }
 

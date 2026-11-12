@@ -1,5 +1,6 @@
 import { c, s } from "./brand";
 import { appendUtm } from "./utm";
+import { ADULT_LESSON_REQUEST_URL } from "@/data/scheduling";
 import type { CoachTip } from "@/lib/newsletter-tips";
 import { seatStatusLabel } from "@/lib/seat-status";
 import type { NewsletterProgram } from "@/lib/newsletter-programs";
@@ -27,7 +28,7 @@ import {
 const LESSONS_HEADING = "Private, semi-private and small-group lessons";
 const YOUTH_LESSONS_COPY = "Help your player build a more consistent serve, rally or match plan with focused coaching. Choose one-on-one, semi-private (two players), or a small group at a similar level. Choose up to three available times for your player. Sam confirms the time and sends an invoice; there is no charge when you request.";
 const PARENT_LESSONS_COPY = "Want coaching for your own game? Request a private lesson, a semi-private lesson with a partner, or a small-group lesson with friends. Choose up to three available times and enter your player count. Sam confirms the time and sends an invoice; there is no charge when you request.";
-const SAM_LESSON_REQUEST_URL = "https://coach.sammorrispb.com/book/private-lesson";
+const SAM_LESSON_REQUEST_URL = ADULT_LESSON_REQUEST_URL;
 const FORWARD_COPY = "Know a kid who'd love this? Forward this email. The community grows because parents like you make the introduction.";
 const SIGNOFF = "See you on the court. Better than yesterday, together.";
 const MAX_GLANCE = 6;
