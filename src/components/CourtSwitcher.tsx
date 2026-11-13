@@ -17,7 +17,7 @@ export const NEW_TAB_CUE = "(opens in a new tab)";
 // thing the teal tells the eye. Text on teal is ngpa-deep (7.15:1); the other
 // boxes are ngpa-white on ngpa-navy (13.25:1).
 const BOX =
-  "flex min-h-12 w-full items-center justify-center px-4 py-3 text-center font-heading text-sm font-bold leading-snug";
+  "flex h-full min-h-12 w-full items-center justify-center px-4 py-3 text-center font-heading text-sm font-bold leading-snug";
 
 // The ring is drawn INSIDE the box and marked important on purpose. The court
 // clips its corners (overflow-hidden), and globals.css sets an unlayered
