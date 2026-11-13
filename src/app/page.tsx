@@ -127,7 +127,7 @@ export default async function Home() {
       <section
         id="levels"
         data-home-block="levels"
-        className="relative isolate overflow-hidden bg-ngpa-deep py-16 sm:py-24 px-4 sm:px-6 lg:px-10 scroll-mt-20"
+        className="relative isolate overflow-hidden bg-ngpa-deep py-14 sm:py-20 px-4 sm:px-6 lg:px-10 scroll-mt-20"
       >
         <div aria-hidden="true" className="absolute inset-0 -z-10">
           <Image
@@ -178,7 +178,7 @@ export default async function Home() {
       <section
         id="contact-form"
         data-home-block="contact-form"
-        className="relative bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
+        className="relative bg-ngpa-navy pt-14 pb-10 sm:pt-20 sm:pb-12 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
       >
         <div
           aria-hidden="true"
@@ -199,7 +199,7 @@ export default async function Home() {
       <section
         id="contact"
         data-home-block="contact"
-        className="bg-ngpa-navy py-20 sm:py-24 px-4 sm:px-6 lg:px-10 scroll-mt-20"
+        className="bg-ngpa-navy pt-4 pb-14 sm:pb-20 px-4 sm:px-6 lg:px-10 scroll-mt-20"
       >
         <div className="max-w-5xl mx-auto">
           <SectionHeading

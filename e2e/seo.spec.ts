@@ -251,11 +251,8 @@ test("ball pathway cards describe levels without creating undated events", async
     expect(await card.getAttribute("itemtype")).toBeNull();
     expect(await card.getAttribute("itemscope")).toBeNull();
     await expect(card.getByRole("link")).toHaveCount(1);
-    if (label === "Yellow Ball") {
-      await expect(card.getByRole("link", { name: "Request an eval" })).toHaveAttribute("href", "/yellowball/inquiry");
-    } else {
-      await expect(card.getByRole("link", { name: "Get Started" })).toHaveAttribute("href", "sms:+13013254731");
-    }
+    // Each row opens the levels page; the hero owns the evaluation ask.
+    await expect(card.getByRole("link")).toHaveAttribute("href", "/levels");
   }
 });
 
@@ -583,7 +580,8 @@ test.describe("Public editorial accuracy", () => {
     });
   }
   test("home safety FAQ matches its JSON-LD answer", async ({ page }) => {
-    await page.goto("/");
+    // The FAQ is folded on the home page; the anchor opens it.
+    await page.goto("/#faq");
     await page.getByRole("button", { name: "Is pickleball safe for kids?", exact: true }).click();
     const button = page.getByRole("button", { name: "Is pickleball safe for kids?", exact: true });
     const answer = page.locator(`#${await button.getAttribute("aria-controls")}`);
