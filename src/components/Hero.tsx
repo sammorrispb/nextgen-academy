@@ -7,7 +7,7 @@ const heroSeason = seasons[seasons.length - 1];
 
 export default function Hero() {
   return (
-    <section className="relative isolate overflow-hidden bg-ngpa-deep">
+    <section data-home-block="hero" className="relative isolate overflow-hidden bg-ngpa-deep">
       {/* Subtle teal radial accent on top */}
       <div className="absolute inset-x-0 top-0 h-96 bg-teal-glow pointer-events-none" />
 

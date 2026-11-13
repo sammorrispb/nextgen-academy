@@ -43,7 +43,22 @@ const INTENTS = [
   },
 ];
 
-export default function IntentChooser() {
+const FILLED =
+  "block text-center px-6 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]";
+// Only the evaluation door is filled. One filled color on the page means one
+// thing: book the free evaluation.
+const OUTLINE =
+  "block text-center px-6 py-3.5 border-2 border-ngpa-teal text-ngpa-teal-bright font-bold rounded-full hover:bg-ngpa-teal/10 transition-colors min-h-[48px]";
+
+export default function IntentChooser({
+  showPlayCard = true,
+}: {
+  /** False once every program the "Looking to play" card names has ended
+   * (playCardLive in lib/home-structure). */
+  showPlayCard?: boolean;
+} = {}) {
+  const intents = showPlayCard ? INTENTS : INTENTS.filter((intent) => intent.id !== "looking-to-play");
+
   function pick(intentId: string, label: string, href: string) {
     trackEvent("cta_click", {
       label: `intent_${intentId}`,
@@ -55,6 +70,7 @@ export default function IntentChooser() {
   return (
     <section
       id="start"
+      data-home-block="start"
       className="bg-ngpa-deep py-14 sm:py-20 px-4 sm:px-6 lg:px-10 scroll-mt-20"
       aria-label="Where to start"
     >
@@ -70,8 +86,8 @@ export default function IntentChooser() {
           we&rsquo;ll take it from there.
         </p>
 
-        <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-5">
-          {INTENTS.map((intent) => (
+        <div className={`mt-10 grid grid-cols-1 gap-5 ${intents.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+          {intents.map((intent) => (
             <div
               key={intent.id}
               className="rounded-2xl bg-ngpa-panel/80 border border-ngpa-slate/60 p-6 sm:p-7 flex flex-col hover:border-ngpa-teal/50 transition-colors"
@@ -91,7 +107,7 @@ export default function IntentChooser() {
                   onClick={() =>
                     pick(intent.id, intent.primary.label, intent.primary.href)
                   }
-                  className="block text-center px-6 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+                  className={intent.primary.href === EVALUATION_SMS_URL ? FILLED : OUTLINE}
                 >
                   {intent.primary.label}
                 </Link>

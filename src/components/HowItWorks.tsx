@@ -47,22 +47,14 @@ const steps: Step[] = [
   },
 ];
 
+/** The section's title. The home page shows it as the label of the fold. */
+export const HOW_IT_WORKS_TITLE = "Three steps onto the pathway.";
+
+/** The three steps and their evaluation link. The home page wraps this in a
+ * fold that carries the `how-it-works` anchor and the heading. */
 export default function HowItWorks() {
   return (
-    <section
-      id="how-it-works"
-      className="relative bg-ngpa-deep py-16 sm:py-20 px-4 sm:px-6 lg:px-10 border-t border-ngpa-slate/40"
-    >
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-10 sm:mb-12">
-          <p className="font-heading text-xs font-bold text-ngpa-teal uppercase tracking-[0.2em] mb-3">
-            How it works
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight">
-            Three steps onto the pathway.
-          </h2>
-        </div>
-
+    <>
         <ol className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
           {steps.map((step) => (
             <li
@@ -111,7 +103,6 @@ export default function HowItWorks() {
             </svg>
           </TrackedCTA>
         </div>
-      </div>
-    </section>
+    </>
   );
 }

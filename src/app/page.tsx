@@ -1,23 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import Hero from "@/components/Hero";
-import HowItWorks from "@/components/HowItWorks";
+import HowItWorks, { HOW_IT_WORKS_TITLE } from "@/components/HowItWorks";
+import HomeDisclosure from "@/components/HomeDisclosure";
+import HomeDisclosureOpener from "@/components/HomeDisclosureOpener";
+import LevelRows from "@/components/LevelRows";
 import CoachStrip from "@/components/CoachStrip";
 import IntentChooser from "@/components/IntentChooser";
 import HomeMvfFeature from "@/components/HomeMvfFeature";
 import UpcomingSessions from "@/components/UpcomingSessions";
-import BallPathway from "@/components/BallPathway";
-import LevelGrid from "@/components/LevelGrid";
-import YellowBallCTA from "@/components/YellowBallCTA";
 import EaseValues from "@/components/EaseValues";
-import CrewPathway from "@/components/CrewPathway";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import ContactForm from "@/components/ContactForm";
 import FAQSection from "@/components/FAQSection";
 import SectionHeading from "@/components/SectionHeading";
 import CoachCard from "@/components/CoachCard";
 import JsonLd from "@/components/JsonLd";
-import NewsletterForm from "@/components/NewsletterForm";
 import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import { coaches } from "@/data/coaches";
 import { site } from "@/data/site";
@@ -28,6 +26,7 @@ import LessonHandoffLink from "@/components/LessonHandoffLink";
 import { coachLessonUrl } from "@/lib/urls";
 import { fetchUpcomingSessions } from "@/lib/notion-sessions";
 import { todayET } from "@/lib/fall-refund-policy";
+import { homeFoldedIds, playCardLive } from "@/lib/home-structure";
 import {
   orgRef,
   PERSON_IDS,
@@ -60,6 +59,8 @@ export const revalidate = 300;
 export default async function Home() {
   const sessions = await fetchUpcomingSessions();
   const upcomingForSchema = sessions.slice(0, 4);
+  const today = todayET();
+  const folded = homeFoldedIds({ testimonials });
   return (
     <>
       {/* FAQ Schema */}
@@ -106,19 +107,18 @@ export default async function Home() {
         <JsonLd key={`event-${session.id}`} data={sportsEventJsonLd(session)} />
       ))}
 
+      <HomeDisclosureOpener folded={folded} />
+
       <Hero />
 
       {/* ─── Start Here: the three intents ───────── */}
-      <IntentChooser />
-
-      {/* ─── How It Works ────────────────────────── */}
-      <HowItWorks />
+      <IntentChooser showPlayCard={playCardLive(today)} />
 
       {/* ─── Coach Strip (above-the-fold trust) ──── */}
       <CoachStrip />
 
       {/* ─── This Week's Sessions (live from Notion) ── */}
-      <UpcomingSessions sessions={sessions} />
+      <UpcomingSessions sessions={sessions} omitOffers={["/free-evaluation"]} />
 
       {/* ─── Featured: MVF Fall Session II ───────── */}
       <HomeMvfFeature todayIso={todayET()} />
@@ -126,7 +126,8 @@ export default async function Home() {
       {/* ─── Programs / Ball Pathway ─────────────── */}
       <section
         id="levels"
-        className="relative isolate overflow-hidden bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20"
+        data-home-block="levels"
+        className="relative isolate overflow-hidden bg-ngpa-deep py-16 sm:py-24 px-4 sm:px-6 lg:px-10 scroll-mt-20"
       >
         <div aria-hidden="true" className="absolute inset-0 -z-10">
           <Image
@@ -136,7 +137,7 @@ export default async function Home() {
             sizes="100vw"
             className="object-cover opacity-[0.12]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-ngpa-navy via-ngpa-navy/85 to-ngpa-navy" />
+          <div className="absolute inset-0 bg-gradient-to-b from-ngpa-deep via-ngpa-deep/85 to-ngpa-deep" />
         </div>
         <div className="relative max-w-7xl mx-auto">
           <SectionHeading
@@ -144,11 +145,7 @@ export default async function Home() {
             title="We don't just teach pickleball. We develop athletes."
             subtitle="Four ball colors — Red, Orange, Green, and Yellow — guide athletes from first paddle touch to tournament play. Private lessons are available at every level; each group program lists its ages and levels. Placement starts with skill and follows the program's eligibility."
           />
-          <BallPathway />
-          <LevelGrid />
-          <div className="mt-10">
-            <YellowBallCTA />
-          </div>
+          <LevelRows />
           <div className="mt-12 border-t border-ngpa-teal/20 pt-8">
             <h3 className="font-heading text-2xl sm:text-3xl font-bold text-ngpa-white mb-6">
               Next Gen on the court.
@@ -177,139 +174,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ─── Coaching Philosophy (EASE) ──────────── */}
-      <section
-        id="ease"
-        className="relative bg-ngpa-deep py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
-      >
-        {/* Subtle teal accent backdrop */}
-        <div
-          aria-hidden="true"
-          className="absolute -top-32 -right-32 w-[28rem] h-[28rem] rounded-full bg-ngpa-teal/10 blur-3xl"
-        />
-        <div className="relative max-w-7xl mx-auto">
-          <SectionHeading
-            eyebrow="Our Philosophy"
-            title="Four habits that travel beyond the court."
-            subtitle="Every drill, every cue, every reset is a chance to build EASE — the framework Sam and Amine teach every session."
-          />
-          <EaseValues />
-          <div className="mt-10 max-w-3xl">
-            <div className="relative rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-teal/30 p-6 sm:p-7">
-              <div
-                aria-hidden="true"
-                className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-ngpa-teal"
-              />
-              <div className="font-heading text-base sm:text-lg font-bold text-ngpa-white mb-1.5">
-                Define &rarr; Demonstrate &rarr; Drill
-              </div>
-              <p className="text-sm sm:text-base text-ngpa-white/70 leading-relaxed">
-                We explain the why, show the how, then practice until it&rsquo;s
-                second nature.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Crew Pathway ────────────────────────── */}
-      <section
-        id="crew"
-        className="relative bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
-      >
-        <div
-          aria-hidden="true"
-          className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-ngpa-teal/10 blur-3xl"
-        />
-        <div className="relative max-w-7xl mx-auto">
-          <SectionHeading
-            eyebrow="The Crew Pathway"
-            title="Find a group where your player can grow."
-            subtitle="Share your player's level, goals and availability. Coach Sam helps you explore current programs and possible crew matches."
-          />
-          <CrewPathway />
-        </div>
-      </section>
-
-      {/* ─── Testimonials ────────────────────────── */}
-      {testimonials.length > 0 && (
-        <section
-          id="testimonials"
-          className="relative isolate overflow-hidden bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20"
-        >
-          <div aria-hidden="true" className="absolute inset-0 -z-10">
-            <Image
-              src="/images/outdoor-action-shot.jpeg"
-              alt=""
-              fill
-              sizes="100vw"
-              className="object-cover object-center opacity-[0.10]"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-ngpa-navy via-ngpa-navy/92 to-ngpa-navy" />
-          </div>
-          <div className="relative max-w-7xl mx-auto">
-            <SectionHeading
-              eyebrow="Parent Stories"
-              title="What Next Gen families say."
-              subtitle="Real feedback from the parents who trust us with their kids."
-              centered
-            />
-            <TestimonialsSection />
-          </div>
-        </section>
-      )}
-
-      {/* ─── About / Coaches ─────────────────────── */}
-      <section
-        id="about"
-        className="relative bg-ngpa-deep py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
-      >
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-ngpa-teal/8 blur-3xl"
-        />
-        <div className="relative max-w-7xl mx-auto">
-          <SectionHeading
-            eyebrow="The Team"
-            title="Two dads, one mission."
-            subtitle="Building the program we wished existed for our own kids."
-          />
-          <div className="max-w-3xl mb-12">
-            <p className="text-lg text-ngpa-white/80 leading-relaxed mb-5">
-              Next Gen was started by{" "}
-              <strong className="text-ngpa-white font-bold">Sam and Amine</strong>, two
-              dads building a roadmap for our own kids: structured lessons, a
-              positive culture, and a clear path from curiosity to competition.
-            </p>
-            <p className="text-lg text-ngpa-white/80 leading-relaxed mb-5">
-              Our approach is built on the{" "}
-              <strong className="text-ngpa-teal font-bold">Parent&ndash;Coach&ndash;Kid Triangle</strong>&mdash;
-              parents aren&rsquo;t spectators, they&rsquo;re partners. Families learn
-              the game together so everyone grows through the sport.
-            </p>
-            <p className="text-lg text-ngpa-white/80 leading-relaxed">
-              And if you&rsquo;re wondering &mdash; yes, Sam coaches adults too,
-              separately from NGA.{" "}
-              <LessonHandoffLink
-                href={coachLessonUrl("about_adults")}
-                className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
-                noteClassName="mt-1 text-sm text-ngpa-white/65"
-              >
-                Request an adult lesson with Sam &rarr;
-              </LessonHandoffLink>
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-7">
-            {coaches.map((coach) => (
-              <CoachCard key={coach.name} coach={coach} />
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ─── Contact Form ────────────────────────── */}
       <section
         id="contact-form"
+        data-home-block="contact-form"
         className="relative bg-ngpa-navy py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
       >
         <div
@@ -327,43 +195,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ─── Newsletter ──────────────────────────── */}
-      <section
-        id="newsletter"
-        className="relative bg-ngpa-deep py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20 overflow-hidden"
-      >
-        <div
-          aria-hidden="true"
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[36rem] h-[36rem] rounded-full bg-ngpa-teal/10 blur-3xl"
-        />
-        <div className="relative max-w-xl mx-auto">
-          <SectionHeading
-            eyebrow="Free Newsletter"
-            title="Get your kid in the crew."
-            subtitle="One free email: where to play this week, when monthly training spots open, and how your kid gets better. No spam, unsubscribe anytime."
-            centered
-          />
-          <NewsletterForm />
-        </div>
-      </section>
-
-      {/* ─── FAQ ─────────────────────────────────── */}
-      <section
-        id="faq"
-        className="bg-ngpa-deep py-20 sm:py-28 px-4 sm:px-6 lg:px-10 scroll-mt-20"
-      >
-        <div className="max-w-3xl mx-auto">
-          <SectionHeading
-            eyebrow="FAQ"
-            title="Everything families need to know."
-          />
-          <FAQSection />
-        </div>
-      </section>
-
       {/* ─── Contact Strip ───────────────────────── */}
       <section
         id="contact"
+        data-home-block="contact"
         className="bg-ngpa-navy py-20 sm:py-24 px-4 sm:px-6 lg:px-10 scroll-mt-20"
       >
         <div className="max-w-5xl mx-auto">
@@ -424,6 +259,103 @@ export default async function Home() {
               </Link>
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* ─── Folded: the reference sections ──────── */}
+      <section
+        data-home-block="more"
+        className="bg-ngpa-deep px-4 sm:px-6 lg:px-10 pb-16 sm:pb-20"
+      >
+        <div className="max-w-5xl mx-auto border-b border-ngpa-slate/40">
+          <HomeDisclosure id="how-it-works" title={HOW_IT_WORKS_TITLE}>
+            <HowItWorks />
+          </HomeDisclosure>
+
+          <HomeDisclosure id="ease" title="Four habits that travel beyond the court.">
+            <p className="mb-8 text-base sm:text-lg text-ngpa-white/70 leading-relaxed max-w-2xl">
+              Every drill, every cue, every reset is a chance to build EASE — the framework Sam and Amine teach every session.
+            </p>
+          <EaseValues />
+          <div className="mt-10 max-w-3xl">
+            <div className="relative rounded-2xl bg-ngpa-panel/80 backdrop-blur-sm border border-ngpa-teal/30 p-6 sm:p-7">
+              <div
+                aria-hidden="true"
+                className="absolute left-0 top-6 bottom-6 w-1 rounded-r-full bg-ngpa-teal"
+              />
+              <div className="font-heading text-base sm:text-lg font-bold text-ngpa-white mb-1.5">
+                Define &rarr; Demonstrate &rarr; Drill
+              </div>
+              <p className="text-sm sm:text-base text-ngpa-white/70 leading-relaxed">
+                We explain the why, show the how, then practice until it&rsquo;s
+                second nature.
+              </p>
+            </div>
+          </div>
+          </HomeDisclosure>
+
+          {folded.includes("testimonials") && (
+            <HomeDisclosure id="testimonials" title="What Next Gen families say.">
+              <p className="mb-8 text-base sm:text-lg text-ngpa-white/70 leading-relaxed max-w-2xl">
+                Real feedback from the parents who trust us with their kids.
+              </p>
+              <TestimonialsSection />
+            </HomeDisclosure>
+          )}
+
+          <HomeDisclosure id="about" title="Two dads, one mission.">
+            <p className="mb-8 text-base sm:text-lg text-ngpa-white/70 leading-relaxed max-w-2xl">
+              Building the program we wished existed for our own kids.
+            </p>
+          <div className="max-w-3xl mb-12">
+            <p className="text-lg text-ngpa-white/80 leading-relaxed mb-5">
+              Next Gen was started by{" "}
+              <strong className="text-ngpa-white font-bold">Sam and Amine</strong>, two
+              dads building a roadmap for our own kids: structured lessons, a
+              positive culture, and a clear path from curiosity to competition.
+            </p>
+            <p className="text-lg text-ngpa-white/80 leading-relaxed mb-5">
+              Our approach is built on the{" "}
+              <strong className="text-ngpa-teal font-bold">Parent&ndash;Coach&ndash;Kid Triangle</strong>&mdash;
+              parents aren&rsquo;t spectators, they&rsquo;re partners. Families learn
+              the game together so everyone grows through the sport.
+            </p>
+            <p className="text-lg text-ngpa-white/80 leading-relaxed">
+              And if you&rsquo;re wondering &mdash; yes, Sam coaches adults too,
+              separately from NGA.{" "}
+              <LessonHandoffLink
+                href={coachLessonUrl("about_adults")}
+                className="text-ngpa-teal hover:text-ngpa-teal-bright font-bold underline-offset-4 hover:underline transition-colors"
+                noteClassName="mt-1 text-sm text-ngpa-white/65"
+              >
+                Request an adult lesson with Sam &rarr;
+              </LessonHandoffLink>
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-7">
+            {coaches.map((coach) => (
+              <CoachCard key={coach.name} coach={coach} />
+            ))}
+          </div>
+          </HomeDisclosure>
+
+          <HomeDisclosure id="faq" title="Everything families need to know.">
+            <FAQSection />
+          </HomeDisclosure>
+
+          {[
+            { href: "/newsletter", label: "Free Newsletter" },
+            { href: "/crew", label: "The Crew Pathway" },
+          ].map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="flex min-h-12 items-center justify-between gap-4 border-t border-ngpa-slate/40 py-5 font-heading text-xl sm:text-2xl font-black text-ngpa-white tracking-tight transition-colors hover:text-ngpa-teal focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ngpa-teal"
+            >
+              {link.label}
+              <span aria-hidden="true" className="text-ngpa-teal">&rarr;</span>
+            </Link>
+          ))}
         </div>
       </section>
     </>
