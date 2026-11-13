@@ -5,15 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { site } from "@/data/site";
 import { CITY_LANDING_PAGES, EXTENDED_AREA_LANDING_PAGES } from "@/lib/seo";
-import { familySiteUrl, familyMarketingRef, type FamilyDest } from "@/lib/urls";
+import { familySiteUrl, familyMarketingRef } from "@/lib/urls";
 import { trackEvent } from "@/lib/funnelClient";
-
-type FamilyLink = { dest: FamilyDest; label: string; icon?: string };
-
-const FAMILY_LINKS: FamilyLink[] = [
-  { dest: "sammorrispb", label: "Adult lessons with Coach Sam" },
-  { dest: "linkanddink", label: "Free adult pickleball with Link & Dink" },
-];
+import CourtSwitcher from "@/components/CourtSwitcher";
 
 export default function Footer() {
   return (
@@ -196,36 +190,8 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Family nav */}
-        <div className="mt-10 pt-8 border-t border-ngpa-slate/40">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-white/50 text-center mb-5">
-            Part of the Sam Morris pickleball family
-          </p>
-          <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-3">
-            {FAMILY_LINKS.map((link) => {
-              const href = familySiteUrl(link.dest);
-              return (
-                <a
-                  key={link.dest}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    trackEvent(
-                      "external_link",
-                      { label: `family_${link.dest}`, url: href, page: "footer" },
-                      familyMarketingRef(link.dest),
-                    )
-                  }
-                  className="inline-flex items-center gap-2 px-5 py-2.5 border border-ngpa-slate/60 rounded-full text-sm text-ngpa-white/85 hover:border-ngpa-teal/60 hover:text-ngpa-teal transition-colors"
-                >
-                  {link.icon && <span aria-hidden="true">{link.icon}</span>}
-                  {link.label}
-                </a>
-              );
-            })}
-          </div>
-        </div>
+        {/* Sam's three sites, drawn as one court */}
+        <CourtSwitcher />
 
         <div className="mt-10 pt-8 border-t border-ngpa-slate/40 text-center">
           <p className="font-heading text-sm sm:text-base font-bold text-ngpa-white tracking-tight">

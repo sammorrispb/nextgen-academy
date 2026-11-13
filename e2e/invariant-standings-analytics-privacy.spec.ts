@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { test, expect } from "@playwright/test";
 import { trackEvent } from "../src/lib/funnelClient";
-import { POST } from "../src/app/api/analytics/route";
+import { POST as analyticsPost } from "../src/app/api/analytics/route";
+import { AfterStub } from "./fixtures/after-stub";
 import { metadata as fallMetadata } from "../src/app/fall/standings/[group]/[token]/page";
 import { metadata as leagueMetadata } from "../src/app/standings/[slug]/[token]/page";
 
@@ -25,11 +26,21 @@ let beacons: Blob[];
 let providers: unknown[][];
 let cookieAccesses: number;
 let location: { pathname: string };
+// The proxy registers its upstream send through after(). Run whatever it
+// registered before returning, so "no upstream call" below means the proxy
+// registered nothing, not that the registered send had not run yet.
+const after = new AfterStub();
+async function POST(request: Request): Promise<Response> {
+  const response = await analyticsPost(request);
+  await after.run();
+  return response;
+}
 function global(key: string, value: unknown) {
   Object.defineProperty(globalThis, key, { configurable: true, writable: true, value });
 }
 test.beforeEach(() => {
   calls = []; beacons = []; providers = []; cookieAccesses = 0;
+  after.install();
   location = { pathname: "/schedule" };
   process.env.OPEN_BRAIN_ANALYTICS_URL = "https://analytics.example.test/ingest";
   process.env.LEAD_INGEST_TOKEN = "synthetic-ingest-key";
@@ -43,6 +54,7 @@ test.beforeEach(() => {
   });
 });
 test.afterEach(() => {
+  after.uninstall();
   for (const key of GLOBALS) {
     const descriptor = originals.get(key);
     if (descriptor) Object.defineProperty(globalThis, key, descriptor);

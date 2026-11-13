@@ -20,6 +20,46 @@ test.describe("attributedSource", () => {
     expect(attributedSource({ utm_source: "nextdoor" })).toBe("Ad: nextdoor");
   });
 
+  test("an arrival from one of Sam's other sites is a Family site, not an ad", () => {
+    // What the sibling sites' switchers stamp on a link to this site.
+    expect(attributedSource({ utm_source: "linkanddink", utm_medium: "cross_family_nav" })).toBe("Family site");
+    expect(attributedSource({ utm_source: "sammorrispb", utm_medium: "cross_family_nav", utm_content: "switcher_nga" })).toBe("Family site");
+    // The medium alone decides it; a missing source must not fall to the fallback.
+    expect(attributedSource({ utm_medium: "cross_family_nav" })).toBe("Family site");
+    expect(attributedSource({ utm_medium: "cross_family_nav" }, "Website Lead Form")).toBe("Family site");
+  });
+
+  test("the family medium leaves every other mapping where it was", () => {
+    // Named ad platforms still win, whatever the medium says.
+    expect(attributedSource({ utm_source: "facebook", utm_medium: "cross_family_nav" })).toBe("Facebook Ad");
+    expect(attributedSource({ utm_source: "ig", utm_medium: "cross_family_nav" })).toBe("Instagram Ad");
+    expect(attributedSource({ utm_source: "google", utm_medium: "cross_family_nav" })).toBe("Google Ad");
+    // Without that medium an unknown source is still an ad, and no utm is still the fallback.
+    expect(attributedSource({ utm_source: "linkanddink" })).toBe("Ad: linkanddink");
+    expect(attributedSource({ utm_source: "linkanddink", utm_medium: "email" })).toBe("Ad: linkanddink");
+    expect(attributedSource({ utm_source: "facebook", utm_medium: "cpc" })).toBe("Facebook Ad");
+    expect(attributedSource({ utm_medium: "email" })).toBe("Website");
+    expect(attributedSource({ utm_medium: null, utm_source: null })).toBe("Website");
+  });
+
+  test("every route that writes a Source select uses the shared vocabulary", async () => {
+    const { readFileSync } = await import("node:fs");
+    const routes: Record<string, string> = {
+      "src/app/api/lead/route.ts": 'attributedSource(body, "Website Lead Form")',
+      "src/app/api/contact/route.ts": 'attributedSource(body, "Website Contact Form")',
+      "src/app/api/schools-lead/route.ts": 'attributedSource(body, "Schools Inquiry Form")',
+      "src/app/api/waitlist/route.ts": "attributedSource(body)",
+      "src/app/api/stripe/webhook/route.ts": 'utm_medium: metaString(m, "source_utm_medium")',
+    };
+    for (const [file, call] of Object.entries(routes)) {
+      const source = readFileSync(file, "utf8");
+      expect(source, file).toContain('import { attributedSource } from "@/lib/attribution"');
+      expect(source, file).toContain(call);
+      // A private copy of the mapping is how two routes missed this branch.
+      expect(source, file).not.toMatch(/function attributedSource|`Ad: /);
+    }
+  });
+
   test("absent utm_source falls back to default Website", () => {
     expect(attributedSource({})).toBe("Website");
     expect(attributedSource({ utm_source: "" })).toBe("Website");

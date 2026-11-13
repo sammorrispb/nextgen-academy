@@ -15,6 +15,10 @@ export interface UtmFields {
   ref?: string | null;
 }
 
+/** The utm_medium the cross-site helpers stamp (src/lib/urls.ts and the sibling sites). */
+export const FAMILY_NAV_MEDIUM = "cross_family_nav";
+export const FAMILY_SITE_SOURCE = "Family site";
+
 /**
  * Map common ad sources to clean Notion select values. Unknown sources keep
  * their raw name behind an "Ad: " prefix so new channels surface without a
@@ -32,6 +36,10 @@ export function attributedSource(
   if (src === "facebook" || src === "fb") return "Facebook Ad";
   if (src === "instagram" || src === "ig") return "Instagram Ad";
   if (src === "google") return "Google Ad";
+  // A tap on another of Sam's sites (their footer links stamp this medium, as
+  // familySiteUrl does here). It is a referral inside the family, not paid
+  // traffic, so it must not read as "Ad: linkanddink" in the pipeline.
+  if (utm.utm_medium?.toLowerCase() === FAMILY_NAV_MEDIUM) return FAMILY_SITE_SOURCE;
   // Notion select names cap at 100 chars — a hostile/garbage utm_source must
   // not 400 the row create (on the webhook path that's a paid-but-unregistered
   // parent). Commas are illegal in select names; swap for spaces.

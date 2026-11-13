@@ -1,5 +1,8 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { analyticsPayloadHasCapability, containsStandingsCapability } from "@/lib/analytics-privacy";
+
+// Room for the forward to finish after the 204 has gone out (15s timeout below).
+export const maxDuration = 30;
 
 /**
  * Server-side proxy to the Open Brain analytics-ingest edge function.
@@ -34,9 +37,13 @@ export async function POST(request: Request) {
     return new NextResponse(null, { status: 204 });
   }
 
-  // Fire-and-forget — return immediately, don't block the page on a slow
-  // ingest. We still log non-2xx responses for debugging.
-  void (async () => {
+  // The forward is registered with the platform through after(), never left as
+  // a detached promise. Vercel can suspend the function the moment the 204 is
+  // returned, and a detached send then only finishes if a later request thaws
+  // the instance. A visitor who just tapped a link that leaves the site sends
+  // no later request, so those taps were the events that went missing. Do not
+  // wrap after() in a try/catch: a failure to register must stay loud.
+  after(async () => {
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -45,16 +52,20 @@ export async function POST(request: Request) {
           "x-lead-ingest-token": token,
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(15_000),
       });
       if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        console.error(`[analytics] ${res.status}: ${text}`);
+        // Status only: the upstream body and the event payload stay out of logs.
+        console.error("[analytics] upstream rejected event", { status: res.status });
       }
+      await res.body?.cancel();
     } catch (err) {
-      console.error("[analytics] request failed:", err);
+      const reason = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")
+        ? "timeout"
+        : "network";
+      console.error("[analytics] forwarding failed", { reason });
     }
-  })();
+  });
 
   return new NextResponse(null, { status: 204 });
 }

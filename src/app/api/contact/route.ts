@@ -18,6 +18,7 @@ import {
 import type { Kid } from "@/lib/validate-lead";
 import { site } from "@/data/site";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { attributedSource } from "@/lib/attribution";
 import { c, s } from "@/lib/email/brand";
 
 function getResend() {
@@ -62,15 +63,6 @@ function formatAttribution(body: ContactFormData): string {
   if (body.referrer) lines.push(`referrer: ${body.referrer}`);
   if (body.landing_page) lines.push(`landing: ${body.landing_page}`);
   return lines.join(" | ");
-}
-
-function attributedSource(body: ContactFormData): string {
-  const src = body.utm_source?.toLowerCase();
-  if (src === "facebook" || src === "fb") return "Facebook Ad";
-  if (src === "instagram" || src === "ig") return "Instagram Ad";
-  if (src === "google") return "Google Ad";
-  if (body.utm_source) return `Ad: ${body.utm_source}`;
-  return "Website Contact Form";
 }
 
 function currentSeasonLabel(now: Date = new Date()): string {
@@ -132,7 +124,7 @@ async function createNotionRow(
     },
     Level: { select: { name: notionLevel } },
     Status: { select: { name: notionStatus } },
-    Source: { select: { name: attributedSource(body) } },
+    Source: { select: { name: attributedSource(body, "Website Contact Form") } },
     Season: { select: { name: currentSeasonLabel() } },
     Notes: {
       rich_text: [{ text: { content: notesContent } }],
