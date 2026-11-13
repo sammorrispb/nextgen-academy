@@ -33,16 +33,24 @@ export const TABS: readonly (NavLink & { key: TabKey })[] = [
   { key: "schedule", href: "/schedule", label: "Schedule" },
 ];
 
-/** Every menu door the tabs do not carry, in menu order. */
-export const MORE_LINKS: readonly NavLink[] = [
-  { href: "/lessons", label: "Lessons" },
-  { href: "/league", label: "Leagues" },
-  { href: "/montgomery-village-youth-pickleball", label: "MVF Classes" },
-  { href: "/mvf-junior-tournament", label: "Tournaments" },
-  { href: "/#about", label: "About" },
-];
+/**
+ * Every menu door the tabs do not carry, in menu order. Derived, not typed:
+ * a door added to NAV_LINKS lands here unless a tab already opens it. Home
+ * page anchors become full paths so they work from any page.
+ */
+export const MORE_LINKS: readonly NavLink[] = NAV_LINKS.filter(
+  (link) => !TABS.some((tab) => tab.href === link.href),
+).map((link) => (link.href.startsWith("#") ? { ...link, href: `/${link.href}` } : link));
 
-// Staff surfaces carry their own bars; a marketing bar over a roster is noise.
+/** The More sheet's door for this page, if it has one. Anchors are never "the page". */
+export function activeMoreHref(pathname: string | null | undefined): string | null {
+  const path = (pathname ?? "").replace(/\/+$/, "") || "/";
+  const match = MORE_LINKS.find((link) => !link.href.includes("#") && (path === link.href || path.startsWith(`${link.href}/`)));
+  return match ? match.href : null;
+}
+
+// Staff pages are tools, not the public site: no marketing bar over a roster
+// or a sign-in form. The signed-in areas carry their own navigation.
 const HIDDEN_PREFIXES = ["/admin", "/coach"];
 
 export function tabBarHidden(pathname: string | null | undefined): boolean {

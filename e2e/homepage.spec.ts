@@ -375,7 +375,7 @@ test.describe("Contact Strip", () => {
   });
 });
 
-// ─── Sticky Mobile CTA ───────────────────────────
+// ─── Phone bar ───────────────────────────────────
 
 test.describe("Phone bar", () => {
   // The fixed bar at the bottom of a phone took over from the sticky button and
@@ -434,7 +434,26 @@ test.describe("Phone bar", () => {
   test("hidden on desktop @desktop", async ({ page }, testInfo) => {
     if (testInfo.project.name !== "desktop") test.skip();
     await page.goto("/");
-    await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
+    // Present in the page and not shown: a renamed bar must not pass as hidden.
+    await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(1);
+    await expect(page.locator('nav[aria-label="Main"]')).toBeHidden();
+  });
+
+  test("the sheet closes on back and on a tap outside @mobile", async ({ page }, testInfo) => {
+    if (testInfo.project.name !== "mobile") test.skip();
+    await page.goto("/schedule");
+    await page.goto("/");
+    const more = page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "More" });
+    const sheet = page.locator("#mobile-more");
+    await more.click();
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByRole("link", { name: "Start Here" })).toHaveAttribute("href", "/#start");
+    await page.locator("h1").click({ position: { x: 5, y: 5 } });
+    await expect(sheet).toBeHidden();
+    await more.click();
+    await page.goBack();
+    await expect(page).toHaveURL(/\/schedule$/);
+    await expect(sheet).toBeHidden();
   });
 });
 

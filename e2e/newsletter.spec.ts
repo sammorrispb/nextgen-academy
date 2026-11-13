@@ -36,10 +36,12 @@ test.describe("MVF junior series promotion", () => {
   test("desktop and mobile menus reach tournaments and the schedule", async ({ page }, testInfo) => {
     await page.goto("/");
     await expect(page.locator("h1")).toBeVisible();
+    // On a phone the doors sit in the bottom bar; Tournaments is behind its More tab.
+    const more = page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "More" });
     const openMenu = async () => {
       if (testInfo.project.name === "mobile") {
-        await page.getByRole("button", { name: "Toggle menu" }).click();
-        await expect(page.getByRole("dialog", { name: "Navigation menu" })).toBeVisible();
+        await more.click();
+        await expect(page.locator("#mobile-more")).toBeVisible();
       }
     };
     await openMenu();
@@ -50,7 +52,9 @@ test.describe("MVF junior series promotion", () => {
     await expect(page).toHaveURL(/\/schedule$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Youth Pickleball Schedule");
     if (testInfo.project.name === "mobile") {
-      await expect(page.getByRole("button", { name: "Toggle menu" })).toHaveAttribute("aria-expanded", "false");
+      // Leaving the page puts the sheet away.
+      await expect(more).toHaveAttribute("aria-expanded", "false");
+      await expect(page.locator("#mobile-more")).toBeHidden();
     }
     await openMenu();
     await page.locator("nav").getByRole("link", { name: "Tournaments", exact: true }).filter({ visible: true }).click();

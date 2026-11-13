@@ -37,6 +37,7 @@ export default function Navbar() {
 
   return (
     <nav
+      aria-label="Site"
       className={`sticky top-0 z-50 backdrop-blur-md border-b transition-all duration-200 ${navBg}`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

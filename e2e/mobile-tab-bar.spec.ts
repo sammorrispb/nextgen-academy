@@ -33,6 +33,7 @@ const lib = () => load()("./src/lib/mobile-tabs") as {
   NAV_LINKS: readonly { label: string; href: string }[];
   tabBarHidden: (pathname: string | null | undefined) => boolean;
   activeTab: (pathname: string | null | undefined) => string | null;
+  activeMoreHref: (pathname: string | null | undefined) => string | null;
 };
 
 const hrefs = (html: string) => [...html.matchAll(/<a\b[^>]*\bhref="([^"]*)"/g)].map((m) => m[1]);
@@ -45,7 +46,8 @@ test.describe("the bar", () => {
     expect(hrefs(row(html))).toEqual(["/", "/levels", "/schedule", EVALUATION_SMS_URL]);
     expect(row(html).split("<button").length - 1).toBe(1);
     expect(row(html)).toMatch(/<button[^>]*aria-controls="mobile-more"[^>]*aria-expanded="false"/);
-    expect(lib().TABS.length + 2).toBeLessThanOrEqual(5);
+    // Five slots in all: the brand guide's ceiling for a phone bar.
+    expect(hrefs(row(html)).length + 1).toBe(5);
   });
 
   test("marks the tab for the page a parent is on", () => {
@@ -53,9 +55,9 @@ test.describe("the bar", () => {
       (html.match(/<a\b[^>]*>/g) ?? [])
         .filter((tag) => tag.includes('aria-current="page"'))
         .map((tag) => /href="([^"]*)"/.exec(tag)?.[1]);
-    expect(current(bar("/"))).toEqual(["/"]);
-    expect(current(bar("/schedule"))).toEqual(["/schedule"]);
-    expect(current(bar("/league"))).toEqual([]);
+    expect(current(row(bar("/")))).toEqual(["/"]);
+    expect(current(row(bar("/schedule")))).toEqual(["/schedule"]);
+    expect(current(row(bar("/league")))).toEqual([]);
     expect(lib().activeTab("/schedule/some-session")).toBe("schedule");
     expect(lib().activeTab("/levels")).toBe("levels");
     expect(lib().activeTab("/league")).toBeNull();
@@ -91,6 +93,7 @@ test.describe("the More sheet", () => {
     const html = bar("/");
     const sheet = html.slice(html.indexOf('id="mobile-more"'));
     expect(hrefs(sheet)).toEqual([
+      "/#start",
       "/lessons",
       "/league",
       "/montgomery-village-youth-pickleball",
@@ -98,7 +101,7 @@ test.describe("the More sheet", () => {
       "/#about",
       "tel:3013254731",
     ]);
-    for (const label of ["Lessons", "Leagues", "MVF Classes", "Tournaments", "About"]) expect(sheet).toContain(`>${label}<`);
+    for (const label of ["Start Here", "Lessons", "Leagues", "MVF Classes", "Tournaments", "About"]) expect(sheet).toContain(`>${label}<`);
   });
 
   test("starts closed", () => {
@@ -107,11 +110,29 @@ test.describe("the More sheet", () => {
 
   test("no door in the top menu is missing on phones", () => {
     const { TABS, MORE_LINKS, NAV_LINKS } = lib();
-    const reachable = new Set([...TABS, ...MORE_LINKS].map((link) => link.href.replace(/^\/#/, "#")));
-    // "Start Here" is the home page's first block; the Home tab opens it.
-    reachable.add("#start");
-    for (const link of NAV_LINKS) expect(reachable.has(link.href), `${link.label} (${link.href})`).toBe(true);
+    // An anchor on the home page is written as a full path in the sheet.
+    const onPhone = new Set([...TABS, ...MORE_LINKS].map((link) => link.href.replace(/^\/#/, "#")));
+    for (const link of NAV_LINKS) expect(onPhone.has(link.href), `${link.label} (${link.href})`).toBe(true);
     expect(NAV_LINKS.map((link) => link.label)).toContain("Tournaments");
+    // No door twice: a tab's page is not repeated in the sheet.
+    for (const tab of TABS) expect(MORE_LINKS.map((link) => link.href)).not.toContain(tab.href);
+  });
+
+  test("the sheet marks the page a parent is on, and More lights up for it", () => {
+    const { activeMoreHref } = lib();
+    expect(activeMoreHref("/lessons")).toBe("/lessons");
+    expect(activeMoreHref("/lessons/book")).toBe("/lessons");
+    expect(activeMoreHref("/")).toBeNull();
+    expect(activeMoreHref("/schedule")).toBeNull();
+    const html = bar("/league");
+    const sheet = html.slice(html.indexOf('id="mobile-more"'));
+    const marked = (sheet.match(/<a\b[^>]*>/g) ?? []).filter((tag) => tag.includes('aria-current="page"'));
+    expect(marked).toHaveLength(1);
+    expect(marked[0]).toContain('href="/league"');
+  });
+
+  test("a long sheet scrolls instead of running off a short screen", () => {
+    expect(bar("/")).toMatch(/<div\b[^>]*id="mobile-more"[^>]*class="[^"]*\bmax-h-\[calc\(100dvh-9rem\)\][^"]*\boverflow-y-auto\b/);
   });
 });
 
@@ -132,6 +153,8 @@ test.describe("what it replaced", () => {
     const navbar = readFileSync("src/components/Navbar.tsx", "utf8");
     expect(navbar).not.toMatch(/Toggle menu|mobile-menu/);
     expect(navbar).toContain('from "@/lib/mobile-tabs"');
+    // Two navigation landmarks on a phone, so each has a name.
+    expect(navbar).toContain('aria-label="Site"');
   });
 
   test("the layout mounts the bar once and leaves room for it", () => {
@@ -140,6 +163,10 @@ test.describe("what it replaced", () => {
     expect(layout).not.toContain("StickyMobileCTA");
     // The bar brings its own spacer, so the page no longer pads for it.
     expect(layout).not.toMatch(/pb-16 md:pb-0/);
-    expect(bar("/")).toMatch(/data-tab-bar-spacer/);
+    const spacer = /<div\b[^>]*data-tab-bar-spacer[^>]*>/.exec(bar("/"))?.[0] ?? "";
+    // The spacer goes away with the bar: wide screens and print get neither.
+    expect(spacer).toMatch(/\blg:hidden\b/);
+    expect(spacer).toMatch(/\bprint:hidden\b/);
+    expect(bar("/")).toMatch(/<nav\b[^>]*class="[^"]*\bprint:hidden\b/);
   });
 });
