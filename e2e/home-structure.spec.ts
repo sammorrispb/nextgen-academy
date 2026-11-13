@@ -56,6 +56,9 @@ async function render(make: () => React.ReactNode | Promise<React.ReactNode>): P
 // Loaded inside the render window: HowItWorks builds JSX at module load (see
 // e2e/lesson-handoff.spec.ts, which this copies).
 async function home(at: string): Promise<string> {
+  // One frozen clock at a time: a second render in the same test must hand
+  // the real Date back first, or it stays frozen for whatever runs next.
+  restoreDate?.();
   restoreDate = fixedDate(at);
   return render(() => {
     const require = load();
