@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRateLimiter, getClientIp } from "@/lib/rate-limit";
-import { playerCrmDbId } from "@/lib/notion-utils";
+import { createNotionPageSourceFailSoft, playerCrmDbId } from "@/lib/notion-utils";
 import { Resend } from "resend";
 import {
   CONTACT_INTEREST_OPTIONS,
@@ -24,8 +24,6 @@ import { c, s } from "@/lib/email/brand";
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
-
-const NOTION_API = "https://api.notion.com/v1";
 
 const ADMIN_EMAIL = "sam.morris2131@gmail.com";
 const CC_EMAIL = "nextgenacademypb@gmail.com";
@@ -144,21 +142,18 @@ async function createNotionRow(
     properties["Parent Phone"] = { phone_number: body.phone.trim() };
   }
 
-  const res = await fetch(`${NOTION_API}/pages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": "2022-06-28",
-    },
-    body: JSON.stringify({
-      parent: { database_id: playerCrmDbId() },
-      properties,
-    }),
+  // The Source label can be a value Notion has not seen ("Family site", a new
+  // "Ad: x"). If that alone is rejected, retry without it so the family's row
+  // still lands.
+  const { res, bodyText } = await createNotionPageSourceFailSoft({
+    notionKey,
+    databaseId: playerCrmDbId(),
+    properties,
+    logPrefix: "[contact]",
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    const text = bodyText || (await res.text().catch(() => ""));
     return { error: `Notion create failed (${res.status}): ${text}` };
   }
   const data = await res.json();
