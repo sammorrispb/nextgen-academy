@@ -27,6 +27,30 @@ const FAMILY_BASES: Record<FamilyDest, string> = {
 };
 
 /**
+ * Sam's sites as the footer court switcher draws them: one service box each,
+ * in this order at every width. A corner with no `dest` is this site (its box
+ * is lit and is not a link). Names only. Adding a site is one entry here, plus
+ * a FAMILY_BASES origin if it is a new destination. llms.txt lists the same
+ * corners, so the two cannot drift.
+ */
+export type FamilyCorner = {
+  id: string;
+  name: string;
+  dest?: FamilyDest;
+};
+
+export const FAMILY_CORNERS: readonly FamilyCorner[] = [
+  { id: "sammorrispb", name: "Coach Sam", dest: "sammorrispb" },
+  { id: "nga", name: "Next Gen Pickleball Academy" },
+  { id: "linkanddink", name: "Link & Dink", dest: "linkanddink" },
+];
+
+/** A family site's bare origin, for surfaces that must not carry UTMs (llms.txt). */
+export function familySiteOrigin(dest: FamilyDest): string {
+  return FAMILY_BASES[dest];
+}
+
+/**
  * Reads the `ld_visitor` cookie (set by funnelClient.ts getOrCreateVisitorId).
  * SSR-safe: returns null when document is undefined.
  * Fail-open: any parse error returns null rather than throwing.

@@ -126,7 +126,7 @@ export const faq: FaqItem[] = [
   {
     question: "Do you offer lessons for adults?",
     answer:
-      "Next Gen is youth-only (ages 6–16). For adults, Coach Sam offers private lessons separately through sammorrispb.com. Choose available times on his lesson scheduling page; Sam confirms the time before sending your invoice. Many of our NGA parents pick up the paddle alongside their kids.",
+      "Next Gen is youth-only (ages 6–16). For adults, Coach Sam offers private lessons separately. Choose available times on his lesson request page on linkanddink.com; Sam confirms the time before sending your invoice. Many of our NGA parents pick up the paddle alongside their kids.",
   },
 ];
 

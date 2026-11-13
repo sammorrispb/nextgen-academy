@@ -19,6 +19,7 @@ import {
   type AgeRange,
 } from "@/lib/validate-schools";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
+import { attributedSource } from "@/lib/attribution";
 import { site } from "@/data/site";
 import { escapeHtml } from "@/lib/html";
 
@@ -35,15 +36,6 @@ const FROM_EMAIL = "Next Gen PB Academy <noreply@nextgenpbacademy.com>";
 // Per-route in-memory rate limit (5/hr, resets on deploy) — shared impl in
 // src/lib/rate-limit.ts; each route keeps its own bucket, as before.
 const { isRateLimited } = createRateLimiter();
-
-function attributedSource(body: SchoolsLeadFormData): string {
-  const src = body.utm_source?.toLowerCase();
-  if (src === "facebook" || src === "fb") return "Facebook Ad";
-  if (src === "instagram" || src === "ig") return "Instagram Ad";
-  if (src === "google") return "Google Ad";
-  if (body.utm_source) return `Ad: ${body.utm_source}`;
-  return "Schools Inquiry Form";
-}
 
 function formatAttribution(body: SchoolsLeadFormData): string {
   const lines: string[] = [];
@@ -114,7 +106,7 @@ async function createOrgLead(
     "Age Range": { select: { name: ageRangeNotion } },
     Format: { select: { name: frequencyNotion } },
     Status: { select: { name: "Lead" } },
-    Source: { select: { name: attributedSource(body) } },
+    Source: { select: { name: attributedSource(body, "Schools Inquiry Form") } },
     "Next Action": {
       rich_text: [
         { text: { content: "Send quote within 1 business day" } },

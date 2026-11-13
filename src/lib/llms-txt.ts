@@ -38,6 +38,8 @@ import {
   PICKLPARK_VENUE_SHORT,
 } from "@/data/picklpark-2026";
 import { PICKLPARK_LEAGUES } from "@/data/picklpark-leagues-2026";
+import { ADULT_LESSON_REQUEST_URL } from "@/data/scheduling";
+import { FAMILY_CORNERS, familySiteOrigin } from "@/lib/urls";
 
 /** "Green 1:00 PM–2:30 PM, Yellow 2:30 PM–4:00 PM" — derived, never typed. */
 const FALL_BLOCKS_LINE = FALL_YOUTH_BLOCKS.map(
@@ -48,6 +50,30 @@ const FALL_BLOCKS_LINE = FALL_YOUTH_BLOCKS.map(
 const PICKLPARK_LEAGUES_LINE = PICKLPARK_LEAGUES.map(
   (l) => `${l.title} (${l.ageLabel}, ${l.timeLabel})`,
 ).join("; ");
+
+/**
+ * What each family site is, keyed by its corner id. The sites, their names and
+ * their order come from FAMILY_CORNERS (the footer court switcher's list), so
+ * this section cannot name a site the switcher does not show. Factual one-liners
+ * only. Adult lesson requests are taken on Coach Sam's page on linkanddink.com,
+ * not on sammorrispb.com, so that entry says where the request actually opens.
+ */
+const FAMILY_SITE_NOTES: Record<string, string> = {
+  sammorrispb:
+    "Sam Morris's coaching site, adult private lessons. Adult lesson requests open " +
+    `the lesson request page on linkanddink.com (${ADULT_LESSON_REQUEST_URL}).`,
+  nga: "youth pickleball (this site).",
+  linkanddink:
+    "free adult pickleball community in MoCo (its llms.txt lists the full L&D agent surface).",
+};
+
+function familySection(): string {
+  return FAMILY_CORNERS.map((corner) => {
+    const origin = corner.dest ? familySiteOrigin(corner.dest) : "https://nextgenpbacademy.com";
+    const note = FAMILY_SITE_NOTES[corner.id];
+    return wrapEntry(`- ${origin} — ${corner.name}${note ? `, ${note}` : "."}`);
+  }).join("\n");
+}
 
 /**
  * Wrap one bullet to the file's ~78-column house style, continuation lines
@@ -226,9 +252,7 @@ ${MVF_ENTRY}
 
 ## Family of sites
 
-- https://www.linkanddink.com — Link & Dink, free adult pickleball community in
-  MoCo (its llms.txt lists the full L&D agent surface).
-- https://sammorrispb.com — Coach Sam Morris, adult private lessons.
+${familySection()}
 `;
 }
 
