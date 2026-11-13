@@ -217,7 +217,10 @@ test("tapping a switcher box records an external_link event that survives both p
 });
 
 test("the WhatsApp footer tap also clears both privacy guards", async () => {
-  const { trackEvent } = await import("../src/lib/funnelClient");
+  // Loaded the same way the switcher module is: a dynamic import() of this
+  // file resolved its named exports on some runs and not others.
+  const { trackEvent } = load("./src/lib/funnelClient") as typeof import("../src/lib/funnelClient");
+  expect(typeof trackEvent).toBe("function");
   const beacons: Blob[] = [];
   const upstream: string[] = [];
   setGlobal("window", { location: { pathname: "/" }, sessionStorage: { getItem: () => null } });

@@ -20,6 +20,7 @@ import {
 } from "@/lib/validate-schools";
 import { ingestToOpenBrain } from "@/lib/open-brain-ingest";
 import { attributedSource } from "@/lib/attribution";
+import { createNotionPageSourceFailSoft } from "@/lib/notion-utils";
 import { site } from "@/data/site";
 import { escapeHtml } from "@/lib/html";
 
@@ -138,21 +139,18 @@ async function createOrgLead(
     };
   }
 
-  const res = await fetch(`${NOTION_API}/pages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${notionKey}`,
-      "Content-Type": "application/json",
-      "Notion-Version": "2022-06-28",
-    },
-    body: JSON.stringify({
-      parent: { database_id: dbId },
-      properties,
-    }),
+  // The Source label can be a value Notion has not seen ("Family site", a new
+  // "Ad: x"). If that alone is rejected, retry without it so the inquiry's row
+  // still lands.
+  const { res, bodyText } = await createNotionPageSourceFailSoft({
+    notionKey,
+    databaseId: dbId,
+    properties,
+    logPrefix: "[schools-lead]",
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    const text = bodyText || (await res.text().catch(() => ""));
     return { error: `Notion create failed (${res.status}): ${text}` };
   }
   const data = await res.json();

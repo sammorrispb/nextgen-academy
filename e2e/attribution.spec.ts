@@ -60,6 +60,20 @@ test.describe("attributedSource", () => {
     }
   });
 
+  test("the routes that gained the Family site label create their row through the fail-soft writer", async () => {
+    // A new Source value on a raw POST is how a family gets lost: if Notion
+    // rejects the value, the whole create 400s. CLAUDE.md: "A lead-capture row
+    // never dies for its attribution". /api/lead still posts raw (not edited here).
+    const { readFileSync } = await import("node:fs");
+    for (const file of ["src/app/api/contact/route.ts", "src/app/api/schools-lead/route.ts"]) {
+      const source = readFileSync(file, "utf8");
+      expect(source, file).toContain("createNotionPageSourceFailSoft(");
+      expect(source, file).not.toContain("${NOTION_API}/pages`");
+    }
+    // Positive control: the route that has not been moved still matches the raw shape.
+    expect(readFileSync("src/app/api/lead/route.ts", "utf8")).toContain("${NOTION_API}/pages`");
+  });
+
   test("absent utm_source falls back to default Website", () => {
     expect(attributedSource({})).toBe("Website");
     expect(attributedSource({ utm_source: "" })).toBe("Website");
