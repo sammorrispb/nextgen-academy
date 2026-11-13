@@ -64,11 +64,12 @@ test.describe("/clusters index", () => {
   }, testInfo) => {
     await page.goto("/");
     if (testInfo.project.name === "mobile") {
-      await page.getByRole("button", { name: /toggle menu/i }).click();
+      // On a phone Schedule is a tab and the rest sit behind More.
+      await page.getByRole("navigation", { name: "Main" }).getByRole("button", { name: "More" }).click();
     }
     const nav = page.locator("nav");
     for (const label of ["Start Here", "Lessons", "Leagues", "MVF Classes", "Schedule", "About"]) {
-      await expect(nav.getByRole("link", { name: label, exact: true })).toBeVisible();
+      await expect(nav.getByRole("link", { name: label, exact: true }).filter({ visible: true })).toHaveCount(1);
     }
     await expect(nav.getByRole("link", { name: "Clusters", exact: true })).toHaveCount(0);
 

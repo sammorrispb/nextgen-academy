@@ -247,7 +247,7 @@ Mobile-first. iPhone SE (375px) is the minimum supported viewport.
 - **Tap targets:** 48×48px minimum, 8px minimum between adjacent targets.
 - **Thumb-zone rule:** Primary CTAs ("Book a Free Evaluation," "Register")
   live in the bottom 20% of the mobile viewport — the natural thumb reach.
-  There's a fixed `StickyMobileCTA` for this.
+  The fixed phone bar (`MobileTabBar`) carries it as its fifth slot.
 - **Breakpoints:** 375 (sm) · 768 (md) · 1024 (lg) · 1280 (xl) · 1536
   (2xl). Grid is 4-col mobile, 8-col tablet, 12-col desktop.
 - **Navigation:** mobile bottom nav max 5 items; desktop top nav max 7

@@ -1,33 +1,20 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { EVALUATION_SMS_URL } from "@/data/scheduling";
 import { trackEvent } from "@/lib/funnelClient";
+import { NAV_LINKS } from "@/lib/mobile-tabs";
 
-// Seven doors, no more. The three intents Sam named map to the first three;
-// "Tournaments" joined 2026-10-31 for the MVF junior series. Everything else (Fall Season, Camp, Pickl Park, Clusters, Monday Girls,
-// Newsletter, Crew) stays live and reachable from the schedule page, footer,
-// and homepage cards — it just stops competing for attention up here.
-const links = [
-  { href: "#start", label: "Start Here" },
-  { href: "/lessons", label: "Lessons" },
-  { href: "/league", label: "Leagues" },
-  { href: "/montgomery-village-youth-pickleball", label: "MVF Classes" },
-  { href: "/mvf-junior-tournament", label: "Tournaments" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "#about", label: "About" },
-];
+// The doors live in lib/mobile-tabs so the phone bar can never miss one. This
+// bar shows them from lg up; below that the fixed bottom bar steers the site.
+const links = NAV_LINKS;
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const hamburgerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
   const isHome = pathname === "/";
 
   function resolveHref(href: string) {
@@ -37,11 +24,6 @@ export default function Navbar() {
     return href;
   }
 
-  const closeMenu = useCallback(() => {
-    setOpen(false);
-    hamburgerRef.current?.focus();
-  }, []);
-
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
@@ -49,47 +31,13 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const menu = menuRef.current;
-    if (!menu) return;
-
-    const focusableEls = menu.querySelectorAll<HTMLElement>(
-      'a[href], button, [tabindex]:not([tabindex="-1"])'
-    );
-    const firstEl = focusableEls[0];
-    const lastEl = focusableEls[focusableEls.length - 1];
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        closeMenu();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      if (e.shiftKey) {
-        if (document.activeElement === firstEl) {
-          e.preventDefault();
-          lastEl?.focus();
-        }
-      } else {
-        if (document.activeElement === lastEl) {
-          e.preventDefault();
-          firstEl?.focus();
-        }
-      }
-    }
-
-    menu.addEventListener("keydown", handleKeyDown);
-    firstEl?.focus();
-    return () => menu.removeEventListener("keydown", handleKeyDown);
-  }, [open, closeMenu]);
-
   const navBg = scrolled
     ? "bg-ngpa-deep/95 border-ngpa-slate/70 shadow-lg shadow-black/20"
     : "bg-ngpa-deep/70 border-transparent";
 
   return (
     <nav
+      aria-label="Site"
       className={`sticky top-0 z-50 backdrop-blur-md border-b transition-all duration-200 ${navBg}`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -146,69 +94,7 @@ export default function Navbar() {
               </svg>
             </a>
           </div>
-
-          <button
-            ref={hamburgerRef}
-            onClick={() => setOpen(!open)}
-            className="lg:hidden p-2 -mr-2 text-ngpa-white hover:text-ngpa-teal min-h-[48px] min-w-[48px] flex items-center justify-center"
-            aria-label="Toggle menu"
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              {open ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
         </div>
-
-        {open && (
-          <div
-            ref={menuRef}
-            id="mobile-menu"
-            role="dialog"
-            aria-label="Navigation menu"
-            className="lg:hidden pb-5 border-t border-ngpa-slate/60"
-          >
-            <div className="flex flex-col gap-1 pt-4">
-              {links.map((link) => {
-                const resolved = resolveHref(link.href);
-                const isActive = !link.href.startsWith("#") && pathname === link.href;
-                return (
-                  <Link
-                    key={link.href}
-                    href={resolved}
-                    onClick={() => setOpen(false)}
-                    className={`px-4 py-3 text-base font-semibold rounded-lg ${
-                      isActive
-                        ? "text-ngpa-teal bg-ngpa-slate/40"
-                        : "text-ngpa-white hover:bg-ngpa-slate/40"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-              <a
-                href={EVALUATION_SMS_URL}
-                onClick={() => {
-                  setOpen(false);
-                  trackEvent("cta_click", {
-                    label: "navbar_get_started",
-                    destination: EVALUATION_SMS_URL,
-                    section: "navbar_mobile",
-                  });
-                }}
-                className="mt-3 mx-1 px-5 py-3.5 bg-ngpa-teal text-ngpa-deep text-base font-bold rounded-full text-center hover:bg-ngpa-teal-bright transition-colors"
-              >
-                Text for a Free Evaluation
-              </a>
-            </div>
-          </div>
-        )}
       </div>
     </nav>
   );

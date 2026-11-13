@@ -367,12 +367,12 @@ test.describe("/montgomery-village-youth-pickleball", () => {
     await expect(page.locator("body")).not.toContainText("Tournament day");
   });
 
-  test("is linked from the global Navbar (desktop direct, mobile via hamburger)", async ({
+  test("is linked from the global nav (desktop direct, phone via More)", async ({
     page,
   }, testInfo) => {
     await page.goto("/");
     if (testInfo.project.name === "mobile") {
-      await page.getByRole("button", { name: /toggle menu/i }).click();
+      await page.getByRole("button", { name: "More" }).click();
     }
     const navLink = page.locator("nav").getByRole("link", { name: "MVF Classes" });
     await expect(navLink.first()).toBeVisible();

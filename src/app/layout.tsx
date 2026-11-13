@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Montserrat, Inter, Roboto_Mono } from "next/font/google";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import StickyMobileCTA from "@/components/StickyMobileCTA";
+import MobileTabBar from "@/components/MobileTabBar";
 import TournamentBanner from "@/components/TournamentBanner";
 import { nextMvfJuniorSeriesEvent, mvfJuniorSeriesShortDate } from "@/data/mvf-junior-series";
 import { publicSeriesRelease } from "@/data/mvf-series-registration";
@@ -108,9 +108,9 @@ export default function RootLayout({
           />
         )}
         <Navbar />
-        <main id="main" className="pb-16 md:pb-0">{children}</main>
+        <main id="main">{children}</main>
         <Footer />
-        <StickyMobileCTA />
+        <MobileTabBar />
         <UtmCapture />
         <PageViewTracker />
       </body>

@@ -61,19 +61,29 @@ for (const width of [375, 820, 1024, 1280]) {
     const logo = nav.locator('a[href="/"]').first();
     await expect(logo).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const toggle = page.getByRole("button", { name: "Toggle menu" });
+    // Below 1024px the bottom bar steers the site; Tournaments is behind More.
+    const bar = page.getByRole("navigation", { name: "Main" });
+    const toggle = bar.getByRole("button", { name: "More" });
     if (width < 1024) {
       await expect(toggle).toBeVisible();
       await toggle.click();
-      const dialog = page.getByRole("dialog", { name: "Navigation menu" });
-      await expect(dialog).toBeVisible();
-      await expect(dialog.getByRole("link", { name: "Tournaments", exact: true })).toHaveAttribute("href", "/mvf-junior-tournament");
+      const sheet = page.locator("#mobile-more");
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByRole("link", { name: "Tournaments", exact: true })).toHaveAttribute("href", "/mvf-junior-tournament");
+      // Opening moves focus into the sheet, so Escape has something to give back.
+      await expect(sheet.getByRole("link").first()).toBeFocused();
       await page.keyboard.press("Escape");
-      await expect(dialog).toHaveCount(0);
+      await expect(sheet).toBeHidden();
       await expect(toggle).toBeFocused();
+      // A tap outside the bar closes it too.
+      await toggle.click();
+      await expect(sheet).toBeVisible();
+      await page.locator("h1").click({ position: { x: 5, y: 5 } });
+      await expect(sheet).toBeHidden();
       await toggle.click();
     } else {
-      await expect(toggle).not.toBeVisible();
+      await expect(page.locator('nav[aria-label="Main"]')).toHaveCount(1);
+      await expect(bar).toBeHidden();
       const logoBox = await logo.boundingBox();
       const firstLink = await nav.getByRole("link", { name: "Start Here", exact: true }).filter({ visible: true }).boundingBox();
       expect(logoBox!.x + logoBox!.width).toBeLessThanOrEqual(firstLink!.x);
