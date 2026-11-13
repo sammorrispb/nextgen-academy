@@ -203,7 +203,7 @@ test.describe("Level rows", () => {
 
   test("every row opens the levels page and none opens a text message", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator('#levels article a[href="/levels"]')).toHaveCount(4);
+    await expect(page.locator('#levels article a[href^="/levels#"]')).toHaveCount(4);
     await expect(page.locator('#levels a[href^="sms:"]')).toHaveCount(0);
   });
 
@@ -453,4 +453,58 @@ test.describe("Redirects", () => {
       expect(response?.status()).toBeLessThan(400);
     });
   }
+});
+
+// ─── Folded sections open when a link points at them ───
+// Browser-only (this file does not run in CI). The menu and footer move
+// through the App Router, which fires no hashchange, so each path the opener
+// has to cover is clicked here rather than loaded cold.
+
+test.describe("Folded sections", () => {
+  test("are closed on a plain visit", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("details[data-home-disclosure]")).toHaveCount(4);
+    await expect(page.locator("details[data-home-disclosure][open]")).toHaveCount(0);
+  });
+
+  test("menu About on the home page opens the team fold, and again after it is closed @desktop", async ({ page }, testInfo) => {
+    if (testInfo.project.name !== "desktop") test.skip();
+    await page.goto("/");
+    const about = page.locator("nav").getByRole("link", { name: "About", exact: true }).first();
+    await about.click();
+    await expect(page.locator("#about[open]")).toBeVisible();
+    await expect(page.locator("#about").getByRole("heading", { name: "Sam Morris" })).toBeVisible();
+    await page.locator("#about > summary").click();
+    await expect(page.locator("#about[open]")).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await about.click();
+    await expect(page.locator("#about[open]")).toBeVisible();
+  });
+
+  test("footer FAQ on the home page opens the FAQ fold", async ({ page }) => {
+    await page.goto("/");
+    await page.locator('footer a[href="/#faq"]').click();
+    await expect(page.locator("#faq[open]")).toBeVisible();
+  });
+
+  test("footer About from another page arrives on the open team fold", async ({ page }) => {
+    await page.goto("/schedule");
+    await page.locator('footer a[href="/#about"]').click();
+    await expect(page).toHaveURL(/#about$/);
+    await expect(page.locator("#about[open]")).toBeVisible();
+  });
+
+  test("the old /faq and /about URLs land on an open fold", async ({ page }) => {
+    await page.goto("/faq");
+    await expect(page.locator("#faq[open]")).toBeVisible();
+    await page.goto("/about");
+    await expect(page.locator("#about[open]")).toBeVisible();
+  });
+
+  test("the schedule page's Get Started lands on the contact form", async ({ page }) => {
+    await page.goto("/schedule");
+    await page.locator('a[href="/#contact-form"]').first().click();
+    await expect(page).toHaveURL(/#contact-form$/);
+    await expect(page.locator("#contact-form form #name")).toBeVisible();
+  });
 });

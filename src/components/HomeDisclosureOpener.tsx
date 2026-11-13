@@ -16,26 +16,34 @@ const SELECTOR = "details[data-home-disclosure]";
  * covers the router; load, hashchange and popstate cover the rest.
  */
 export default function HomeDisclosureOpener({ folded }: { folded: readonly string[] }) {
+  // The list arrives as a fresh array with every server render. Keying the
+  // effect on its contents keeps a refresh from re-running it, which would
+  // re-open a fold the parent had closed and scroll them back to it.
+  const key = folded.join("|");
+
   useEffect(() => {
+    const ids = key.split("|");
+    // Folds this component opened itself. Only a parent's own tap on a fold
+    // is counted as interest in it.
+    const openedHere = new Set<string>();
+
     function open(hash: string, scroll: boolean) {
-      const id = disclosureIdForHash(hash, folded);
+      const id = disclosureIdForHash(hash, ids);
       if (!id) return;
       const fold = document.getElementById(id);
       if (!(fold instanceof HTMLDetailsElement)) return;
-      fold.open = true;
-      if (!scroll) return;
-      let target: Element = fold;
-      try {
-        target = document.getElementById(decodeURIComponent(hash.replace(/^#/, ""))) ?? fold;
-      } catch {
-        // A fragment that will not decode names nothing; the fold itself is the target.
+      if (!fold.open) {
+        openedHere.add(id);
+        fold.open = true;
       }
-      target.scrollIntoView({ block: "start" });
+      if (scroll) fold.scrollIntoView({ block: "start" });
     }
 
     const fromLocation = () => open(window.location.hash, true);
 
     function onClick(event: MouseEvent) {
+      // A modified click opens the link somewhere else; leave this page alone.
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const link = (event.target as Element | null)?.closest?.("a[href]");
       if (!(link instanceof HTMLAnchorElement) || !link.hash) return;
       if (link.origin !== window.location.origin || link.pathname !== window.location.pathname) return;
@@ -47,6 +55,7 @@ export default function HomeDisclosureOpener({ folded }: { folded: readonly stri
     function onToggle(event: Event) {
       const fold = event.target;
       if (!(fold instanceof HTMLDetailsElement) || !fold.matches(SELECTOR) || !fold.open) return;
+      if (openedHere.delete(fold.id)) return;
       trackEvent("cta_click", { label: `home_disclosure_open_${fold.id}`, section: "home_more" });
     }
 
@@ -65,7 +74,7 @@ export default function HomeDisclosureOpener({ folded }: { folded: readonly stri
       window.removeEventListener("hashchange", fromLocation);
       window.removeEventListener("popstate", fromLocation);
     };
-  }, [folded]);
+  }, [key]);
 
   return null;
 }

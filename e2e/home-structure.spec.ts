@@ -14,9 +14,11 @@ import { fixedDate } from "./fixtures/fixed-date";
 // on. The page used to be fifteen full sections; this pins the short version
 // so a later edit cannot quietly grow it back or strand a redirect.
 
-// MVF Session II still has a class to come, the league season has ended.
+// The league season and MVF Session II are both still running.
+const LEAGUE_LIVE = "2026-11-05T15:00:00Z";
+// The league season has ended; MVF Session II still has a class to come.
 const IN_SEASON = "2026-11-14T15:00:00Z";
-// Every program the "Looking to play" card names has ended.
+// MVF Session II has ended too.
 const AFTER_SEASON = "2026-11-25T15:00:00Z";
 
 const NOTION_ENV = ["NOTION_API_KEY", "NOTION_SESSIONS_DB_ID", "NOTION_FALL_CALLS_DB_ID", "NOTION_FALL_REGS_DB_ID"] as const;
@@ -122,7 +124,11 @@ test.describe("home page order", () => {
     expect(blocks(html)).toEqual(ORDER);
     // The listed session replaces the waitlist form.
     expect(blockHtml(html, "sessions")).not.toContain("No drop-in sessions are listed right now.");
-    expect(blockHtml(await home(IN_SEASON), "sessions")).toContain("upcoming-sessions-heading");
+    expect(blockHtml(html, "sessions")).toContain("Nov 21");
+    // Positive control: with no session listed, the waitlist is what renders.
+    stub.reset();
+    for (const key of NOTION_ENV) delete process.env[key];
+    expect(blockHtml(await home(IN_SEASON), "sessions")).toContain("No drop-in sessions are listed right now.");
   });
 
   test("the MVF block leaves once its classes end, and nothing else moves", async () => {
@@ -140,11 +146,14 @@ test.describe("folded sections", () => {
     }
   });
 
-  test("each fold is labelled by a heading inside its summary", async () => {
+  test("each fold says what it is: the section's short name, then its heading", async () => {
     const html = await home(IN_SEASON);
     const summaries = [...html.matchAll(/<summary\b[^>]*>([\s\S]*?)<\/summary>/g)].map((m) => m[1]);
     expect(summaries).toHaveLength(FOLDED.length);
     for (const summary of summaries) expect(summary).toMatch(/<h2\b/);
+    for (const name of ["How it works", "Our Philosophy", "The Team", "FAQ"]) {
+      expect(summaries.some((summary) => summary.includes(`>${name}<`)), name).toBe(true);
+    }
     expect(html.split("<h1").length - 1).toBe(1);
   });
 
@@ -165,7 +174,7 @@ test.describe("folded sections", () => {
 test.describe("one ask", () => {
   test("the levels block sends nobody to a text message", async () => {
     const levels = blockHtml(await home(IN_SEASON), "levels");
-    expect(levels).toContain('href="/levels"');
+    for (const color of ["red", "orange", "green", "yellow"]) expect(levels).toContain(`href="/levels#${color}"`);
     expect(smsLinks(levels)).toBe(0);
     // Positive control: the counter does see evaluation links elsewhere.
     expect(smsLinks(blockHtml(await home(IN_SEASON), "hero"))).toBe(1);
@@ -188,12 +197,23 @@ test.describe("one ask", () => {
     expect(sessions).not.toContain('href="/free-evaluation"');
   });
 
-  test("the play card shows only while a program it names is running", async () => {
-    expect(blockHtml(await home(IN_SEASON), "start")).toContain("Looking to play");
-    const after = blockHtml(await home(AFTER_SEASON), "start");
+  test("the play card shows only while the league its button opens is running", async () => {
+    const live = blockHtml(await home(LEAGUE_LIVE), "start");
+    expect(live).toContain("Looking to play");
+    expect(live).toContain("Three doors, one right for you.");
+    const after = blockHtml(await home(IN_SEASON), "start");
     expect(after).not.toContain("Looking to play");
     expect(after).toContain("New to pickleball");
     expect(after).toContain("Looking to improve");
+    // Two cards are not three doors.
+    expect(after).not.toContain("Three doors");
+    expect(after).toContain("Pick the one that fits");
+  });
+
+  test("only the evaluation door is a filled button", async () => {
+    const start = blockHtml(await home(LEAGUE_LIVE), "start");
+    expect(start.split("bg-ngpa-teal text-ngpa-deep").length - 1).toBe(1);
+    expect(start.split("border-2 border-ngpa-teal").length - 1).toBe(2);
   });
 });
 
@@ -201,7 +221,7 @@ test.describe("fold lookup", () => {
   const lib = () => load()("./src/lib/home-structure") as {
     homeFoldedIds: (input: { testimonials: readonly unknown[] }) => string[];
     disclosureIdForHash: (hash: string, folded: readonly string[]) => string | null;
-    playCardLive: (todayIso: string) => boolean;
+    playCardLive: (todayIso: string, seasons?: readonly { endDate: string }[]) => boolean;
   };
 
   test("a hash resolves to the fold it names or sits inside, and to nothing otherwise", () => {
@@ -222,11 +242,12 @@ test.describe("fold lookup", () => {
     expect(homeFoldedIds({ testimonials: [{}] })).toEqual(["how-it-works", "ease", "testimonials", "about", "faq"]);
   });
 
-  test("the play card window follows the league and MVF dates", () => {
+  test("the play card window ends with the last league date, inclusive", () => {
     const { playCardLive } = lib();
-    expect(playCardLive("2026-11-10")).toBe(true);
-    expect(playCardLive("2026-11-19")).toBe(true);
-    expect(playCardLive("2026-11-20")).toBe(false);
+    const seasons = [{ endDate: "2026-06-01" }, { endDate: "2026-11-10" }];
+    expect(playCardLive("2026-11-10", seasons)).toBe(true);
+    expect(playCardLive("2026-11-11", seasons)).toBe(false);
+    expect(playCardLive("2026-11-11", [])).toBe(false);
   });
 });
 
@@ -251,6 +272,14 @@ test.describe("what the rebuild must not break", () => {
     expect(jsonLd(await home(IN_SEASON)).filter((node) => node["@type"] === "SportsEvent")).toHaveLength(0);
     withOneSession();
     expect(jsonLd(await home(IN_SEASON)).filter((node) => node["@type"] === "SportsEvent")).toHaveLength(1);
+  });
+
+  test("Yellow Ball interest still routes to the inquiry page from the levels page", () => {
+    // The home page's Yellow Ball card left with the rebuild; the yellow row
+    // opens /levels#yellow, which carries the invite-only inquiry link.
+    const levelsPage = readFileSync("src/app/levels/page.tsx", "utf8");
+    expect(levelsPage).toContain("id={level.key}");
+    expect(levelsPage).toContain('href="/yellowball/inquiry"');
   });
 
   test("the hero keeps one evaluation link and one schedule link", async () => {

@@ -1,5 +1,4 @@
 import { LEAGUE_SEASONS } from "@/data/leagues";
-import { MVF_PROGRAMS, upcomingMvfPrograms } from "@/data/mvf";
 
 /**
  * The home page folds its reference sections (how it works, the four habits,
@@ -41,13 +40,14 @@ export function disclosureIdForHash(hash: string, folded: readonly string[]): st
 }
 
 /**
- * The "Looking to play" card names league play and MVF classes. It shows only
- * while one of them still has a date to come, so it retires itself instead of
- * pointing a parent at a season that has ended.
+ * The "Looking to play" card leads with league play: its headline button opens
+ * the leagues page. It shows only while a league season still has a date to
+ * come, so it retires itself instead of sending a parent to a season that has
+ * ended. MVF classes have their own block on the home page while they run.
  */
-export function playCardLive(todayIso: string): boolean {
-  return (
-    LEAGUE_SEASONS.some((season) => season.endDate >= todayIso) ||
-    upcomingMvfPrograms(todayIso, MVF_PROGRAMS).length > 0
-  );
+export function playCardLive(
+  todayIso: string,
+  seasons: readonly { endDate: string }[] = LEAGUE_SEASONS,
+): boolean {
+  return seasons.some((season) => season.endDate >= todayIso);
 }

@@ -11,7 +11,7 @@ const DOT: Record<BallColor, string> = {
 
 /**
  * The four ball colors as the way in: one short row each, the whole row a
- * link to the levels page, which holds the detail the home page used to
+ * link to its color on the levels page, which holds the detail the home page used to
  * repeat. No evaluation link here on purpose. The hero owns that ask.
  *
  * Each row is an article carrying the age band as data attributes, the same
@@ -24,12 +24,12 @@ export default function LevelRows() {
         <li key={level.key}>
           <article data-age-min={level.ages.replace("+", "")} data-age-max="16">
             <Link
-              href="/levels"
+              href={`/levels#${level.key}`}
               className="flex min-h-12 items-center gap-4 rounded-2xl border border-ngpa-slate/60 bg-ngpa-panel/80 p-4 sm:p-5 transition-colors hover:border-ngpa-teal/60 hover:bg-ngpa-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ngpa-teal"
             >
               <span aria-hidden="true" className={`h-10 w-10 shrink-0 rounded-full ${DOT[level.key]}`} />
-              <span className="min-w-0">
-                <span className="flex flex-wrap items-baseline gap-x-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-x-3">
                   <h3 className="font-heading text-lg font-black text-ngpa-white tracking-tight">
                     {level.label}
                   </h3>
@@ -39,9 +39,9 @@ export default function LevelRows() {
                       Invite Only
                     </span>
                   )}
-                </span>
-                <span className="mt-1 block text-sm leading-snug text-ngpa-white/70">{level.focus}</span>
-              </span>
+                </div>
+                <p className="mt-1 text-sm leading-snug text-ngpa-white/70">{level.focus}</p>
+              </div>
             </Link>
           </article>
         </li>

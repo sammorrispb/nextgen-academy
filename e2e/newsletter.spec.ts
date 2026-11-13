@@ -101,8 +101,8 @@ test.describe("Newsletter page", () => {
 // ─── Home page link to the newsletter ─────────────
 
 test.describe("Home newsletter link", () => {
-  // The embedded form left the home page with the rebuild (it recorded no
-  // signups there); the home page links to /newsletter instead.
+  // The embedded form left the home page with the rebuild; the home page
+  // links to /newsletter instead.
   test("links to the newsletter page instead of embedding the form", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#newsletter")).toHaveCount(0);

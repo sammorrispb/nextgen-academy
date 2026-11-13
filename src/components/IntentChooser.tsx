@@ -8,7 +8,7 @@ import {
 import Link from "next/link";
 import { trackEvent } from "@/lib/funnelClient";
 
-// The three doors Sam named: new to pickleball → evaluation or lessons;
+// The doors Sam named: new to pickleball → evaluation or lessons;
 // looking to play → leagues or MVF; looking to improve → lessons. Sits right
 // under the hero so nobody has to decode twelve nav items to find their next
 // step.
@@ -82,7 +82,7 @@ export default function IntentChooser({
           Where are you in the journey?
         </h2>
         <p className="text-ngpa-white/70 text-center mt-3 max-w-xl mx-auto">
-          Three doors, one right for you. Pick the one that fits and
+          {intents.length === 3 ? "Three doors, one right for you. " : ""}Pick the one that fits and
           we&rsquo;ll take it from there.
         </p>
 

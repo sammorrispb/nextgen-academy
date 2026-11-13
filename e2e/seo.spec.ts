@@ -252,7 +252,7 @@ test("ball pathway cards describe levels without creating undated events", async
     expect(await card.getAttribute("itemscope")).toBeNull();
     await expect(card.getByRole("link")).toHaveCount(1);
     // Each row opens the levels page; the hero owns the evaluation ask.
-    await expect(card.getByRole("link")).toHaveAttribute("href", "/levels");
+    await expect(card.getByRole("link")).toHaveAttribute("href", /^\/levels#(red|orange|green|yellow)$/);
   }
 });
 

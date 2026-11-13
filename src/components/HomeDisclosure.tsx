@@ -8,10 +8,14 @@ import type { ReactNode } from "react";
  */
 export default function HomeDisclosure({
   id,
+  eyebrow,
   title,
   children,
 }: {
   id: string;
+  /** The short name of the section ("FAQ", "The Team"): what a parent who
+   * followed /faq or /about is looking for. */
+  eyebrow: string;
   title: string;
   children: ReactNode;
 }) {
@@ -22,9 +26,14 @@ export default function HomeDisclosure({
       className="group scroll-mt-20 border-t border-ngpa-slate/40"
     >
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 py-5 [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ngpa-teal">
-        <h2 className="font-heading text-xl sm:text-2xl font-black text-ngpa-white tracking-tight">
-          {title}
-        </h2>
+        <span className="min-w-0">
+          <span className="block text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal mb-1.5">
+            {eyebrow}
+          </span>
+          <h2 className="font-heading text-xl sm:text-2xl font-black text-ngpa-white tracking-tight">
+            {title}
+          </h2>
+        </span>
         <span
           aria-hidden="true"
           className="shrink-0 font-heading text-2xl font-bold text-ngpa-teal transition-transform motion-reduce:transition-none group-open:rotate-45"

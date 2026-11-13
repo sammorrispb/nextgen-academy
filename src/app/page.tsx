@@ -111,7 +111,7 @@ export default async function Home() {
 
       <Hero />
 
-      {/* ─── Start Here: the three intents ───────── */}
+      {/* ─── Start Here: the intents ─────────────── */}
       <IntentChooser showPlayCard={playCardLive(today)} />
 
       {/* ─── Coach Strip (above-the-fold trust) ──── */}
@@ -268,11 +268,11 @@ export default async function Home() {
         className="bg-ngpa-deep px-4 sm:px-6 lg:px-10 pb-16 sm:pb-20"
       >
         <div className="max-w-5xl mx-auto border-b border-ngpa-slate/40">
-          <HomeDisclosure id="how-it-works" title={HOW_IT_WORKS_TITLE}>
+          <HomeDisclosure id="how-it-works" eyebrow="How it works" title={HOW_IT_WORKS_TITLE}>
             <HowItWorks />
           </HomeDisclosure>
 
-          <HomeDisclosure id="ease" title="Four habits that travel beyond the court.">
+          <HomeDisclosure id="ease" eyebrow="Our Philosophy" title="Four habits that travel beyond the court.">
             <p className="mb-8 text-base sm:text-lg text-ngpa-white/70 leading-relaxed max-w-2xl">
               Every drill, every cue, every reset is a chance to build EASE — the framework Sam and Amine teach every session.
             </p>
@@ -295,7 +295,7 @@ export default async function Home() {
           </HomeDisclosure>
 
           {folded.includes("testimonials") && (
-            <HomeDisclosure id="testimonials" title="What Next Gen families say.">
+            <HomeDisclosure id="testimonials" eyebrow="Parent Stories" title="What Next Gen families say.">
               <p className="mb-8 text-base sm:text-lg text-ngpa-white/70 leading-relaxed max-w-2xl">
                 Real feedback from the parents who trust us with their kids.
               </p>
@@ -303,7 +303,7 @@ export default async function Home() {
             </HomeDisclosure>
           )}
 
-          <HomeDisclosure id="about" title="Two dads, one mission.">
+          <HomeDisclosure id="about" eyebrow="The Team" title="Two dads, one mission.">
             <p className="mb-8 text-base sm:text-lg text-ngpa-white/70 leading-relaxed max-w-2xl">
               Building the program we wished existed for our own kids.
             </p>
@@ -339,7 +339,7 @@ export default async function Home() {
           </div>
           </HomeDisclosure>
 
-          <HomeDisclosure id="faq" title="Everything families need to know.">
+          <HomeDisclosure id="faq" eyebrow="FAQ" title="Everything families need to know.">
             <FAQSection />
           </HomeDisclosure>
 
