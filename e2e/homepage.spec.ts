@@ -377,20 +377,64 @@ test.describe("Contact Strip", () => {
 
 // ─── Sticky Mobile CTA ───────────────────────────
 
-test.describe("Sticky Mobile CTA", () => {
-  test("visible on mobile @mobile", async ({ page }, testInfo) => {
+test.describe("Phone bar", () => {
+  // The fixed bar at the bottom of a phone took over from the sticky button and
+  // the hamburger menu (Sam, 2026-11-13): three tabs, More, and the page's action.
+  test("shows the tabs and the page's action on a phone @mobile", async ({ page }, testInfo) => {
     if (testInfo.project.name !== "mobile") test.skip();
     await page.goto("/");
-    const sticky = page.locator(".fixed.bottom-0");
-    await expect(sticky).toBeVisible();
-    await expect(sticky.getByText("Text for an Evaluation")).toBeVisible();
+    const bar = page.getByRole("navigation", { name: "Main" });
+    await expect(bar).toBeVisible();
+    for (const name of ["Home", "Levels", "Schedule"]) await expect(bar.getByRole("link", { name, exact: true })).toBeVisible();
+    await expect(bar.getByRole("link", { name: "Text for an Evaluation" })).toBeVisible();
+    await expect(bar.getByRole("link", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
+  });
+
+  test("More opens every other menu door and closes again @mobile", async ({ page }, testInfo) => {
+    if (testInfo.project.name !== "mobile") test.skip();
+    await page.goto("/");
+    const bar = page.getByRole("navigation", { name: "Main" });
+    const more = bar.getByRole("button", { name: "More" });
+    await expect(page.locator("#mobile-more")).toBeHidden();
+    await more.click();
+    await expect(more).toHaveAttribute("aria-expanded", "true");
+    const sheet = page.locator("#mobile-more");
+    await expect(sheet.getByRole("link", { name: "Leagues", exact: true })).toHaveAttribute("href", "/league");
+    await expect(sheet.getByRole("link", { name: "Tournaments" })).toHaveAttribute("href", "/mvf-junior-tournament");
+    await expect(sheet.getByRole("link", { name: /^Call / })).toHaveAttribute("href", "tel:3013254731");
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    await more.click();
+    await sheet.getByRole("link", { name: "Lessons" }).click();
+    await expect(page).toHaveURL(/\/lessons$/);
+    await expect(page.locator("#mobile-more")).toBeHidden();
+    await expect(page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Request a Lesson" })).toBeVisible();
+  });
+
+  test("the bar never covers the end of the page @mobile", async ({ page }, testInfo) => {
+    if (testInfo.project.name !== "mobile") test.skip();
+    await page.goto("/");
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const gap = await page.evaluate(() => {
+      const footer = document.querySelector("footer")!.getBoundingClientRect();
+      const bar = document.querySelector('nav[aria-label="Main"]')!.getBoundingClientRect();
+      return bar.top - footer.bottom;
+    });
+    expect(gap).toBeGreaterThanOrEqual(-1);
+  });
+
+  test("Frederick's bar offers leagues, not an evaluation @mobile", async ({ page }, testInfo) => {
+    if (testInfo.project.name !== "mobile") test.skip();
+    await page.goto("/youth-pickleball-frederick");
+    const bar = page.getByRole("navigation", { name: "Main" });
+    await expect(bar.getByRole("link", { name: "See Frederick Leagues" })).toHaveAttribute("href", "#leagues");
+    await expect(bar.getByText(/evaluation/i)).toHaveCount(0);
   });
 
   test("hidden on desktop @desktop", async ({ page }, testInfo) => {
     if (testInfo.project.name !== "desktop") test.skip();
     await page.goto("/");
-    const sticky = page.locator(".fixed.bottom-0");
-    await expect(sticky).toBeHidden();
+    await expect(page.getByRole("navigation", { name: "Main" })).toBeHidden();
   });
 });
 
@@ -407,15 +451,11 @@ test.describe("Nav links", () => {
     await expect(nav.getByRole("link", { name: "About" })).toHaveAttribute("href", "#about");
   });
 
-  test("mobile navbar shows links when hamburger is tapped @mobile", async ({ page }, testInfo) => {
+  test("a phone has no hamburger; the top bar is the logo @mobile", async ({ page }, testInfo) => {
     if (testInfo.project.name !== "mobile") test.skip();
     await page.goto("/");
-    // Open hamburger menu
-    await page.getByLabel("Toggle menu").click();
-    const menu = page.locator("#mobile-menu");
-    await expect(menu.getByRole("link", { name: "Start Here" })).toHaveAttribute("href", "#start");
-    await expect(menu.getByRole("link", { name: "Leagues", exact: true })).toHaveAttribute("href", "/league");
-    await expect(menu.getByRole("link", { name: "Schedule" })).toHaveAttribute("href", "/schedule");
+    await expect(page.getByLabel("Toggle menu")).toHaveCount(0);
+    await expect(page.locator("#mobile-menu")).toHaveCount(0);
   });
 
   test("/schedule page loads", async ({ page }) => {

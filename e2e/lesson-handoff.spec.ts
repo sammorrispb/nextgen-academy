@@ -180,7 +180,7 @@ test("the sticky mobile button stays unlabelled while the three in-body links ar
     expect(JSON.stringify(cta)).not.toContain("linkanddink");
   }
   expect(stickyCtaFor("/lessons").href).toBe("/lessons/book");
-  for (const file of ["src/lib/sticky-cta.ts", "src/components/StickyMobileCTA.tsx", "src/components/Navbar.tsx", "src/app/lessons/success/page.tsx"]) {
+  for (const file of ["src/lib/sticky-cta.ts", "src/components/MobileTabBar.tsx", "src/components/Navbar.tsx", "src/app/lessons/success/page.tsx"]) {
     const text = readFileSync(file, "utf8");
     expect(text.length).toBeGreaterThan(200);
     expect(text).not.toMatch(/LessonHandoff|LESSON_HANDOFF_LINE/);
