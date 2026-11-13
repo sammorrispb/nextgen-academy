@@ -98,16 +98,15 @@ test.describe("Newsletter page", () => {
   });
 });
 
-// ─── Home #newsletter section ─────────────────────
+// ─── Home page link to the newsletter ─────────────
 
-test.describe("Home newsletter section", () => {
-  test("renders the #newsletter section with the form", async ({ page }) => {
+test.describe("Home newsletter link", () => {
+  // The embedded form left the home page with the rebuild; the home page
+  // links to /newsletter instead.
+  test("links to the newsletter page instead of embedding the form", async ({ page }) => {
     await page.goto("/");
-    const section = page.locator("#newsletter");
-    await expect(section).toBeVisible();
-    await expect(
-      section.getByRole("button", { name: /Join the Free Newsletter/ }),
-    ).toBeVisible();
+    await expect(page.locator("#newsletter")).toHaveCount(0);
+    await expect(page.locator('[data-home-block="more"] a[href="/newsletter"]')).toBeVisible();
   });
 });
 

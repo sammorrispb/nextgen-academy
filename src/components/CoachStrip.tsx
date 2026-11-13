@@ -4,6 +4,7 @@ import { coaches } from "@/data/coaches";
 export default function CoachStrip() {
   return (
     <section
+      data-home-block="coaches"
       aria-labelledby="coach-strip-heading"
       className="relative bg-ngpa-navy py-12 sm:py-16 px-4 sm:px-6 lg:px-10 border-t border-ngpa-slate/40"
     >

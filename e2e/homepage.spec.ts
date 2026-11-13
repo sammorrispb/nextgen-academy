@@ -36,7 +36,8 @@ test.describe("Hero", () => {
 
 test.describe("How It Works", () => {
   test("shows 3 steps distinguishing evaluations, drop-ins and seasons", async ({ page }) => {
-    await page.goto("/");
+    // Folded on the home page; the anchor opens it.
+    await page.goto("/#how-it-works");
     const section = page.locator("#how-it-works");
     await expect(section).toBeVisible();
     await expect(section.getByRole("heading", { name: "Free evaluation" })).toBeVisible();
@@ -172,103 +173,43 @@ test.describe("Coach Strip", () => {
 
 // ─── Ball Pathway ─────────────────────────────────
 
-test.describe("Ball Pathway", () => {
-  test("desktop pathway is horizontal @desktop", async ({ page }, testInfo) => {
-    if (testInfo.project.name !== "desktop") test.skip();
+test.describe("Level rows", () => {
+  // The home page shows the four ball colors as short rows that open the
+  // levels page. The long level cards, the pathway diagram and the Yellow Ball
+  // card left the home page with the rebuild; /levels carries that detail.
+  test("shows the four colors with their age floors", async ({ page }) => {
     await page.goto("/");
-    // The desktop pathway container (hidden on mobile, flex on sm+)
-    const desktopPathway = page.locator("#levels >> css=.hidden.sm\\:flex");
-    await expect(desktopPathway).toBeVisible();
-    const pathwayText = await desktopPathway.textContent();
-    // Post-2026-06-18: all four ball colors run their own group court, so the
-    // pathway shows a ball-color label next to each colored ball.
-    expect(pathwayText).toContain("Red Ball");
-    expect(pathwayText).toContain("Orange Ball");
-    expect(pathwayText).toContain("Green Ball");
-    expect(pathwayText).toContain("Yellow Ball");
-    // PR #94 (2026-05-24) realigned the floor from 8+ back to 6+.
-    expect(pathwayText).toContain("Ages 6+");
-    expect(pathwayText).toContain("Ages 10+");
-    expect(pathwayText).toContain("Ages 12+");
+    const rows = page.locator("#levels article");
+    await expect(rows).toHaveCount(4);
+    for (const label of ["Red Ball", "Orange Ball", "Green Ball", "Yellow Ball"]) {
+      await expect(page.locator("#levels").getByRole("heading", { name: label, exact: true })).toBeVisible();
+    }
+    // PR #94 (2026-05-24) realigned the floor to 6+ as the canonical academy floor.
+    expect(await rows.first().textContent()).toContain("Ages 6+");
+    expect(await rows.nth(2).textContent()).toContain("Ages 10+");
+    expect(await rows.nth(3).textContent()).toContain("Ages 12+");
   });
 
-  test("mobile pathway is vertical @mobile", async ({ page }, testInfo) => {
-    if (testInfo.project.name !== "mobile") test.skip();
+  test("rows quote no price", async ({ page }) => {
     await page.goto("/");
-    const mobilePathway = page.locator("#levels >> css=.sm\\:hidden");
-    await expect(mobilePathway).toBeVisible();
-    const pathwayText = await mobilePathway.textContent();
-    expect(pathwayText).toContain("Red Ball");
-    expect(pathwayText).toContain("Orange Ball");
-    expect(pathwayText).toContain("Green Ball");
-    expect(pathwayText).toContain("Yellow Ball");
-    // PR #94 (2026-05-24) realigned the floor from 8+ back to 6+.
-    expect(pathwayText).toContain("Ages 6+");
-    expect(pathwayText).toContain("Ages 10+");
-    expect(pathwayText).toContain("Ages 12+");
-  });
-});
-
-// ─── Level Cards ──────────────────────────────────
-
-test.describe("Level Cards", () => {
-  test("shows 4 level cards with no pricing", async ({ page }) => {
-    await page.goto("/");
-    const cards = page.locator("#levels article");
-    await expect(cards).toHaveCount(4);
-
+    const rows = page.locator("#levels article");
     for (let i = 0; i < 4; i++) {
-      const cardText = await cards.nth(i).textContent();
-      expect(cardText).not.toContain("drop-in");
-      expect(cardText).not.toContain("/season");
+      const text = await rows.nth(i).textContent();
+      expect(text).not.toContain("$");
+      expect(text).not.toContain("drop-in");
+      expect(text).not.toContain("/season");
     }
   });
 
-  test("cards show correct age badges", async ({ page }) => {
+  test("every row opens the levels page and none opens a text message", async ({ page }) => {
     await page.goto("/");
-    const cards = page.locator("#levels article");
-    const firstCardText = await cards.first().textContent();
-    // 2026-05-13 lifted the floor from 5+ to 8+; PR #94 (2026-05-24)
-    // realigned to 6+ as the canonical academy floor.
-    expect(firstCardText).toContain("Ages 6+");
-    // Each subsequent level has a higher floor.
-    expect(await cards.nth(2).textContent()).toContain("Ages 10+");
-    expect(await cards.nth(3).textContent()).toContain("Ages 12+");
+    await expect(page.locator('#levels article a[href^="/levels#"]')).toHaveCount(4);
+    await expect(page.locator('#levels a[href^="sms:"]')).toHaveCount(0);
   });
 
-  test("non-yellow cards have Get Started links", async ({ page }) => {
-    await page.goto("/");
-    const getStartedLinks = page.locator('#levels article a[href="sms:+13013254731"]');
-    // Red, Orange, Green = 3 cards with Get Started
-    await expect(getStartedLinks).toHaveCount(3);
-  });
-
-  test("yellow card shows Invite Only", async ({ page }) => {
+  test("yellow row shows Invite Only", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("#levels").getByText("Invite Only")).toBeVisible();
-  });
-});
-
-// ─── Yellow Ball CTA ──────────────────────────────
-
-test.describe("Yellow Ball CTA", () => {
-  // Yellow Ball is invite-only with custom scheduling — the drop-in rate never
-  // applied to it, so the card quotes no price at all (Sam, 2026-09-08).
-  test("quotes no price", async ({ page }) => {
-    await page.goto("/");
-    const card = page.getByTestId("yellowball-cta");
-    await expect(card).toBeVisible();
-    await expect(card).not.toContainText("$");
-    await expect(card).not.toContainText(/per 1-hour/i);
-  });
-
-  test("links to the inquiry page", async ({ page }) => {
-    await page.goto("/");
-    const cta = page
-      .getByRole("link", { name: /Request an eval/i })
-      .first();
-    await expect(cta).toBeVisible();
-    await expect(cta).toHaveAttribute("href", "/yellowball/inquiry");
   });
 });
 
@@ -276,7 +217,7 @@ test.describe("Yellow Ball CTA", () => {
 
 test.describe("EASE section", () => {
   test("shows all 4 EASE values", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#ease");
     const ease = page.locator("#ease");
     await expect(ease.getByText("Ethics")).toBeVisible();
     await expect(ease.getByText("Attitude")).toBeVisible();
@@ -285,7 +226,7 @@ test.describe("EASE section", () => {
   });
 
   test("shows Define Demonstrate Drill", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#ease");
     await expect(page.locator("#ease").getByText(/Define.*Demonstrate.*Drill/)).toBeVisible();
   });
 });
@@ -328,14 +269,14 @@ test.describe("Testimonials", () => {
 
 test.describe("Coaches / About", () => {
   test("shows both coaches", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#about");
     const about = page.locator("#about");
     await expect(about.getByRole("heading", { name: "Sam Morris" })).toBeVisible();
     await expect(about.getByRole("heading", { name: "Amine Lahlou" })).toBeVisible();
   });
 
   test("shows Parent-Coach-Kid Triangle mention", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#about");
     await expect(page.locator("#about").getByText(/Parent.*Coach.*Kid Triangle/)).toBeVisible();
   });
 });
@@ -359,7 +300,7 @@ test.describe("Contact Form (homepage anchor)", () => {
 
 test.describe("FAQ", () => {
   test("shows all FAQ items", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#faq");
     const faqSection = page.locator("#faq");
     const questions = faqSection.locator('button[aria-expanded]');
     // faq.ts currently has 12 items; assert >= 6 so the test isn't brittle to copy edits
@@ -367,7 +308,7 @@ test.describe("FAQ", () => {
   });
 
   test("accordion expands and collapses", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#faq");
     const faqSection = page.locator("#faq");
     const firstQuestion = faqSection.locator('button[aria-expanded]').first();
 
@@ -379,7 +320,7 @@ test.describe("FAQ", () => {
   });
 
   test("shows still have questions footer with contact options", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/#faq");
     const faqSection = page.locator("#faq");
     await expect(faqSection.getByText("Still have questions?")).toBeVisible();
     // Match the call-or-text link directly — FAQ answer copy also contains the phone number.
@@ -512,4 +453,58 @@ test.describe("Redirects", () => {
       expect(response?.status()).toBeLessThan(400);
     });
   }
+});
+
+// ─── Folded sections open when a link points at them ───
+// Browser-only (this file does not run in CI). The menu and footer move
+// through the App Router, which fires no hashchange, so each path the opener
+// has to cover is clicked here rather than loaded cold.
+
+test.describe("Folded sections", () => {
+  test("are closed on a plain visit", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.locator("details[data-home-disclosure]")).toHaveCount(4);
+    await expect(page.locator("details[data-home-disclosure][open]")).toHaveCount(0);
+  });
+
+  test("menu About on the home page opens the team fold, and again after it is closed @desktop", async ({ page }, testInfo) => {
+    if (testInfo.project.name !== "desktop") test.skip();
+    await page.goto("/");
+    const about = page.locator("nav").getByRole("link", { name: "About", exact: true }).first();
+    await about.click();
+    await expect(page.locator("#about[open]")).toBeVisible();
+    await expect(page.locator("#about").getByRole("heading", { name: "Sam Morris" })).toBeVisible();
+    await page.locator("#about > summary").click();
+    await expect(page.locator("#about[open]")).toHaveCount(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await about.click();
+    await expect(page.locator("#about[open]")).toBeVisible();
+  });
+
+  test("footer FAQ on the home page opens the FAQ fold", async ({ page }) => {
+    await page.goto("/");
+    await page.locator('footer a[href="/#faq"]').click();
+    await expect(page.locator("#faq[open]")).toBeVisible();
+  });
+
+  test("footer About from another page arrives on the open team fold", async ({ page }) => {
+    await page.goto("/schedule");
+    await page.locator('footer a[href="/#about"]').click();
+    await expect(page).toHaveURL(/#about$/);
+    await expect(page.locator("#about[open]")).toBeVisible();
+  });
+
+  test("the old /faq and /about URLs land on an open fold", async ({ page }) => {
+    await page.goto("/faq");
+    await expect(page.locator("#faq[open]")).toBeVisible();
+    await page.goto("/about");
+    await expect(page.locator("#about[open]")).toBeVisible();
+  });
+
+  test("the schedule page's Get Started lands on the contact form", async ({ page }) => {
+    await page.goto("/schedule");
+    await page.locator('a[href="/#contact-form"]').first().click();
+    await expect(page).toHaveURL(/#contact-form$/);
+    await expect(page.locator("#contact-form form #name")).toBeVisible();
+  });
 });

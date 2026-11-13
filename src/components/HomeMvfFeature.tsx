@@ -36,7 +36,7 @@ export default function HomeMvfFeature({
   if (!mvfSessionTwoEnrolling(todayIso, programs)) return null;
 
   return (
-    <section className="bg-ngpa-navy py-14 sm:py-20 px-4 sm:px-6 lg:px-10">
+    <section data-home-block="mvf" className="bg-ngpa-navy py-14 sm:py-20 px-4 sm:px-6 lg:px-10">
       <div className="max-w-6xl mx-auto">
         <MvfSessionTwoFeature section="homepage" />
       </div>

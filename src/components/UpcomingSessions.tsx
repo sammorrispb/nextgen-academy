@@ -10,6 +10,9 @@ import { fillGoal } from "@/lib/fill-meter";
 
 interface UpcomingSessionsProps {
   sessions: NgaSession[];
+  /** Offers to leave out of the empty state, by href. The home page drops the
+   * evaluation card: its hero makes that offer two blocks up. */
+  omitOffers?: readonly string[];
 }
 
 function formatDay(date: string): string {
@@ -21,11 +24,12 @@ function formatDay(date: string): string {
   });
 }
 
-export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
+export default function UpcomingSessions({ sessions, omitOffers }: UpcomingSessionsProps) {
   const upcoming = sessions.slice(0, 4);
 
   return (
     <section
+      data-home-block="sessions"
       aria-labelledby="upcoming-sessions-heading"
       className="relative bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10 border-t border-ngpa-slate/40"
     >
@@ -55,7 +59,7 @@ export default function UpcomingSessions({ sessions }: UpcomingSessionsProps) {
               heading="No drop-in sessions are listed right now."
               source="home_upcoming_empty"
             />
-            <OpenNowOffers />
+            <OpenNowOffers omit={omitOffers} />
           </div>
         ) : (
           <>

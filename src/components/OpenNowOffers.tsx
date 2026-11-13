@@ -15,9 +15,11 @@ import {
  * Deliberately no seat counts: those live behind a Notion read, and a
  * fabricated count is worse than none. /fall shows the real numbers.
  */
-export default function OpenNowOffers() {
+export default function OpenNowOffers({ omit = [] }: { omit?: readonly string[] }) {
   const todayIso = new Date().toISOString().slice(0, 10);
-  const offers = buildOpenNowOffers(todayIso, openNowFlags(todayIso));
+  const offers = buildOpenNowOffers(todayIso, openNowFlags(todayIso)).filter(
+    (offer) => !omit.includes(offer.href),
+  );
 
   if (offers.length === 0) return null;
 
