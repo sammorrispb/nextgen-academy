@@ -38,11 +38,11 @@ export const metadata: Metadata = {
     // ≤60 chars so Google doesn't truncate. Per-page `title` overrides this
     // via the template — those pages use `{ absolute }` when their copy
     // would exceed the budget.
-    default: "Next Gen PB Academy — Youth Pickleball in MoCo, MD",
+    default: "Next Gen PB Academy | Youth Pickleball, Ellicott City MD",
     template: "%s | Next Gen Pickleball Academy",
   },
   description:
-    "Youth pickleball coaching for kids ages 6\u201316 in Montgomery County, MD. Free evaluations, group sessions, and private lessons with a clear pathway.",
+    "Youth pickleball coaching for kids ages 6\u201316, based in Ellicott City, MD. Free evaluations, group sessions, and private lessons with a clear pathway.",
   icons: {
     icon: "/images/og-image.png",
     apple: "/images/og-image.png",
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     siteName: "Next Gen Pickleball Academy",
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball academy for kids ages 6\u201316 in Montgomery County, MD. Group sessions run a court for every level \u2014 Red, Orange, Green, Yellow \u2014 plus private lessons.",
+      "Youth pickleball academy for kids ages 6\u201316, based in Ellicott City, MD. Group sessions run a court for every level \u2014 Red, Orange, Green, Yellow \u2014 plus private lessons.",
     url: "https://nextgenpbacademy.com",
     images: [{
       url: "/opengraph-image",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Next Gen Pickleball Academy",
     description:
-      "Youth pickleball lessons for kids ages 6\u201316 in Montgomery County, MD. A group court for every level, plus private lessons at any level.",
+      "Youth pickleball lessons for kids ages 6\u201316, based in Ellicott City, MD. A group court for every level, plus private lessons at any level.",
     images: ["/opengraph-image"],
   },
   verification: {

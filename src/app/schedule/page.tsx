@@ -107,7 +107,7 @@ export default async function SchedulePage() {
   return (
     <>
       <h1 className="sr-only">
-        Youth Pickleball Schedule &mdash; Montgomery County, MD
+        Youth Pickleball Schedule, Ellicott City, MD
       </h1>
 
       <JsonLd
@@ -141,7 +141,7 @@ export default async function SchedulePage() {
             Schedule &amp; Registration
           </p>
           <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight max-w-3xl">
-            Youth pickleball across Montgomery County.
+            Youth pickleball, based in Ellicott City.
           </h2>
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Seasons, weekly classes, and free evaluations for kids 6&ndash;16 at
@@ -173,26 +173,25 @@ export default async function SchedulePage() {
           <SeasonCallouts todayIso={todayET()} />
 
           {/* ─── Winter League callout removed 2026-09-22: details being nailed down ─── */}
-          {/* ─── MVF Montgomery Village callout ──── */}
+          {/* ─── MVF junior tournaments callout (Session II classes delisted 2026-11-17) ──── */}
           <Link
-            href="/montgomery-village-youth-pickleball"
+            href="/mvf-junior-tournament"
             className="group flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border border-ngpa-teal/40 bg-ngpa-teal/10 p-5 sm:p-6 hover:border-ngpa-teal transition-colors"
           >
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-ngpa-teal-bright">
-                Thursday classes &middot; Fall 2026
+                Winter tournaments &middot; Montgomery Village
               </p>
               <p className="font-heading text-lg sm:text-xl font-bold text-ngpa-white mt-1">
-                MVF Youth Pickleball in Montgomery Village
+                MVF Junior Tournaments, 12U and 16U
               </p>
               <p className="text-sm text-ngpa-muted mt-0.5">
-                Thursday sessions at North Creek, ages 8&ndash;16 &middot;
-                confirm current classes, venue and registration through the
-                Montgomery Village Foundation.
+                Sunday, January 17 and Sunday, February 14 at Lake Marion
+                Community Center, indoors.
               </p>
             </div>
             <span className="shrink-0 inline-flex items-center justify-center px-5 py-3 rounded-full bg-ngpa-teal text-ngpa-deep font-heading font-bold group-hover:bg-ngpa-teal-bright transition-colors min-h-[48px]">
-              See MVF classes &rarr;
+              See tournaments &rarr;
             </span>
           </Link>
         </div>
