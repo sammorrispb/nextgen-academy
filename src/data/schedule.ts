@@ -9,6 +9,7 @@ export const seasons: Season[] = [
   { label: "Spring 2026", dates: "April 11 – June 15" },
   { label: "Summer 2026", dates: "June – July 2026" },
   { label: "Fall 2026", dates: "September – November" },
+  { label: "Winter 2026–27", dates: "December – February" },
 ];
 
 /**

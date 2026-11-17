@@ -81,7 +81,7 @@ export default function Hero() {
               </span>
               <span className="inline-flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                MCPS venues
+                Montgomery County
               </span>
             </div>
           </div>

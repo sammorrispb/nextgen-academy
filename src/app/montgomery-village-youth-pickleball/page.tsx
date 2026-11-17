@@ -16,6 +16,7 @@ import {
   type MvfProgram,
   type MvfVenue,
 } from "@/data/mvf";
+import { MVF_JUNIOR_SERIES } from "@/data/mvf-junior-series";
 import JsonLd from "@/components/JsonLd";
 import NewsletterForm from "@/components/NewsletterForm";
 import MvfSessionTwoFeature from "@/components/MvfSessionTwoFeature";
@@ -306,6 +307,13 @@ export default function MontgomeryVillagePage() {
       : sessionCount === 2
         ? "Two six-week Thursday sessions."
         : "A six-week Thursday session.";
+  // Once the last class has finished, the programs section stops describing a
+  // fall session that no longer exists and points at what is still to come in
+  // Montgomery Village: the MVF junior tournaments. Date-driven like the rest
+  // of the page, so each tournament drops off the day after it runs.
+  const winterTournaments = programs.length === 0
+    ? MVF_JUNIOR_SERIES.filter((event) => event.dates[0].iso >= today)
+    : [];
 
   return (
     <>
@@ -347,9 +355,11 @@ export default function MontgomeryVillagePage() {
               <>
                 Next Gen&rsquo;s Montgomery Village classes for ages{" "}
                 {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX} have wrapped for this season.
+                {winterTournaments.length > 0 &&
+                  " This winter, the MVF junior tournaments keep kids playing."}{" "}
                 Join the newsletter below and we&rsquo;ll post the next MVF
-                lineup there &mdash; or book a free evaluation and get your
-                child placed in a Next Gen session now.
+                class lineup there, or text us for a free evaluation to find
+                your child&rsquo;s level.
               </>
             )}
           </p>
@@ -379,7 +389,7 @@ export default function MontgomeryVillagePage() {
               section="mvf_hero"
               className="inline-flex items-center gap-2 px-7 py-3.5 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px] shadow-xl shadow-ngpa-teal/20"
             >
-              See classes &amp; register
+              {programs.length > 0 ? <>See classes &amp; register</> : "See what\u2019s next"}
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
@@ -405,20 +415,66 @@ export default function MontgomeryVillagePage() {
         className="bg-ngpa-navy py-16 sm:py-20 px-4 sm:px-6 lg:px-10 scroll-mt-20"
       >
         <div className="max-w-3xl mx-auto">
-          <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
-            Fall 2026 Programs
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-            {programsHeading}
-          </h2>
-          <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
-            {intro.length > 0 &&
-              "Start with the one-evening intro class, roll into the fall sessions, or do both. "}
-            Each session runs a Red/Orange class 5:30&ndash;6:30 PM and a
-            Green/Yellow class 6:30&ndash;7:30 PM, registered separately
-            &mdash; pick the one that fits your child, or ask us and
-            we&rsquo;ll place them.
-          </p>
+          {programs.length > 0 ? (
+            <>
+              <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+                Fall 2026 Programs
+              </p>
+              <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
+                {programsHeading}
+              </h2>
+              <p className="text-lg text-ngpa-white/75 leading-relaxed mb-10 max-w-2xl">
+                {intro.length > 0 &&
+                  "Start with the one-evening intro class, roll into the fall sessions, or do both. "}
+                Each session runs a Red/Orange class 5:30&ndash;6:30 PM and a
+                Green/Yellow class 6:30&ndash;7:30 PM, registered separately
+                &mdash; pick the one that fits your child, or ask us and
+                we&rsquo;ll place them.
+              </p>
+            </>
+          ) : (
+            <div className="mb-10" data-testid="mvf-winter-programs">
+              <p className="text-xs font-bold tracking-[0.2em] uppercase text-ngpa-teal mb-3">
+                Winter 2026&ndash;27
+              </p>
+              <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
+                Fall classes are done. Winter tournaments are next.
+              </h2>
+              <p className="text-lg text-ngpa-white/75 leading-relaxed max-w-2xl">
+                The Thursday classes at North Creek wrapped up for the fall.
+                New MVF classes will be listed here when MVF opens them.
+              </p>
+              {winterTournaments.length > 0 && (
+                <div className="mt-8 rounded-2xl bg-ngpa-panel border border-ngpa-teal/40 p-6">
+                  <p className="font-heading text-lg font-black text-ngpa-white">
+                    MVF Junior Tournaments, 12U and 16U
+                  </p>
+                  <ul className="mt-3 space-y-1 text-ngpa-white/80">
+                    {winterTournaments.map((event) => (
+                      <li key={event.slug}>
+                        {event.dates[0].label} at {event.venue.name}
+                        {event.venue.indoors ? " (indoors)" : ""}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-3 text-sm text-ngpa-white/70">
+                    ${winterTournaments[0].prices.residentUsd} Montgomery
+                    Village resident, ${winterTournaments[0].prices.nonresidentUsd}{" "}
+                    non-resident, per player. No partner needed.
+                  </p>
+                  <TrackedCTA
+                    href="/mvf-junior-tournament"
+                    label="mvf_winter_tournaments"
+                    section="mvf_programs"
+                    asNextLink
+                    className="mt-5 inline-flex items-center gap-2 px-6 py-3 bg-ngpa-teal text-ngpa-deep font-bold rounded-full hover:bg-ngpa-teal-bright transition-colors min-h-[48px]"
+                  >
+                    See tournament dates and register
+                  </TrackedCTA>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Session II is the enrollment product right now — it gets the
               featured card above the fold of the program list. */}
@@ -428,7 +484,9 @@ export default function MontgomeryVillagePage() {
             </div>
           )}
 
-          {/* Registration note */}
+          {/* Registration note. "Registration is open now" is only true while a
+              class is still to come, so it goes with the classes. */}
+          {programs.length > 0 && (
           <div
             className="rounded-2xl border border-ngpa-teal/40 bg-ngpa-teal/10 p-6"
             data-testid="mvf-registration-note"
@@ -451,6 +509,7 @@ export default function MontgomeryVillagePage() {
               Browse all MVF youth pickleball activities &rarr;
             </TrackedCTA>
           </div>
+          )}
 
           {intro.length > 0 && (
             <>
@@ -509,12 +568,14 @@ export default function MontgomeryVillagePage() {
             </>
           )}
 
+          {programs.length > 0 && (
           <p
             className="mt-8 text-sm text-ngpa-white/70"
             data-testid="mvf-venue-footnote"
           >
             {MVF_VENUE_FOOTNOTE}
           </p>
+          )}
         </div>
       </section>
 
