@@ -80,14 +80,20 @@ test.describe("home page: the MVF Session II card", () => {
   const lastClass = fallTwo.map((p) => p.endDate).sort().at(-1) as string;
   const feature = (todayIso: string) => render(() => HomeMvfFeature({ todayIso }));
 
-  test("shows through the last class and is gone the day after", () => {
+  // Sam took Session II off the site on 2026-11-17, two days before its last
+  // class, so the card's last day is its listedUntil date, not the last class.
+  const lastListed = fallTwo.map((p) => p.listedUntil ?? p.endDate).sort().at(-1) as string;
+
+  test("shows through its last listed day and is gone the day after", () => {
     expect(fallTwo.length, "re-pin this test if Session II leaves the data file").toBeGreaterThan(0);
     expect(lastClass).toBe("2026-11-19");
-    const during = feature(lastClass);
+    expect(lastListed).toBe("2026-11-16");
+    const during = feature(lastListed);
     expect(during).toContain(CARD);
     expect(during).toContain("Enrolling now");
-    expect(feature(shift(lastClass, -30))).toContain(CARD);
-    expect(feature(shift(lastClass, 1)), "no empty section left holding padding").toBe("");
+    expect(feature(shift(lastListed, -30))).toContain(CARD);
+    expect(feature(shift(lastListed, 1)), "no empty section left holding padding").toBe("");
+    expect(feature("2026-11-17")).toBe("");
     expect(feature("2026-11-20")).toBe("");
   });
 
@@ -109,7 +115,7 @@ test.describe("home page: the MVF Session II card", () => {
       startDate: "2027-10-14",
       endDate: "2027-11-18",
     });
-    expect(mvfSessionTwoEnrolling(lastClass, [real]), "positive control").toBe(true);
+    expect(mvfSessionTwoEnrolling(lastListed, [real]), "positive control").toBe(true);
     for (const key of ["fall-2027-beginner", "fall-2-2027-advanced", "fall-20"]) {
       expect(mvfSessionTwoEnrolling("2027-10-01", [nextYear(key)]), key).toBe(false);
       expect(render(() => HomeMvfFeature({ todayIso: "2027-10-01", programs: [nextYear(key)] }))).toBe("");

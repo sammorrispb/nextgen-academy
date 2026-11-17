@@ -3,17 +3,17 @@ export const seo = {
     title: "Next Gen Pickleball Academy",
     // Tightened to ~155 chars for Google's description budget.
     description:
-      "Youth pickleball coaching for kids ages 6–16 in Montgomery County, MD. Free evaluations, group sessions, and private lessons with a clear pathway.",
+      "Youth pickleball coaching for kids ages 6–16, based in Ellicott City, MD. Free evaluations, group sessions, and private lessons with a clear pathway.",
   },
   schedule: {
-    title: "Youth Pickleball Schedule — Montgomery County, MD",
+    title: "Youth Pickleball Schedule | Ellicott City, MD",
     description:
-      "Upcoming youth pickleball sessions for kids ages 6–16 in Montgomery County, MD — rotating MCPS courts across Rockville, Bethesda, Potomac, and beyond.",
+      "Upcoming youth pickleball programs for kids ages 6–16 from Next Gen, now based in Ellicott City, MD, plus the MVF junior tournaments in Montgomery Village.",
   },
   freeEvaluation: {
-    title: "Free 30-Minute Youth Pickleball Evaluation — Montgomery County, MD",
+    title: "Free 30-Minute Youth Pickleball Evaluation | Ellicott City, MD",
     description:
-      "Text Coach Sam at 301-325-4731 to schedule a free 30-minute pickleball evaluation for your child, ages 6–16, in Montgomery County, MD. No commitment.",
+      "Text Coach Sam at 301-325-4731 to schedule a free 30-minute pickleball evaluation for your child, ages 6–16, based in Ellicott City, MD. No commitment.",
   },
   montgomeryCounty: {
     title: "Youth Pickleball in Montgomery County, MD — Ages 6–16",

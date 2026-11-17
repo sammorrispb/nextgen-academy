@@ -244,18 +244,17 @@ export default async function Home() {
 
           <div className="max-w-2xl mx-auto bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
             <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              Your closest court, every week.
+              Home base: Ellicott City.
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions rotate across Montgomery County Public Schools by demand
-              &mdash; closer to more zip codes than a single fixed venue.
-              Private lessons are also available at The Pickl Park in
-              Frederick.{" "}
+              Next Gen is now based in Ellicott City, MD. We still run the MVF
+              junior tournaments in Montgomery Village, and private lessons are
+              available at The Pickl Park in Frederick.{" "}
               <Link
                 href="/schedule"
                 className="text-ngpa-teal font-bold hover:text-ngpa-teal-bright underline-offset-4 hover:underline transition-colors"
               >
-                See this week&rsquo;s locations &rarr;
+                See the schedule &rarr;
               </Link>
             </p>
           </div>

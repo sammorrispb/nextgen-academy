@@ -140,6 +140,12 @@ export interface MvfProgram {
   /** Suffix after each price, e.g. "class" or "session". */
   priceUnit: string;
   description: string;
+  /**
+   * Last day (ISO, ET) the site lists this program. After it the program is
+   * treated like a past one everywhere upcomingMvfPrograms is used, even if
+   * classes remain. Sam took Fall Session II off the site on 2026-11-17.
+   */
+  listedUntil?: string;
 }
 
 export const MVF_PROGRAMS: MvfProgram[] = [
@@ -208,6 +214,7 @@ export const MVF_PROGRAMS: MvfProgram[] = [
   },
   {
     key: "fall-2-beginner",
+    listedUntil: "2026-11-16",
     title: "Fall Session II — Red / Orange",
     activityName: "Youth Pickleball Fall II Beginner (ages 8 to 16)",
     activityNumber: "1205.440",
@@ -230,6 +237,7 @@ export const MVF_PROGRAMS: MvfProgram[] = [
   },
   {
     key: "fall-2-advanced",
+    listedUntil: "2026-11-16",
     title: "Fall Session II — Green / Yellow",
     activityName: "Youth Pickleball Fall II Advanced (ages 8 to 16)",
     activityNumber: "1205.441",
@@ -292,7 +300,11 @@ export function upcomingMvfPrograms(
   todayIso: string,
   programs: MvfProgram[] = MVF_PROGRAMS,
 ): MvfProgram[] {
-  return programs.filter((p) => !isMvfProgramPast(p, todayIso));
+  return programs.filter(
+    (p) =>
+      !isMvfProgramPast(p, todayIso) &&
+      !(p.listedUntil !== undefined && todayIso > p.listedUntil),
+  );
 }
 
 /** Class dates of `program` still to come, today INCLUSIVE. */

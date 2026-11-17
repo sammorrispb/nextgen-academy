@@ -42,7 +42,7 @@ export default function UpcomingSessions({ sessions, omitOffers }: UpcomingSessi
             id="upcoming-sessions-heading"
             className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white tracking-tight"
           >
-            Find a drop-in near you &mdash; across Montgomery County Public Schools.
+            Find a drop-in session near you.
           </h2>
           <p className="mt-3 text-base sm:text-lg text-ngpa-white/70 max-w-2xl mx-auto">
             These are single-session drop-in listings. Check each one for its

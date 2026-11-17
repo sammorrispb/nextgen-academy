@@ -53,7 +53,7 @@ test.describe("How It Works", () => {
 test.describe("program discovery consistency", () => {
   test("the drop-in feed does not imply other programs are closed", async ({ page }) => {
     await page.goto("/");
-    const strip = page.getByRole("region", { name: /Montgomery County Public Schools/ });
+    const strip = page.getByRole("region", { name: /Find a drop-in session near you/ });
     await expect(strip).toContainText(/drop-in/i);
     await expect(strip.getByRole("link", { name: /see leagues and seasons/i })).toHaveAttribute("href", "/league");
     await expect(strip).not.toContainText("No sessions open this week.");
@@ -97,7 +97,7 @@ test.describe("program discovery consistency", () => {
 test.describe("Upcoming Sessions strip", () => {
   test("renders the heading and either sessions or empty-state waitlist", async ({ page }) => {
     await page.goto("/");
-    const section = page.getByRole("region", { name: /Montgomery County Public Schools/ });
+    const section = page.getByRole("region", { name: /Find a drop-in session near you/ });
     await expect(section).toBeVisible();
     // Renders EITHER session cards + 'See all upcoming sessions' link
     // OR the EmptyStateWaitlist form (PR 5).
@@ -363,14 +363,14 @@ test.describe("Contact Strip", () => {
     ).toHaveCount(0);
   });
 
-  test("shows MCPS framing in contact panel", async ({ page }) => {
+  test("shows the Ellicott City home base in contact panel", async ({ page }) => {
     await page.goto("/");
     const contact = page.locator("#contact");
     await expect(
-      contact.getByText("Your closest court, every week.")
+      contact.getByText("Home base: Ellicott City.")
     ).toBeVisible();
     await expect(
-      contact.getByText(/Montgomery County Public Schools/)
+      contact.getByText(/now based in Ellicott City, MD/)
     ).toBeVisible();
   });
 });
@@ -481,7 +481,7 @@ test.describe("Nav links", () => {
     await page.goto("/schedule");
     await expect(
       page.getByRole("heading", {
-        name: /Youth Pickleball Schedule.*Montgomery County, MD/,
+        name: /Youth Pickleball Schedule.*Ellicott City, MD/,
       })
     ).toBeVisible();
   });

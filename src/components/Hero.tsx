@@ -27,15 +27,15 @@ export default function Hero() {
 
             <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-black text-ngpa-white leading-[1.02] tracking-tight">
               Real pickleball coaching for{" "}
-              <span className="text-ngpa-teal">kids 6&ndash;16</span> in{" "}
-              <span className="text-ngpa-teal">Montgomery County</span>.
+              <span className="text-ngpa-teal">kids 6&ndash;16</span>, based in{" "}
+              <span className="text-ngpa-teal">Ellicott City</span>.
             </h1>
 
             <p className="mt-7 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
               A clear Red, Orange, Green and Yellow Ball pathway, from first
-              rally to tournament play. Choose private lessons, a league or a
-              partner class &mdash; each program lists the ages and levels it
-              serves across Montgomery County, MD.
+              rally to tournament play. We&rsquo;re based in Ellicott City, MD,
+              and still run the MVF junior tournaments in Montgomery Village.
+              Each program lists the ages and levels it serves.
             </p>
 
             <p className="mt-5 text-base sm:text-lg text-ngpa-white/95 leading-relaxed max-w-xl">
@@ -81,7 +81,7 @@ export default function Hero() {
               </span>
               <span className="inline-flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                Montgomery County
+                Ellicott City, MD
               </span>
             </div>
           </div>
