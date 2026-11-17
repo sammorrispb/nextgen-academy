@@ -281,13 +281,21 @@ test.describe("/montgomery-village-youth-pickleball", () => {
       );
     }
     const note = page.getByTestId("mvf-registration-note");
-    await expect(note).toContainText(
-      /register and pay on MVF['’]s site, not ours/i,
+    // The note says registration is open, so it shows only while a class is
+    // still to come; after the last class the winter block replaces it.
+    await expect(note).toHaveCount(LIVE.length > 0 ? 1 : 0);
+    await expect(page.getByTestId("mvf-winter-programs")).toHaveCount(
+      LIVE.length > 0 ? 0 : 1,
     );
-    await expect(page.getByTestId("mvf-browse-all")).toHaveAttribute(
-      "href",
-      MVF_REGISTRATION_SEARCH_URL,
-    );
+    if (LIVE.length > 0) {
+      await expect(note).toContainText(
+        /register and pay on MVF['’]s site, not ours/i,
+      );
+      await expect(page.getByTestId("mvf-browse-all")).toHaveAttribute(
+        "href",
+        MVF_REGISTRATION_SEARCH_URL,
+      );
+    }
     // No NGA payment surface may appear on this page.
     await expect(page.locator('a[href*="/api/checkout"]')).toHaveCount(0);
   });
