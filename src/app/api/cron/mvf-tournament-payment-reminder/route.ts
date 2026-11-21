@@ -1,3 +1,5 @@
+import { MVF_JUNIOR_TOURNAMENT_DATE_ISO } from "@/data/mvf-junior-tournament-2026";
+import { todayET } from "@/lib/fall-refund-policy";
 import { Resend } from "resend";
 import { getStripe } from "@/lib/stripe";
 import {
@@ -40,6 +42,14 @@ const REMINDER_SENT_KEY = "payment_reminder_sent";
  * email) is a failure, never a quiet skip.
  */
 export const GET = withCronAlert("mvf-tournament-payment-reminder", async () => {
+  // This roster belongs only to the October tournament. Later MVF events
+  // have separate rosters; there is no spot to reserve after the event.
+  if (todayET() > MVF_JUNIOR_TOURNAMENT_DATE_ISO) {
+    return {
+      attempted: 0, succeeded: 0, failures: [],
+      body: { sent: 0, skipped: 0, reason: "tournament_ended" },
+    };
+  }
   const stripe = getStripe();
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {

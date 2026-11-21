@@ -23,6 +23,6 @@ export const seo = {
   mvf: {
     title: "MVF Youth Pickleball in Montgomery Village, MD — Ages 8–16",
     description:
-      "Youth pickleball in Montgomery Village, MD — an intro class Aug 27 plus two six-week Thursday sessions for ages 8–16, coached by Next Gen. Register through MVF.",
+      "Find MVF junior pickleball tournaments and class updates in Montgomery Village. Next Gen Pickleball Academy is based at Game On in Ellicott City.",
   },
 } as const;

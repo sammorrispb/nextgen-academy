@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { mock } from "node:test";
 import { NextRequest } from "next/server";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -309,9 +310,27 @@ test.describe("payment reminder: every due row it can't remind is reported", () 
       stripe.invoices.update = update;
     };
   }
-  test.afterEach(() => restore?.());
+  test.beforeEach(() => {
+    mock.timers.enable({ apis: ["Date"], now: new Date("2026-10-24T15:00:00Z") });
+  });
+  test.afterEach(() => {
+    restore?.();
+    mock.timers.reset();
+  });
 
   const run = () => paymentReminder(cronRequest("/api/cron/mvf-tournament-payment-reminder"));
+
+  test("after the tournament ends in Eastern time the job makes no service calls", async () => {
+    mock.timers.setTime(new Date("2026-10-25T04:00:00Z").getTime());
+    installServices([{ id: "historical", email: GOOD_EMAIL, invoice: "" }]);
+    patchStripe({});
+    const res = await run();
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ reason: "tournament_ended", sent: 0 });
+    expect(stub.calls).toEqual([]);
+    expect(fake.retrieved).toEqual([]);
+    expect(fake.updates).toEqual([]);
+  });
 
   test("a lookup that throws: no parent email, the run goes red, Sam gets an alert naming the row", async () => {
     installServices([{ id: "page-old-1", email: OLD_EMAIL, invoice: OLD }]);
