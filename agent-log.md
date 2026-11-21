@@ -4,6 +4,13 @@ Append-only. One entry per consequential decision, newest first. Format:
 **Situation** (what was true) · **Decision** (what we chose) · **Risk** (what could bite) · **Change** (what moved in the repo).
 
 
+## 2026-11-21 | October MVF payment reminders
+
+- **Situation.** The November 10 cron alert counted six historical roster rows and four missing invoice IDs. Vercel recorded another scheduled HTTP 500 on November 20.
+- **Decision.** The daily reminder applies only through the October tournament date in Eastern time. Later tournaments use a separate roster.
+- **Risk.** Ignoring blank invoice IDs during registration could hide an actual checkout problem. The existing in-season failure and alert stay in place.
+- **Change.** The route returns before reading the roster or initializing payment and email clients once the event ends. An offline test checks the midnight boundary and zero service calls. The schedule now links to the full program terms, and both public pages identify the academy’s Game On base.
+
 ## 2026-11-12 — One rule for fall registration; ended seasons retire their cards
 
 - **Situation and authority:** The Fall 2026 Sunday season ended November 8, but `/fall` still rendered the open state (badge "registration open", "Grab your spot", the form, JSON-LD `InStock`) because the page read `NEXT_PUBLIC_FALL_REGISTRATION_OPEN` alone, while `/api/checkout-fall` already answered 410. The open/closed rule was hand-copied with different logic across the page, the cross-links, the offer cards and the admin page (which compared a UTC date). `/schedule` showed the fall and Pickl Park season cards with no date gate, and the home page's "Enrolling now: Fall Session II" card had no end date. Sam approved PR 2 of the "stop the leaks" plan on 2026-11-12. The ended-state copy on `/fall` is draft for his review.

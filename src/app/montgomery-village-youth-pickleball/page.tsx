@@ -353,13 +353,9 @@ export default function MontgomeryVillagePage() {
               </>
             ) : (
               <>
-                Next Gen&rsquo;s Montgomery Village classes for ages{" "}
-                {MVF_AGE_MIN}&ndash;{MVF_AGE_MAX} have wrapped for this season.
-                {winterTournaments.length > 0 &&
-                  " This winter, the MVF junior tournaments keep kids playing."}{" "}
-                Join the newsletter below and we&rsquo;ll post the next MVF
-                class lineup there, or text us for a free evaluation to find
-                your child&rsquo;s level.
+                Next Gen Pickleball Academy is based at Game On in Ellicott City.
+                Looking for a place to play in Montgomery Village? Find MVF junior
+                tournament dates below or join our newsletter for class updates.
               </>
             )}
           </p>
@@ -438,11 +434,10 @@ export default function MontgomeryVillagePage() {
                 Winter 2026&ndash;27
               </p>
               <h2 className="font-heading text-3xl sm:text-4xl font-black text-ngpa-white mb-4 tracking-tight">
-                Fall classes are done. Winter tournaments are next.
+                Junior pickleball in Montgomery Village
               </h2>
               <p className="text-lg text-ngpa-white/75 leading-relaxed max-w-2xl">
-                The Thursday classes at North Creek wrapped up for the fall.
-                New MVF classes will be listed here when MVF opens them.
+                Check the tournament listing for dates, venues and registration details.
               </p>
               {winterTournaments.length > 0 && (
                 <div className="mt-8 rounded-2xl bg-ngpa-panel border border-ngpa-teal/40 p-6">

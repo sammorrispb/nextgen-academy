@@ -9,7 +9,7 @@ import CTABanner from "@/components/CTABanner";
 import CrewPathway from "@/components/CrewPathway";
 import CommunityGroupsCard from "@/components/CommunityGroupsCard";
 import RegistrationNotice from "@/components/RegistrationNotice";
-import ProgramPolicySummary from "@/components/ProgramPolicySummary";
+import { EXISTING_AGREEMENTS_POLICY_TEXT, NGA_REFUND_POLICY_TEXT } from "@/data/program-policies";
 import SessionCard from "@/components/SessionCard";
 import SessionGroupCard from "@/components/SessionGroupCard";
 import JsonLd from "@/components/JsonLd";
@@ -141,7 +141,7 @@ export default async function SchedulePage() {
             Schedule &amp; Registration
           </p>
           <h2 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-black text-ngpa-white leading-[1.05] tracking-tight max-w-3xl">
-            Youth pickleball, based in Ellicott City.
+            Youth pickleball at Game On in Ellicott City.
           </h2>
           <p className="mt-5 text-lg text-ngpa-white/80 leading-relaxed max-w-2xl">
             Seasons, weekly classes, and free evaluations for kids 6&ndash;16 at
@@ -264,9 +264,12 @@ export default async function SchedulePage() {
       <section className="bg-ngpa-deep py-12 px-4 sm:px-6 lg:px-10">
         <div className="max-w-3xl mx-auto text-ngpa-white/80 leading-relaxed">
           <h2 className="font-heading text-2xl font-black text-ngpa-white mb-5">
-            Registration, weather and refunds by program
+            Refunds and cancellations
           </h2>
-          <ProgramPolicySummary />
+          <p>{NGA_REFUND_POLICY_TEXT} {EXISTING_AGREEMENTS_POLICY_TEXT}</p>
+          <Link href="/terms" className="text-ngpa-teal-bright font-bold underline underline-offset-4">
+            Read the terms for your program
+          </Link>
         </div>
       </section>
 
