@@ -41,16 +41,21 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
   title: { absolute: "MVF Junior Tournaments — Montgomery Village, MD" },
-  description: "Schedule, registration and policies for the November 2026, January 2027 and February 2027 MVF junior tournaments. Includes the October 24 tournament archive.",
+  description: "Schedule, registration and policies for upcoming MVF junior pickleball tournaments in Montgomery Village, MD.",
   alternates: { canonical: "https://nextgenpbacademy.com/mvf-junior-tournament" },
 };
 
 export default function MvfJuniorTournamentPage() {
+  const now = new Date();
+  const todayEt = now.toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+  const openEvents = process.env.VERCEL_ENV === "production"
+    ? MVF_JUNIOR_SERIES.filter(event => publicSeriesRelease(event.slug, now.getTime())).map(event => event.slug)
+    : [];
   const registrationClosed = isMvfTournamentRegistrationClosed();
   return (
     <main className="bg-ngpa-navy min-h-screen">
       <JsonLd data={mvfTournamentJsonLd()} />
-      <MvfJuniorSeriesOverview openEvents={process.env.VERCEL_ENV === "production" ? MVF_JUNIOR_SERIES.filter(e => publicSeriesRelease(e.slug)).map(e => e.slug) : []} />
+      <MvfJuniorSeriesOverview todayEt={todayEt} openEvents={openEvents} />
       {/* Hero */}
       <section className="px-5 sm:px-8 pt-16 pb-10 max-w-3xl mx-auto">
         <p className="text-ngpa-white/70 mb-3">October 24, 2026 archive — the details and policies below apply only to that past tournament.</p>

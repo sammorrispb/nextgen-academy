@@ -101,13 +101,18 @@ for (const event of ["november-2026", "january-2027", "february-2027"]) {
   });
 }
 
-test("overview says registration is open only for open months and links each to register", () => {
-  const html = renderToStaticMarkup(MvfJuniorSeriesOverview({ openEvents: ["november-2026", "january-2027"] }));
-  expect(html).toContain("Registration is open for November 2026, January 2027.");
-  expect(html).not.toContain("Registration is not open yet");
-  expect(html).toContain("Register for November 2026");
+test("overview features the next open tournament and leaves later registration available", () => {
+  const html = renderToStaticMarkup(MvfJuniorSeriesOverview({
+    todayEt: "2026-11-22",
+    openEvents: ["november-2026", "january-2027", "february-2027"],
+  }));
+  expect(html).not.toContain("november-2026");
+  expect(html).not.toContain("November 2026");
+  expect(html).toContain("January 2027 registration is open");
   expect(html).toContain("Register for January 2027");
-  expect(html).toContain("February 2027 details and updates");
+  expect(html).toContain('href="/mvf-junior-tournament/january-2027#register"');
+  expect(html).toContain("Register for February 2027");
+  expect(html).not.toContain("February 2027 registration is open");
 });
 
 test("invoice due wording is singular for one day and plural otherwise", () => {
@@ -115,9 +120,10 @@ test("invoice due wording is singular for one day and plural otherwise", () => {
   expect(invoiceDueLabel(7)).toBe("7 days");
 });
 
-test("overview separates current updates from the October archive and keeps stable links", () => {
-  const html = renderToStaticMarkup(MvfJuniorSeriesOverview());
+test("overview keeps same-day details and links to upcoming tournaments with closed registration", () => {
+  const html = renderToStaticMarkup(MvfJuniorSeriesOverview({ todayEt: "2026-11-14", openEvents: [] }));
   expect(html).toContain("Registration is not open yet");
+  expect(html).not.toContain("#register");
   expect(html).toContain("A minimum of 8 players across both brackets");
   for (const event of MVF_JUNIOR_SERIES) {
     expect(html).toContain(`href="${mvfJuniorSeriesUrl(event)}"`);
@@ -133,6 +139,18 @@ test("overview separates current updates from the October archive and keeps stab
   expect(html).toContain("No separate makeup date has been announced.");
   expect(html).not.toContain("Venue to be confirmed");
   expect(html).not.toMatch(/4:00–7:00 PM|January 16|February 13|<form|<input/);
+});
+
+test("overview stops listing events after their dates and retires the registration banner", () => {
+  const february = renderToStaticMarkup(MvfJuniorSeriesOverview({
+    todayEt: "2027-01-18",
+    openEvents: ["february-2027"],
+  }));
+  expect(february).not.toContain("january-2027");
+  expect(february).toContain("February 2027 registration is open");
+  const finished = renderToStaticMarkup(MvfJuniorSeriesOverview({ todayEt: "2027-02-15", openEvents: [] }));
+  expect(finished).toContain("There are no upcoming tournaments scheduled.");
+  expect(finished).not.toContain("/mvf-junior-tournament/");
 });
 
 test("unknown pages and metadata return not found", async () => {
