@@ -6,6 +6,7 @@ import {
   MVF_REGISTRATION_SEARCH_URL,
   upcomingMvfPrograms,
 } from "../src/data/mvf";
+import { MVF_JUNIOR_SERIES, mvfJuniorSeriesUrl } from "../src/data/mvf-junior-series";
 
 const PAGE_PATH = "/montgomery-village-youth-pickleball";
 
@@ -96,7 +97,10 @@ test.describe("/mvf-junior-tournament rain plan", () => {
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
     await expect(page.locator("#register")).toHaveText("This tournament has ended. Registration is closed.");
     const overview = page.getByRole("region", { name: "MVF Junior Tournaments", exact: true });
-    await expect(overview.getByRole("status")).toContainText("Registration is not open yet");
+    const hasUpcomingTournament = MVF_JUNIOR_SERIES.some(event => event.dates[0].iso >= today);
+    await expect(overview.getByRole("status")).toContainText(
+      hasUpcomingTournament ? "Registration is not open yet" : "There are no upcoming tournaments scheduled.",
+    );
     const policies = overview.getByRole("region", { name: "Tournament policies" });
     await expect(policies).toContainText("Age is measured on December 31");
     await expect(policies).toContainText("Younger players may play up");
@@ -105,8 +109,13 @@ test.describe("/mvf-junior-tournament rain plan", () => {
     await expect(policies).toContainText("3 days before the tournament");
     await expect(policies).toContainText("24 hours before the tournament");
     await expect(policies).toContainText("No refunds unless we cancel.");
-    for (const event of ["november-2026", "january-2027", "february-2027"]) {
-      await expect(overview.locator(`a[href="https://nextgenpbacademy.com/mvf-junior-tournament/${event}"]`)).toBeVisible();
+    for (const event of MVF_JUNIOR_SERIES) {
+      const monthLink = overview.locator(`a[href="${mvfJuniorSeriesUrl(event)}"]`);
+      if (event.dates[0].iso >= today) {
+        await expect(monthLink).toBeVisible();
+      } else {
+        await expect(monthLink).toHaveCount(0);
+      }
     }
     await expect(page.locator("#main form")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: /^Register/ })).toHaveCount(0);
