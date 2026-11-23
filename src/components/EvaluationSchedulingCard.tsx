@@ -8,9 +8,9 @@ export default function EvaluationSchedulingCard() {
         Let&rsquo;s find a time to play.
       </p>
       <p className="mt-4 text-base text-ngpa-white/80 leading-relaxed">
-        Text Coach Sam to arrange your child&rsquo;s free 30-minute evaluation.
-        Share the days that work for your family and your preferred area.
-        We&rsquo;ll agree on the time and court by text.
+        Text Coach Sam to schedule your child&rsquo;s free 30-minute evaluation
+        at Game On in Ellicott City, MD. Share the days that work for your
+        family and Coach Sam will confirm the time by text.
       </p>
       <a
         href={EVALUATION_SMS_URL}

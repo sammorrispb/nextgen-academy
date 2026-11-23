@@ -14,6 +14,15 @@ test("NGA youth photo gallery displays four scenes without page overflow", async
   await expect(page.locator("section").first().getByRole("link", { name: /Text for a Free 30-Minute Evaluation/ })).toHaveAttribute("href", "sms:+13013254731");
 });
 
+test("evaluation pages show the Game On location alongside the scheduling link", async ({ page }) => {
+  for (const path of ["/free-evaluation", "/free-evaluation/book"]) {
+    await page.goto(path);
+    await expect(page.getByText(/at Game On in Ellicott City, MD/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Text to schedule a free evaluation", exact: true }))
+      .toHaveAttribute("href", "sms:+13013254731");
+  }
+});
+
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {

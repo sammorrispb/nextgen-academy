@@ -8,11 +8,9 @@ import { testimonials } from "@/data/testimonials";
 import { site } from "@/data/site";
 import { areaServedJsonLd, breadcrumbJsonLd, orgRef, SITE_URL } from "@/lib/seo";
 
-const PAGE_TITLE = "Free Youth Pickleball Evaluation — Montgomery County, MD";
+const PAGE_TITLE = "Free Youth Pickleball Evaluation in Ellicott City, MD";
 const PAGE_DESCRIPTION =
-  "Text Coach Sam for a free 30-minute pickleball evaluation for kids ages 6–16 in Montgomery County, MD. Find your player's level. No cost or commitment.";
-const SHARE_DESCRIPTION =
-  "Youth pickleball coaching for kids ages 6–16 in Montgomery County, MD. Your first 30 minutes are on us.";
+  "Text Coach Sam to schedule a free 30-minute pickleball evaluation for kids ages 6 to 16 at Game On in Ellicott City, MD.";
 
 export const metadata: Metadata = {
   title: { absolute: PAGE_TITLE },
@@ -20,14 +18,14 @@ export const metadata: Metadata = {
   alternates: { canonical: "/free-evaluation" },
   openGraph: {
     title: PAGE_TITLE,
-    description: SHARE_DESCRIPTION,
+    description: PAGE_DESCRIPTION,
     url: "https://nextgenpbacademy.com/free-evaluation",
     images: ["/opengraph-image"],
   },
   twitter: {
     card: "summary_large_image",
     title: PAGE_TITLE,
-    description: SHARE_DESCRIPTION,
+    description: PAGE_DESCRIPTION,
   },
 };
 
@@ -150,7 +148,7 @@ export default function FreeEvaluationPage() {
               <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ngpa-white/70">
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
-                  MCPS venues across MoCo
+                  Game On in Ellicott City, MD
                 </span>
                 <span className="inline-flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-ngpa-teal" aria-hidden="true" />
@@ -243,12 +241,11 @@ export default function FreeEvaluationPage() {
           </h2>
           <div className="bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
             <h3 className="font-heading text-xl font-black text-ngpa-white mb-2 tracking-tight">
-              MCPS courts across Montgomery County.
+              Game On in Ellicott City, MD
             </h3>
             <p className="text-base text-ngpa-white/70 leading-relaxed">
-              Sessions rotate by demand &mdash; closer to more zip codes than a
-              single fixed venue. We&rsquo;ll share the venue when we confirm
-              your evaluation.
+              You can schedule your child&rsquo;s free evaluation with Coach Sam
+              at Game On. Text him to find a time that works for your family.
             </p>
           </div>
           <div className="mt-4 bg-ngpa-panel/80 backdrop-blur-sm rounded-2xl border border-ngpa-slate/60 p-7 text-center">
