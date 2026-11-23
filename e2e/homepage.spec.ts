@@ -17,6 +17,13 @@ test("NGA youth photo gallery displays four scenes without page overflow", async
 // ─── Hero Section ─────────────────────────────────
 
 test.describe("Hero", () => {
+  test("leads with the youth promise and puts ages and home base beneath it", async ({ page }) => {
+    await page.goto("/");
+    const hero = page.locator('[data-home-block="hero"]');
+    await expect(hero.getByRole("heading", { level: 1 })).toHaveText("Youth pickleball for all.");
+    await expect(hero.locator("h1 + p")).toContainText("kids ages 6 to 16 in Ellicott City, MD");
+  });
+
   test("has primary Text for a Free 30-Minute Evaluation CTA linking to SMS", async ({ page }) => {
     await page.goto("/");
     const btn = page.locator("section").first().getByRole("link", { name: /Text for a Free 30-Minute Evaluation/ });

@@ -25,16 +25,14 @@ export default function Hero() {
               Free 30-minute evaluation
             </div>
 
-            <h1 className="font-heading text-4xl sm:text-5xl lg:text-7xl font-black text-ngpa-white leading-[1.02] tracking-tight">
-              Real pickleball coaching for{" "}
-              <span className="text-ngpa-teal">kids 6&ndash;16</span>, based in{" "}
-              <span className="text-ngpa-teal">Ellicott City</span>.
+            <h1 className="text-balance font-heading text-4xl sm:text-5xl lg:text-7xl font-black text-ngpa-white leading-[1.02] tracking-tight">
+              Youth pickleball for all.
             </h1>
 
             <p className="mt-7 text-lg sm:text-xl text-ngpa-white/85 leading-relaxed max-w-xl">
-              A clear Red, Orange, Green and Yellow Ball pathway, from first
-              rally to tournament play. We&rsquo;re based in Ellicott City, MD,
-              and still run the MVF junior tournaments in Montgomery Village.
+              We coach kids ages 6 to 16 in Ellicott City, MD. Our Red, Orange,
+              Green and Yellow Ball pathway goes from first rally to tournament
+              play. We also run MVF junior tournaments in Montgomery Village.
               Each program lists the ages and levels it serves.
             </p>
 
